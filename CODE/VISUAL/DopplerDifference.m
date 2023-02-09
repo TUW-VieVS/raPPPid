@@ -102,7 +102,8 @@ function [] = plot_code_difference(n_plot, x, L1_diff, obs_prns_gnss, prns_strin
 subplot(n_plot, 1, i_plot) 
 hold on
 for i = 1:numel(obs_prns_gnss)
-    plot(x, L1_diff(:,obs_prns_gnss(i)), '-', 'MarkerSize', ms);
+%     plot(x, L1_diff(:,obs_prns_gnss(i)), '-', 'MarkerSize', ms);
+    plot(x, L1_diff(:,obs_prns_gnss(i)), '.', 'MarkerSize', ms);
 end
 
 % threshold

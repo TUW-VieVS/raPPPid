@@ -27,7 +27,7 @@ function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL,
 noclock = false;
 IODE = NaN;
 if isGPS
-    sys = 'GPS';
+    sys = 'G';
     if settings.ORBCLK.bool_brdc
         Eph = input.Eph_GPS;
         IODE = Eph(24,k);   % Issue of Data Ephemeris
@@ -42,7 +42,7 @@ if isGPS
         corr2brdc = input.ORBCLK.corr2brdc_GPS;
     end
 elseif isGLO
-    sys = 'GLO';    
+    sys = 'R';    
     if settings.ORBCLK.bool_brdc
         Eph = input.Eph_GLO;
         IODE = Eph(19,k);   % Issue of Data
@@ -55,7 +55,7 @@ elseif isGLO
         corr2brdc = input.ORBCLK.corr2brdc_GLO;
     end
 elseif isGAL
-    sys = 'GAL';    
+    sys = 'E';    
     if settings.ORBCLK.bool_brdc
         Eph = input.Eph_GAL;
         IODE = Eph(24,k);
@@ -70,7 +70,7 @@ elseif isGAL
         corr2brdc = input.ORBCLK.corr2brdc_GAL;
     end
 elseif isBDS
-    sys = 'BDS';    
+    sys = 'C';    
     if settings.ORBCLK.bool_brdc
         Eph = input.Eph_BDS;
         IODE = Eph(24,k);       % ||| check this

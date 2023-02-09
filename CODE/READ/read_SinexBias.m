@@ -29,7 +29,7 @@ function [BIAS] = read_SinexBias(BIAS, path, glo_channels)
 % because the file format is anything but consistent
 
 % for default if consecutive entries in the Sinex-Bias file have the same
-% value the validity is extended but for certain products this is not
+% value the validity is extended but for certain products this might not
 % working later-on as the number of entries is manipulated in this way
 bool_extend = true;
 
@@ -106,7 +106,7 @@ no_lines = length(lines);   % number of lines of file
 
 %% Handle header
 
-BIAS.Header.APCMODEL = '';
+BIAS.Header.APC_MODEL = '';
 BIAS.Header.SAT_ANT_PCC_APPLIED = '';
 BIAS.Header.TimeSystem = '';
 
@@ -121,7 +121,8 @@ while bool
     end
     
     if contains(curr_line, 'APC_MODEL')
-        BIAS.Header.APCMODEL = strtrim(curr_line(40:end));
+        apcmodel_string = strrep(curr_line, 'APC_MODEL', '');
+        BIAS.Header.APC_MODEL = strtrim(strrep(apcmodel_string, '*', ''));
     end
     
     if contains(curr_line, 'SATELLITE_ANTENNA_PCC_APPLIED_TO_MW_LC')
@@ -213,8 +214,13 @@ if isempty(BiaStruct)                       % first call
     BiaStruct.ende_gpsweek(1)  = gpsweek_ende;
     return
 end
-if extend_validity && BiaStruct.value(end) == value  	% bias value is the same as last entry
+if extend_validity && BiaStruct.value(end) == value  	
+    % bias value is the same as last entry
     BiaStruct.ende(end) = sow_ende;         % extend validity
+    if BiaStruct.ende_gpsweek(end) ~= gpsweek_ende      
+        % data of Sinex BIAS file runs over day and gps week
+        BiaStruct.ende_gpsweek(end) = gpsweek_ende;
+    end
 else                                        % save new bias
     BiaStruct.value(end+1)         = value; 
     BiaStruct.start(end+1)         = sow_start;
@@ -260,6 +266,7 @@ elseif strcmpi(version,'SINEX')
     
 end
 
+
 % convert from [cycles] to [ns]
 % ||| implemented only for OSB!!!!
 if strcmp(unit, 'cyc')
@@ -303,8 +310,8 @@ if strcmp(unit, 'cyc')
             
     end
     
-    
     value = value * lambda / Const.C * 10^9;    % from [cycles] to [ns]
+    
 end
 
 

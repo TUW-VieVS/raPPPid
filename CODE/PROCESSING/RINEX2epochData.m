@@ -48,7 +48,7 @@ if r_version == 2
     h = linvalues{4} + linvalues{5}/60 + linvalues{6}/3600;             % fractional hour
     jd = cal2jd_GT(2000+linvalues{1}, linvalues{2}, linvalues{3} + h/24); % julian date
     mjd = jd-2400000.5;                                                 % modified Julian date
-    [~, gps_time, ~] = jd2gps_GT(jd);                                      % gps-time [sow]   
+    [gps_week, gps_time, ~] = jd2gps_GT(jd);                           	% gps-time [sow] and gps-week 
         
     % check if epoch is usable
     usable = true;
@@ -139,7 +139,7 @@ elseif r_version == 3 || r_version == 4
     h = linvalues{4} + linvalues{5}/60 + linvalues{6}/3600;             % fractional hour
     jd = cal2jd_GT(linvalues{1}, linvalues{2}, linvalues{3} + h/24);    % Julian date
     mjd = jd-2400000.5;                                                 % modified Julian date
-    [~, gps_time,~] = jd2gps_GT(jd);                                   % gps-time [sow]
+    [gps_week, gps_time,~] = jd2gps_GT(jd);                             % gps-time [sow] and gps-week 
     gps_time = double(gps_time);     	
     
     % check if epoch is usable or number of satellites is zero
@@ -237,6 +237,7 @@ Epoch.obs = OBS;
 Epoch.LLI_bit_rinex = LLI_bit;
 Epoch.ss_digit_rinex = ss_digit;
 Epoch.gps_time = gps_time;
+Epoch.gps_week = gps_week;
 Epoch.mjd = mjd;
 Epoch.sats = sats;
 Epoch.gps = is_gps;

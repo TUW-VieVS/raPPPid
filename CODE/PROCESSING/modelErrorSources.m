@@ -14,7 +14,7 @@ function [model, Epoch] = modelErrorSources(settings, input, Epoch, model, Adjus
 %   Epoch           update of .excluded
 %  
 % Revision:
-%   ...
+%   2023/02/06, MFG: calculate APC correction in los for WL fixing (HMW)
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -49,7 +49,7 @@ idx_frqs_bds(idx_frqs_bds>DEF.freq_BDS(end)) = [];
 
 
 if isempty(model)
-    model = init_struct_model(num_sat, n_proc_frq);  	% Init struct model
+    model = init_struct_model(num_sat, n_proc_frq, n_num_frq);  	% Init struct model
     % --- Calculate hour and approximate sun and moon position for epoch ---
     h = mod(Epoch.gps_time,86400)/3600;
     model.sunECEF  = sunPositionECEF (obs.startdate(1), obs.startdate(2), obs.startdate(3), h);
@@ -157,7 +157,6 @@ for i_sat = 1:num_sat
         PCV_sat = input.OTHER.PCV.sat_GAL(:,sv);
         % PCO satellite
         offset_LL = input.OTHER.PCO.sat_GAL(sv, 2:4, 1:5);
-        reshape(offset_LL,3,5,1);
         offset_LL = reshape(offset_LL,3,5,1);
         
     elseif isBDS
@@ -231,9 +230,9 @@ for i_sat = 1:num_sat
     %% Vectors, Angles, Distance between Receiver and Satellite
     
     % --- Azimuth, Elevation, zenith distance, cutoff-angle ---
-    [az, el] = topocent(pos_XYZ,X_rot-pos_XYZ);     % calculate azimuth and elevation [°]
-    if el < settings.PROC.elev_mask         % elevation is under cut-off-angle
-        cutoff = true;                      % eliminate satellite
+    [az, elev] = topocent(pos_XYZ,X_rot-pos_XYZ); 	% calculate azimuth and elevation [°]
+    if elev < settings.PROC.elev_mask            	% elevation is under cut-off-angle
+        cutoff = true;                              % eliminate satellite
         status = 2;
     end   
     
@@ -276,7 +275,8 @@ for i_sat = 1:num_sat
     
     % --- Windup Correction ---
     delta_windup = 0;   windupCorr = [0, 0, 0];
-    if settings.OTHER.bool_wind_up        % Wind-Up correction is enabled
+    if settings.OTHER.bool_wind_up && contains(settings.PROC.method, 'Phase')
+        % Wind-Up correction is enabled
         delta_windup = PhaseWindUp(prn, Epoch, model, SatOr_ECEF, los0);
         % Conversion of windup in cycles to frequency
         windupCorr_L1 = delta_windup * Epoch.l1(i_sat);     % [m]
@@ -320,12 +320,12 @@ for i_sat = 1:num_sat
         switch settings.TROPO.mfh       % Model of hydrostatic mf
             case 'VMF3'
                 if strcmpi(input.TROPO.V3GR.version,'sitewise')
-                    [mfh, mfw_VMF3] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, el*pi/180 );
+                    [mfh, mfw_VMF3] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, elev*pi/180 );
                 elseif strcmpi(input.TROPO.V3GR.version,'gridwise')
-                    [mfh, mfw_VMF3] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, el*pi/180 );
+                    [mfh, mfw_VMF3] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180 );
                 end
             case 'GPT3'
-                [mfh, mfw_GPT3] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, el*pi/180 );
+                [mfh, mfw_GPT3] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180 );
             otherwise
                 error('There is something wrong here...')
         end
@@ -372,15 +372,15 @@ for i_sat = 1:num_sat
                 if ~isempty(mfw_VMF3)           % check if this was already calculated
                     mfw = mfw_VMF3;
                 elseif strcmpi(input.TROPO.V3GR.version,'sitewise')
-                    [~,mfw] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, el*pi/180);
+                    [~,mfw] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, elev*pi/180);
                 elseif strcmpi(input.TROPO.V3GR.version,'gridwise')
-                    [~,mfw] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, el*pi/180);
+                    [~,mfw] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180);
                 end
             case 'GPT3'
                 if exist('mfw_GPT3', 'var')     % check if this was already calculated
                     mfw = mfw_GPT3;
                 else
-                    [~,mfw] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, el*pi/180 );
+                    [~,mfw] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180 );
                 end
             otherwise
                 error('There is something wrong here...')
@@ -405,8 +405,11 @@ for i_sat = 1:num_sat
     end
     
     % stick together the slant total delay
-    mfg_h = 1 / ( sin(el*pi/180) * tan(el*pi/180)+0.0031 );
-    mfg_w = 1 / ( sin(el*pi/180) * tan(el*pi/180)+0.0007 );
+    mfg_h = 0; mfg_w = 0;
+    if elev > 0       % only sensible for positive elevation angles
+        mfg_h = 1 / ( sin(elev*pi/180) * tan(elev*pi/180)+0.0031 );
+        mfg_w = 1 / ( sin(elev*pi/180) * tan(elev*pi/180)+0.0007 );
+    end
     az_ = az*pi/180;
     trop = zhd*mfh + zwd*mfw   +   mfg_h*( Gn_h*cos(az_)+Ge_h*sin(az_) ) + mfg_w*( Gn_w*cos(az_)+Ge_w*sin(az_) );
     
@@ -424,7 +427,7 @@ for i_sat = 1:num_sat
             case 'IONEX File'
                 % calculate ionospheric correction from gim or klobuchar
                 [mappingf, Lat_IPP, Lon_IPP] = ...      % get value of mapping-function and IPP
-                    iono_mf(el, input.IONO.ionex.mf, pos_WGS84, az, input.IONO.ionex.radius, input.IONO.ionex.hgt);
+                    iono_mf(elev, input.IONO.ionex.mf, pos_WGS84, az, input.IONO.ionex.radius, input.IONO.ionex.hgt);
                 vtec = iono_gims(Lat_IPP, Lon_IPP, Ttr, input.IONO.ionex, settings.IONO.interpol);	% interpolate VTEC
                 model.iono_mf(i_sat)   = mappingf;      % saving value of mapping-function
                 model.iono_vtec(i_sat) = vtec;          % saving value of VTEC
@@ -432,7 +435,7 @@ for i_sat = 1:num_sat
                 iono(2) = mappingf * 40.3e16/f2^2* vtec;
                 iono(3) = mappingf * 40.3e16/f3^2* vtec;
             case 'Klobuchar model'
-                iono(1) = iono_klobuchar(pos_WGS84.ph*(180/pi), pos_WGS84.la*(180/pi), az, el, Ttr, input.IONO.klob_coeff);
+                iono(1) = iono_klobuchar(pos_WGS84.ph*(180/pi), pos_WGS84.la*(180/pi), az, elev, Ttr, input.IONO.klob_coeff);
                 iono(2) = iono(1) * ( f1.^2 ./ f2.^2 );     % convert Klobuchar correction from L1 to L2
                 iono(3) = iono(1) * ( f1.^2 ./ f3.^2 );     % convert Klobuchar correction from L2 to L3
             case 'NeQuick model'
@@ -447,7 +450,7 @@ for i_sat = 1:num_sat
 %                 iono(3) = 40.3e16/f3^2 * STEC;
 
             case 'CODE Spherical Harmonics'
-                stec = iono_coeff_global(pos_WGS84.ph, pos_WGS84.la, az, el, round(Ttr), input.IONO.ion, obs.leap_sec);
+                stec = iono_coeff_global(pos_WGS84.ph, pos_WGS84.la, az, elev, round(Ttr), input.IONO.ion, obs.leap_sec);
                 iono(1) = 40.3/f1^2 * stec;
                 iono(2) = 40.3/f2^2 * stec;
                 iono(3) = 40.3/f3^2 * stec;
@@ -456,7 +459,7 @@ for i_sat = 1:num_sat
                 idx_vtec = find(dt_vtec==min(dt_vtec));         % find nearest vtec correction in stream data
                 C_nm = input.ORBCLK.corr2brdc_vtec.Cnm(:,:,idx_vtec);  % get coefficients
                 S_nm = input.ORBCLK.corr2brdc_vtec.Snm(:,:,idx_vtec);
-                stec = corr2brdc_stec(C_nm, S_nm, az, el, pos_WGS84, mod(Ttr,86400));
+                stec = corr2brdc_stec(C_nm, S_nm, az, elev, pos_WGS84, mod(Ttr,86400));
                 iono(1) = 40.3e16/f1^2 * stec;
                 iono(2) = 40.3e16/f2^2 * stec;
                 iono(3) = 40.3e16/f3^2 * stec;
@@ -503,7 +506,7 @@ for i_sat = 1:num_sat
     end
     
     
-    %% Phase Center Offset Corrections
+    %% Phase Center Offsets and Variations
     % --- Receiver Antenna Reference Point Correction ---
     % correct the measurement to the ARP with values from RINEX-File-Header
     
@@ -517,20 +520,20 @@ for i_sat = 1:num_sat
     dX_PCO_REC_ECEF_corr = zeros(n_proc_frq,1);
     if settings.OTHER.bool_rec_pco        % Receiver Phase Center Offset is enabled
         dX_PCO_REC_ECEF = model.R_LL2ECEF * PCO_rec; 	% convert Local Level into ECEF   
-        dX_los = sum(los0.*dX_PCO_REC_ECEF, 1);         % project onto line of sight, dot-product of each column        
+        los_pco_r = sum(los0.*dX_PCO_REC_ECEF, 1);         % project onto line of sight, dot-product of each column        
         % missing receiver PCO correction are replaced with the correction
         % of the 1st frequency:
-        dX_los(dX_los==0) = dX_los(1);
+        los_pco_r(los_pco_r==0) = los_pco_r(1);
         % convert to the processed frequencies:
         if strcmpi(settings.IONO.model,'2-Frequency-IF-LCs')
-            dX_PCO_REC_ECEF_corr(1) = (f1^2*dX_los(j(1))-f2^2*dX_los(j(2))) / (f1^2-f2^2);
+            dX_PCO_REC_ECEF_corr(1) = (f1^2*los_pco_r(j(1))-f2^2*los_pco_r(j(2))) / (f1^2-f2^2);
             if n_proc_frq == 2
-                dX_PCO_REC_ECEF_corr(2) = (f2^2*dX_los(j(2))-f3^2*dX_los(j(3))) / (f2^2-f3^2);
+                dX_PCO_REC_ECEF_corr(2) = (f2^2*los_pco_r(j(2))-f3^2*los_pco_r(j(3))) / (f2^2-f3^2);
             end
         elseif strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
-            dX_PCO_REC_ECEF_corr(1) = e1.*dX_los(j(1)) + e2.*dX_los(j(2)) + e3.*dX_los(j(3));
+            dX_PCO_REC_ECEF_corr(1) = e1.*los_pco_r(j(1)) + e2.*los_pco_r(j(2)) + e3.*los_pco_r(j(3));
         else                                        % no IF-LC
-            dX_PCO_REC_ECEF_corr(j) = dX_los(j);      % get values of processed frequencies
+            dX_PCO_REC_ECEF_corr(j) = los_pco_r(j);      % get values of processed frequencies
         end
     end
 
@@ -539,49 +542,53 @@ for i_sat = 1:num_sat
     % is necessary when orbit/clock product refers to the CoM
     % ||| check´n´change for not sp3
     dX_PCO_SAT_ECEF_corr = zeros(n_proc_frq,1);
-    if settings.OTHER.bool_sat_pco && settings.ORBCLK.bool_sp3 && ~cutoff   	
+    if settings.OTHER.bool_sat_pco && settings.ORBCLK.bool_sp3 	
         % satellite Phase Center Offset and precise ephemerides are enabled
         % and satellite is not under cutoff
         dX_PCO_SAT_ECEF = SatOr_ECEF*offset_LL;                         % transform offsets into ECEF site displacements
-        dX_los = sum(los0.*dX_PCO_SAT_ECEF, 1); 	% project each frequency onto line of sight
+        los_pco_s = sum(los0.*dX_PCO_SAT_ECEF, 1); 	% project each frequency onto line of sight
         % missing satellite PCO corrections are replaced with the correction
         % of the 1st frequency:
-        dX_los(dX_los==0) = dX_los(1);
+        los_pco_s(los_pco_s==0) = los_pco_s(1);
         % convert to the processed frequencies
         switch settings.IONO.model
             case '2-Frequency-IF-LCs'
-                dX_PCO_SAT_ECEF_corr(1) = (f1^2*dX_los(j(1))-f2^2*dX_los(j(2))) / (f1^2-f2^2);
+                dX_PCO_SAT_ECEF_corr(1) = (f1^2*los_pco_s(j(1))-f2^2*los_pco_s(j(2))) / (f1^2-f2^2);
                 if n_proc_frq == 2
-                    dX_PCO_SAT_ECEF_corr(2) = (f2^2*dX_los(j(2))-f3^2*dX_los(j(3))) / (f2^2-f3^2);
+                    dX_PCO_SAT_ECEF_corr(2) = (f2^2*los_pco_s(j(2))-f3^2*los_pco_s(j(3))) / (f2^2-f3^2);
                 end
             case '3-Frequency-IF-LC'
-                dX_PCO_SAT_ECEF_corr(1) = e1.*dX_los(j(1)) + e2.*dX_los(j(2)) + e3.*dX_los(j(3));
+                dX_PCO_SAT_ECEF_corr(1) = e1.*los_pco_s(j(1)) + e2.*los_pco_s(j(2)) + e3.*los_pco_s(j(3));
             otherwise        % uncombined signals are processed
-                dX_PCO_SAT_ECEF_corr(j) = dX_los(j);
+                dX_PCO_SAT_ECEF_corr(j) = los_pco_s(j);
         end
     end
-    
-    
-    %% Phase Center Variation Corrections
+
     % --- Receiver Antenna Phase Center Variation Correction---
     dX_PCV_rec = [0,0,0];
     if settings.OTHER.bool_rec_pcv
         if ~isempty(PCV_rec)    % check if PCV corrections are existing
-            dX_PCV_rec = calc_PCV_rec(PCV_rec, j, el, az, settings.IONO.model, f1, f2, f3);
+            [dX_PCV_rec, ~] = calc_PCV_rec(PCV_rec, j, elev, az, settings.IONO.model, f1, f2, f3);
         end
     end
     
     % --- Satellite Antenna Phase Center Variation Correction---
     dX_PCV_sat = [0,0,0];
-    if settings.OTHER.bool_sat_pcv && settings.ORBCLK.bool_sp3 
-        dX_PCV_sat = calc_PCV_sat(PCV_sat, SatOr_ECEF, los0, j, settings.IONO.model, f1, f2, f3, X_rot, pos_XYZ);
+    if settings.OTHER.bool_sat_pcv && settings.ORBCLK.bool_sp3 && ~cutoff 
+        [dX_PCV_sat, ~] = calc_PCV_sat(PCV_sat, SatOr_ECEF, los0, j, settings.IONO.model, f1, f2, f3, X_rot, pos_XYZ);
     end
+    
+    % --- APC correction due to PCOs for raw processed frequencies---
+    % simplified version, https://doi.org/10.1186/s43020-021-00049-9 or
+    % https://doi.org/10.1007/s00190-022-01602-3
+    % for correcting HMW observation in create_HMW_LC.m
+    los_APC = PCO_rec(3,j).*sind(elev) + offset_LL(3,j);    
     
     
     %% Group Delay Variations
     dX_GDV = [0,0,0];
     if settings.OTHER.bool_GDV
-        dX_GDV = calc_GDV(prn, el, f1, f2, f3, j, settings.IONO.model, n_proc_frq);
+        dX_GDV = calc_GDV(prn, elev, f1, f2, f3, j, settings.IONO.model, n_proc_frq);
     end
 
     
@@ -601,7 +608,7 @@ for i_sat = 1:num_sat
     model.zhd(i_sat,frqs)  = zhd;               % modelled zenith hydrostativ delay
     % Observation direction
     model.az(i_sat,frqs)   = az;                % Satellite azimuth [°]
-    model.el(i_sat,frqs)   = el;                % Satellite elevation [°]
+    model.el(i_sat,frqs)   = elev;                % Satellite elevation [°]
     % Windup
     model.delta_windup(i_sat,frqs) = delta_windup;          % Phase windup effect in cycles
     model.windup(i_sat,frqs)       = windupCorr(frqs);      % Phase windup effect, scaled to frequency
@@ -611,6 +618,7 @@ for i_sat = 1:num_sat
     % group delay variation
     model.dX_GDV(i_sat,frqs)  = dX_GDV(frqs);                           % Group delay variation correction
     % phase center offsets and variations
+    model.los_APC(i_sat,j) = los_APC;
     model.dX_ARP_ECEF_corr(i_sat,frqs)= dX_ARP_ECEF_corr;               % Receiver antenna reference point correction in ECEF
     model.dX_PCO_rec_corr(i_sat,frqs) = dX_PCO_REC_ECEF_corr(frqs);     % Receiver phase center offset correction in ECEF
     model.dX_PCV_rec_corr(i_sat,frqs) = dX_PCV_rec(frqs);            	% Receiver phase center variation correction

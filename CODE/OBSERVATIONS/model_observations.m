@@ -20,7 +20,7 @@ function [code_model, phase_model, doppler_model] = ...
 f1 = Epoch.f1;
 f2 = Epoch.f2;
 f3 = Epoch.f3;
-cutoff = Epoch.exclude;
+exclude = Epoch.exclude;
 num_freq = settings.INPUT.proc_freqs;
 param = Adjust.param;
 NO_PARAM = Adjust.NO_PARAM;
@@ -58,7 +58,7 @@ code_model = model.rho...                                 	% theoretical range
     - model.dX_ARP_ECEF_corr;                           	% Antenna Reference Point correction
 
 % eliminate code observations because of cut-off:
-code_model = code_model .* ~cutoff;
+code_model = code_model .* ~exclude;
 
 
 
@@ -79,7 +79,7 @@ if contains(settings.PROC.method,'+ Phase')
         + model.windup + ambig;                          	% Phase Wind-Up and ambiguities
     
     % eliminate observations because of cut-off or cycle slip:
-    phase_model = phase_model .* ~cutoff .* ~Epoch.cs_found;
+    phase_model = phase_model .* ~exclude .* ~Epoch.cs_found;
 else
    phase_model = [];
 end   
@@ -103,7 +103,7 @@ if contains(settings.PROC.method, 'Doppler') && ~strcmp(settings.PROC.method, 'C
     doppler_model = dot(r,v)' ./Epoch.l1;               % put together, [Hz] (?)
     
     % exclude satellites where cutoff is set
-    doppler_model(Epoch.exclude) = 0;
+    doppler_model(exclude) = 0;
 else
     doppler_model = [];
 end

@@ -328,18 +328,22 @@ bool_sinex = any(strcmp(settings.BIASES.code, ...
     {'CAS Multi-GNSS DCBs','CAS Multi-GNSS OSBs','DLR Multi-GNSS DCBs','CODE OSBs','CNES OSBs','CODE MGEX','WUM MGEX','CNES MGEX','GFZ MGEX','CNES postprocessed'}));
 bool_manually_sinex = strcmp(settings.BIASES.code, 'manually') && settings.BIASES.code_manually_Sinex_bool;
 bool_CNES_archive_biases = strcmp(settings.ORBCLK.CorrectionStream, 'CNES Archive') && (settings.BIASES.code_corr2brdc_bool || settings.BIASES.phase_corr2brdc_bool);
+settings.AMBFIX.APC_MODEL = false;
 if bool_sinex || bool_manually_sinex || bool_CNES_archive_biases
     if bool_sinex || bool_manually_sinex
         path_sinex = settings.BIASES.code_file;
     elseif bool_CNES_archive_biases
         path_sinex = settings.BIASES.code_file;     % or settings.BIASES.phase_file
     end
-    % check for auto-detection Sinex-File
+    % check for auto-detection Sinex-BIAS-File
     if contains(path_sinex, '$')
         [fname, fpath] = ConvertStringDate(path_sinex, obs.startdate(1:3));
         path_sinex = ['../DATA/BIASES' fpath fname];
     end
-    sinex_file = [path_sinex, '.mat'];
+    % create path to potential *.mat-file (already read-in)
+    if ~strcmp(path_sinex(end-3:end), '.mat'); sinex_file = [path_sinex, '.mat'];
+    else; sinex_file = path_sinex; end
+    % check if Sinex BIAS file was already read-in and saved as *.mat
     if exist(sinex_file, 'file')
         load(sinex_file, 'Biases');      % already read in, load .mat-file
     else            % mainly for huge CNES-whole-day-files
@@ -354,6 +358,10 @@ if bool_sinex || bool_manually_sinex || bool_CNES_archive_biases
     input = save_SinexBias(input, Biases);
     % find correct biases depending processed observation type
     [obs] = assign_sinex_biases(obs, input, settings);
+    % check if APC model is applied for WL fixing
+    if ~isempty(Biases.Header.APC_MODEL) || strcmp(Biases.Header.SAT_ANT_PCC_APPLIED, 'YES')
+        settings.AMBFIX.APC_MODEL = true;
+    end
 end
 
 % -) CODE DCBs: directly selected or manually

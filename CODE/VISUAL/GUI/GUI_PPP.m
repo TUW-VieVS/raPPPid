@@ -50,7 +50,7 @@ set(gca, 'Units', 'pixels', 'Position', [18 516 900 80])
 axis off
 
 % Set Copyright and Version in the lower right
-set(handles.text_version, 'String', ['Version 1.0 ', char(169), ' TUW 2023']);
+set(handles.text_version, 'String', ['Version 1.1 ', char(169), ' TUW 2023']);
 
 % load default filter settings for selected filter
 handles = LoadDefaultFilterSettings(handles);
@@ -1671,6 +1671,7 @@ row_label = sprintf('label%02.0f',row_idx);
 if ~isempty(settings.PROC.name)
     row_label = settings.PROC.name;
 end
+if ~isfield(obs, 'coordsyst'); obs.coordsyst = ''; end
 true_coord = getCoordinates(obs.stationname, obs.startdate, obs.coordsyst);
 
 % write everything into table
@@ -1942,7 +1943,7 @@ radiobutton_multi_nav_Callback(hObject, eventdata, handles)
 % if CNES is active, then change the radiobuttons in Biases to "Correction Stream"
 value = get(handles.popupmenu_CorrectionStream, 'Value');
 string_all = get(handles.popupmenu_CorrectionStream,'String');
-if strcmpi(string_all{value},'CNES Archive')
+if ~strcmpi(string_all{value},'off')
     set(handles.radiobutton_models_biases_code_CorrectionStream,'Value',1)
     set(handles.radiobutton_models_biases_phase_CorrectionStream,'Value',1)
     msgbox('Code and Phase Biases corrections are changed to correction stream.', 'Settings of Biases changed', 'help')
@@ -2918,7 +2919,7 @@ end
 
 function pushbutton_bias_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BIASES/'], handles.paths.bias_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.bia;*.bsx'}, 'Select the Multi-GNSS-Bias File', folder);
+[FileName, PathName] = uigetfile({'*.bia;*.bsx;*.mat'}, 'Select a Sinex BIAS File', folder);
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;

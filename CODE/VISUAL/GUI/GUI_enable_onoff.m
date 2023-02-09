@@ -370,7 +370,8 @@ end
 if strcmpi(handles.uipanel_otherCorrections.Visible, 'on')
     
     % enable satellite PCO and PCV for precise products only
-    if get(handles.radiobutton_prec_prod, 'Value')
+    if get(handles.radiobutton_prec_prod, 'Value') || ...
+            contains(handles.popupmenu_CorrectionStream.String{handles.popupmenu_CorrectionStream.Value}, 'Archive')
         handles.checkbox_sat_pco.Enable = 'on';
         handles.checkbox_sat_pcv.Enable = 'on';
     else

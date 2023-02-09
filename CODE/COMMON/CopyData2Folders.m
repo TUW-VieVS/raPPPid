@@ -57,7 +57,6 @@ for i = 1:n
     if ~(numel(ext) == 3 || numel(ext) == 5)
         fprintf(2, [file '.' ext ' is not copied (unknown data type).\n'])
         continue
-        % ||| print message
     end
     % switch extension to find target folder
     switch ext                  
@@ -72,7 +71,7 @@ for i = 1:n
             % || monthly files
         case 'atx'
             tfolder = 'ANTEX';
-        case 'ssc'
+        case {'ssc', 'pos'}
             tfolder = 'COORDS';
         case 'inx'
             tfolder = 'IONO';
@@ -126,13 +125,16 @@ msgbox('Data was copied successfully!', 'Achievement', 'help')
 function [subf_1, subf_2] = AnalyzeFileName(file, ext)
 % This function tries to extract the year and the day of year belonging to
 % a GNSS related data file (e.g. RINEX, orbit,...)
-subf_1 = ''; subf_2 = '';
+subf_1 = '';    % string with 4-digit year
+subf_2 = '';    % string with doy, 3-digit
 n = numel(file);
 if strcmp(ext, 'atx')       % no subfolders needed
     return
 end
 
-if n == 34 && strcmp(ext, 'rnx') 	% Rinex 3 observatiom file
+if n == 34 && strcmp(ext, 'rnx') || ...         % Rinex 3 observatiom file
+        n == 30 && strcmp(ext, 'rnx') || ...	% Rinex navigation file
+        n == 23 && ext(end) == 'o'              % e.g. RINEX logged with rinex ON
     idx = strfind(file, '_');
     idx_1 = idx(2) + 1;
     idx_2 = idx_1  + 3;
@@ -140,15 +142,10 @@ if n == 34 && strcmp(ext, 'rnx') 	% Rinex 3 observatiom file
     idx_4 = idx_3  + 2;
     subf_1 = file(idx_1:idx_2);
     subf_2 = file(idx_3:idx_4);
+    
 elseif strcmp(ext, 'fcb')           % SGG FCB, gps week and dow in file name
-    gpsweek = str2double(file(4:7));
-    dow = str2double(file(8));
-    jd = gps2jd_GT(gpsweek,dow*24*3600);
-    [doy, yyyy] = jd2doy_GT(jd);
-    yyyy   = sprintf('%04d',yyyy);
-    doy    = sprintf('%03d',doy);
-    subf_1 = yyyy;
-    subf_2 = doy;
+    [subf_1, subf_2] = gps2calendar(file(4:7), file(8));
+    
 elseif n == 34                      % Rinex 3 long filename
     idx = strfind(file, '_');
     idx_1 = idx(1) + 1;
@@ -157,14 +154,38 @@ elseif n == 34                      % Rinex 3 long filename
     idx_4 = idx_3  + 2;
     subf_1 = file(idx_1:idx_2);
     subf_2 = file(idx_3:idx_4);
+    
 elseif n == 8                   	% Rinex short filename
     subf_1 = ['20' ext(1:2)];
     if str2double(ext(1:2)) > 70
         subf_1 = ['19' ext(1:2)];
     end
     subf_2 = file(5:7);
+    
+elseif n == 14                      % e.g. correction stream recorded with BNC
+    subf_1 = ['20' ext(1:2)];
+    subf_2 = file(11:13);
+    
+elseif n == 11 && strcmp(ext, 'ssc')    % daily IGS coordinate solution (old short filename)
+    [subf_1, subf_2] = gps2calendar(file(7:10), file(11));  
+    
+elseif n == 9 && ext(end) == 'c'    % e.g. correction stream recorded with BNC
+    subf_2 = file(6:8);
+    subf_1  = ['20' ext(1:2)];
+
 else
     fprintf([file ': date could not be extracted!\n']);
 end
+
+
+function [yyyy, doy] = gps2calendar(gpsweek, dow)
+% convert GPS week and day of week to year and day of year
+% all input and output variables are strings
+gpsweek = str2double(gpsweek);
+dow = str2double(dow);
+jd = gps2jd_GT(gpsweek,dow*24*3600);
+[doy, yyyy] = jd2doy_GT(jd);
+yyyy   = sprintf('%04d',yyyy);
+doy    = sprintf('%03d',doy);
 
 

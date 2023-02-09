@@ -62,6 +62,8 @@ startdate = [];         enddate = [];
 shift = [];     shiftlines = {};    i_shift = 1;
 glo_cod_phs_bis = [];
 glo_channel = NaN(99,1);
+stationname = '';
+time_system = 'GPS';        % GPS time system is default
 
 
 %% LOOP TO GOBBLE THE HEADER

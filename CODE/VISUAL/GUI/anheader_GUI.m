@@ -41,6 +41,8 @@ fid = fopen(file,'rt');         % open observation-file
 
 first_obs = []; last_obs = []; rinex2_obs_types = [];
 station = ''; antenna_type = ''; receiver_type = '';
+time_system = 'GPS';        % GPS time system is default
+
 % default ranking of observation types
 gps_ranking = DEF.RANKING_GPS;
 glo_ranking = DEF.RANKING_GLO;

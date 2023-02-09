@@ -1,4 +1,4 @@
-function [x_sat, v_sat] = corr2brdc_orb(corr, time_orb, Ttr, prn, x_sat, v_sat, gnss, IODE_eph)
+function [x_sat, v_sat] = corr2brdc_orb(corr, time_orb, Ttr, prn, x_sat, v_sat, char, IODE_eph)
 % Calculates correction to broadcast orbits (from navigation message/file)
 % with data from correction stream.
 % 
@@ -9,7 +9,7 @@ function [x_sat, v_sat] = corr2brdc_orb(corr, time_orb, Ttr, prn, x_sat, v_sat, 
 %   prn         satellite number, at the same time number of column
 %   x_sat       satellite position, ECEF, [m]
 %   v_sat       satellite velocity, ECEF, [m/s]
-%   gnss        string for identifying GNSS, 'GPS' or 'GLO'
+%   char        character identifying GNSS, 'G' or 'R' or 'E' or 'C'
 %   IODE_eph	Issue of Data Ephemeris
 % OUTPUT:
 %   x_sat       satellite position correction in ECEF, [m]
@@ -55,10 +55,10 @@ if ~isempty(i_orb_corr)
         v_sat = v_sat - drho_dot;               % corrected velocity
     else                        % time difference exceeds threshold
         x_sat = zeros(3,1);     v_sat = zeros(3,1);
-        fprintf('WARNING: PRN %.2d (%s) has no closely in time SSR corrections at second %8.2f               \n', prn, gnss, Ttr)
+        fprintf('WARNING: %s%.2d, no close SSR orbit                            \n', char, prn)
     end
 else
     x_sat = zeros(3,1);     v_sat = zeros(3,1); % no correction
-    fprintf('WARNING: PRN %.2d (%s) has no SSR corrections at second %8.2f               \n', prn, gnss, Ttr)
+    fprintf('WARNING: %s%.2d, no SSR orbit                            \n', char, prn)
 end
 

@@ -55,9 +55,11 @@ for i = 1:n
         system(command);
         
         % check if REALLY downloaded
-        if ~exist([target '/' file],'file') && bool_print
-            fprintf(2, ['Download failed: ', url '\n'])
+        if ~exist([target '/' file],'file')
             filestatus(i) = 0;
+            if bool_print
+                fprintf(2, ['Download failed: ', url '\n'])
+            end
         end
         
     catch

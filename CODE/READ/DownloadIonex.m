@@ -98,6 +98,27 @@ switch settings.IONO.file_source
         % remove the zip file extension
         [~,file{1},~] = fileparts(file{1});
         
+    case 'GFZ'
+        URL_host = 'isdcftp.gfz-potsdam.de:21';
+        URL_folder = {['/gnss/products/iono/w' gpsweek '/']};
+        switch settings.IONO.type_ionex
+            case 'final'
+                file = {['GFZ0OPSFIN_' yyyy doy '0000_01D_02H_ION.IOX.gz']};
+            case 'rapid'
+                file = {['GFZ0OPSRAP_' yyyy doy '0000_01D_02H_ION.IOX.gz']};
+            otherwise
+                errordlg(['Selected Ionex-Type: "' settings.IONO.type_ionex '" not found! "Final" is tried.'], 'Error');
+                file = {['GFZ0OPSFIN_' yyyy doy '0000_01D_02H_ION.IOX.gz']};
+        end
+        % download, unzip, save file-path
+        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        if file_status == 1   ||   file_status == 2
+            unzip_and_delete(file, target);
+        elseif file_status == 0
+            errordlg(['No Ionex file from ' settings.IONO.file_source ' found on server. Please specify different source!'], 'Error');
+        end
+        [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
+
     case 'Regiomontan'              % Ionosphere Model Janina
         file = {['REGR' doy '0.' yyyy(3:4) 'I']};
         folder = Path.TUW_IONO;
@@ -263,10 +284,28 @@ switch settings.IONO.file_source
         end
         [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
         
+    case 'IGS RT GIM'
+        try
+            file =  {['irtg' doy '0.' yyyy(3:4) 'i']};
+            file_zip = {[file{1} '.Z']};
+            webfolder = ['http://chapman.upc.es/irtg/archive/' yyyy '/' doy '/global_vtec_movie_since_last_midnight/ionex_file/'];
+            websave([target{1} '/' file_zip{1}] , [webfolder file_zip{1}]);
+            unzip_and_delete(file_zip, target);        
+        catch
+            errordlg('Download of IGS Real-Time GIM failed.', 'Error');
+        end
+
     otherwise
         errordlg(['Ionex Source ' settings.IONO.file_source ' not implemented!'], 'Error');
         
 end
 
+% check if decompressed file is really existing
+if ~isfile([target{1} '/' file{1}])
+    errordlg({'Please select IONEX file manually!', 'Compressed file has not the archive´s name.'}, 'Error');
+end
+
 % save downloaded file into settings
 settings.IONO.file_ionex = [target{1} '/' file{1}];
+
+

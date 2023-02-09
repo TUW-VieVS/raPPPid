@@ -1,14 +1,14 @@
 function bool_enoughSats = check_min_sats(bool_GPS, bool_GLO, bool_GAL, bool_BDS, noGPS, noGLO, noGAL, noBDS, noGNSS)
-% check if there are still enough satellites for processing
+% check if there are (still) enough satellites for processing
 %
 % OUTPUT:
 %   bool_enoughSats....if current epoch has enough satellites for processing
 %   it returns true. otherwise false and this epoch will be skipped later on.
 % INPUT:
-%   bool_GPS  	GPS activated?
-%   bool_GLO	Glonass activated?
-%   bool_GAL	Galileo activated?
-%   bool_BDS	Galileo activated?
+%   bool_GPS  	GPS is processed
+%   bool_GLO	Glonass is processed
+%   bool_GAL	Galileo is processed
+%   bool_BDS	Galileo is processed
 %   noGPS       number of GPS satellites in this epoch
 %   noGLO       number of Glonass satellites in this epoch
 %   noGAL       number of Galileo satellites in this epoch
@@ -21,9 +21,7 @@ function bool_enoughSats = check_min_sats(bool_GPS, bool_GLO, bool_GAL, bool_BDS
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-% ||| BDS: improve
-% ||| GLO: improve
-% ||| make easier
+% ||| check carefully
 % ||| mGNSS solution with no GPS sats in 1st epoch fails
 
 bool_enoughSats = true;

@@ -1,22 +1,18 @@
-function [Epoch, HMW_12, HMW_23, HMW_13, storeData] = ...
-    create_LC_observations(Epoch, settings, HMW_12, HMW_23, HMW_13, storeData, q)
+function [Epoch, storeData] = create_LC_observations(Epoch, settings, storeData, q)
 % This function builds all LCs and creates the observations for each epoch.
 % All calculations are in the unit of meters.
 %
 % INPUT:
 %	Epoch           struct, epoch-specific data
 %   settings        struct, processing settings from GUI
-%   HMW_12,...      matrix, HMW LC for all epochs and satellites between 1st
-%                   and 2nd or 2nd and 3rd frequency
 %   storeData
 %   q               number of epoch
 % OUTPUT:
 %	Epoch           updated with code/phase observations
-%   HMW_12,...      filled with HMW LC of current epoch
 %   storeData       updated with MP LC
 %
 % Revision:
-%   ...
+%   2023/02/06, MFG: moved calculation of HMW to ZD_processing.m
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -25,27 +21,6 @@ function [Epoch, HMW_12, HMW_23, HMW_13, storeData] = ...
 sats = Epoch.sats;
 f1 = Epoch.f1;   	f2 = Epoch.f2;      f3 = Epoch.f3;
 lam1 = Epoch.l1;    lam2 = Epoch.l2;    lam3 = Epoch.l3;
-
-
-%% --- Build Hatch-Melbourne-Wübbena Linear Combinations ---
-if settings.AMBFIX.bool_AMBFIX
-    if settings.INPUT.num_freqs >= 2
-        % between first and second frequency
-        HMW12_epoch = (f1.*Epoch.L1-f2.*Epoch.L2) ./ (f1-f2) - ...
-            (f1.*Epoch.C1+f2.*Epoch.C2) ./ (f1+f2);
-        HMW_12(q,sats) = HMW12_epoch .* ((f1-f2)./Const.C); % convert to [cyc] and save
-    end
-    if settings.INPUT.num_freqs >= 3
-        % between second and third frequency
-        HMW23_epoch = (f2.*Epoch.L2-f3.*Epoch.L3) ./ (f2-f3) - ...
-            (f2.*Epoch.C2+f3.*Epoch.C3) ./ (f2+f3);
-        HMW_23(q,sats) = HMW23_epoch .* ((f2-f3)./Const.C); % convert to [cyc] and save
-        % between first and third frequency
-        HMW13_epoch = (f1.*Epoch.L1-f3.*Epoch.L3) ./ (f1-f3) - ...
-            (f1.*Epoch.C1+f3.*Epoch.C3) ./ (f1+f3);
-        HMW_13(q,sats) = HMW13_epoch .* ((f1-f3)./Const.C); % convert to [cyc] and save
-    end
-end
 
 
 %% --- Build observation vectors ---

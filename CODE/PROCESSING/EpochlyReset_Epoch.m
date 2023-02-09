@@ -26,6 +26,7 @@ end
 
 % time
 Epoch.gps_time = [];
+Epoch.gps_week = [];
 Epoch.mjd = [];
 % observations
 Epoch.obs = [];

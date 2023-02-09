@@ -1,4 +1,4 @@
-function dt_clock = corr2brdc_clk(corr, clk_time, Ttr, prn, gnss, IODE_eph, toe)
+function dt_clock = corr2brdc_clk(corr, clk_time, Ttr, prn, gnss_char, IODE_eph, toe)
 % Calculates correction to broadcast clocks (from navigation message/file) 
 % with data from correction stream.
 % 
@@ -7,7 +7,7 @@ function dt_clock = corr2brdc_clk(corr, clk_time, Ttr, prn, gnss, IODE_eph, toe)
 %   clk_time    time of clock corrections
 %   Ttr         transmission time [seconds of week]
 %   prn         satellite number, at the same time number of column
-%   gnss        string for identifying GNSS, 'GPS' / 'GLO' / 'GAL' / 'BDS'
+%   gnss_char   character identifying GNSS, 'G' / 'R' / 'E' / 'C'
 %   IODE_eph 	Issue of Data Ephemeris
 %   toe         time of ephemeris [seconds of week]
 % OUTPUT:
@@ -36,7 +36,7 @@ end
 % ---- Get and calculate clock correction to broadcast ephemerides ----
 if isempty(i_clk_coeff)
     dt_clock = 0;
-    fprintf('WARNING: PRN %.2d (%s) has no SSR corrections at second %8.2f               \n', prn, gnss,  Ttr)
+    fprintf('WARNING: %s%.2d, no SSR clock                            \n', gnss_char, prn)
 else
     time_corr = clk_time(i_clk_coeff); 	% get time of SSR correction from stream
     dt = Ttr - time_corr; 	% time difference between transmission time and clock correction from stream
@@ -45,7 +45,7 @@ else
     %    - for highly-precise positioning: 5sec or smaller
     if abs(dt) > DEF.THRESHOLD_corr2brdc_clk_dt
         dt_clock = 0;
-        fprintf('WARNING: PRN %.2d (%s) has no closely in time SSR corrections at second %8.2f           \n', prn, gnss, Ttr)
+        fprintf('WARNING: %s%.2d, no close SSR clock                        \n', gnss_char, prn)
     else
         a0 = corr.c0(i_clk_coeff,prn);
         a1 = corr.c1(i_clk_coeff,prn);

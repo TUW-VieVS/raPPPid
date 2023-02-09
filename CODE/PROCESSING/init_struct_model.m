@@ -1,9 +1,10 @@
-function model = init_struct_model(m, n)
+function model = init_struct_model(m, n, k)
 % Function to initialize the struct 'model'
 %
 % INPUT:
 %   m		number of satellites of current epoch
 %   n		number of frequencies which are processed
+%   k       number of input frequencies
 % OUTPUT:
 %   model	struct, all fields initialized
 %
@@ -47,6 +48,7 @@ model.dX_solid_tides_corr = NaN(m,n);   % Correction for Solid Earth Tides proje
 model.dX_ocean_loading    = NaN(m,n); 	% Correction for ocean loading projected on the Line of sight
 model.dX_GDV   = NaN(m,n);              % Correction for group delay variations
 
+model.los_APC = NaN(m,k);               % line-of-sight correction due to antenna phase corrections
 model.dX_PCO_rec_corr  = NaN(m,n); 		% Receiver Antenna Phase Center Offset correction
 model.dX_PCV_rec_corr  = NaN(m,n); 		% Receiver Antenna Phase Center Variation correction
 model.dX_ARP_ECEF_corr = NaN(m,n);      % Receiver Antenna Reference Point correction

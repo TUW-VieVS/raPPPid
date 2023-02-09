@@ -34,9 +34,15 @@ function [mfh, mfw] = vmf3(ah, aw, mjd, lat, lon, el)
 %
 % 2016-03-14: m-file created
 % 2019-08-26: input change from zd to el [MFG]
+% 2023-01-26: added return if el == 0
 % 
 %--------------------------------------------------------------------------
 
+
+if el == 0      % elevation is zero (e.g., satellite has no orbit data)
+    mfh = 0; mfw = 0;
+    return      % to avoid modeling absurdly big tropospheric delay values 
+end
 
 % convert mjd to doy
 

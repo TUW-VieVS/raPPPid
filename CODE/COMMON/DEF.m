@@ -34,7 +34,7 @@ classdef DEF
         
         % time [s] which satellites is excluded if no broadcast ephemeris
         % are found
-        EXCLUDE_TIME = 600;     % [s]
+        EXCLUDE_TIME = 300;     % [s]
         
         % default observation type ranking
         RANKING_GPS = 'WCDPSLXYMNDIQF';

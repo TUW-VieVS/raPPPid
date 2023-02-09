@@ -25,7 +25,7 @@ function [] = DownloadDaily30sEUREF(stations, doys, year)
 URL_host = 'gnss.bev.gv.at:21';
 
 % check input of variable year
-if numel(year) > 1
+if numel(year) > 1 || year < 1900
     errordlg('Check input for year!', 'Error');
     return
 end

@@ -94,7 +94,8 @@ for i = 1:numel(Epoch.sats)         % loop over satellites to find the column of
     
     % look for column of current satellite in brdc ephemeris
     if ~isempty(idx_sat)                    % check if satellite is included in Broadcast-Ephemeris
-        dt = abs(t - Eph_sat(r_toc,:));  	% diff. transmission time to times of satellite ephemeris
+        dt = t - Eph_sat(r_toc,:);          % diff. transmission time to times of satellite ephemeris
+        dt(dt < 0) = [];                    % do not consider future broadcast ephemeris
         if ~corr2brdc
             % --- orbit and clock correction not from correction stream
             k = idx_sat(dt == min(dt)); 	% column of ephemeris, take nearest
@@ -106,7 +107,7 @@ for i = 1:numel(Epoch.sats)         % loop over satellites to find the column of
                 % are equal to the stream IODEs
                 k = idx_sat(Eph_sat(r_iode, :) == stream_IODE);
                 if numel(k) > 1
-                    k = k(1);                   % in case of multiple suitable datasets take first
+                    k = k(1);              	% in case of multiple suitable datasets take first
                 end
             end
         end
@@ -144,8 +145,6 @@ for i = 1:numel(Epoch.sats)         % loop over satellites to find the column of
     
     
 end     % end of loop over satellites
-
-
 
 
 

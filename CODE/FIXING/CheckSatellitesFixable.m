@@ -59,8 +59,6 @@ if ~isempty(excl_prn)
     Epoch.fixable(boolean(ind),:) = false;
 end
 
-% ||| add option in GUI and here to exclude specific satellites only from
-% fixing?
 
 
 

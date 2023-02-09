@@ -36,7 +36,7 @@ switch host
 end
 
 % check input of variable year
-if numel(year) > 1
+if numel(year) > 1 || year < 1900
     errordlg('Check input for year!', 'Error');
     return
 end

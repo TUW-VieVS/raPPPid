@@ -22,6 +22,7 @@ function [model, Epoch] = modelApproximately(settings, input, Epoch, param, obs,
 pos_XYZ = param(1:3);
 pos_WGS84 = cart2geo(param(1:3));
 num_freq = settings.INPUT.proc_freqs;
+n_num_frq  = settings.INPUT.num_freqs;  % number of input frequencies (e.g. 2 for IF-LC)
 frqs = 1:num_freq;
 num_sat = Epoch.no_sats;     % number of satellites in current epoch
 % indices of processed frequencies
@@ -35,7 +36,7 @@ idx_frqs_bds = settings.INPUT.bds_freq_idx(frqs);
 % ----- Epoch-specific corrections -----
 % corrections which are valid for all satellites but only for a specific epoch
 
-model = init_struct_model(num_sat, num_freq);  	% Init struct model
+model = init_struct_model(num_sat, num_freq, n_num_frq);  	% Init struct model
 % --- Calculate hour and approximate sun and moon position for epoch ---
 h = mod(Epoch.gps_time,86400)/3600;
 model.sunECEF  = sunPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h);

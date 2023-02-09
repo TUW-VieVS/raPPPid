@@ -111,9 +111,9 @@ no_eph_glo = sum(CharGNSS == 'R');
 no_eph_gal = sum(CharGNSS == 'E');
 no_eph_bds = sum(CharGNSS == 'C');
 
-Eph_GPS = zeros(28, no_eph_gps);
+Eph_GPS = zeros(29, no_eph_gps);
 Eph_GLO = zeros(19, no_eph_glo);
-Eph_GAL = zeros(28, no_eph_gal);
+Eph_GAL = zeros(29, no_eph_gal);
 Eph_BDS = zeros(28, no_eph_bds);
 
 
@@ -210,7 +210,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Eph_GPS( 2,i_gps) = af2;        % [s/s^2], sv clock drift rate
         Eph_GPS( 3,i_gps) = M0;         % [rad]
         Eph_GPS( 4,i_gps) = roota;      % [sqrt(m)]
-        Eph_GPS( 5,i_gps) = Delta_n;     % [rad/s]
+        Eph_GPS( 5,i_gps) = Delta_n;    % [rad/s]
         Eph_GPS( 6,i_gps) = ecc;        % Eccentricity
         Eph_GPS( 7,i_gps) = omega;      % [rad]
         Eph_GPS( 8,i_gps) = cuc;        % [rad]
@@ -234,6 +234,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Eph_GPS(26,i_gps) = codes;      % codes on L2 channel
         Eph_GPS(27,i_gps) = weekno;     % gps-week, continuos number
         Eph_GPS(28,i_gps) = accuracy;   % [m], sat in space accuracy
+        Eph_GAL(29,i_gal) = tom;        % [sow]
         i_gps = i_gps + 1;
     end
     
@@ -407,8 +408,8 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         line = fData{i};
         lData = textscan(line,'%f'); lData = lData{1};
         tom = lData(1);             % transmission time of message [sow]
-        % save data
         
+        % save data
         Eph_GAL( 1,i_gal) = prn;        % satellite number
         Eph_GAL( 2,i_gal) = af2;        % [s/s^2], sv clock drift rate
         Eph_GAL( 3,i_gal) = M0;         % [rad]
@@ -437,6 +438,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Eph_GAL(26,i_gal) = datasource;	% ???????????
         Eph_GAL(27,i_gal) = weekno;     % galileo-week
         Eph_GAL(28,i_gal) = sisa;       % signal in space accuracy [m]
+        Eph_GAL(29,i_gal) = tom;        % [sow]
         i_gal = i_gal + 1;
     end
     

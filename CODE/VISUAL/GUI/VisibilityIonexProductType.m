@@ -32,6 +32,9 @@ switch IONEX_source
     case 'IGS'
         handles.radiobutton_ionex_rapid_highrate.Enable = 'Off';
         
+    case 'IGS RT GIM'
+        set(handles.buttongroup_models_ionosphere_ionex_type,'Visible','Off');
+        
     case 'Regiomontan'
         set(handles.buttongroup_models_ionosphere_ionex_type,'Visible','Off');
         
@@ -48,6 +51,9 @@ switch IONEX_source
         handles.radiobutton_ionex_rapid_highrate.Enable = 'Off';
         
     case 'ESA'
+        handles.radiobutton_ionex_rapid_highrate.Enable = 'Off';
+        
+    case 'GFZ'
         handles.radiobutton_ionex_rapid_highrate.Enable = 'Off';
         
     case 'JPL'

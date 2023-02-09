@@ -1,5 +1,5 @@
 % load precise ephemeris file
-orbfile = '..\DATA\ORBIT\2022\261\WUM0MGXFIN_20222610000_01D_15M_ORB.SP3';
+orbfile = '..\DATA\ORBIT\2022\345\COD0MGXFIN_20223450000_01D_05M_ORB.SP3';
 [GPS, GLO, GAL, BDS] = read_precise_eph(orbfile);
 
 % create gif file
@@ -8,14 +8,15 @@ filename = 'Animated.gif';
 % set marker and font size and delay time of gif and seconds of day
 s = 80;             % marker size
 fs = 6;             % font size
-dtime = 0.20;       % speed of gif
-m_int = 15;              % orbit interval, [min]
+dtime = 0.10;       % speed of gif
+m_int = 5;              % orbit interval, [min]
 axlim = [-4 4] *1e7;    % axes limits
 b_col = 'w';        % color background       
 t_col = 'k';        % text color
 
 % create plot
 h = figure;
+set(gcf, 'Position',  [100, 100, 500, 400])
 h = style_plot(h, axlim);
 set(gcf,'color',b_col);
 set(gca,'Color',b_col);
@@ -31,49 +32,49 @@ imwrite(imind,cm,filename,'gif', 'Loopcount',inf, 'DelayTime',dtime);
 
 m = 0;
 for q = 1:1:size(GPS.X,1)
-%     % plot gps satellites
-%     for i = 1:size(GPS.X,2)
-%         X_sat = GPS.X(q,i);
-%         Y_sat = GPS.Y(q,i);
-%         Z_sat = GPS.Z(q,i);
-%         notnan = ~isnan(X_sat);
-%         if notnan
-%             % plot position
-%             scatter3(X_sat,Y_sat,Z_sat, s, 'MarkerEdgeColor',[255, 0, 0]/255, 'Marker', '.', 'MarkerFaceColor','none')
-%             % plot PRN
+    % plot gps satellites
+    for i = 1:size(GPS.X,2)
+        X_sat = GPS.X(q,i);
+        Y_sat = GPS.Y(q,i);
+        Z_sat = GPS.Z(q,i);
+        notnan = ~isnan(X_sat);
+        if notnan
+            % plot position
+            scatter3(X_sat,Y_sat,Z_sat, s, 'MarkerEdgeColor',[255, 0, 0]/255, 'Marker', '.', 'MarkerFaceColor','none')
+            % plot PRN
 %             text(X_sat, Y_sat, Z_sat, ['G', sprintf('%02.0f',i)], 'FontSize',fs, 'Color', t_col);
-%         end
-%     end
+        end
+    end
     
-%     % plot glonass satellites
-%     for i = 1:size(GLO.X,2)
-%         X_sat = GLO.X(q,i);
-%         Y_sat = GLO.Y(q,i);
-%         Z_sat = GLO.Z(q,i);
-%         scatter3(X_sat,Y_sat,Z_sat, s, 'MarkerEdgeColor',[0, 255, 255]/255, 'Marker', '.', 'MarkerFaceColor','none')
+    % plot glonass satellites
+    for i = 1:size(GLO.X,2)
+        X_sat = GLO.X(q,i);
+        Y_sat = GLO.Y(q,i);
+        Z_sat = GLO.Z(q,i);
+        scatter3(X_sat,Y_sat,Z_sat, s, 'MarkerEdgeColor',[0, 255, 255]/255, 'Marker', '.', 'MarkerFaceColor','none')
 %         text(X_sat, Y_sat, Z_sat, ['R', sprintf('%02.0f',i)], 'FontSize',fs, 'Color', t_col);
-%     end
-%     
-%     % plot galileo satellitesedit 
-%     for i = 1:size(GAL.X,2)
-%         X_sat = GAL.X(q,i);
-%         Y_sat = GAL.Y(q,i);
-%         Z_sat = GAL.Z(q,i);
-%         scatter3(X_sat,Y_sat,Z_sat, s, 'MarkerEdgeColor',[0, 0, 255]/255, 'Marker', '.', 'MarkerFaceColor','none')
+    end
+    
+    % plot galileo satellitesedit 
+    for i = 1:size(GAL.X,2)
+        X_sat = GAL.X(q,i);
+        Y_sat = GAL.Y(q,i);
+        Z_sat = GAL.Z(q,i);
+        scatter3(X_sat,Y_sat,Z_sat, s, 'MarkerEdgeColor',[0, 0, 255]/255, 'Marker', '.', 'MarkerFaceColor','none')
 %         text(X_sat, Y_sat, Z_sat, ['E', sprintf('%02.0f',i)], 'FontSize',fs, 'Color', t_col);
-%     end
-%     
+    end
+    
     % plot beidou satellites
-    for i = 6:size(BDS.X,2)     % ignore GEO satellites
+    for i = 1:size(BDS.X,2)     % ignore GEO satellites
         X_sat = BDS.X(q,i);
         Y_sat = BDS.Y(q,i);
         Z_sat = BDS.Z(q,i);
         scatter3(X_sat,Y_sat,Z_sat, s, 'MarkerEdgeColor',[255, 0, 255]/255, 'Marker', '.', 'MarkerFaceColor','none')
-        text(X_sat, Y_sat, Z_sat, ['C', sprintf('%02.0f',i)], 'FontSize',fs, 'Color', t_col);
+%         text(X_sat, Y_sat, Z_sat, ['C', sprintf('%02.0f',i)], 'FontSize',fs, 'Color', t_col);
     end
     
     % plot time
-    DateVector = [2022,09,18, floor(m/60), mod(m,60), 00];
+    DateVector = [2022,12,11, floor(m/60), mod(m,60), 00];
     text(0, -4*1e7, 3*1e7, datestr(DateVector), 'FontSize',fs+4, 'Color', t_col)
     m = m + m_int;
     

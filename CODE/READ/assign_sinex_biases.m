@@ -1,6 +1,6 @@
 function [obs] = assign_sinex_biases(obs, input, settings)
-% Finds the correct DCB and/or UPD correction from Multi-GNSS-Sinex-Bias
-% and assigns it to struct obs.C1_bias/L1_bias/...
+% Finds the correct biases from a Sinex BIAS file and assigns it to struct 
+% obs.C1_bias/L1_bias/...
 % If needed (DSB) biases are missing it is attempted to calculate them from
 % the existing biases.
 % The general idea to apply the biases is to convert the observation to C1C

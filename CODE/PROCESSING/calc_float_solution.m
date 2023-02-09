@@ -119,19 +119,17 @@ while it < 15                           % Start iteration (because of linearizat
     % --- create covariance matrix of observations
     Adjust = createObsCovariance(Adjust, Epoch, settings, model.el);
     
-%     % --- check if too many satellites have been excluded because of e.g. 
-%     % elevation cutoff, check_omc,...
-%     % ||| implement at some point
-%     n_gps = sum(Epoch.gps & ~Epoch.exclude);
-%     n_glo = sum(Epoch.glo & ~Epoch.exclude);
-%     n_gal = sum(Epoch.gal & ~Epoch.exclude);
-%     n_bds = sum(Epoch.bds & ~Epoch.exclude);
-%     bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, ...
-%         n_gps, n_glo, n_gal, n_bds, settings.INPUT.use_GNSS);
-%     if ~bool_enough_sats
-          % ||| what to do here????
-%         break
-%     end    
+    % --- check if too many satellites have been excluded because of e.g. 
+    % elevation cutoff, check_omc, missing broadcast corrections...
+    n_gps = sum(Epoch.gps & ~Epoch.exclude);    n_glo = sum(Epoch.glo & ~Epoch.exclude);
+    n_gal = sum(Epoch.gal & ~Epoch.exclude);    n_bds = sum(Epoch.bds & ~Epoch.exclude);
+    bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, ...
+        n_gps, n_glo, n_gal, n_bds, settings.INPUT.use_GNSS);
+    if ~bool_enough_sats
+        fprintf(2, 'Not enough satellites for adjustment (Epoch %d)\n', Epoch.q)
+        Adjust.res = zeros(2*no_sats*settings.INPUT.proc_freqs,1);
+        return
+    end    
     
     
     

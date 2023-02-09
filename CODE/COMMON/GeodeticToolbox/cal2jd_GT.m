@@ -8,7 +8,7 @@ function jd = cal2jd_GT(yr, mn, dy)
 % Usage:   jd=cal2jd_GT(yr,mn,dy)
 % Input:   yr - calendar year (4-digit including century)
 %          mn - calendar month
-%          dy - calendar day (including factional day)
+%          dy - calendar day (including fractional day)
 % Output:  jd - jJulian date
 
 % Copyright (c) 2011, Michael R. Craymer

@@ -33,7 +33,7 @@ function settings = PPP_main(settings)
 if exist('settings', 'var')     % PPP_main.m started from GUI or with settings as input
     settings.PROC.output_dir = createResultsFolder(settings.INPUT.file_obs, settings.PROC.name);
 else                            % PPP_main.m started without settings as input
-    [FileName, PathName] = uigetfile('settings*.mat', 'Select a Settings File', Path.RESULTS');
+    [FileName, PathName] = uigetfile('*.mat', 'Select a Settings File', Path.RESULTS');
     if ~FileName;       return;         end         % stop if no file selected
     PathName = relativepath(PathName);              % convert absolute path to relative path
     load([PathName, '/', FileName], 'settings');    % load selected settings.mat-file
@@ -284,12 +284,11 @@ for q = q_range         % loop over epochs
     end
     
     % --- Build LCs and processed observations -> Epoch.code/.phase ---
-    [Epoch, HMW_12, HMW_23, HMW_13, storeData] = ...
-        create_LC_observations(Epoch, settings, HMW_12, HMW_23, HMW_13, storeData, q);
+    [Epoch, storeData] = create_LC_observations(Epoch, settings, storeData, q);
     
     
     % -+-+-+-+-+-START CALCULATION EPOCH-WISE SOLUTION-+-+-+-+-+- 
-    [Adjust, Epoch, model, obs] = ...
+    [Adjust, Epoch, model, obs, HMW_12, HMW_23, HMW_13] = ...
         ZD_processing(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, input, satellites, obs);
        
     % Save results from epoch-wise processing

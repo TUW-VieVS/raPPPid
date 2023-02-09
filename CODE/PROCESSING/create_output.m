@@ -127,8 +127,8 @@ if settings.EXP.results_float
     fprintf(fid,'%s\n','# (7) sigma receiver position: x [m]');
     fprintf(fid,'%s\n','# (8) sigma receiver position: y [m]');
     fprintf(fid,'%s\n','# (9) sigma receiver position: z [m]');
-    fprintf(fid,'%s\n','# (10) receiver position: phi [°]');
-    fprintf(fid,'%s\n','# (11) receiver position: lambda [°]');
+    fprintf(fid,'%s\n','# (10) receiver position: latitude [°]');
+    fprintf(fid,'%s\n','# (11) receiver position: longitude [°]');
     fprintf(fid,'%s\n','# (12) receiver position: height [m]');
     fprintf(fid,'%s\n','# (13) receiver position: x_UTM [m]');
     fprintf(fid,'%s\n','# (14) receiver position: y_UTM [m]');

@@ -67,6 +67,7 @@ obs.total_epochs = tot_eps;         % total number of epochs
 %% Epoch
 % time
 Epoch.gps_time = [];
+Epoch.gps_week = [];
 Epoch.mjd = [];
 Epoch.q = 1;
 % observations

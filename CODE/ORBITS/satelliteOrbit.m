@@ -41,7 +41,7 @@ if isGPS
         IODE = Eph_brdc(24,k);   % Issue of Data Ephemeris
     end
     if settings.ORBCLK.corr2brdc_orb
-        sys = 'GPS';
+        sys = 'G';
         corr2brdc_orbs = input.ORBCLK.corr2brdc_GPS;
     end
     
@@ -54,7 +54,7 @@ elseif isGLO
         IODE = Eph_brdc(19,k);      % calculated during read in
     end
     if settings.ORBCLK.corr2brdc_orb
-        sys = 'GLO';
+        sys = 'R';
         corr2brdc_orbs = input.ORBCLK.corr2brdc_GLO;
     end
     
@@ -67,7 +67,7 @@ elseif isGAL
         IODE = Eph_brdc(24,k);    % Issue of Data Ephemeris
     end
     if settings.ORBCLK.corr2brdc_orb
-        sys = 'GAL';
+        sys = 'E';
         corr2brdc_orbs = input.ORBCLK.corr2brdc_GAL;
     end
     
@@ -80,7 +80,7 @@ elseif isBDS
         IODE = Eph_brdc(24,k);     % ||| check!
     end
     if settings.ORBCLK.corr2brdc_orb
-        sys = 'BDS';
+        sys = 'C';
         corr2brdc_orbs = input.ORBCLK.corr2brdc_BDS;
     end   
 end

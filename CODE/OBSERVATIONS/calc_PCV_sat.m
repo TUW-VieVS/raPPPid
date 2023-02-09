@@ -1,4 +1,5 @@
-function dX_PCV_sat = calc_PCV_sat(PCV_sat, SatOr_ECEF, los0, j_idx, iono_model, f1, f2, f3, X_sat, X_rec)
+function [dX_PCV_sat, los_PCO_s] = ...
+    calc_PCV_sat(PCV_sat, SatOr_ECEF, los0, j_idx, iono_model, f1, f2, f3, X_sat, X_rec)
 % This function calculates the range correction caused by the stellite
 % phase center variations. Azimuthal dependency is ignored because during
 % test no improvement could be detected.
@@ -13,8 +14,8 @@ function dX_PCV_sat = calc_PCV_sat(PCV_sat, SatOr_ECEF, los0, j_idx, iono_model,
 %   iono_model      ionosphere model of processing
 %   f1,f2,f3        frequencies current satellites
 % OUTPUT:
-%	dX_PCV_sat      range correction for each frequency
-%
+%	dX_PCV_sat      range correction for processed frequencies (e.g. IF LC)
+%   los_PCO_s       range correction for raw frequencies (e.g., L1, L2, L5)
 % Revision:
 %   ...
 %
@@ -22,7 +23,7 @@ function dX_PCV_sat = calc_PCV_sat(PCV_sat, SatOr_ECEF, los0, j_idx, iono_model,
 % *************************************************************************
 
 
-dX_PCV = [0 0 0];
+los_PCO_s = [0 0 0];
 
 % calculate zenith distance from satellite antenna to receiver
 z_axis = SatOr_ECEF(:,3);           % pointing from CoM to earth center
@@ -43,15 +44,15 @@ for j = j_idx'
     sat_PCV_zen = PCV_sat_frq(1,2:end);         % grid in zenith angle
     PCV_sat_frq = PCV_sat_frq(2:end, 2:end);	% PCV data for current frequency
     PCV_sat_frq = mean(PCV_sat_frq,1);          % take mean over azimuth (instead of considered azimuthal dependency)
-    dX_PCV(j) = interp1(sat_PCV_zen, PCV_sat_frq, z_sat);     % linear interpolation
+    los_PCO_s(j) = interp1(sat_PCV_zen, PCV_sat_frq, z_sat);     % linear interpolation
 end
 
 % convert to processed frequency
 switch iono_model
     case '2-Frequency-IF-LCs'
-        dX_PCV_sat(1) = (f1^2*dX_PCV(j_idx(1))-f2^2*dX_PCV(j_idx(2))) / (f1^2-f2^2);
+        dX_PCV_sat(1) = (f1^2*los_PCO_s(j_idx(1))-f2^2*los_PCO_s(j_idx(2))) / (f1^2-f2^2);
         if numel(j_idx) == 3
-            dX_PCV_sat(2) = (f2^2*dX_PCV(j_idx(2))-f3^2*dX_PCV(j_idx(3))) / (f2^2-f3^2);
+            dX_PCV_sat(2) = (f2^2*los_PCO_s(j_idx(2))-f3^2*los_PCO_s(j_idx(3))) / (f2^2-f3^2);
         end
     case '3-Frequency-IF-LC'
         y2 = f1.^2 ./ f2.^2;            % coefficients of 3-Frequency-IF-LC
@@ -59,9 +60,9 @@ switch iono_model
         e1 = (y2.^2 +y3.^2  -y2-y3) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
         e2 = (y3.^2 -y2.*y3 -y2 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
         e3 = (y2.^2 -y2.*y3 -y3 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-        dX_PCV_sat(1) = e1.*dX_PCV(j_idx(1)) + e2.*dX_PCV(j_idx(2)) + e3.*dX_PCV(j_idx(3));
+        dX_PCV_sat(1) = e1.*los_PCO_s(j_idx(1)) + e2.*los_PCO_s(j_idx(2)) + e3.*los_PCO_s(j_idx(3));
     otherwise        % e.g., uncombined model
-        dX_PCV_sat = dX_PCV;
+        dX_PCV_sat = los_PCO_s;
 end
 
 

@@ -65,7 +65,7 @@ if ~prebatch
     jd = cal2jd_GT(rheader.first_obs(1), rheader.first_obs(2), rheader.first_obs(3));
     [doy, yyyy] = jd2doy_GT(jd);
     [gpsweek, ~, ~] = jd2gps_GT(jd);
-    windowname = [rheader.station ' ' sprintf('%04.0f', yyyy) '/' sprintf('%02.0f', doy)];
+    windowname = [rheader.station ' ' sprintf('%04.0f', yyyy) '/' sprintf('%03.0f', doy)];
 else
     windowname = 'Error';
 end
@@ -540,6 +540,12 @@ if (strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmp
     valid_settings = false; return
 end
 
+% Multipath detection makes only sense with high observation interval
+if settings.OTHER.mp_detection && ~isempty(rheader.interval) && rheader.interval > 5
+    msgbox({'Be careful: Observation interval might',  'be too low for Multipath detection!'}, 'MP Detection', 'help')
+end
+
+
 
 % ||| to be continued
 
@@ -634,12 +640,21 @@ if settings.AMBFIX.bool_AMBFIX
         msgbox('CNES integer recovery clock approach might need CODE MGEX biases!', windowname);
     end
     
-    % CNES postprocessed biases need GFZ orbits and clocks
-    if settings.ORBCLK.bool_precise && strcmp(settings.BIASES.code, 'CNES postprocessed')&& ~strcmp(settings.ORBCLK.prec_prod, 'GFZ')
-        errordlg('CNES postprocessed biases need GFZ orbit and clock products!', windowname);
+    %     % CNES postprocessed biases need GFZ orbits and clocks
+    %     if settings.ORBCLK.bool_precise && strcmp(settings.BIASES.code, 'CNES postprocessed')&& ~strcmp(settings.ORBCLK.prec_prod, 'GFZ')
+    %         errordlg('CNES postprocessed biases need GFZ orbit and clock products!', windowname);
+    %         valid_settings = false; return
+    %     end
+    
+    % CNES started providing postprocessed product in an archive containing
+    % all necessary files.
+    if strcmp(settings.BIASES.code, 'CNES postprocessed')
+        errordlg({'CNES now provides post-processed products as an archive!', 'Download that archive, extract it, and manually select the files.', 'Try the link in command window.'}, windowname);
+        fprintf(['\nhttp://www.ppp-wizard.net/products/POST_PROCESSED/post_' sprintf('%04.0f', yyyy) sprintf('%03.0f', doy) '.tgz\n\n'])
         valid_settings = false; return
     end
-    
+
+
     % CODE MGEX needs its own ANTEX file
     if ~strcmp(settings.BIASES.phase, 'SGG FCBs') && settings.ORBCLK.bool_precise && prec_prod_CODE_MGEX 
         if ~strcmp(settings.OTHER.antex, 'Manual choice:')

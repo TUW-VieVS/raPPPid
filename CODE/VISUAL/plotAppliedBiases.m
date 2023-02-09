@@ -188,11 +188,6 @@ function output_txt = vis_customdatatip_applBiases(obj,event_obj)
 %
 % *************************************************************************
 
-if isempty(event_obj.Target.DisplayName)
-    output_txt = 'no info';
-    return
-end
-
 
 % get position of click (x-value = time [sod], y-value = depends on plot)
 pos = get(event_obj,'Position');

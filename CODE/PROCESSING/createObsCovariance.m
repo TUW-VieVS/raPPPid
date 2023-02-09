@@ -136,6 +136,7 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') && Adjust.cons
         iono_var = v_end;
     end
     % create covariance and weigth-matrix
+    P_fac = sin(elev*pi/180).^2;
     Q_iono = diag(iono_var ./ P_fac(:,1));
     Q = blkdiag(Q, Q_iono);
     P = blkdiag(P, inv(Q_iono));

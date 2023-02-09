@@ -52,30 +52,20 @@ switch ext
         
     case '.pos'
         % text file with columns:
-        % yyyy/mm/dd | hh:mm:ss.sss | lat [°] | lon [°] | height [m] | ignore
+        % yyyy/mm/dd | hh:mm:ss.sss | lat [°] | lon [°] | height [m] | valid
         % time is already GPS time
         fid = fopen(filepath);
         header = fgetl(fid);
         
-        switch header
-            case '%  GPST                   lat(deg)      lon(deg)         h(m)      OK' 
-                DATA = textscan(fid,'%f/%f/%f %f:%f:%f %f %f %f %f', 'HeaderLines', 0);
-                fclose(fid);
-                lat_wgs84 = DATA{:,7} / 180 * pi;   % convert [°] to [rad]
-                lon_wgs84 = DATA{:,8} / 180 * pi;   % convert [°] to [rad]
-                h_wgs84   = DATA{:,9};
-                sod_true = DATA{:,4} * 3600 + DATA{:,5}*60 + DATA{:,6};     % already GPS time
-                [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
-                
-            otherwise
-                pos_ref_geo.ph = NaN;
-                pos_ref_geo.la = NaN;
-                pos_ref_geo.h  = NaN;
-                North_ref = NaN;
-                East_ref = NaN;
-                errordlg('Implement read-in function! Check LoadReferenceTrajectory.', 'Error');
-                return
-        end
+        swit
+        
+        DATA = textscan(fid,'%f/%f/%f %f:%f:%f %f %f %f %f', 'HeaderLines', 0);
+        fclose(fid);
+        lat_wgs84 = DATA{:,7} / 180 * pi;   % convert [°] to [rad]
+        lon_wgs84 = DATA{:,8} / 180 * pi;   % convert [°] to [rad]
+        h_wgs84   = DATA{:,9};
+        sod_true = DATA{:,4} * 3600 + DATA{:,5}*60 + DATA{:,6};     % already GPS time       
+        [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
         
     otherwise
         pos_ref_geo.ph = NaN;
