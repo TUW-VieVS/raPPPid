@@ -203,7 +203,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         i = i+1;
         line = fData{i};
         lData = textscan(line,'%f'); lData = lData{1};
-        tom = lData(1);         % transmission time of message [sow]
+        tom = lData(1);             % transmission time of message [sow]
         % save data
         
         Eph_GPS( 1,i_gps) = prn;        % satellite number
@@ -234,7 +234,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Eph_GPS(26,i_gps) = codes;      % codes on L2 channel
         Eph_GPS(27,i_gps) = weekno;     % gps-week, continuos number
         Eph_GPS(28,i_gps) = accuracy;   % [m], sat in space accuracy
-        Eph_GAL(29,i_gal) = tom;        % [sow]
+        Eph_GPS(29,i_gps) = tom;        % [sow]
         i_gps = i_gps + 1;
     end
     

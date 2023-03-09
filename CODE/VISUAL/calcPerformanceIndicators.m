@@ -48,10 +48,10 @@ d3D_n = d3D(TIME == n);                 % 3D position error after n
 %% Calculation
 if PlotStruct.float
     % average convergence time
-    average_conv = nanmean(conv);               % [minutes]
+    average_conv = mean(conv, 'omitnan');               % [minutes]
     
     % median convergence time
-    median_conv  = nanmedian(conv);             % [minutes]
+    median_conv  = median(conv, 'omitnan');             % [minutes]
     
     % percentage of no convergence
     not_conv = sum(isnan(conv) | conv > n_min);
@@ -59,10 +59,10 @@ if PlotStruct.float
     
 elseif PlotStruct.fixed
     % average time to correct fix
-    average_ttff = nanmean(TTCF);               % [minutes]
+    average_ttff = mean(TTCF, 'omitnan');               % [minutes]
     
     % median time to correct fix
-    median_ttff  = nanmedian(TTCF);             % [minutes]
+    median_ttff  = median(TTCF, 'omitnan');             % [minutes]
     
     % percentage no correct fix after n minutes
     no_fix = sum(isnan(TTCF) | TTCF > n); 
@@ -70,20 +70,20 @@ elseif PlotStruct.fixed
 end
 
 % median 3D position error for all epochs
-median_3D    = nanmedian(d3D(:)) * 100;         % [cm]
+median_3D    = median(d3D(:), 'omitnan') * 100;         % [cm]
 
 % median 3D position error after n minutes
-median_3D_n  = nanmedian(d3D_n(:)) * 100;       % [cm]
+median_3D_n  = median(d3D_n(:), 'omitnan') * 100;       % [cm]
 
 % average 3D position error after n minutes
-average_3D_n = nanmean(d3D_n(:)) * 100;         % [cm]
+average_3D_n = mean(d3D_n(:), 'omitnan') * 100;         % [cm]
 
 % average 2D position error after n minutes
-average_2D_n = nanmean(d2D_n(:)) * 100;         % [cm]
+average_2D_n = mean(d2D_n(:), 'omitnan') * 100;         % [cm]
 
 % median of the ZTD difference
 ZTD = abs(d.ZTD(:));
-ZTD_50 = nanmedian(ZTD) * 100;        % [cm]
+ZTD_50 = median(ZTD, 'omitnan') * 100;        % [cm]
 
 % 68% quantile of the ZTD difference
 ZTD_68 = quantile(ZTD, .68) * 100;    % [cm]

@@ -128,7 +128,7 @@ for i_sat = 1:num_sat
     % initialize
     dT_rel = 0;     dt_rx = 0;      mfw_VMF3 = [];
     % get cutoff (could be already set!) and satellite status
-    cutoff = Epoch.exclude(i_sat);	status = Epoch.sat_status(i_sat);
+    exclude = Epoch.exclude(i_sat);	status = Epoch.sat_status(i_sat);
     % receiver clock offset [s]
 	dt_rx = (param(5) + isGLO*param(8) + isGAL*param(11) + isBDS*param(14))/Const.C;      
     
@@ -174,7 +174,7 @@ for i_sat = 1:num_sat
     
     % --- Ttr....transmission time/time of emission
     % code_dist = Epoch.code(i_sat);            % before 14.1.2021
-    code_dist = nanmean(Epoch.code(i_sat,:));   % should be more stable
+    code_dist = mean(Epoch.code(i_sat,:), 'omitnan');   % should be more stable
     tau = code_dist/Const.C;    % approximate signal runtime from sat. to rec.
     % time of emission [sow (seconds of week)] = time of obs. - runtime
     Ttr = Epoch.gps_time - tau;       	
@@ -182,19 +182,20 @@ for i_sat = 1:num_sat
     % --- Get column of broadcast ephemerides for current satellite ---
     k = Epoch.BRDCcolumn(prn);
     if settings.ORBCLK.bool_brdc && isnan(k)      % no ephemeris
-        fprintf('No broadcast orbit data for satellite %d in SOW %.3f              \n', prn, Ttr);
-        cutoff = true;      % eliminate satellite
-        status = 15;
+%         fprintf('No broadcast orbit data for satellite %d in SOW %.3f              \n', prn, Ttr);
+        Epoch.exclude(i_sat,frqs) = true; 	% eliminate satellite
+        Epoch.sat_status(i_sat) = 15;
         Epoch.tracked(prn) = 1;
+        continue
     end
     
     % --- Clock correction: with navigation data or precise clocks from .clk-file ---
     % Clock correction in seconds, accurate enough with approximate Ttr
     dT_sat = 0;      % just for simulated data when satellite clock is perfect
-    [dT_sat, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings);
+    [dT_sat, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, Epoch.corr2brdc_clk(:,prn));
     if isnan(dT_sat) || dT_sat == 0 || noclock       % no clock correction
         % if ~settings.INPUT.bool_parfor; fprintf('No precise clock data for satellite %d in SOW %0.3f              \n', prn, Ttr); end
-        cutoff = true;                      % eliminate satellite
+        exclude = true;                      % eliminate satellite
         status = 5;
         Epoch.tracked(prn) = 1;             % set epoch counter for this satellite to 1
     end
@@ -206,8 +207,8 @@ for i_sat = 1:num_sat
         tau = (code_dist + Const.C*dT_sat_rel)/Const.C;     % corrected signal runtime 8s9
         Ttr = Epoch.gps_time - tau;   	% time of emission = time of obs. - runtime
         
-        % --- Satellite-Orbit: precise ephemeris (.sp3-file) or broadcast navigation data (perhabs + correction stream) ---
-        [X, V, cutoff, status] = satelliteOrbit(prn, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, cutoff, status);
+        % --- Satellite-Orbit: precise ephemeris (.sp3-file) or broadcast navigation data (perhaps + correction stream) ---
+        [X, V, exclude, status] = satelliteOrbit(prn, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, exclude, status, Epoch.corr2brdc_orb(:,prn));
         
         % --- correction of satellite ECEF position for earth rotation during runtime tau ---
         tau = tau - dt_rx;  % Correct tau for receiver clock error to avoid jumps in sat position
@@ -232,7 +233,7 @@ for i_sat = 1:num_sat
     % --- Azimuth, Elevation, zenith distance, cutoff-angle ---
     [az, elev] = topocent(pos_XYZ,X_rot-pos_XYZ); 	% calculate azimuth and elevation [°]
     if elev < settings.PROC.elev_mask            	% elevation is under cut-off-angle
-        cutoff = true;                              % eliminate satellite
+        exclude = true;                              % eliminate satellite
         status = 2;
     end   
     
@@ -245,9 +246,9 @@ for i_sat = 1:num_sat
     los0 = los/rho;                 % unit vector from receiver to satellite
     
     % --- Satellite Orientation ---
-    if ~settings.ORBCLK.bool_obx
+    if ~settings.ORBCLK.bool_obx || ~isfield(input.ORBCLK, 'OBX')
         SatOr_ECEF = getSatelliteOrientation(X_rot, model.sunECEF*1000);    % satellite orientation in ECEF
-    else
+    else    % attitude data from ORBEX file
         dt = abs(Ttr - input.ORBCLK.OBX.ATT.sow);
         if min(dt) < 60
             idx = (dt == min(dt));
@@ -498,9 +499,9 @@ for i_sat = 1:num_sat
         cos_phi = dot(X_rot,model.sunECEF*1000) / (norm(X_rot)*norm(model.sunECEF)*1000);   % angle between satellite and sun
         if cos_phi < 0 && (norm(X_rot)*sqrt(1-cos_phi^2)) < Const.RE
             if mod(Epoch.q, 100) == 0 && ~settings.INPUT.bool_parfor
-                fprintf('Warning! Eclipsing Satellite PRN %d \t                \n', prn)
+                fprintf('Eclipsing Satellite PRN %d \t                \n', prn)
             end
-            cutoff = true;              % eliminate satellite
+            exclude = true;              % eliminate satellite
             status = 13;
         end
     end
@@ -574,7 +575,7 @@ for i_sat = 1:num_sat
     
     % --- Satellite Antenna Phase Center Variation Correction---
     dX_PCV_sat = [0,0,0];
-    if settings.OTHER.bool_sat_pcv && settings.ORBCLK.bool_sp3 && ~cutoff 
+    if settings.OTHER.bool_sat_pcv && settings.ORBCLK.bool_sp3 && ~exclude 
         [dX_PCV_sat, ~] = calc_PCV_sat(PCV_sat, SatOr_ECEF, los0, j, settings.IONO.model, f1, f2, f3, X_rot, pos_XYZ);
     end
     
@@ -630,7 +631,7 @@ for i_sat = 1:num_sat
     model.Rot_X(:,i_sat)  = X_rot;      % Sat Position after correcting the earth rotation during runtime tau
     model.Rot_V(:,i_sat)  = Rot_V;  	% Sat Velocity after correcting the earth rotation during runtime tau  
     
-    Epoch.exclude(i_sat,frqs) = cutoff;   	% boolean, true = do not use satellite (e.g. cutoff angle)
+    Epoch.exclude(i_sat,frqs) = exclude;   	% boolean, true = do not use satellite (e.g. cutoff angle)
     Epoch.sat_status(i_sat) = status;   
     
 end     % of loop over satellites

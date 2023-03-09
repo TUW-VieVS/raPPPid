@@ -40,7 +40,7 @@ pos_approx = [0; 0; 0];
 fid = fopen(file,'rt');         % open observation-file
 
 first_obs = []; last_obs = []; rinex2_obs_types = [];
-station = ''; antenna_type = ''; receiver_type = '';
+station = ''; station_long = ''; antenna_type = ''; receiver_type = '';
 time_system = 'GPS';        % GPS time system is default
 
 % default ranking of observation types
@@ -61,6 +61,7 @@ while 1
     
     if contains(line,'MARKER NAME')
         station = upper(strtrim(line(1:4)));        % make sure that uppercase
+        station_long = upper(strtrim(line(1:9)));      
     end
     
     if contains(line,'END OF HEADER') || feof(fid)
@@ -226,6 +227,7 @@ rheader.ind_glo_freq = ind_glo_freq;
 rheader.ind_gal_freq = ind_gal_freq;
 rheader.ind_bds_freq = ind_bds_freq;
 rheader.station = station;
+rheader.station_long = station_long;
 rheader.antenna = antenna_type;
 rheader.receiver = receiver_type;
 

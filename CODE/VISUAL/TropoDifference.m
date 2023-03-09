@@ -18,11 +18,11 @@ function dZTD = TropoDifference(storeData, obs)
 ZTD = storeData.zhd+storeData.zwd+storeData.param(:,4);
 ZTD(storeData.param(:,4)==0) = NaN;     % 
 date = obs.startdate;
-stat = lower(obs.stationname);
+station = obs.station_long;
 jd = cal2jd_GT(date(1), date(2), date(3));
 % convert (from julian date) into other formats
 [doy, yyyy] = jd2doy_GT(jd);
-[tropofile, success] = DownloadTropoFile(stat, yyyy, doy);
+[tropofile, success] = DownloadTropoFile(station, yyyy, doy);
 if ~success
     % no IGS ZTD estimation existing, set dZTD to NaN;
     dZTD = ZTD - NaN;

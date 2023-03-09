@@ -1,5 +1,5 @@
-function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = read_CLK9x(path, code_order, phase_order)
-
+function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = ...
+    read_corr2brdc_stream(path)
 % Reads in a recorded realtime correction stream from CNES (e.g., CLK92 or
 % CLK93) and saves the data in an internal format. Stream was recorded with 
 % BKG Ntrip and saved in a RINEX-file.
@@ -14,10 +14,7 @@ function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = read_CLK9x(path, code_
 % 
 % INPUT: 
 %   path        string, path to file of recorded stream
-%   code_order  cell, containing order of code biases for GPS, GLO, GAL,
-%               BDS (order of occurence)
-%   phase_order cell, containing order of phase biases for GPS, GLO, GAL,
-%               BDS (order of occurence)
+% 
 % OUTPUT: 
 %   4 structs: corr_GPS, corr_GLO, corr_GAL, corr_BDS with same format
 %   struct: vtec...values of spherical harmonics and their timestamp
@@ -29,37 +26,18 @@ function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = read_CLK9x(path, code_
 % *************************************************************************
 
 
-
-%% Preparation
-t_orb = -1;      % time of ephemeris-correction  [seconds of week]
-t_clk = -1;      % time of clock-correction      [seconds of week]
-t_cb = -1;       % time of code-bias-correction  [seconds of week]
-t_pb = -1;       % time of phase-bias-correction [seconds of week]
-t_tec = -1;      % time of vertical TEC          [seconds of week]
-i_orb=0; i_clk=0; i_cb=0; i_pb=0; i_tec=0;	% indices for saving the data
-vtec = [];
-sow = 0;
-fid = fopen(path);          % open file
+% open and read file file
+fid = fopen(path);          
 lines = textscan(fid,'%s', 'delimiter','\n', 'whitespace','');
 lines = lines{1};
 fclose(fid);
 
 
-% Initialisation of Variables
-% strings with the order of the bias corrections
-C_GPS = code_order{1};
-C_GLO = code_order{2};
-C_GAL = code_order{3};
-C_BDS = code_order{4};
-P_GPS = phase_order{1};
-P_GLO = phase_order{2};
-P_GAL = phase_order{3};
-P_BDS = phase_order{4};
-% number of code/phase biases for each GNSS
-no_c_bias_GPS = length(C_GPS);   no_p_bias_GPS = length(P_GPS);
-no_c_bias_GLO = length(C_GLO);   no_p_bias_GLO = length(P_GLO);
-no_c_bias_GAL = length(C_GAL);   no_p_bias_GAL = length(P_GAL);
-no_c_bias_BDS = length(C_BDS);   no_p_bias_BDS = length(P_BDS);
+%% Initialization of Variables
+i_orb=0; i_clk=0; i_cb=0; i_pb=0; i_tec=0;	% indices for saving the data
+vtec = [];
+sow = 0;
+
 % logical vectors for data headers
 bool_orbit  = contains(lines, 'ORBIT');
 bool_clk    = contains(lines, 'CLOCK');
@@ -71,11 +49,22 @@ n_orb   = sum(bool_orbit);
 n_clk   = sum(bool_clk);
 n_code  = sum(bool_c_bias);
 n_phase = sum(bool_p_bias);
+% vectors with time of ...
+t_orb = zeros(n_orb+1, 1);  t_clk = zeros(n_clk+1, 1);      % first epoch will be removed later
+t_cb  = zeros(n_code+1, 1); t_pb  = zeros(n_phase+1, 1);
+t_orb(1) = -1;      % ... ephemeris-correction  [seconds of week]
+t_clk(1) = -1;      % ... clock-correction      [seconds of week]
+t_cb(1)  = -1;      % ... code-bias-correction  [seconds of week]
+t_pb(1)  = -1;      % ... phase-bias-correction [seconds of week]
+t_tec(1) = -1;      % ... vertical TEC          [seconds of week]
+% strings with the order of the bias corrections
+C_GPS = ''; C_GLO = ''; C_GAL = ''; C_BDS = '';
+P_GPS = ''; P_GLO = ''; P_GAL = ''; P_BDS = '';
 % initialize matrices
-[radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS, c_bias_GPS, p_bias_GPS] = init_corr(DEF.SATS_GLO, n_orb, n_clk, n_code, n_phase, C_GPS, P_GPS);
-[radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO, c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO, c_bias_GLO, p_bias_GLO] = init_corr(DEF.SATS_GLO, n_orb, n_clk, n_code, n_phase, C_GLO, P_GLO);
-[radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL, c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL, c_bias_GAL, p_bias_GAL] = init_corr(DEF.SATS_GAL, n_orb, n_clk, n_code, n_phase, C_GAL, P_GAL);
-[radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS, c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS, c_bias_BDS, p_bias_BDS] = init_corr(DEF.SATS_BDS, n_orb, n_clk, n_code, n_phase, C_BDS, P_BDS);
+[radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS, c_bias_GPS, p_bias_GPS] = init_corr(DEF.SATS_GLO, n_orb, n_clk, n_code, n_phase);
+[radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO, c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO, c_bias_GLO, p_bias_GLO] = init_corr(DEF.SATS_GLO, n_orb, n_clk, n_code, n_phase);
+[radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL, c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL, c_bias_GAL, p_bias_GAL] = init_corr(DEF.SATS_GAL, n_orb, n_clk, n_code, n_phase);
+[radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS, c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS, c_bias_BDS, p_bias_BDS] = init_corr(DEF.SATS_BDS, n_orb, n_clk, n_code, n_phase);
 % VTEC values
 vtec_header = contains(lines, 'VTEC');
 bool_vtec = any(vtec_header);           % check if stream contains VTEC information
@@ -85,7 +74,7 @@ if bool_vtec
     values = values{1};     degree = values(2);     order = values(3);
     vtec_lines = 2*degree + 2;
     vtec_rows  = order + 1;
-    vtec_coeff = zeros(vtec_lines,vtec_rows,sum(vtec_header));
+    vtec_coeff = zeros(vtec_lines, vtec_rows, sum(vtec_header));
 end
 % get satellite entries
 prn_char_1 = cellfun( @(li) li(1,2), lines );
@@ -188,16 +177,16 @@ while j < lgth
                 values = sscanf(temp, '%f');
                 switch sys
                     case 'G'
-                        pos_3 = get_order(types, C_GPS, no_c_bias_GPS);
+                        [pos_3, C_GPS] = get_order(types, C_GPS);
                         c_bias_GPS(i_cb, prn, pos_3) = values;
                     case 'R'
-                        pos_3 = get_order(types, C_GLO, no_c_bias_GLO);
+                        [pos_3, C_GLO] = get_order(types, C_GLO);
                         c_bias_GLO(i_cb, prn, pos_3) = values;
                     case 'E'
-                        pos_3 = get_order(types, C_GAL, no_c_bias_GAL);
+                        [pos_3, C_GAL] = get_order(types, C_GAL);
                         c_bias_GAL(i_cb, prn, pos_3) = values;
                     case 'C'
-                        pos_3 = get_order(types, C_BDS, no_c_bias_BDS);
+                        [pos_3, C_BDS] = get_order(types, C_BDS);
                         c_bias_BDS(i_cb, prn, pos_3) = values;
                 end
                 j = j + 1;     line = lines(j);     line = char(line);
@@ -224,13 +213,13 @@ while j < lgth
                     values = sscanf(temp, '%f');
                     switch sys          % no glonass phase biases
                         case 'G'
-                            pos_3 = get_order(types, P_GPS, no_p_bias_GPS);
+                            [pos_3, P_GPS] = get_order(types, P_GPS);
                             p_bias_GPS(i_cb, prn, pos_3) = values;
                         case 'E'
-                            pos_3 = get_order(types, P_GAL, no_p_bias_GAL);
+                            [pos_3, P_GAL] = get_order(types, P_GAL);
                             p_bias_GAL(i_cb, prn, pos_3) = values;
                         case 'C'
-                            pos_3 = get_order(types, P_BDS, no_p_bias_BDS);
+                            [pos_3, P_BDS] = get_order(types, P_BDS);
                             p_bias_BDS(i_cb, prn, pos_3) = values;
                     end
                 end
@@ -269,23 +258,23 @@ end         % end of: loop over the lines of the correction-stream-file
 
 
 %% Save all variables in output structs
-% GPS
-corr_GPS = save2struct(C_GPS, P_GPS,   radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS, c_bias_GPS, p_bias_GPS);
-corr_GLO = save2struct(C_GLO, P_GLO,   radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO, c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO, c_bias_GLO, p_bias_GLO);
-corr_GAL = save2struct(C_GAL, P_GAL,   radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL, c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL, c_bias_GAL, p_bias_GAL);
-corr_BDS = save2struct(C_BDS, P_BDS,   radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS, c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS, c_bias_BDS, p_bias_BDS);
-
-% correct time-vectors (1st entry = -1)
+% correct orbit and clock time-vectors (1st entry = -1) of and save them
 t_orb = t_orb(2:end); 	% time of ephemeris-correction  [seconds of week]
 t_clk = t_clk(2:end);  	% time of clock-correction      [seconds of week]
-t_cb = t_cb(2:end); 	% time of code-bias-correction  [seconds of week]
-t_pb = t_pb(2:end);  	% time of phase-bias-correction [seconds of week]
-
-% save time-vectors
 corr_GPS.t_orb = t_orb';   corr_GLO.t_orb = t_orb';   corr_GAL.t_orb = t_orb';   corr_BDS.t_orb = t_orb';
 corr_GPS.t_clk = t_clk';   corr_GLO.t_clk = t_clk';   corr_GAL.t_clk = t_clk';   corr_BDS.t_clk = t_clk';
-corr_GPS.t_dcb = t_cb';    corr_GLO.t_dcb = t_cb';    corr_GAL.t_dcb = t_cb';    corr_BDS.t_dcb = t_cb';
-corr_GPS.t_upd = t_pb';    corr_GLO.t_upd = t_pb';    corr_GAL.t_upd = t_pb';    corr_BDS.t_upd = t_pb';
+% save orbit and clock corrections
+corr_GPS = orbclk2struct(radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS, corr_GPS);
+corr_GLO = orbclk2struct(radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO, c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO, corr_GLO);
+corr_GAL = orbclk2struct(radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL, c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL, corr_GAL);
+corr_BDS = orbclk2struct(radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS, c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS, corr_BDS);
+
+% remove epochs without data (time-vector == 0), then save code and phase  
+% bias corrections and time-vectors
+corr_GPS = biases2struct(C_GPS, P_GPS, c_bias_GPS, p_bias_GPS, t_cb, t_pb, corr_GPS);
+corr_GLO = biases2struct(C_GLO, P_GLO, c_bias_GLO, p_bias_GLO, t_cb, t_pb, corr_GLO);
+corr_GAL = biases2struct(C_GAL, P_GAL, c_bias_GAL, p_bias_GAL, t_cb, t_pb, corr_GAL);
+corr_BDS = biases2struct(C_BDS, P_BDS, c_bias_BDS, p_bias_BDS, t_cb, t_pb, corr_BDS);
 
 % save time and coefficients of vtec spherical harmonics
 if bool_vtec
@@ -295,7 +284,7 @@ if bool_vtec
     vtec.Snm = vtec_coeff((l+1):vtec_lines,:,:);
 end
 
-end         % end of read_CLK9x.m
+end         % end of read_corr2brdc_stream.m
 
 
 
@@ -303,7 +292,7 @@ end         % end of read_CLK9x.m
 %% AUXILIARY FUNCTIONS
 
 function [rad, al, out, v_rad, v_al, v_out, IOD_orb, c0, c1, c2, IOD_clk, c_bias, p_bias] ...
-    = init_corr(n_sats, n_orb, n_clk, n_code, n_phase, code_biases, phase_biases)
+    = init_corr(n_sats, n_orb, n_clk, n_code, n_phase)
 % function to get initialise the struct for each GNSS
 % initialise orbit corrections
 rad     = zeros(n_orb, n_sats);         % radial component
@@ -319,9 +308,9 @@ c1 = zeros(n_clk, n_sats);
 c2 = zeros(n_clk, n_sats);
 IOD_clk = zeros(n_clk, n_sats);         % Issue of Data clock
 % initialise code biases matrix
-c_bias = zeros(n_code,n_sats, length(code_biases));
+c_bias = zeros(n_code,n_sats, 1);
 % initialise phase biases matrix
-p_bias = zeros(n_phase,n_sats, length(phase_biases));
+p_bias = zeros(n_phase,n_sats, 1);
 end
 
 
@@ -351,20 +340,35 @@ no_lines = date(8);                     % number of lines of data record
 end
 
 
-function [pos_3] = get_order(types, ORDER, no_types)
+function [pos, ORDER] = get_order(types, ORDER)
 % function to get index of each element of "types" in "ORDER"
+% types ... contains bias types of current epoch
+% ORDER ... contains the order of all biases 
+n = length(types);      	% number of bias types in current line
 if isequal(types, ORDER)
-    pos_3 = 1:no_types;
-else
-    pos_0 = zeros(no_types, 1);
-    for ii = 1:length(types)
-        idx = all(ismember(ORDER, types(ii,:)),2);
-        if any(idx)         % only save if type is found in order
-            pos_0(ii) = find(idx);
+    pos = 1:n;
+elseif ~isempty(ORDER)
+    ii = 1;
+    pos = zeros(n,1);   	% initialize
+    for i = 1:n
+        curr_type = types(i,:);         % current bias type
+        idx = find(all(ORDER == curr_type, 2));
+        if ~isempty(idx)
+            % save position/dimension of current bias
+            pos(ii) = idx;
+        else
+            % new bias type
+            ORDER(end+1,:) = curr_type;     % save new bias
+            pos(ii) = length(ORDER);
         end
+        ii = ii + 1;
     end
-    pos_3 = pos_0(pos_0 ~= 0);
+else
+    % e.g. first call
+    ORDER = types;
+    pos = 1:n;
 end
+
 end
 
 
@@ -390,8 +394,8 @@ IOD_clk(i_clk,prn) = IOD_clk_epoch;
 end
 
 
-function [save_struct] = save2struct(CODE, PHASE, radial, along, outof, v_radial, v_along, v_outof, IOD_orb, c0, c1, c2, IOD_clk, c_bias, p_bias)
-% function to save all matrices into struct
+function [save_struct] = orbclk2struct(radial, along, outof, v_radial, v_along, v_outof, IOD_orb, c0, c1, c2, IOD_clk, save_struct)
+% function to save orbit and clock corrections matrices into struct
 % orbit corrections
 save_struct.radial = radial;
 save_struct.along = along;
@@ -405,13 +409,37 @@ save_struct.c0 = c0;
 save_struct.c1 = c1;
 save_struct.c2 = c2;
 save_struct.IOD_clk = IOD_clk;
-% biases
+end
+
+
+function [save_struct] = biases2struct(CODE, PHASE, c_bias, p_bias, t_cb, t_pb, save_struct)
+% remove epochs without data (time-vector == 0), then save code & phase  
+% bias corrections and time-vectors into struct
+
+% remove 1st entry due to initialization (1st entry == -1)
+t_cb(1) = []; t_pb(1) = [];
+% detect epochs without data (e.g. identical messages in stream)
+nodata_c = (t_cb == 0); 
+nodata_p = (t_pb == 0); 
+% remove epochs without data
+t_cb = t_cb(~nodata_c);
+t_pb = t_pb(~nodata_p);
+% save code biases and exclude epochs without data (-> all-zero-epochs)
+save_struct.cbias = [];
 for i = 1:length(CODE)
     field = strcat('C', CODE(i,:));             % name of bias-type
-    save_struct.dcb.(field) = c_bias(:,:,i);	% take correct dimension from c_bias-matrix
+    % take correct dimension from c_bias-matrix and remove all-zero-epochs
+    save_struct.cbias.(field) = c_bias(~nodata_c,:,i);	
 end
+% save phase biases and exclude epochs without data (-> all-zero-epochs)
+save_struct.pbias = [];
 for i = 1:length(PHASE)
     field = strcat('L', PHASE(i,:));            % name of bias-type
-    save_struct.upd.(field) = p_bias(:,:,i);	% take correct dimension from p_bias-matrix    
+    % take correct dimension from p_bias-matrix and remove all-zero-epochs
+    save_struct.pbias.(field) = p_bias(~nodata_p,:,i);	 
 end
+% save time-vectors
+save_struct.t_code  = t_cb; 
+save_struct.t_phase = t_pb; 
 end
+

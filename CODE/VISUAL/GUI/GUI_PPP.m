@@ -50,7 +50,7 @@ set(gca, 'Units', 'pixels', 'Position', [18 516 900 80])
 axis off
 
 % Set Copyright and Version in the lower right
-set(handles.text_version, 'String', ['Version 1.1 ', char(169), ' TUW 2023']);
+set(handles.text_version, 'String', ['Version 1.0 ', char(169), ' TUW 2023']);
 
 % load default filter settings for selected filter
 handles = LoadDefaultFilterSettings(handles);
@@ -1449,7 +1449,7 @@ switch col      % action depending of column where event happened
         if isnan(value)
             TABLE{row, col} = 1;
         end
-        if value == 0 && row~=1     % if zero is entered copy coordinate value from above
+        if (value == 1 || value == 0) && row ~= 1   % if zero is entered copy coordinate value from above
             TABLE{row, col} = TABLE{row-1, col};
         end
         if bool_all
@@ -2009,9 +2009,15 @@ string_all = get(hObject,'String');
 if strcmpi(string_all{value},'manually')
     set(handles.edit_corr2brdc,'Visible','on');
     set(handles.pushbutton_corr2brdc,'Visible','on');
+	set(handles.text_corr2brdc_age_1,'Visible','on');
+	set(handles.text_corr2brdc_age_2,'Visible','on');
+	set(handles.edit_corr2brdc_age,'Visible','on');
 else
     set(handles.edit_corr2brdc,'Visible','off');
     set(handles.pushbutton_corr2brdc,'Visible','off');
+	set(handles.text_corr2brdc_age_1,'Visible','off');
+	set(handles.text_corr2brdc_age_2,'Visible','off');
+	set(handles.edit_corr2brdc_age,'Visible','off');	
 end
 
 if strcmpi(string_all{value},'CNES Archive')
@@ -2216,7 +2222,7 @@ end
 
 function pushbutton_nav_multi_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BROADCAST/'], handles.paths.navMULTI_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*MN.rnx', 'Multi-Nav-RINEX'}, 'Select the Multi-GNSS Navigation File', folder);
+[FileName, PathName] = uigetfile({'*MN.rnx;*.*n'}, 'Select the Multi-GNSS Navigation File', folder);
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName        % uigetfile cancelled
     return;
@@ -4290,6 +4296,9 @@ set(handles.radiobutton_multi_nav, 	   'Enable', onoff);
 set(handles.text_CorrectionStream,	   'Enable', onoff);
 set(handles.popupmenu_CorrectionStream,'Enable', onoff);
 set(handles.edit_corr2brdc,            'Enable', onoff);
+set(handles.text_corr2brdc_age_1,      'Enable', onoff);
+set(handles.text_corr2brdc_age_2,      'Enable', onoff);
+set(handles.edit_corr2brdc_age,        'Enable', onoff);
 set(handles.pushbutton_corr2brdc,	   'Enable', onoff);
 end
 

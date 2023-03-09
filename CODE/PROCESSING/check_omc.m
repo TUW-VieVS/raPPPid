@@ -49,7 +49,7 @@ no_frqs = settings.INPUT.proc_freqs;            % number of processed frequencie
 % calculate threshold for observed minus computed check of code observations
 if time_last_reset/obs_intval >= n
     omc_old = Adjust.code_omc(1:n-1, Epoch.sats);   % do not take current epoch
-    std_thresh = fac * nanstd(omc_old(:));
+    std_thresh = fac * std(omc_old(:), 'omitnan');
     thresh_c = min([std_thresh thresh_c]);
 end
 
@@ -62,10 +62,10 @@ omc_code(omc_code==0) = NaN;
 % do this for each GNSS - otherwise it might not work e.g. different drift
 % in GPS and Galileo observations
 omc_code_ = omc_code;       % to keep dimension
-omc_code_(Epoch.gps,:) = abs(omc_code(Epoch.gps,:) - nanmedian(omc_code(Epoch.gps,:)));   
-omc_code_(Epoch.glo,:) = abs(omc_code(Epoch.glo,:) - nanmedian(omc_code(Epoch.glo,:)));  
-omc_code_(Epoch.gal,:) = abs(omc_code(Epoch.gal,:) - nanmedian(omc_code(Epoch.gal,:)));  
-omc_code_(Epoch.bds,:) = abs(omc_code(Epoch.bds,:) - nanmedian(omc_code(Epoch.bds,:)));  
+omc_code_(Epoch.gps,:) = abs(omc_code(Epoch.gps,:) - median(omc_code(Epoch.gps,:), 'omitnan'));   
+omc_code_(Epoch.glo,:) = abs(omc_code(Epoch.glo,:) - median(omc_code(Epoch.glo,:), 'omitnan'));  
+omc_code_(Epoch.gal,:) = abs(omc_code(Epoch.gal,:) - median(omc_code(Epoch.gal,:), 'omitnan'));  
+omc_code_(Epoch.bds,:) = abs(omc_code(Epoch.bds,:) - median(omc_code(Epoch.bds,:), 'omitnan'));  
 
 % if more than the half of the observations would be excluded, do not 
 % perform a check of omc (otherwise to many observations are excluded)
@@ -94,7 +94,7 @@ end
 
 if ~isnan(settings.PROC.omc_window)
     % save mean code omc value for each satellite
-    Adjust.code_omc(end, Epoch.sats) = nanmean(omc_code_,2);
+    Adjust.code_omc(end, Epoch.sats) = mean(omc_code_, 2, 'omitnan');
 end
 
 
@@ -115,16 +115,16 @@ if bool_phase
     % do this for each GNSS - otherwise it might not work e.g. different drift
     % in GPS and Galileo observations
     omc_phase_ = omc_phase;       % to keep dimension
-    omc_phase_(Epoch.gps,:) = abs(omc_phase(Epoch.gps,:) - nanmedian(omc_phase(Epoch.gps,:)));
-    omc_phase_(Epoch.glo,:) = abs(omc_phase(Epoch.glo,:) - nanmedian(omc_phase(Epoch.glo,:)));
-    omc_phase_(Epoch.gal,:) = abs(omc_phase(Epoch.gal,:) - nanmedian(omc_phase(Epoch.gal,:)));
-    omc_phase_(Epoch.bds,:) = abs(omc_phase(Epoch.bds,:) - nanmedian(omc_phase(Epoch.bds,:)));
+    omc_phase_(Epoch.gps,:) = abs(omc_phase(Epoch.gps,:) - median(omc_phase(Epoch.gps,:), 'omitnan'));
+    omc_phase_(Epoch.glo,:) = abs(omc_phase(Epoch.glo,:) - median(omc_phase(Epoch.glo,:), 'omitnan'));
+    omc_phase_(Epoch.gal,:) = abs(omc_phase(Epoch.gal,:) - median(omc_phase(Epoch.gal,:), 'omitnan'));
+    omc_phase_(Epoch.bds,:) = abs(omc_phase(Epoch.bds,:) - median(omc_phase(Epoch.bds,:), 'omitnan'));
     
     
     % calculate threshold for observed minus computed check of phase observations
     if time_last_reset/obs_intval >= n
         omc_old = Adjust.phase_omc(1:n-1, Epoch.sats);      % do not take current epoch
-        std_thresh = fac * nanstd(omc_old(:));
+        std_thresh = fac * std(omc_old(:), 'omitnan');
         thresh_p = min([std_thresh thresh_p]);
     end    
     
@@ -150,7 +150,7 @@ if bool_phase
     
     if ~isnan(settings.PROC.omc_window)
         % save mean phase omc value for each satellite
-        Adjust.phase_omc(end, Epoch.sats) = nanmean(omc_phase_,2);
+        Adjust.phase_omc(end, Epoch.sats) = mean(omc_phase_,2, 'omitnan');
     end
     
     Epoch.sat_status(any(outlier_p,2)) = 11;

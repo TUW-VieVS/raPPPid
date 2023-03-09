@@ -1,4 +1,4 @@
-function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings)
+function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, corr_clk)
 % Calculate (precise satellite) clock.
 % 
 % INPUT:
@@ -11,6 +11,8 @@ function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL,
 %   isBDS       boolean, BeiDou-satellite
 % 	k           column of ephemerides according to time and sv
 %   settings 	struct with settings from GUI
+%   corr_clk    clock correction to broadcast message
+% 
 % OUTPUT:
 %   dT_clk      satellite clock correction, [s]
 %   noclock     true if satellite should not be used (missing clock information)
@@ -25,65 +27,41 @@ function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL,
 
 %% Preparations
 noclock = false;
-IODE = NaN;
 if isGPS
-    sys = 'G';
     if settings.ORBCLK.bool_brdc
         Eph = input.Eph_GPS;
-        IODE = Eph(24,k);   % Issue of Data Ephemeris
-        IODC = Eph(25,k);   % Issue of Data Clock
         toe  = Eph(18,k);   % time of ephemeris, [seconds of week]
         toc  = Eph(21,k);   % time of clock, [seconds of week]
     end
     if settings.ORBCLK.bool_clk
         preciseClk = input.ORBCLK.preciseClk_GPS;
     end
-    if settings.ORBCLK.corr2brdc_clk
-        corr2brdc = input.ORBCLK.corr2brdc_GPS;
-    end
-elseif isGLO
-    sys = 'R';    
+elseif isGLO   
     if settings.ORBCLK.bool_brdc
         Eph = input.Eph_GLO;
-        IODE = Eph(19,k);   % Issue of Data
         toe = Eph(18,k);    % epoch of ephemerides converted into GPS sow
     end
     if settings.ORBCLK.bool_clk
         preciseClk = input.ORBCLK.preciseClk_GLO;
     end
-    if settings.ORBCLK.corr2brdc_clk
-        corr2brdc = input.ORBCLK.corr2brdc_GLO;
-    end
-elseif isGAL
-    sys = 'E';    
+elseif isGAL  
     if settings.ORBCLK.bool_brdc
         Eph = input.Eph_GAL;
-        IODE = Eph(24,k);
-        IODC = IODE;
         toe = Eph(18,k);
         toc = Eph(21,k);
     end
     if settings.ORBCLK.bool_clk
         preciseClk = input.ORBCLK.preciseClk_GAL;
     end
-    if settings.ORBCLK.corr2brdc_clk
-        corr2brdc = input.ORBCLK.corr2brdc_GAL;
-    end
 elseif isBDS
-    sys = 'C';    
     if settings.ORBCLK.bool_brdc
         Eph = input.Eph_BDS;
-        IODE = Eph(24,k);       % ||| check this
-        IODC = IODE;
         toe = Eph(18,k);
         toc = Eph(21,k);
     end
     if settings.ORBCLK.bool_clk
         preciseClk = input.ORBCLK.preciseClk_BDS;
     end
-    if settings.ORBCLK.corr2brdc_clk
-        corr2brdc = input.ORBCLK.corr2brdc_BDS;
-    end    
 end
 
 
@@ -133,9 +111,14 @@ else
     
     % --- Clock correction with correction stream
     if settings.ORBCLK.corr2brdc_clk
-        brdc_clk_corr = corr2brdc_clk(corr2brdc, input.ORBCLK.corr2brdc.t_clk, Ttr, sv, sys, IODE, toe);
-        if abs(brdc_clk_corr) >= 2 || brdc_clk_corr == 0    % no valid corrections available
-            brdc_clk_corr = 0;     noclock = true;           % eliminate satellite
+        dt = Ttr - corr_clk(1); 	% time difference between transmission time and clock correction from stream
+        a0 = corr_clk(2);           % coefficients of corrections polynomial
+        a1 = corr_clk(3);
+        a2 = corr_clk(4);
+        dt_clock = a0 + a1*dt + a2*dt^2; % calculate 2nd degree polynomial clock correction, [m]
+        brdc_clk_corr = dt_clock/Const.C;        % convert from [m] to [s]
+        if abs(brdc_clk_corr) >= 2 || brdc_clk_corr == 0 	% no valid corrections available
+            brdc_clk_corr = 0;     noclock = true;       	% eliminate satellite
         end
         dT_clk = dT_clk + brdc_clk_corr;
     end

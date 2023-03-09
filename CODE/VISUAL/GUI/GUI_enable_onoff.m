@@ -394,6 +394,12 @@ if strcmpi(handles.uipanel_otherCorrections.Visible, 'on')
         handles.uibuttongroup_antex.Visible = 'on';
     end
     
+    % disable eclipse condition checkbox depending on ORBEX use
+    handles.checkbox_eclipse.Enable = 'on';
+    if handles.checkbox_obx.Value
+        handles.checkbox_eclipse.Enable = 'off';
+    end
+    
     % Cycle-Slip Detection is not relevant for code only processing
     if contains(proc_meth, 'Phase');   onoff = 'On';   else;   onoff = 'Off';   end
     handles.text117.Enable = onoff;

@@ -1,15 +1,20 @@
 % load precise ephemeris file
-orbfile = '..\DATA\ORBIT\2022\345\COD0MGXFIN_20223450000_01D_05M_ORB.SP3';
+orbfile = '..\DATA\ORBIT\2023\049\WUM0MGXRAP_20230490000_01D_01M_ORB.SP3';
 [GPS, GLO, GAL, BDS] = read_precise_eph(orbfile);
 
 % create gif file
 filename = 'Animated.gif';
 
+date = [2023 02 18];
+viewangle = [80 30];
+textstr = '@mfglaner';
+
 % set marker and font size and delay time of gif and seconds of day
 s = 80;             % marker size
 fs = 6;             % font size
-dtime = 0.10;       % speed of gif
-m_int = 5;              % orbit interval, [min]
+dtime = 0.05;       % speed of gif (smaller number = faster)
+m_int = 5;
+% m_int = median(diff(GPS.t(:,1)))/60;              % orbit interval, [min]
 axlim = [-4 4] *1e7;    % axes limits
 b_col = 'w';        % color background       
 t_col = 'k';        % text color
@@ -20,6 +25,7 @@ set(gcf, 'Position',  [100, 100, 500, 400])
 h = style_plot(h, axlim);
 set(gcf,'color',b_col);
 set(gca,'Color',b_col);
+view(viewangle)
 drawnow
 
 % write into gif
@@ -31,7 +37,7 @@ im = frame2im(frame);
 imwrite(imind,cm,filename,'gif', 'Loopcount',inf, 'DelayTime',dtime);
 
 m = 0;
-for q = 1:1:size(GPS.X,1)
+for q = 1:5:size(GPS.X,1)
     % plot gps satellites
     for i = 1:size(GPS.X,2)
         X_sat = GPS.X(q,i);
@@ -74,13 +80,15 @@ for q = 1:1:size(GPS.X,1)
     end
     
     % plot time
-    DateVector = [2022,12,11, floor(m/60), mod(m,60), 00];
-    text(0, -4*1e7, 3*1e7, datestr(DateVector), 'FontSize',fs+4, 'Color', t_col)
+    DateVector = [date(1),date(2),date(3), floor(m/60), mod(m,60), 00];
+    text(30088284, -39903356, -21293635, datestr(DateVector), 'FontSize',fs+4, 'Color', t_col)
+    text(-8455900, -33612000, 38565000, textstr, 'FontSize',fs+4, 'Color', t_col)
     m = m + m_int;
-    
+
     % write into gif
     set(gcf,'color', b_col);
     set(gca,'Color', b_col);
+    view(viewangle)
     drawnow
     % Capture the plot as an image
     frame = getframe(h);

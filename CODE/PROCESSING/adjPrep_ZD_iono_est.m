@@ -53,7 +53,7 @@ iono_eye = eye(numel(iono_idx));        % square unit matrix, size = number of i
 dt = obs_int/3600;    
 
 
-%% Parameter vector of adjustment
+%% Initialize
 % ----- Initialization and Epoch Preparation -----
 if Adjust.float     
 %   --- all epochs with valid float solution
@@ -174,13 +174,13 @@ else
 end
 
 
-%% Modify parameter vector and covariance matrix
+%% Modify
 % check for changes in satellite constellation
 if Adjust.float
     param_vec = Adjust.param;           % get parameter vector
     param_sigma = Adjust.param_sigma;   % get covariance matrix of parameters
 %   ----- start manipulating parameter vector and covariance matrix -----
-    if ~isequal(prns, prns_old)     % test if satellite constellation is different to last epoch
+    if ~isequal(prns, prns_old)         % test if satellite constellation is different to last epoch
 %   --- delete ambiguities of vanished satellites
         del_idx = [];
         for i = 1:no_sats_old                           % loop over satellites of last epoch
@@ -240,7 +240,7 @@ epochs_tracked = Epoch.tracked(prns);          % vector number of tracked epochs
 
 
 
-%% Prediction of Parameter vector, covariance matrix of adjustment with Transition and Noise matrix
+%% Predict
 if bool_filter   &&   Adjust.float       % Filter is enabled
 %   --- for all epochs with valid float solution
     Noise = Adjust.Noise_0;

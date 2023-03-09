@@ -72,10 +72,10 @@ Epoch.exclude = Epoch.exclude | mp_cooldown';
 % check if code time difference is above specified threshold. Thereby, subtract 
 % median (e.g., smartphone data) for each GNSS (e.g., different clock drifts)
 C1_diff_n_ = C1_diff_n;       % do keep dimension
-C1_diff_n_(Epoch.gps) = abs(C1_diff_n(Epoch.gps) - nanmedian(C1_diff_n(Epoch.gps)));   
-C1_diff_n_(Epoch.glo) = abs(C1_diff_n(Epoch.glo) - nanmedian(C1_diff_n(Epoch.glo)));  
-C1_diff_n_(Epoch.gal) = abs(C1_diff_n(Epoch.gal) - nanmedian(C1_diff_n(Epoch.gal)));  
-C1_diff_n_(Epoch.bds) = abs(C1_diff_n(Epoch.bds) - nanmedian(C1_diff_n(Epoch.bds))); 
+C1_diff_n_(Epoch.gps) = abs(C1_diff_n(Epoch.gps) - median(C1_diff_n(Epoch.gps), 'omitnan'));   
+C1_diff_n_(Epoch.glo) = abs(C1_diff_n(Epoch.glo) - median(C1_diff_n(Epoch.glo), 'omitnan'));  
+C1_diff_n_(Epoch.gal) = abs(C1_diff_n(Epoch.gal) - median(C1_diff_n(Epoch.gal), 'omitnan'));  
+C1_diff_n_(Epoch.bds) = abs(C1_diff_n(Epoch.bds) - median(C1_diff_n(Epoch.bds), 'omitnan')); 
 
 % check which code differences are above threshold and consider cooldown
 above_thresh = C1_diff_n_ > settings.OTHER.mp_thresh;

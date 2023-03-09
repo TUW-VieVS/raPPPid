@@ -39,8 +39,8 @@ end
 filename = filename(max(strfind(filename, '\'))+1:end-4);
 time_clk = mod(corr.t_clk,86400);
 time_orb = mod(corr.t_orb,86400);
-time_dcb = mod(corr.t_dcb,86400);
-time_upd = mod(corr.t_upd,86400);
+time_dcb = mod(corr.t_code,86400);
+time_upd = mod(corr.t_phase,86400);
 
 % Code Bias Correction Plots
 if plot_code_biases

@@ -138,7 +138,8 @@ end
 
 % Check if coefficients from broadcast navigation message are needed for
 % ionospheric correction (e.g. Klobuchar, NeQuick)
-bool_nav_iono = strcmp(settings.IONO.source, 'Klobuchar model') || strcmp(settings.IONO.source, 'NeQuick model');
+bool_nav_iono = ~strcmp(settings.ORBCLK.multi_nav, 'manually') && ...
+    (strcmp(settings.IONO.source, 'Klobuchar model') || strcmp(settings.IONO.source, 'NeQuick model'));
 if bool_nav_iono
     % No Multi-GNSS broadcast messages before 2015 which is ignored here!
     target_nav = {[Path.DATA, 'BROADCAST/', yyyy, '/', doy]};

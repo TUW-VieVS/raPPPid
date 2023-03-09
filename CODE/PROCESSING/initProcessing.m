@@ -155,7 +155,9 @@ Epoch.exclude = [];
 Epoch.fixable = [];
 % broadcast column
 Epoch.BRDCcolumn = NaN(399,1);
-
+% corrections from real-time correction stream
+Epoch.corr2brdc_orb = zeros(7,399);		% timestamp, radial, along, outof, v_radial, v_along, v_outof
+Epoch.corr2brdc_clk = zeros(4,399);		% timestamp, a0, a1, a2
 
 
 %% storeData

@@ -77,8 +77,8 @@ subplot(2,1,1)
 n = round(1 + 3.322*log(numel(iono_diff)));
 histogram(iono_res, n, 'Normalization', 'probability', 'FaceColor', [0.09 0.72 0.72])
 title({[sol ' minus Modelled Ionospheric Delay for ' gnss]}, 'fontsize', 11);
-std_iono = nanstd(iono_res);
-bias_iono = nanmean(iono_res);
+std_iono = std(iono_res, 'omitnan');
+bias_iono = mean(iono_res, 'omitnan');
 xlabel(sprintf('std-dev = %2.3f, bias = %2.3f, [m]\n', std_iono, bias_iono))
 xlim(4*[-std_iono std_iono])
 ylabel('[%]')

@@ -69,8 +69,8 @@ prns(remove) = [];
 HMW_gnss(:, remove) = [];
 
 HMW_SD = HMW_refSat - HMW_gnss;             % collected HMW LC single differenced to reference satellite
-%     std_MW = nanstd(MW_SD);               % stdev of collected HMW LC, [cycles]
-mean_HMW = nanmean(HMW_SD);                 % mean of collected HMW LC, [cycles]
+%     std_MW = std(MW_SD, 'omitnan');               % stdev of collected HMW LC, [cycles]
+mean_HMW = mean(HMW_SD, 'omitnan');                 % mean of collected HMW LC, [cycles]
 HMW_round = round(mean_HMW);                % rounded mean of collected HMW LC
 dist_round = abs(mean_HMW - HMW_round);   	% distance mean to rounded mean
 dist_HMW = abs(mean_HMW' - fixed(prns));    % distance to current EW fix

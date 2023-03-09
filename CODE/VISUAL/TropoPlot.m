@@ -285,7 +285,6 @@ end
 function handles = load_read_IGS_estimation(handles)
 % Download IGS estimation for current station from ftp-server and read the
 % data in
-stat = lower(handles.station);
 % get date of current station
 date = handles.startdate;
 date = date(1,:);       % take first row of date for plotting from Multi Plot table
@@ -293,7 +292,7 @@ jd = cal2jd_GT(date(1), date(2), date(3));
 % convert (from julian date) into other formats
 [doy, yyyy] = jd2doy_GT(jd);
 % download tropofile
-[tropofile, success] = DownloadTropoFile(stat, yyyy, doy);
+[tropofile, success] = DownloadTropoFile(handles.station, yyyy, doy);
 if ~success
     handles.checkbox_IGS_ZTD.Enable = 'off';
     return      % download failed
@@ -345,8 +344,8 @@ figure('Name','Troposphere Histogram Plot', 'NumberTitle','off');
 histogram(diff, 'Normalization', 'probability')
 
 % Style
-std_trop = nanstd(diff);
-bias_trop = nanmean(diff);
+std_trop = std(diff, 'omitnan');
+bias_trop = mean(diff, 'omitnan');
 xlabel(sprintf('std-dev = %2.3f, bias = %2.3f, [m]\n', std_trop, bias_trop))
 xlim(4*[-std_trop std_trop])
 ylabel('[%]')

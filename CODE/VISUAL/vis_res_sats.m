@@ -105,7 +105,7 @@ for i = loop
         subplot(4, 4, no_plot)
         histogram(res, n, 'Normalization', 'probability', 'FaceColor', coleur)
         title({[codephase_fr ': ' sys sprintf('%02d',i)]}, 'fontsize', 11);
-        std_c = nanstd(res);         	% standard deviation of residuals of current satellite
+        std_c = std(res, 'omitnan');         	% standard deviation of residuals of current satellite
         res(isnan(res)) = [];           % remove NaNs
         no_res = numel(res);            % number of residuals (which are not NaN)
         bias_c = sum(res)/no_res;       % bias of the residuals of current satellite

@@ -29,12 +29,8 @@ classdef DEF
         % maximum time difference for a correction from correction stream,
         % timely nearest correction from correction stream has to be under
         % this threshold
-        THRESHOLD_corr2brdc_clk_dt = 5;         % [s], for clock corrections
+        THRESHOLD_corr2brdc_clk_dt = 60;        % [s], for clock corrections
         THRESHOLD_corr2brdc_orb_dt = 120;       % [s], for orbit corrections
-        
-        % time [s] which satellites is excluded if no broadcast ephemeris
-        % are found
-        EXCLUDE_TIME = 300;     % [s]
         
         % default observation type ranking
         RANKING_GPS = 'WCDPSLXYMNDIQF';

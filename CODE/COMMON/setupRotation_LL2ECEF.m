@@ -3,6 +3,12 @@ function  R = setupRotation_LL2ECEF(phi,lam)
 % Local Level origin in point with phi and lam
 % can be interpreted as the axes of the Local Level Frame expressed in the
 % ECEF frame
+% 
+% INPUT:
+%   phi         latitude [rad]
+%   lam         longitude [rad]
+% OUTPUT:
+%	R           3x3, rotation matrix from Local Level to ECEF frame
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************

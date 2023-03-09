@@ -74,6 +74,9 @@ for q = 1:n
         storeData.gpstime(q,1) = Epoch.gps_time;
         continue
     end
+    obs.glo_channel(isnan(obs.glo_channel)) = 0;
+    % -> frequency of GLONASS satellites is not correct but otherwise
+    % GLONASS is not analzed correctly
     [Epoch, obs] = prepareObservations(settings, obs, Epoch, q);
     % save relevant data
     prns = Epoch.sats;

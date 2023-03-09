@@ -60,8 +60,8 @@ end
 
 function [] = plotEllipse_std(dE, dN)
 % Plot ellipse with standard deviation of coordinates
-std_dE = nanstd(dE);
-std_dN = nanstd(dN);
+std_dE = std(dE, 'omitnan');
+std_dN = std(dN, 'omitnan');
 t = linspace(0, 2*pi);
 x_ell = std_dE*cos(t);
 y_ell = std_dN*sin(t);

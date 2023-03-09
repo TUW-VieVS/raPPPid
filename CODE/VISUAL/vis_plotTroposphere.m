@@ -44,8 +44,8 @@ grid on;
 xlim([hours(1) hours(end)])
 Grid_Xoff_Yon()
 legend([tot zhd_m zwd_m zwd_e], {'ZTD', 'Modeled ZHD', 'Modeled ZWD', 'Estimated ZWD'})
-ylim1 = quantile(zwd_estimate, 0.05) - nanstd(zwd_estimate);
-ylim2 = quantile(zwd_estimate, 0.95) + nanstd(zwd_estimate);
+ylim1 = quantile(zwd_estimate, 0.05) - std(zwd_estimate, 'omitnan');
+ylim2 = quantile(zwd_estimate, 0.95) + std(zwd_estimate, 'omitnan');
 ylim([ylim1, ylim2])
 
 % add customized datatip

@@ -264,7 +264,9 @@ else
     set(handles.edit_corr2brdc,'Visible','off');
     set(handles.pushbutton_corr2brdc,'Visible','off');
 end
-
+try
+    set(handles.edit_corr2brdc_age, 'String', num2str(structure.ORBCLK.CorrectionStream_age));  %#ok<*ST2NM>
+end
 
         
 

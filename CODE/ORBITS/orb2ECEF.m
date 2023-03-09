@@ -3,8 +3,8 @@ function [drho, drho_dot] = orb2ECEF(x_sat, v_sat, dr, dr_dot)
 % orb2ECEF from RTCM 3.1 document Amendment 5
 % 
 % INPUT:
-%   x_sat       Satellite Position in ECEF, [m]
-%   v_sat       Velocity in ECEF, [m/s]
+%   x_sat       broadcasted satellite position in ECEF, [m]
+%   v_sat       broadcasted velocity in ECEF, [m/s]
 %   dr          orbit position correction from corr2brdc-stream
 %   dr_dot      orbit velocity correction from corr2brdc-stream
 %               components of corrections vectors: radial, along-track, out-of-plane (across)

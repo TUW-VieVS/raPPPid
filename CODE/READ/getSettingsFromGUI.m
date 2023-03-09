@@ -89,6 +89,7 @@ settings.ORBCLK.multi_nav =   string_all{value};
 value = get(handles.popupmenu_CorrectionStream, 'Value');
 string_all = get(handles.popupmenu_CorrectionStream, 'String');
 settings.ORBCLK.CorrectionStream = string_all{value};
+settings.ORBCLK.CorrectionStream_age = str2num(get(handles.edit_corr2brdc_age, 'String'));  %#ok<*ST2NM>
 
 % get file paths, [] if not input
 settings.ORBCLK.file_sp3 = join_path(path.sp3_1, path.sp3_2);

@@ -68,8 +68,8 @@ remove = remove | isnan(HMW_gnss(epochs,:));
 prns(remove) = [];
 HMW_gnss(:, remove) = [];
 
-%     std_MW = nanstd(HMW_gnss);            % stdev of collected HMW LC, [cycles]
-mean_HMW = nanmean(HMW_gnss);               % mean of collected HMW LC, [cycles]
+%     std_MW = std(HMW_gnss, 'omitnan');            % stdev of collected HMW LC, [cycles]
+mean_HMW = mean(HMW_gnss, 'omitnan');               % mean of collected HMW LC, [cycles]
 HMW_round = round(mean_HMW);                % rounded mean of collected HMW LC
 dist_round = abs(mean_HMW - HMW_round);   	% distance mean to rounded mean
 dist_HMW = abs(mean_HMW' - fixed(prns));    % distance to current fix

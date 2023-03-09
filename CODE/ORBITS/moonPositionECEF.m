@@ -18,8 +18,6 @@ function [moonECEF] = moonPositionECEF(y, m, D, UT)
 %   ...
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
-%
-% This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 % (1) Calculate T - the number of Julian centuries since 1.5 January 2000

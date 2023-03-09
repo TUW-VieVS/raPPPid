@@ -259,8 +259,8 @@ function [str] = histodcbs(dcb_diff, coleur, gnsschar)
 dcb_diff = dcb_diff(:);
 n = round(1 + 3.322*log(numel(dcb_diff)));      % number of bins
 histogram(dcb_diff, n, 'Normalization', 'probability', 'FaceColor', coleur)
-std_dcb = nanstd(dcb_diff);     % standard deviation
-bias_dcb = nanmean(dcb_diff);   % bias
+std_dcb = std(dcb_diff, 'omitnan');     % standard deviation
+bias_dcb = mean(dcb_diff, 'omitnan');   % bias
 str = sprintf('std = %2.3f, bias = %2.3f\n', std_dcb, bias_dcb);
 xlim(4*[-std_dcb std_dcb])
 ylabel('[%]')

@@ -3,7 +3,7 @@ function DATA = readTropoFile(tropofile, station)
 %
 % INPUT:
 %   tropofile   string, path to troposphere file
-%   station     string, 4-digit station name
+%   station     string, 9-digit station name
 % OUTPUT:
 %   data        troposphere data for station in internal format,
 %               [n x 6] - matrix:
@@ -14,6 +14,9 @@ function DATA = readTropoFile(tropofile, station)
 
 
 % ||| only ZTD is considered
+
+
+stat = station(1:4);        % 4-digit station name
 
 
 %% HEADER
@@ -47,7 +50,7 @@ DATA = zeros(1,5); d = 1;
 while 1
     line = fgetl(fid); l = l + 1;
     
-    if contains(line, station)
+    if contains(line, stat)
         % get and save date
         date = sscanf(line(1:18),' %*s %2f:%3f:%5f')';      % year, doy, seconds of day
         DATA(d, 1:3) = date;        

@@ -88,8 +88,6 @@ Epoch.cs_dL1dL2 = [];
 Epoch.cs_dL1dL3 = [];
 Epoch.cs_dL2dL3 = [];
 Epoch.cs_pred_SF = NaN(399,1);
-% broadcast column
-Epoch.BRDCcolumn = NaN(399,1);
 % satellite status
 Epoch.sat_status = [];
 

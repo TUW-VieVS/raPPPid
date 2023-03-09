@@ -63,7 +63,7 @@ if isa(settings.PLOT.pos_true, 'double') || ~isfile(settings.PLOT.pos_true)
     bool_true_pos = true;
     if any(isnan(pos_true) | pos_true == 0 | pos_true == 1)     % no valid true position
         pos_cart(bool_zero, :) = [];        % remove those
-        pos_true = nanmedian(pos_cart, 1); 	% take median position for coordinate differences
+        pos_true = median(pos_cart, 1, 'omitnan'); 	% take median position for coordinate differences
         bool_true_pos = false;
     end
     % transform true positions in phi, lambda, h of WGS84 and into UTM
@@ -178,7 +178,7 @@ if STOP_CALC; return; end
 
 % -+-+-+-+- Figure: Wet Troposphere Plot -+-+-+-+-
 if settings.PLOT.wet_tropo && settings.TROPO.estimate_ZWD
-    TropoPlot(hours, label_x_h, storeData, reset_h, obs.startdate, station)
+    TropoPlot(hours, label_x_h, storeData, reset_h, obs.startdate, obs.station_long)
 %     vis_plotTroposphere(hours, label_x_h, storeData, reset_h);    % OLD
 end
 if STOP_CALC; return; end

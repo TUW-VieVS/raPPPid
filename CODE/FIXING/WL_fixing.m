@@ -98,8 +98,8 @@ prns(remove) = [];
 MW_gnss(:, remove) = [];
 
 MW_SD = MW_refSat - MW_gnss;                % collected MW LC single differenced to reference satellite
-%     std_MW = nanstd(MW_SD);               % stdev of collected MW LC, [cycles]
-mean_MW = nanmean(MW_SD);                   % mean of collected MW LC, [cycles]
+%     std_MW = std(MW_SD, 'omitnan');               % stdev of collected MW LC, [cycles]
+mean_MW = mean(MW_SD, 'omitnan');                   % mean of collected MW LC, [cycles]
 MW_round = round(mean_MW);                  % rounded mean of collected MW LC
 dist_round = abs(mean_MW - MW_round);   	% distance mean to rounded mean
 dist_MW = abs(mean_MW' - Epoch.WL_12(prns)); 	% distance to current WL fix

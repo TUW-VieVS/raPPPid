@@ -545,6 +545,20 @@ if settings.OTHER.mp_detection && ~isempty(rheader.interval) && rheader.interval
     msgbox({'Be careful: Observation interval might',  'be too low for Multipath detection!'}, 'MP Detection', 'help')
 end
 
+% Galileo HAS does not provide phase biases (yet)
+if settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'manually') && ...
+    contains(settings.ORBCLK.file_corr2brdc, 'SSRA00EUH0') && strcmp(settings.BIASES.phase, 'Correction Stream')
+    errordlg({'Galileo HAS does not provide phase biases (yet).', 'Set phase biases to off!'}, windowname)
+    valid_settings = false; return
+end
+
+% Correction stream is only implemented for GPS and Galileo
+if settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'manually') && (GLO_on || BDS_on)
+    errordlg({'Real-time correction stream is implemented for GPS+Galileo.', 'Disable the processing of GLONASS and BeiDou!'}, windowname)
+    valid_settings = false; return
+end
+
+
 
 
 % ||| to be continued

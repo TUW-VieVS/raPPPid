@@ -99,6 +99,7 @@ else
     
     if ~strcmpi(settings.ORBCLK.CorrectionStream,'off')
         fprintf(fileID,'    %s%s%s%s\n','Correction stream file: ',settings.ORBCLK.CorrectionStream,':   ',settings.ORBCLK.file_corr2brdc);
+        fprintf(fileID,'    %s%.0f%s%.0f%s%.0f%s\n','Corrections age limit [s]: ', settings.ORBCLK.CorrectionStream_age(1), ', ', settings.ORBCLK.CorrectionStream_age(2), ', ', settings.ORBCLK.CorrectionStream_age(3), ' (orbit, clock, biases)');
     else
         fprintf(fileID,'    %s\n','No correction stream file');
     end
@@ -260,7 +261,7 @@ if settings.OTHER.bool_rec_arp || settings.OTHER.bool_rec_pco || settings.OTHER.
     if settings.OTHER.ocean_loading
         fprintf(fileID,'    %s\n','o Ocean Loading');
     end
-    if settings.OTHER.bool_eclipse
+    if settings.OTHER.bool_eclipse && ~settings.ORBCLK.bool_obx
         fprintf(fileID,'    %s\n','o Eclipse condition is on');
     end    
 else

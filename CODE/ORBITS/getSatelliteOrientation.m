@@ -7,8 +7,8 @@ function orientation = getSatelliteOrientation(satECEF,sunECEF)
 % Details can be found in the ANTEX format specification
 %
 % INPUT:
-%   satECEF         Satellite Position in ECEF [m]
-%   sunECEF         Sun Position in ECEF [m]
+%   satECEF         3x1, Satellite Position in ECEF [m]
+%   sunECEF         3x1, Sun Position in ECEF [m]
 % OUTPUT:
 %   orientation     axes of satellite-frame in ECEF
 %

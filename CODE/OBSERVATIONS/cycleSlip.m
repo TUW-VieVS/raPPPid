@@ -50,9 +50,8 @@ if contains(settings.PROC.method, 'Phase')  % except code only solution
     if settings.PROC.LLI
         Epoch = cycleSlip_LLI(Epoch, use_column, settings);
     end
-    
-    
+   
+
     % save detected cycle slips in Epoch.sat_status
     Epoch.sat_status(any(Epoch.cs_found, 2)) = 3;
-    
 end

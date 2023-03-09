@@ -53,7 +53,8 @@ bool_print = ~settings.INPUT.bool_parfor;
 
 
 %% PREPARATIONS
-fid = fopen(path_file,'rt');         % open observation-file
+fid = fopen(path_file,'rt');            % open observation-file
+version = 0; version_full = 0;          % initialize
 obs_types_gps = [];     obs_types_glo = [];     obs_types_gal = [];     obs_types_bds = [];
 obs_types_gps_3 = [];   obs_types_glo_3 = [];   obs_types_gal_3 = []; 	obs_types_bds_3 = [];
 ranking_gps = [];       ranking_glo = [];     	ranking_gal = [];       ranking_bds = [];
@@ -62,7 +63,7 @@ startdate = [];         enddate = [];
 shift = [];     shiftlines = {};    i_shift = 1;
 glo_cod_phs_bis = [];
 glo_channel = NaN(99,1);
-stationname = '';
+stationname = ''; stationname_long = '';
 time_system = 'GPS';        % GPS time system is default
 
 
@@ -76,8 +77,8 @@ while 1
     
     % Rinex version
     if contains(line,'RINEX VERSION / TYPE')
-        version = line(6);
-        version_full = line(6:9);
+        version = sscanf(line(6), '%f');
+        version_full = sscanf(line(6:9), '%f');
     end
     
     % Antenna delta
@@ -101,6 +102,12 @@ while 1
     % Marker name
     if contains(line,'MARKER NAME')
         stationname = upper(strtrim(line(1:4)));        % make sure that uppercase
+        stationname_long = upper(strtrim(line(1:9)));   
+        if length(stationname_long) == 4 && version >= 3 
+            % try to recover long stationname from RINEX file
+            [~, obsfile, ~] = fileparts(settings.INPUT.file_obs);
+            stationname_long = obsfile(1:9);
+        end
     end
     
     % GLONASS Slot/Frequency Numbers
@@ -117,7 +124,7 @@ while 1
     end
     
     % Types of observations in RINEX 2.xx
-    if version=='2' && contains(line,'# / TYPES OF OBSERV')
+    if version == 2 && contains(line,'# / TYPES OF OBSERV')
         % read first line and no. of obs. types
         if length(line) > 60
             line = line(1:60);
@@ -141,7 +148,7 @@ while 1
     end
     
     % Types of observations in RINEX 3.xx
-    if (version=='4' || version=='3') && contains(line, 'SYS / # / OBS TYPES')
+    if version >= 3 && contains(line, 'SYS / # / OBS TYPES')
         system = line(1);   % get system identifier
         if system~='G' && system~='R' && system~='E' && system~='C' 
             continue        % continue for other system than GPS or GLONASS or GALILEO
@@ -308,8 +315,8 @@ obs.phase_shift   = shift;
 obs.startdate     = startdate;
 obs.time_system   = time_system; 
 obs.enddate       = enddate;
-obs.rinex_version = sscanf(version, '%f');
-obs.rinex_version_full = sscanf(version_full, '%f');
+obs.rinex_version = version;
+obs.rinex_version_full = version_full;
 
 % check and save observation interval
 try
@@ -337,6 +344,7 @@ obs.glo_cod_phs_bis = glo_cod_phs_bis;
 
 % save station relevant data
 obs.stationname 	= upper(stationname);
+obs.station_long 	= upper(stationname_long);
 obs.antenna_type 	= antenna_type;
 obs.receiver_type   = receiver_type;
 obs.rec_ant_delta 	= [ant_delta(3); ant_delta(2); ant_delta(1)];   % North / East / Height

@@ -34,10 +34,10 @@ delta_lam = delta_lam*pi/180*Const.RE;      % [~m]
 delta_phi = delta_phi*pi/180*Const.RE;   	% [~m]
 % handle limits of axes
 if delta_lam < 10
-    xlim([nanmean(lon)-0.002 nanmean(lon)+0.002]);    % +/- ~220m
+    xlim([mean(lon, 'omitnan')-0.002 mean(lon, 'omitnan')+0.002]);    % +/- ~220m
 end
 if delta_phi < 10
-    ylim([nanmean(lat)-0.002 nanmean(lat)+0.002]);    % +/- ~220m
+    ylim([mean(lat, 'omitnan')-0.002 mean(lat, 'omitnan')+0.002]);    % +/- ~220m
 end
 
 % plot the background map

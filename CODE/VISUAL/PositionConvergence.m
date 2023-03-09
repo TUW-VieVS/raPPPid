@@ -44,7 +44,7 @@ hold on
 if bool
     p_11 = plot(dT',d2D', 'color',[1 .44 .44], 'linewidth',1);  	% plot vectorized
 end
-p_12 = hline(PlotStruct.thresh_2D, 'b--');      % convergence threshold
+p_12 = hline(PlotStruct.thresh_2D, 'k--');      % convergence threshold
 p_13 = plot(dT_all, q68{4}, 'LineStyle', '-', 'Color', [.5 .5 .5], 'LineWidth',2);
 p_14 = plot(dT_all, q95{4},	'LineStyle', '-', 'Color', [.3 .3 .3], 'linewidth',2);
 ylabel('2D Position Error [m]')
@@ -55,7 +55,7 @@ end
 title([sprintf('%.0f', n_conv) ' Convergence Periods'])
 % create legend
 thresh_str_2D = ['Threshold: ' sprintf('%5.3f', PlotStruct.thresh_2D) ' m'];
-legend([p_13 p_14 p_12], {'68% Quantile', '95% Quantile', thresh_str_2D})
+legend([p_12; p_13; p_14; p_11], {thresh_str_2D, '68% Quantile', '95% Quantile', 'Convergence period'})
 
 
 
@@ -65,7 +65,7 @@ hold on
 if bool
     p_21 = plot(dT',d3D', 'color',[1 .44 .44], 'linewidth',1);  	% plot vectorized
 end
-p_22 = hline(PlotStruct.thresh_3D, 'b--');      % convergence threshold
+p_22 = hline(PlotStruct.thresh_3D, 'k--');      % convergence threshold
 p_23 = plot(dT_all, q68{5},	'LineStyle', '-', 'Color', [.5 .5 .5], 'LineWidth',2);
 p_24 = plot(dT_all, q95{5},	'LineStyle', '-', 'Color', [.3 .3 .3], 'linewidth',2);
 ylabel('3D Position Error [m]')
@@ -75,7 +75,7 @@ if max(q68{5}) < 3          % random threshold to detect geodetic results
 end
 % create legend
 thresh_str_3D = ['Threshold: ' sprintf('%5.3f', PlotStruct.thresh_3D) ' m'];
-legend([p_23 p_24 p_22], {'68% Quantile', '95% Quantile', thresh_str_3D})
+legend([p_22; p_23; p_24; p_21], {thresh_str_3D, '68% Quantile', '95% Quantile', 'Convergence period'})
 
 % add customized datatip
 dcm = datacursormode(fig);

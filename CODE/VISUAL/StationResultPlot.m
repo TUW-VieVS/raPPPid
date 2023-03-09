@@ -132,11 +132,11 @@ for j = 1:n_labels
         ACC_2D(i)  = quantile(d2D(:), .95);
         ACC_3D(i)  = quantile(d3D(:), .95);
         % calculate mean station convergence
-        CONV_2D_mean(i) = nanmean(conv_2D);
-        CONV_3D_mean(i) = nanmean(conv_3D);
+        CONV_2D_mean(i) = mean(conv_2D, 'omitnan');
+        CONV_3D_mean(i) = mean(conv_3D, 'omitnan');
         % calculate median station convergence
-        CONV_2D_medi(i) = nanmedian(conv_2D);
-        CONV_3D_medi(i) = nanmedian(conv_3D);        
+        CONV_2D_medi(i) = median(conv_2D, 'omitnan');
+        CONV_3D_medi(i) = median(conv_3D, 'omitnan');        
         % calculate quantiles of ZTD
         ZTD_68(i) = quantile(abs(d.ZTD(:)), .68);
         ZTD_95(i) = quantile(abs(d.ZTD(:)), .95);

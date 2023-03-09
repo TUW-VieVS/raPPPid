@@ -188,9 +188,9 @@ for q = q_range         % loop over epochs
         resetSolution(Adjust, Epoch, settings, HMW_12, HMW_23, HMW_13, storeData, obs.interval, init_ambiguities);
     
     % ----- Find column of broadcast-ephemeris of current satellite -----
-    % also check if satellites have broadcast ephemerides and are healthy, otherwise satellite is excluded
+    % check if satellites have broadcast ephemerides and are healthy, otherwise satellite is excluded
     if settings.ORBCLK.bool_brdc
-        [settings.PROC.excl_partly, Epoch.BRDCcolumn] = findEphColumn(Epoch, input, settings, q, obs.interval);
+        Epoch = findEphCorr2Brdc(Epoch, input, settings);
     end 
     
     % ----- prepare observations -----

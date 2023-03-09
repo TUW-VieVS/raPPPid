@@ -1,6 +1,6 @@
 function dx = KalmanFilterIterative(Adjust, x_pred)
 % Function for Kalm Filter with inner-epoch iteration. 
-% The change of the parameters % is estimated as pseudo-observation trough 
+% The change of the parameters is estimated as pseudo-observation trough 
 % an inner-epoch iteration. Start of the iteration is the zero-vector as 
 % the change of the parameters is expected to be zero.
 % Check [01]: p.244, formulas without Gain Matrix

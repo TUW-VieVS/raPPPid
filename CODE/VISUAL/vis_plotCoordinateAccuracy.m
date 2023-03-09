@@ -20,10 +20,10 @@ function vis_plotCoordinateAccuracy(dN, dE, label, floatfix)
 fig_coords = figure('Name','Coordinate Accuracy', 'NumberTitle','off');
 dE = dE(:);
 dN = dN(:);
-std_dE = nanstd(dE);
-std_dN = nanstd(dN);
-mean_dE = nanmean(dE);
-mean_dN = nanmean(dN);
+std_dE = std(dE, 'omitnan');
+std_dN = std(dN, 'omitnan');
+mean_dE = mean(dE, 'omitnan');
+mean_dN = mean(dN, 'omitnan');
 
 
 % % Plot ellipse with standard deviation of coordinates

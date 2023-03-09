@@ -83,11 +83,11 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(set
     % --- Design Matrix A
     dR_diono_code_f1  =  Epoch.f1.^2 ./ Epoch.f1.^2;
     A_iono = diag(dR_diono_code_f1);
-    if num_freq > 1      % 2nd frequency is processed
+    if num_freq > 1         % 2nd frequency is processed
         dR_diono_code_f2  =  Epoch.f1.^2 ./ Epoch.f2.^2;
         A_iono_2 = diag(dR_diono_code_f2);
         A_iono = [A_iono; A_iono_2];
-        if num_freq > 2      % 3rd frequency is processed
+        if num_freq > 2     % 3rd frequency is processed
             dR_diono_code_f3  =  Epoch.f1.^2 ./ Epoch.f3.^2;
             A_iono_3 = diag(dR_diono_code_f3);
             A_iono = [A_iono; A_iono_3];

@@ -25,7 +25,8 @@ targets = {...
     [Path.DATA, 'CLOCK/', yyyy, '/', doy]};
 mkdir(targets{1});
 mkdir(targets{2});
-URL_host = 'igs.ign.fr:21';            % default ftp-server
+URL_host = 'igs.ign.fr:21';                                 % default ftp-server
+URL_host_2 = 'https://cddis.nasa.gov'; URL_folders_2 = '';  files_2 = ''; % option 2
 download = true;    % boolean variable if products need still to be downloaded
 multiple = false;   % is set to true if multiple sp3-files are needed (e.g. ???)
 
@@ -39,6 +40,7 @@ switch settings.ORBCLK.prec_prod
         switch settings.ORBCLK.prec_prod_type
             case 'Final'
                 URL_folders = repmat({['/pub/igs/products/', gpsweek, '/']},2,1);
+                URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
                 if settings.INPUT.use_GPS && settings.INPUT.use_GLO
                     % ||| implement
                     errordlg('ERROR: IGS final products for GPS+GLO are not implemented!', 'Error');
@@ -65,6 +67,7 @@ switch settings.ORBCLK.prec_prod
                 
             case 'Rapid'
                 URL_folders = repmat({['/pub/igs/products/', gpsweek, '/']},2,1);
+                URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
                 if settings.INPUT.use_GPS && settings.INPUT.use_GLO
                     % ||| implement
                     errordlg('ERROR: IGS Products for GPS+GLO are not implemented!', 'Error');
@@ -87,11 +90,13 @@ switch settings.ORBCLK.prec_prod
                 if settings.INPUT.use_GPS
                     if str2double(gpsweek) >= 2238
                         URL_folders = repmat({['/pub/igs/products/', gpsweek, '/']},1,1);
+                        URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
                         files = {['IGS0OPSULT_' yyyy doy '0000_02D_15M_ORB.SP3.gz']};
                     else
                         [gpsweek, dow] = NextDay(gpsweek, dow);
                         targets = targets(1);       % no clk file
                         URL_folders = repmat({['/pub/igs/products/', gpsweek, '/']},1,1);
+                        URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
                         files = {['igu', gpsweek, dow, '_00.', 'sp3',     '.Z']};
                     end
                     
@@ -205,6 +210,11 @@ switch settings.ORBCLK.prec_prod
         % https://igsac-cnes.cls.fr/html/products.html
         if settings.ORBCLK.MGEX
             URL_folders = repmat({['/pub/igs/products/mgex/' gpsweek, '/']},2,1);
+            if str2double(gpsweek) > 2230 
+                URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
+            else
+                URL_folders_2 = repmat({['/archive/gnss/products/mgex/' gpsweek]},2,1);
+            end
             if str2double(gpsweek) > 2141       % orbit interval changed after week 2141
                 files = {...
                     ['GRG0MGXFIN_', yyyy, doy, '0000', '_01D_05M_ORB.SP3.gz']
@@ -220,6 +230,7 @@ switch settings.ORBCLK.prec_prod
             end
         else
             URL_folders = repmat({['/pub/igs/products/', gpsweek, '/']},2,1);
+            URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
             switch settings.ORBCLK.prec_prod_type
                 case 'Final'
                     if str2double(gpsweek) >= 2238
@@ -245,7 +256,7 @@ switch settings.ORBCLK.prec_prod
         % Some satellites stay unfixed and have no integer clock therefore:
         % ftp://ftpsedr.cls.fr/pub/igsac/readme_ELIMSAT.txt
         if ~exist([Path.DATA 'CLOCK/' 'GRG_ELIMSAT_all.dat'], 'file')
-            ftp_download('ftpsedr.cls.fr:21', '/pub/igsac/', 'GRG_ELIMSAT_all.dat', [Path.DATA 'CLOCK/'], true)
+            ftp_download('ftpsedr.cls.fr:21', '/pub/igsac/', 'GRG_ELIMSAT_all.dat', [Path.DATA 'CLOCK/'], true);
         end
         
     case 'CODE'
@@ -307,10 +318,18 @@ switch settings.ORBCLK.prec_prod
                 case 'Rapid'
                     % ftp adress without 'pub' does only work in the browser
                     URL_folders = repmat({['/pub/GNSS/products/mgex/' gpsweek, '/']},2,1);
+                    if str2double(gpsweek) > 2230
+                        URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
+                    else
+                        URL_folders_2 = repmat({['/archive/gnss/products/mgex/' gpsweek]},2,1);
+                    end
                     if str2double(gpsweek) > 2081
                         files = {...    % follows http://mgex.igs.org/IGS_MGEX_Metadata.php
                             ['GBM0MGXRAP_', yyyy, doy, '0000_01D_05M_ORB.SP3.gz']       % GFZ Multi-GNSS precise orbits
                             ['GBM0MGXRAP_', yyyy, doy, '0000_01D_30S_CLK.CLK.gz']}; 	% GFZ Multi-GNSS precise clocks
+                        files_2 = {...    % follows http://mgex.igs.org/IGS_MGEX_Metadata.php
+                            ['GFZ0MGXRAP_', yyyy, doy, '0000_01D_05M_ORB.SP3.gz']       % GFZ Multi-GNSS precise orbits
+                            ['GFZ0MGXRAP_', yyyy, doy, '0000_01D_30S_CLK.CLK.gz']}; 	% GFZ Multi-GNSS precise clocks
                     elseif str2double(gpsweek) > 1782 
                         files = {...
                             ['gbm', gpsweek, dow, '.sp3.Z']
@@ -371,6 +390,11 @@ switch settings.ORBCLK.prec_prod
                 return
             end
             URL_folders = repmat({['/pub/ips/products/mgex/' gpsweek, '/']},2,1);
+            if str2double(gpsweek) > 2230
+                URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
+            else
+                URL_folders_2 = repmat({['/archive/gnss/products/mgex/' gpsweek]},2,1);
+            end
             files = {...
                 ['JAX0MGXFIN_', yyyy, doy, '0000_01D_05M_ORB.SP3.gz']
                 ['JAX0MGXFIN_', yyyy, doy, '0000_01D_30S_CLK.CLK.gz']};
@@ -385,6 +409,11 @@ switch settings.ORBCLK.prec_prod
                 return
             end
             URL_folders = repmat({['/pub/ips/products/mgex/' gpsweek, '/']},2,1);
+            if str2double(gpsweek) > 2230
+                URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
+            else
+                URL_folders_2 = repmat({['/archive/gnss/products/mgex/' gpsweek]},2,1);
+            end
             files = {...
                 ['SHA0MGXRAP_', yyyy, doy, '0000', '_01D_15M_ORB.SP3.gz'] 	% orbits
                 ['SHA0MGXRAP_', yyyy, doy, '0000', '_01D_05M_CLK.CLK.gz']};   	% clocks
@@ -396,6 +425,11 @@ switch settings.ORBCLK.prec_prod
         if settings.ORBCLK.MGEX
             % tum has no clk-file, only sp3 (?!)
             URL_folders = repmat({['/pub/igs/products/mgex/' gpsweek, '/']},1,1);
+            if str2double(gpsweek) > 2230
+                URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
+            else
+                URL_folders_2 = repmat({['/archive/gnss/products/mgex/' gpsweek]},2,1);
+            end
             files = {['SHA0MGXRAP_', yyyy, doy, '0000', '_01D_15M_ORB.SP3.gz']}; 	% orbits
         else
             errordlg(['Precise Product Type: ' settings.ORBCLK.prec_prod_type ' is not implemented.'], 'Error');
@@ -407,8 +441,15 @@ switch settings.ORBCLK.prec_prod
             URL_host = 'igs.gnsswhu.cn:21';
             URL_folders{1} = ['/pub/whu/phasebias/' yyyy, '/orbit/'];
             URL_folders{2} = ['/pub/whu/phasebias/' yyyy, '/clock/'];
+            if str2double(gpsweek) > 2230
+                URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
+            else
+                URL_folders_2 = repmat({['/archive/gnss/products/mgex/' gpsweek]},2,1);
+            end
             files{1} = ['WUM0MGXRAP_' yyyy doy '0000_01D_01M_ORB.SP3.gz'];
             files{2} = ['WUM0MGXRAP_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
+            files_2{1} = ['WUM0MGXFIN_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
+            files_2{2} = ['WUM0MGXFIN_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
 %             URL_folders = repmat({['/pub/igs/products/mgex/' gpsweek, '/']},2,1);
 %             if str2double(gpsweek) > 1961 	% naming of products changed after week 1961
 %                 files = {...
@@ -431,13 +472,25 @@ end
 
 %% download and unzip files, if necessary
 i = 1;
+if isempty(files_2); files_2 = files; end
 while download   &&   i <= length(files)
-    [file_status] = ftp_download(URL_host, URL_folders{i}, files{i}, targets{i}, true);    
-    % ||| if download failed, try another ftp server
+    file_status = 0;
+    try     %#ok<TRYNC>                             % try to download from igs.ign.fr
+        [file_status] = ftp_download(URL_host, URL_folders{i}, files{i}, targets{i}, true);
+    end
     if file_status == 1   ||   file_status == 2
         unzip_and_delete(files(i), targets(i));
-    elseif file_status == 0
-        errordlg(['No precise products from ' settings.ORBCLK.prec_prod ' found on server. Please specify different source!'], 'Error');
+    end
+    if file_status == 0 && ~isempty(URL_folders_2) 	% try to download from CDDIS
+        file = files_2{i};    target = targets{i};
+        file_status = get_cddis_data(URL_host_2, URL_folders_2, {file}, {target}, true);
+        if file_status == 1   ||   file_status == 2
+            unzip_and_delete(files_2(i), targets(i));
+        end
+    end
+    % other download sources can be added here
+    if file_status == 0
+        errordlg({['Downloading ' settings.ORBCLK.prec_prod ' satellite orbits+clocks failed.']; 'Please try different source!'}, 'Error');
         return
     end
     [~,files{i},~] = fileparts(files{i});   % remove the zip file extension

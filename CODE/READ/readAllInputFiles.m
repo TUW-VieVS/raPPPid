@@ -36,6 +36,15 @@ hour = obs.startdate(4) + obs.startdate(5)/60 + obs.startdate(6)/3660;
 obs.startdate_jd = cal2jd_GT(obs.startdate(1),obs.startdate(2), obs.startdate(3) + hour/24);
 [obs.startGPSWeek, obs.startSow, ~] = jd2gps_GT(obs.startdate_jd);
 [obs.doy, ~] = jd2doy_GT(obs.startdate_jd);
+% print startdate of observation file
+if bool_print
+    fprintf('\nRINEX observation start:\n')
+    t = datetime(obs.startdate(1), obs.startdate(2), obs.startdate(3), ...
+        obs.startdate(4), obs.startdate(5), obs.startdate(6), 'Format', 'yyyy-MM-dd HH:mm:ss.SSS');
+    fprintf('  %s | %d/%d | %d/%03d\n\n', t, obs.startGPSWeek, floor(obs.startSow/86400), obs.startdate(1), floor(obs.doy))
+end
+
+
 
 % automatic download of the files which are needed for processing and some
 % changes (filepaths and booleans) in the struct settings for the futher processing
@@ -150,8 +159,9 @@ if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && settings.ORBCLK.bool_
     if exist(corr2brdc_mat,'file') && ~settings.INPUT.bool_realtime      % load .mat-file, if available
         load(corr2brdc_mat, 'corr2brdc_GPS', 'corr2brdc_GLO', 'corr2brdc_GAL', 'corr2brdc_BDS', 'corr2brdc_vtec');	% load .mat-file
     else                                                    % no .mat-file so read-in correction-stream
-        if bool_print; fprintf('Reading corrections to broadcast ephemerides...\n'); end
-        [corr2brdc_GPS, corr2brdc_GLO, corr2brdc_GAL, corr2brdc_BDS, corr2brdc_vtec] = readCorr2Brdc(corr2brdc_path, settings.ORBCLK.corr2brdc_clk, settings.ORBCLK.corr2brdc_orb, settings.BIASES.code_corr2brdc_bool);
+        if bool_print; fprintf('Reading corrections to broadcast ephemerides (this may take up to several minutes)\n'); end
+        [corr2brdc_GPS, corr2brdc_GLO, corr2brdc_GAL, corr2brdc_BDS, ...
+            corr2brdc_vtec] = read_corr2brdc_stream(corr2brdc_path);
         save(corr2brdc_mat, 'corr2brdc_GPS', 'corr2brdc_GLO', 'corr2brdc_GAL', 'corr2brdc_BDS', 'corr2brdc_vtec')   % save as .mat-file for next processing (faster loading)
         %         delete(erase(filename,'.mat'));   % delete the original file (only wastes disk space)
     end
@@ -248,8 +258,25 @@ end
 
 
 % read trop-files from IGS, if specified
-if strcmpi(settings.TROPO.zhd,'Tropo file')   ||   strcmpi(settings.TROPO.zwd,'Tropo file')
-    [settings, input] = getTropoFile (obs, settings, input);
+if strcmpi(settings.TROPO.zhd,'Tropo file') || strcmpi(settings.TROPO.zwd,'Tropo file')
+    switch settings.TROPO.tropo_file
+        case 'manually'
+            input.TROPO.tropoFile.data = readTropoFile(settings.TROPO.tropo_filepath, obs.stationname);
+            
+        case 'IGS troposphere product'
+            % download tropofile
+            [tropofile, success] = DownloadTropoFile(obs.station_long, obs.startdate(1), jd2doy_GT(obs.startdate_jd));
+            if success
+                input.TROPO.tropoFile.data = readTropoFile(tropofile, obs.station_long);
+            else
+                errordlg('IGS Tropo file not found, GPT3 used instead!', 'ERROR')
+                fprintf('%s%s%s\n' , 'Tropo file ',  file_tropoFile, ' not found => GPT3 used instead');
+                settings.TROPO.zhd = 'p (GPT3) + Saastamoinen';
+                settings.TROPO.zwd = 'e (GPT3) + Askne';
+            end
+        otherwise
+            errordlg('Error in getTropoFile.m', 'ERROR');
+    end
 end
 
 

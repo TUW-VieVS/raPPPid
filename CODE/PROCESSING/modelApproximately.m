@@ -82,12 +82,13 @@ for i_sat = 1:num_sat
         cutoff = true;      % eliminate satellite
         status = 15;
         Epoch.tracked(prn) = 1;
+        continue
     end
     
     % --- Clock correction: with navigation data or precise clocks from .clk-file ---
     % Clock correction in seconds, accurate enough with approximate Ttr
     dT_sat = 0;      % just for simulated data when satellite clock is perfect
-    [dT_sat, cutoff] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings);
+    [dT_sat, cutoff] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, Epoch.corr2brdc_clk(:,prn));
     if isnan(dT_sat) || dT_sat == 0 || cutoff       % no clock correction
         if ~settings.INPUT.bool_parfor; fprintf('No precise clock data for satellite %d in SOW %0.3f              \n', prn, Ttr); end
         cutoff = true;                      % eliminate satellite
@@ -103,8 +104,7 @@ for i_sat = 1:num_sat
         Ttr = Epoch.gps_time - tau;                             % time of emission = time of obs. - runtime
         
         % --- Satellite-Orbit: precise ephemeris (.sp3-file) or broadcast navigation data (perhabs + correction stream) ---
-        [X, V, cutoff, status] = satelliteOrbit(prn, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, cutoff, status);
-
+        [X, V, cutoff, status] = satelliteOrbit(prn, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, cutoff, status, Epoch.corr2brdc_orb(:,prn));
         % --- correction of satellite ECEF position for earth rotation during runtime tau ---
         tau = tau - dt_rx;  % Correct tau for receiver clock error to avoid jumps in sat position
         omegatau = Const.WE*tau;     % [rad]
@@ -264,22 +264,19 @@ for i_sat = 1:num_sat
         % and satellite is not under cutoff
         if isGPS        % get offsets for current satellite
             offset_LL = input.OTHER.PCO.sat_GPS(input.OTHER.PCO.sat_GPS(:,1) == sv, 2:4, 1:5); 
-            offset_LL = reshape(offset_LL,3,5,1);   % each column contains another frequency
             idx_frqs = idx_frqs_gps;
         elseif isGLO
             offset_LL = input.OTHER.PCO.sat_GLO(input.OTHER.PCO.sat_GLO(:,1) == sv, 2:4, 1:5);
-            offset_LL = reshape(offset_LL,3,5,1);
             idx_frqs = idx_frqs_glo;
         elseif isGAL
             offset_LL = input.OTHER.PCO.sat_GAL(input.OTHER.PCO.sat_GAL(:,1) == sv, 2:4, 1:5);
-            offset_LL = reshape(offset_LL,3,5,1);
             idx_frqs = idx_frqs_gal;
         elseif isBDS 
             offset_LL = input.OTHER.PCO.sat_BDS(input.OTHER.PCO.sat_BDS(:,1) == sv, 2:4, 1:5);
-            offset_LL = reshape(offset_LL,3,5,1);
             idx_frqs = idx_frqs_bds;            
         end
-        dX_PCO_SAT_ECEF = SatOr_ECEF*offset_LL;                         % transform offsets into ECEF site displacements
+        offset_LL = reshape(offset_LL,3,5,1);   % each column contains another frequency
+        dX_PCO_SAT_ECEF = SatOr_ECEF*offset_LL;   	% transform offsets into ECEF site displacements
         dX_los = sum(los0.*dX_PCO_SAT_ECEF, 1); 	% project each frequency onto line of sight
         % missing satellite PCO corrections are replaced with the correction
         % of the 1st frequency:
