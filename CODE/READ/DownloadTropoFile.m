@@ -27,7 +27,7 @@ doy_ 	= sprintf('%03d',doy);
 % define variables for download
 target = [Path.DATA, 'TROPO/', yyyy_, '/', doy_];
 mkdir(target)
-if (yyyy >= 2023) || (yyyy == 2023 && doy >= 48)
+if (yyyy > 2023) && (yyyy == 2023 && doy >= 48)
     % starting with 17 Feb 2023 long filenames are used (IGSMAIL-8313)
     % ||| not working
     URL_file = ['IGS0OPSFIN_' yyyy_ doy_ '0000_01D_05M_' upper(stationlong) '_TRO.TRO.gz'];
@@ -72,3 +72,8 @@ archive = [target, '/', URL_file];
 tropofile = unzip_7zip(path_7zip, archive);
 delete(archive);
 success = true;
+
+% check if file really exists
+if ~isfile(tropofile)
+    success = false;
+end

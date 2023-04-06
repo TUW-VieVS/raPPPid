@@ -81,55 +81,20 @@ if settings.ORBCLK.bool_brdc && settings.ORBCLK.bool_nav_multi && ~strcmp(settin
     if str2double(yyyy) < 2015
         error('There are no Multi-GNSS broadcast messages before 2015! Please choose Single-GNSS Navigation Files instead!')
     end    
-    target_nav = {[Path.DATA, 'BROADCAST/', yyyy, '/', doy]};
-    mkdir(target_nav{1});
-    switch settings.ORBCLK.multi_nav
-        case 'IGS'  
-            URL_host    = 'igs.ign.fr:21';
-            URL_folder = {['/pub/igs/data/' yyyy '/' doy '/']};
-            file = {['BRDC00IGS_R_', yyyy, doy, '0000', '_01D_MN.rnx.gz']};
-            URL_host_2 = 'gssc.esa.int:21';
-            URL_folder_2 = {['/gnss/data/daily/', yyyy, '/', doy, '/']};
-        case 'IGN'
-            URL_host    = 'igs.ign.fr:21';
-            URL_folder = {['/pub/igs/data/' yyyy '/' doy '/']};
-            URL_host_2 = '';
-            URL_folder_2 = {''};
-            file = {['BRDC00IGN_R_', yyyy, doy, '0000', '_01D_MN.rnx.gz']};
-        case 'BKG'      % ||| removed from GUI
-            % broadcast archive of BKG ||| check the download code
-            file_decompr = {['BRDC00WRD_R_' yyyy doy '0000_01D_MN.rnx']};
-            file         = {['BRDC00WRD_R_' yyyy doy '0000_01D_MN.rnx.gz']};
-            URL_host_2 = '';
-            URL_folder_2 = {''};
-            if ~isfile([target_nav{1} '/' file_decompr{1}])  	% check if already existing
-                websave([target_nav{1} '/' file{1}], ['https://igs.bkg.bund.de/root_ftp/IGS/BRDC/' yyyy '/' doy '/' file{1}]);
-                if isfile([target_nav{1} '/' file{1}])          % check if download worked
-                    unzip_and_delete(file, target_nav);
-                else
-                    % ||| download failed :(
-                end
-            end
-    end
-    file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target_nav{1}, false);
-    if file_status == 0
-        file_status = ftp_download(URL_host_2, URL_folder_2{1}, file{1}, target_nav{1}, true);
-    end
-    if file_status == 1   ||   file_status == 2
-        unzip_and_delete(file, target_nav);
-    elseif file_status == 0
-        errordlg(['No Multi-GNSS broadcast message from ' settings.ORBCLK.multi_nav ' found on server. Please specify different source!'], 'Error');
-    end
-    [~,file,~] = fileparts(file{1});   % remove the zip file extension
-    settings.ORBCLK.file_nav_multi = [target_nav{1} '/' file];
-
+    settings.ORBCLK.file_nav_multi = DownloadBrdcNavMess(yyyy, doy, settings.ORBCLK.multi_nav, true);
+    
 elseif glo_channels
     % Glonass channel numbers could not be extracted from the Rinex header
     % so a brodcast navigation message is needed
     if str2double(yyyy) < 2015
         error('There are no Multi-GNSS broadcast messages before 2015! Please choose Single-GNSS Navigation Files instead!')
     end
-    settings.ORBCLK.file_nav_multi = DownloadBrdcNavMess(yyyy, doy);
+    if ~isfile(settings.ORBCLK.file_nav_multi)
+        settings.ORBCLK.file_nav_multi = DownloadBrdcNavMess(yyyy, doy, 'IGS', false);
+    end
+    if ~isfile(settings.ORBCLK.file_nav_multi)
+        settings.ORBCLK.file_nav_multi = DownloadBrdcNavMess(yyyy, doy, 'IGN', true);
+    end
 end
 
 
@@ -141,28 +106,22 @@ end
 bool_nav_iono = ~strcmp(settings.ORBCLK.multi_nav, 'manually') && ...
     (strcmp(settings.IONO.source, 'Klobuchar model') || strcmp(settings.IONO.source, 'NeQuick model'));
 if bool_nav_iono
-    % No Multi-GNSS broadcast messages before 2015 which is ignored here!
-    target_nav = {[Path.DATA, 'BROADCAST/', yyyy, '/', doy]};
-    mkdir(target_nav{1});
-    URL_host    = 'igs.ign.fr:21';
-    URL_folder = {['/pub/igs/data/' yyyy '/' doy '/']};
-    file = {['BRDC00IGN_R_', yyyy, doy, '0000', '_01D_MN.rnx.gz']};
-    file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target_nav{1}, true);
-    if file_status == 1   ||   file_status == 2
-        unzip_and_delete(file, target_nav);
-    elseif file_status == 0
-        errordlg(['No Multi-GNSS broadcast message from ' settings.ORBCLK.multi_nav ' found on server. Please specify different source!'], 'Error');
+    if str2double(yyyy) < 2015
+        error('There are no Multi-GNSS broadcast messages before 2015! Please choose Single-GNSS Navigation Files instead!')
     end
-    [~,file,~] = fileparts(file{1});   % remove the zip file extension
-    settings.ORBCLK.file_nav_multi = [target_nav{1} '/' file];
+    if ~isfile(settings.ORBCLK.file_nav_multi)
+        settings.ORBCLK.file_nav_multi = DownloadBrdcNavMess(yyyy, doy, 'IGS', false);
+    end
+    if ~isfile(settings.ORBCLK.file_nav_multi)
+        settings.ORBCLK.file_nav_multi = DownloadBrdcNavMess(yyyy, doy, 'IGN', true);
+    end
 end
 
-
-
 % IONEX file
-bool_downl_ionex = strcmp(settings.IONO.source,'IONEX File') && ( strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Correct with ...') );
+bool_downl_ionex = strcmp(settings.IONO.source,'IONEX File') && strcmp(settings.IONO.model_ionex,'Source:') &&...
+    (strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Correct with ...'));
 if bool_downl_ionex
-   [settings] = DownloadIonex(settings, gpsweek, dow, yyyy, mm, doy);    
+    [settings] = DownloadIonex(settings, gpsweek, dow, yyyy, mm, doy);
 end
 
 % .ion file

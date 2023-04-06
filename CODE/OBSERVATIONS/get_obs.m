@@ -41,7 +41,7 @@ no_LC = ~IF_LC_2fr_1x   &&   ~IF_LC_2fr_2x   &&   ~IF_LC_3fr;
 
 
 %% GPS
-if settings.INPUT.use_GPS
+if settings.INPUT.use_GPS   
     % get columns of GPS observations, at the moment the column with the
     % lowest ranking is taken and for all satellites the same observation type  
     L1 = obs.use_column{1, 1}; L2 = obs.use_column{1, 2}; L3 = obs.use_column{1, 3};

@@ -1,83 +1,74 @@
-function brdc_file_path = DownloadBrdcNavMess(yyyy, doy)
+function brdc_file_path = DownloadBrdcNavMess(yyyy, doy, option, bool_print)
 % Download broadcast navigation message. Due to regularly changing
 % filenames and ftp servers in this regard, multiple options are considered
-% 
+%
 % INPUT:
 %   yyyy                string, 4-digit year
 %   doy                 string, day of year
+%   option              string, defines source for download
+%   bool_print          boolean, true to print download information
 % OUTPUT:
 %	brdc_file_path      string, full relative filepath
 %
 % Revision:
-%   ...
+%   2023/03/15, MFG     download all brdc nav message from here
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
+brdc_file_path = '';
+
+% define target for download
 target_nav = {[Path.DATA, 'BROADCAST/', yyyy, '/', doy]};
 mkdir(target_nav{1});
 
-% possible mGNSS navigation message files
-file_1 = ['BRDC00IGN_S_', yyyy, doy, '0000', '_01D_MN.rnx'];
-file_2 = ['BRDC00IGS_R_', yyyy, doy, '0000', '_01D_MN.rnx'];
-file_3 = ['BRDM00DLR_S_' yyyy doy '0000_01D_MN.rnx'];
+% define FTP host and folder
+FTP_h_ign = 'igs.ign.fr:21';
+FTP_f_ign = {['/pub/igs/data/' yyyy '/' doy '/']};
+% define alternative FTP host and folder
+FTP_h_esa = 'gssc.esa.int:21';
+FTP_f_esa = {['/gnss/data/daily/', yyyy, '/', doy, '/']};
+% define alternative FTP host and folder
+URL_cddis = 'https://cddis.nasa.gov'; 
+folder_cddis = ['/archive/gnss/data/daily/' yyyy '/' doy '/' yyyy(3:4) 'p'];  
 
+% booleans for sources
+bool_ign = true;
+bool_esa = true;
+bool_cddis = true;
 
-% check if any already downloaded
-if isfile([ Path.DATA 'BROADCAST/' yyyy, '/' doy '/' file_1 ])
-    brdc_file_path = [Path.DATA 'BROADCAST/' yyyy, '/' doy '/' file_1];
-    return
+switch option
+    case 'IGS'
+        file = {['BRDC00IGS_R_', yyyy, doy, '0000', '_01D_MN.rnx.gz']};
+        
+    case 'IGN'
+        file = {['BRDC00IGN_R_', yyyy, doy, '0000', '_01D_MN.rnx.gz']};
+        bool_esa = false; bool_cddis = false;
 end
-if isfile([ Path.DATA 'BROADCAST/' yyyy, '/' doy '/' file_2 ])
-    brdc_file_path = [Path.DATA 'BROADCAST/' yyyy, '/' doy '/' file_2];
-    return
+
+% try to download from igs.ign.fr
+if bool_ign
+    file_status = ftp_download(FTP_h_ign, FTP_f_ign{1}, file{1}, target_nav{1}, false);
 end
-if isfile([ Path.DATA 'BROADCAST/' yyyy, '/' doy '/' file_3 ])
-    brdc_file_path = [Path.DATA 'BROADCAST/' yyyy, '/' doy '/' file_3];
-    return
+% try to download from gssc.esa.int
+if bool_esa && file_status == 0
+    file_status = ftp_download(FTP_h_esa, FTP_f_esa{1}, file{1}, target_nav{1}, ~bool_cddis&&bool_print);
+end
+% try to download from CDDIS 
+if bool_cddis && file_status == 0
+   file_status = get_cddis_data(URL_cddis, {folder_cddis}, file(1), {target_nav}, bool_print);
 end
 
-
-% otherwise, try to download 
-% IGS IGN: ||| not working... then working....
-URL_host    = 'igs.ign.fr:21';
-URL_folder = {['/pub/igs/data/' yyyy '/' doy '/']};
-% file = {['BRDC00IGN_R_', yyyy, doy, '0000', '_01D_MN.rnx.gz']};
-file = {['BRDC00IGN_S_', yyyy, doy, '0000', '_01D_MN.rnx.gz']};
-file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target_nav{1}, false);
-if file_status == 1   ||   file_status == 2
+% unzip downloaded file
+if file_status == 1 || file_status == 2
     unzip_and_delete(file, target_nav);
-
-elseif file_status == 0
-    % GSSC ESA -> but also: ||| not working... then working....
-    URL_host = 'gssc.esa.int:21';
-    URL_folder = {['/gnss/data/daily/' yyyy '/brdc/']};
-    file = {['BRDC00IGS_R_', yyyy, doy, '0000', '_01D_MN.rnx.gz']};
-    file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target_nav{1}, false);
-    if file_status == 1   ||   file_status == 2
-        unzip_and_delete(file, target_nav);
-
-    elseif file_status == 0     
-        % broadcast archive of BKG
-        %             % does not contain GLONASS (why?
-        %             file_decompr = {['BRDC00WRD_R_' yyyy doy '0000_01D_MN.rnx']};
-        %             file         = {['BRDC00WRD_R_' yyyy doy '0000_01D_MN.rnx.gz']};
-        file_decompr = {['BRDM00DLR_S_' yyyy doy '0000_01D_MN.rnx']};
-        file         = {['BRDM00DLR_S_' yyyy doy '0000_01D_MN.rnx.gz']};
-        if ~isfile([target_nav{1} '/' file_decompr{1}])  	% check if already existing
-            websave([target_nav{1} '/' file{1}], ['https://igs.bkg.bund.de/root_ftp/IGS/BRDC/' yyyy '/' doy '/' file{1}]);
-            if isfile([target_nav{1} '/' file{1}])          % check if download worked
-                unzip_and_delete(file, target_nav);
-            elseif file_status == 0
-                errordlg('No Multi-GNSS broadcast message from IGS found on server for Glonass channels.', 'Error');
-            end
-        end
-    end
-    
 end
 
-
-% create filepath
+% check if file is existing and save path
 [~,file,~] = fileparts(file{1});   % remove the zip file extension
-brdc_file_path = [target_nav{1} '/' file];
+if isfile([target_nav{1} '/' file])
+    brdc_file_path = [target_nav{1} '/' file];
+elseif bool_print
+    errordlg(['No Multi-GNSS broadcast message from ' option ' available. Please try different source!'], 'Error');
+end

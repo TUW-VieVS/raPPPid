@@ -1,5 +1,5 @@
 function [Epoch] = RINEX2epochData(RINEX, epochheader, Epoch, n, ...
-    no_obs_types, r_version, checkLLI, use_GPS, use_GLO, use_GAL, use_BDS)
+    no_obs_types, r_version, settings)
 % This function is called at the beginning of the epoch-wise calculation. 
 % It gets all data from the RINEX file for the current epoch and saves it 
 % in the struct Epoch
@@ -26,14 +26,29 @@ function [Epoch] = RINEX2epochData(RINEX, epochheader, Epoch, n, ...
 
 
 % Preparations
-strt = epochheader(n);              % no. line epoch-header current epoch
-try 
-    ende = epochheader(n+1);        % no. line epoch-header next epoch
-catch
-    ende = length(RINEX) + 1;       % one line after the end of the RINEX
+checkLLI = settings.PROC.LLI;
+use_GPS = settings.INPUT.use_GPS;
+use_GLO = settings.INPUT.use_GLO;
+use_GAL = settings.INPUT.use_GAL;
+use_BDS = settings.INPUT.use_BDS;
+
+
+% Find relevant data
+if ~settings.INPUT.bool_realtime
+    % post-processing
+    strt = epochheader(n);              % no. line epoch-header current epoch
+    try
+        ende = epochheader(n+1);        % no. line epoch-header next epoch
+    catch
+        ende = length(RINEX) + 1;       % one line after the end of the RINEX
+    end
+    epoch_header = RINEX{strt};      	% epoch-header of current epoch
+    data_epoch = RINEX(strt+1:ende-1); 	% data-lines of current epoch
+else
+    % real-time processing
+    epoch_header = RINEX{1};
+    data_epoch = RINEX(2:end);
 end
-epoch_header = RINEX{strt};      	% epoch-header of current epoch
-data_epoch = RINEX(strt+1:ende-1); 	% data-lines of current epoch
 lgth_epoch = length(data_epoch);  	% no. lines of current epoch
 
 

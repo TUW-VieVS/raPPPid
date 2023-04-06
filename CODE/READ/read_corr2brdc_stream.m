@@ -1,5 +1,4 @@
-function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = ...
-    read_corr2brdc_stream(path)
+function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = read_corr2brdc_stream(lines)
 % Reads in a recorded realtime correction stream from CNES (e.g., CLK92 or
 % CLK93) and saves the data in an internal format. Stream was recorded with 
 % BKG Ntrip and saved in a RINEX-file.
@@ -13,7 +12,7 @@ function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = ...
 %   time)
 % 
 % INPUT: 
-%   path        string, path to file of recorded stream
+%   lines       cell, data of (recorded) real-time correction stream
 % 
 % OUTPUT: 
 %   4 structs: corr_GPS, corr_GLO, corr_GAL, corr_BDS with same format
@@ -26,11 +25,8 @@ function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = ...
 % *************************************************************************
 
 
-% open and read file file
-fid = fopen(path);          
-lines = textscan(fid,'%s', 'delimiter','\n', 'whitespace','');
-lines = lines{1};
-fclose(fid);
+% ||| constant degree and order of VTEC message assumed
+
 
 
 %% Initialization of Variables
@@ -61,7 +57,7 @@ t_tec(1) = -1;      % ... vertical TEC          [seconds of week]
 C_GPS = ''; C_GLO = ''; C_GAL = ''; C_BDS = '';
 P_GPS = ''; P_GLO = ''; P_GAL = ''; P_BDS = '';
 % initialize matrices
-[radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS, c_bias_GPS, p_bias_GPS] = init_corr(DEF.SATS_GLO, n_orb, n_clk, n_code, n_phase);
+[radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS, c_bias_GPS, p_bias_GPS] = init_corr(DEF.SATS_GPS, n_orb, n_clk, n_code, n_phase);
 [radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO, c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO, c_bias_GLO, p_bias_GLO] = init_corr(DEF.SATS_GLO, n_orb, n_clk, n_code, n_phase);
 [radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL, c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL, c_bias_GAL, p_bias_GAL] = init_corr(DEF.SATS_GAL, n_orb, n_clk, n_code, n_phase);
 [radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS, c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS, c_bias_BDS, p_bias_BDS] = init_corr(DEF.SATS_BDS, n_orb, n_clk, n_code, n_phase);
@@ -92,7 +88,7 @@ lgth = length(lines);
 
 while j < lgth
 
-    if contains(line, '>')      % new epoch, handle header
+    if line(1) == '>'       % new epoch, handle header
         [sow, no_lines, mess_type] = getime(line);     % get epoch time
         
 % --- Orbit Correction:       
@@ -105,6 +101,7 @@ while j < lgth
             loop_end = j + no_lines;
             loop_end = min([loop_end, lgth]);
             while j < loop_end      % loop over data lines
+                if contains(line, '>'); break; end
                 sys = line(1);
                 prn = prns(j);
                 val   = sscanf(line(18:end), '%f');
@@ -135,9 +132,10 @@ while j < lgth
             end
             loop_end = j + no_lines;
             loop_end = min([loop_end, lgth]);    
-            while j < loop_end      % loop over data lines               
+            while j < loop_end      % loop over data lines       
+                if contains(line, '>'); break; end
                 sys = line(1);
-                prn = prns(j);
+                prn = prns(j);                
                 clks = sscanf(line(19:48), '%f');
                 IOD_clk = sscanf(line(6:15), '%f');
                 switch sys
@@ -167,6 +165,7 @@ while j < lgth
             loop_end = j + no_lines;
             loop_end = min([loop_end, lgth]);
             while j < loop_end      % loop over data lines
+                if contains(line, '>'); break; end
                 sys = line(1);
                 prn = prns(j);
                 types = ''; temp = []; k=1; % initialize
@@ -202,6 +201,7 @@ while j < lgth
             loop_end = j + no_lines;
             loop_end = min([loop_end, lgth]);
             while j < loop_end      % loop over data lines
+                if contains(line, '>'); break; end
                 sys = line(1);
                 prn = prns(j);
                 types = ''; temp = []; k=1;	% initialize
@@ -214,13 +214,13 @@ while j < lgth
                     switch sys          % no glonass phase biases
                         case 'G'
                             [pos_3, P_GPS] = get_order(types, P_GPS);
-                            p_bias_GPS(i_cb, prn, pos_3) = values;
+                            p_bias_GPS(i_pb, prn, pos_3) = values;
                         case 'E'
                             [pos_3, P_GAL] = get_order(types, P_GAL);
-                            p_bias_GAL(i_cb, prn, pos_3) = values;
+                            p_bias_GAL(i_pb, prn, pos_3) = values;
                         case 'C'
                             [pos_3, P_BDS] = get_order(types, P_BDS);
-                            p_bias_BDS(i_cb, prn, pos_3) = values;
+                            p_bias_BDS(i_pb, prn, pos_3) = values;
                     end
                 end
                 j = j + 1;     line = lines(j);     line = char(line);
@@ -236,17 +236,15 @@ while j < lgth
 
             values = textscan(line,'%f', 'delimiter','\n', 'whitespace','');
             values = values{1};
-%             degree = values(2);     order = values(3);    layer_height = values(4);
-            j=j+1;      k=1;    line = char(lines(j));
+            degree = values(2);     order = values(3);    layer_height = values(4);
+            C = NaN(vtec_lines,vtec_rows); k=1;    % to save VTEC map
             
-            C = NaN(vtec_lines,vtec_rows);
-            while ~contains(line, '>')
+            while ~contains(line, '>') && k <= 2*degree + 2     % loop over data lines
+                j=j+1;  line = char(lines(j));
                 coeff = textscan(line,'%f', 'delimiter','\n');
                 coeff = coeff{1};
-                C(k,:) = coeff;                 % coefficients of this line into matrix
-                j=j+1;  k=k+1;  line = char(lines(j));
+                C(k,:) = coeff; k=k+1;          % save coefficients of this line into matrix
             end
-            j = j-1;    line = lines(j);        % step back one line
             vtec_coeff(:,:,i_tec) = C;          % save coefficients
         end
         

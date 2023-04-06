@@ -61,7 +61,7 @@ if bool_BATCH_PROC          % batch processing
                 end
                 [~,file,ext] = fileparts(settings_now.INPUT.file_obs);
                 fprintf('\n---------------------------------------------------------------------\n');
-                fprintf('%s%03d%s%03d%s\n%s','Batch Processing File #', ii, ' of ', n, ': ', [file ext])
+                fprintf('%s%03d%s%03d%s\n%s','Batch Processing File #', ii, ' of ', n, ': ', [file ext]);
                 fprintf('\n---------------------------------------------------------------------\n');
                 % -+-+-+- CALL MAIN FUNCTION  -+-+-+-
                 settings_ = PPP_main(settings_now);         % start processing

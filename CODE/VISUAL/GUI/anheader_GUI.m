@@ -176,7 +176,20 @@ while 1
     end
     
 end
-fclose(fid);
+
+% check if startdate was included in header (as it should)
+if isempty(first_obs)
+    % No "TIME OF FIRST OBS" record included in the RINEX header
+    line = fgetl(fid);   	% get next line, this should be the first epoch
+    if version == 2         % RINEX version 2
+        d = textscan(line,'%f %f %f %f %f %f %d %2d%s','delimiter',',');
+    else                    % RINEX version 3 or higher
+        d = textscan(line,'%*c %f %f %f %f %f %f %d %2d %f');
+    end
+    first_obs = [d{1} d{2} d{3} d{4} d{5} d{6}];
+end
+
+fclose(fid);        % close file
 
 
 %% Handle exceptions

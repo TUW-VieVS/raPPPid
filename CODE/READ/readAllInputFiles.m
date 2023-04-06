@@ -11,12 +11,11 @@ function  [input, obs, settings, RINEX] = readAllInputFiles(settings)
 % *************************************************************************
 
 bool_print = ~settings.INPUT.bool_parfor;
-input = []; Biases = [];
+input = []; Biases = []; 
 
 
 
 %% Files - Set input files
-
 
 % Read the header of the observation file
 obs = anheader(settings);
@@ -25,10 +24,14 @@ glo_channels = settings.INPUT.use_GLO & any(isnan(obs.glo_channel));
 % Looking for the observation types and the right column number
 obs = find_obs_col(obs, settings);
 
-% Read observation file
-[RINEX, obs.epochheader] = readRINEX(settings.INPUT.file_obs, obs.rinex_version);
-if settings.PROC.timeFrame(2) == 999999        % processing till end of RINEX file
-    settings.PROC.timeFrame(2) = numel(obs.epochheader);   % process all epochs of RINEX file
+% Read-in RINEX observation file in the case of postprocessing
+if ~settings.INPUT.bool_realtime
+    [RINEX, obs.epochheader] = readRINEX(settings.INPUT.file_obs, obs.rinex_version);
+    if settings.PROC.timeFrame(2) == 999999        % processing till end of RINEX file
+        settings.PROC.timeFrame(2) = numel(obs.epochheader);   % process all epochs of RINEX file
+    end
+else
+    RINEX = {}; obs.epochheader = [];
 end
 
 % Start-date in different time-formats
@@ -43,8 +46,6 @@ if bool_print
         obs.startdate(4), obs.startdate(5), obs.startdate(6), 'Format', 'yyyy-MM-dd HH:mm:ss.SSS');
     fprintf('  %s | %d/%d | %d/%03d\n\n', t, obs.startGPSWeek, floor(obs.startSow/86400), obs.startdate(1), floor(obs.doy))
 end
-
-
 
 % automatic download of the files which are needed for processing and some
 % changes (filepaths and booleans) in the struct settings for the futher processing
@@ -128,7 +129,7 @@ end
 % -) Broadcast products + correction stream
 
 % Read RINEX navigation ephemerides files and convert to internal Matlab format
-if settings.ORBCLK.bool_brdc || glo_channels
+if (settings.ORBCLK.bool_brdc || glo_channels) && ~settings.INPUT.bool_realtime
     [input] = read_brdc(settings, input, obs.leap_sec, glo_channels);
     if settings.INPUT.use_GLO
         % find out channels of Glonass satellites and save them in input.glo_channel
@@ -143,10 +144,13 @@ if settings.ORBCLK.bool_brdc || glo_channels
 end
 
 
-% Read correction-stream to broadcast ephemeris:
+% Read recorded correction-stream to broadcast ephemeris:
 % load the from the last time saved .mat-file or read in from file directly.
 % GPS and Galileo corrections are read even if their processing is not activated.
-if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && settings.ORBCLK.bool_brdc
+input.ORBCLK.corr2brdc_GPS = []; input.ORBCLK.corr2brdc_GLO = [];
+input.ORBCLK.corr2brdc_GAL = []; input.ORBCLK.corr2brdc_BDS = [];
+input.ORBCLK.corr2brdc_vtec = [];
+if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && settings.ORBCLK.bool_brdc && ~settings.INPUT.bool_realtime
     corr2brdc_path = settings.ORBCLK.file_corr2brdc;
     if contains(corr2brdc_path, '$')
         [fname, fpath] = ConvertStringDate(corr2brdc_path, obs.startdate(1:3));
@@ -160,8 +164,13 @@ if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && settings.ORBCLK.bool_
         load(corr2brdc_mat, 'corr2brdc_GPS', 'corr2brdc_GLO', 'corr2brdc_GAL', 'corr2brdc_BDS', 'corr2brdc_vtec');	% load .mat-file
     else                                                    % no .mat-file so read-in correction-stream
         if bool_print; fprintf('Reading corrections to broadcast ephemerides (this may take up to several minutes)\n'); end
+        % open and read file file
+        fid = fopen(corr2brdc_path);
+        lines = textscan(fid,'%s', 'delimiter','\n', 'whitespace','');
+        lines = lines{1};
+        fclose(fid);
         [corr2brdc_GPS, corr2brdc_GLO, corr2brdc_GAL, corr2brdc_BDS, ...
-            corr2brdc_vtec] = read_corr2brdc_stream(corr2brdc_path);
+            corr2brdc_vtec] = read_corr2brdc_stream(lines);
         save(corr2brdc_mat, 'corr2brdc_GPS', 'corr2brdc_GLO', 'corr2brdc_GAL', 'corr2brdc_BDS', 'corr2brdc_vtec')   % save as .mat-file for next processing (faster loading)
         %         delete(erase(filename,'.mat'));   % delete the original file (only wastes disk space)
     end
@@ -171,8 +180,6 @@ if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && settings.ORBCLK.bool_
     if settings.INPUT.use_GLO;   input.ORBCLK.corr2brdc_GLO  = corr2brdc_GLO;    end
     if settings.INPUT.use_GAL;   input.ORBCLK.corr2brdc_GAL  = corr2brdc_GAL;    end
     if settings.INPUT.use_BDS;   input.ORBCLK.corr2brdc_BDS  = corr2brdc_BDS;    end
-    % manipulate variables
-    input = changeVariables_Corr2Brdc(settings, input);
 end
 if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && contains(settings.ORBCLK.file_corr2brdc, 'CLK22') && ~strcmp(obs.GPS.L1, 'L1W') && strcmp(obs.GPS.L1, 'L2W') && settings.AMBFIX.bool_AMBFIX
     errordlg('No phase biases: CLK22-Stream contains phase biases for L1W and L2W only!', 'Error');
@@ -180,7 +187,8 @@ end
 
 
 % Assign code and phase biases from recorded correction-stream to observation types
-if strcmp(settings.ORBCLK.CorrectionStream, 'manually')   &&   (settings.BIASES.code_corr2brdc_bool || settings.BIASES.phase_corr2brdc_bool)
+if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && ~settings.INPUT.bool_realtime && ...
+        (settings.BIASES.code_corr2brdc_bool || settings.BIASES.phase_corr2brdc_bool)
     if obs.rinex_version >= 3       % 3-digit-obs-types from Rinex 3 onwards
         [obs] = assign_corr2brdc_biases(obs, input, settings);
     else                            % Rinex 2 observation file (2-digit-obs-types)
@@ -310,6 +318,7 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmpi
     elseif strcmpi(settings.IONO.source,'CODE Spherical Harmonics')   % CODE ion file
         input.IONO.ion = read_ion(settings.IONO.file_ion);
     end
+    settings.IONO.file_ionex = path_ionex;
 end
 
 % Check if coefficients from broadcast navigation message are needed for

@@ -103,10 +103,12 @@ while 1
     if contains(line,'MARKER NAME')
         stationname = upper(strtrim(line(1:4)));        % make sure that uppercase
         stationname_long = upper(strtrim(line(1:9)));   
-        if length(stationname_long) == 4 && version >= 3 
+        if length(stationname_long) == 4 && version >= 3
             % try to recover long stationname from RINEX file
             [~, obsfile, ~] = fileparts(settings.INPUT.file_obs);
-            stationname_long = obsfile(1:9);
+            if length(obsfile) >= 9
+                stationname_long = obsfile(1:9);
+            end                
         end
     end
     
@@ -243,6 +245,21 @@ while 1
     end
     
 end % end of loop to gobble the header
+
+
+% check if startdate was included in header (as it should)
+if isempty(startdate)
+    % No "TIME OF FIRST OBS" record included in the RINEX header
+    line = fgetl(fid);   	% get next line, this should be the first epoch
+    if version == 2         % RINEX version 2
+        d = textscan(line,'%f %f %f %f %f %f %d %2d%s','delimiter',',');
+    else                    % RINEX version 3 or higher
+        d = textscan(line,'%*c %f %f %f %f %f %f %d %2d %f');
+    end
+    startdate = [d{1} d{2} d{3} d{4} d{5} d{6}];
+end
+
+
 fclose(fid);        % close file
 
 

@@ -19,6 +19,9 @@ dcm = datacursormode(fig_histo);
 datacursormode on
 set(dcm, 'updatefcn', @vis_customdatatip_histo)
 
+% check if anything to plot
+if isempty(dZTD) || all(isnan(dZTD(:))); return; end
+
 % prepare plot
 dZTD = dZTD(:)*100;         % convert from [m] to [cm]
 dZTD = dZTD(~isnan(dZTD));	% remove NaN values

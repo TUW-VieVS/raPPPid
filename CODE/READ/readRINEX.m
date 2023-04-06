@@ -1,4 +1,6 @@
 function [RINEX, epochheader] = readRINEX(obsfile_path, r_version)
+% Reads all content of a RINEX file. Saves the observation data and
+% epochheaders as new variables. Only used for post-processing
 % 
 % INPUT:
 %   obsfile_path        filepath to RINEX-observation-file

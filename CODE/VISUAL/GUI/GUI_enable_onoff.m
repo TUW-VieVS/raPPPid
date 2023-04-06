@@ -76,6 +76,16 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
     set(handles.edit_glo_rank, 'Enable', onoff);
     set(handles.edit_gal_rank, 'Enable', onoff);
     set(handles.edit_bds_rank, 'Enable', onoff);
+    % realtime processing
+    set(handles.checkbox_realtime, 'Enable', onoff);
+    set(handles.edit_RT_from, 'Enable', onoff);
+    set(handles.edit_RT_to, 'Enable', onoff);
+    set(handles.text_RT_from, 'Enable', onoff);
+    set(handles.text_RT_to, 'Enable', onoff);
+    set(handles.text_RT_format, 'Enable', onoff);
+    % analyze
+    set(handles.pushbutton_analyze_rinex, 'Enable', onoff);
+    
     
     % En/disable items for each GNSS 
     if ~batch_proc
@@ -174,10 +184,23 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
     end
     
     % analyze RINEX is only possible if observation file is defined
-    set(handles.pushbutton_analyze_rinex, 'Enable', 'Off');
-    if ~isempty(handles.edit_obs.String)
-        set(handles.pushbutton_analyze_rinex, 'Enable', 'On');
+    if strcmpi(handles.pushbutton_analyze_rinex.Enable, 'on')
+        set(handles.pushbutton_analyze_rinex, 'Enable', 'Off');
+        if ~isempty(handles.edit_obs.String)
+            set(handles.pushbutton_analyze_rinex, 'Enable', 'On');
+        end
     end
+    
+    % real-time processing is en/disabled
+    onoff = 'Off';
+    if handles.checkbox_realtime.Value && ~handles.checkbox_batch_proc.Value
+        onoff = 'On'; 
+    end
+    handles.edit_RT_from.Enable   = onoff; handles.edit_RT_from.Visible   = onoff;
+    handles.edit_RT_to.Enable     = onoff; handles.edit_RT_to.Visible     = onoff;
+    handles.text_RT_from.Enable   = onoff; handles.text_RT_from.Visible   = onoff;
+    handles.text_RT_to.Enable     = onoff; handles.text_RT_to.Visible     = onoff;
+    handles.text_RT_format.Enable = onoff; handles.text_RT_format.Visible = onoff;
     
     
 end         % end of panel "Input-File"
@@ -744,9 +767,7 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
         set(handles.text_smooth,       'Visible', 'Off');
         set(handles.edit_smooth,       'Visible', 'Off');
     end
-    
-    
-    
+
     
     if handles.checkbox_fixing.Value
         handles.checkbox_reset_fixed.Enable = 'On';
@@ -762,14 +783,12 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
     handles.text_reset_epoch.Enable = onoff;
     handles.edit_reset_epoch.Enable = onoff;
     
-    
-    
-    
-    
-    
-    
-    % disable buttongroup time span if batch processing is enabled
-    onoff = 'On';     if batch_proc; onoff = 'Off'; end
+
+    % disable buttongroup time span if ... is enabled
+    % ... batch processing
+    % ... real-time processing
+    onoff = 'On';     
+    if batch_proc || handles.checkbox_realtime.Value; onoff = 'Off';  end
     set(handles.edit_timeFrame_from, 'Enable', onoff);
     set(handles.edit_timeFrame_to, 'Enable', onoff);
     set(handles.text62, 'Enable', onoff);

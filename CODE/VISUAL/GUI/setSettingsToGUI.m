@@ -70,7 +70,12 @@ if bool_settings        % do this only for the settings structure
     set(handles.edit_y, 'String', num2str(structure.INPUT.pos_approx(2)) );
     set(handles.edit_z, 'String', num2str(structure.INPUT.pos_approx(3)) );
     
+    % settings for real-time processing
     set(handles.checkbox_realtime,  'Value', structure.INPUT.bool_realtime);
+    try
+        set(handles.edit_RT_from, 'String', structure.INPUT.realtime_start_GUI);
+        set(handles.edit_RT_to, 'String', structure.INPUT.realtime_ende_GUI);
+    end
     
     % checkboxes GPS, GLONASS, GALILEO
     set(handles.checkbox_GPS, 'Enable', structure.INPUT.able_GPS);
@@ -788,12 +793,20 @@ if bool_settings == 1   % do this only for the settings structure
         set(handles.edit_output, 'String', structure.PROC.name);
     end
     
-    set(handles.edit_timeFrame_from, 'String', structure.PROC.timeFrame(1));
-    set(handles.edit_timeFrame_to,   'String', structure.PROC.timeFrame(2));
-    if structure.PROC.timeFrame(2) == 999999        % overwrite if processing till end of file
+    try         % set processed time span 
+        set(handles.edit_timeFrame_from, 'String', structure.PROC.timeFrameFrom);
+        set(handles.edit_timeFrame_to, 'String', structure.PROC.timeFrameTo);
+    catch
+        set(handles.edit_timeFrame_from, 'String', structure.PROC.timeFrame(1));
+        set(handles.edit_timeFrame_to,   'String', structure.PROC.timeFrame(2));
+    end
+    
+    % overwrite if processing till end of file
+    if structure.PROC.timeFrame(2) == 999999        
         set(handles.edit_timeFrame_to, 'String', 'end')
     end
     
+    % type of defined time span
     set(handles.radiobutton_timeSpan_format_epochs, 'Value', structure.PROC.timeSpan_format_epochs);
     set(handles.radiobutton_timeSpan_format_SOD,    'Value', structure.PROC.timeSpan_format_SOD);
     set(handles.radiobutton_timeSpan_format_HOD,    'Value', structure.PROC.timeSpan_format_HOD);

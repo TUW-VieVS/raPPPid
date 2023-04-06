@@ -125,8 +125,8 @@ while it < 15                           % Start iteration (because of linearizat
     n_gal = sum(Epoch.gal & ~Epoch.exclude);    n_bds = sum(Epoch.bds & ~Epoch.exclude);
     bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, ...
         n_gps, n_glo, n_gal, n_bds, settings.INPUT.use_GNSS);
-    if ~bool_enough_sats
-        fprintf(2, 'Not enough satellites for adjustment (Epoch %d)\n', Epoch.q)
+    if ~bool_enough_sats && ~settings.INPUT.bool_parfor
+        fprintf(2, 'Not enough satellites for adjustment (Epoch %d)           \n', Epoch.q)
         Adjust.res = zeros(2*no_sats*settings.INPUT.proc_freqs,1);
         return
     end    

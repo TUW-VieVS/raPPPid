@@ -15,13 +15,21 @@ function DATA = readTropoFile(tropofile, station)
 
 % ||| only ZTD is considered
 
+% open file
+fid = fopen(tropofile);
+if fid == -1 
+    % file could not be opened (e.g., non-existing)
+    DATA = [];
+    return
+end
 
 stat = station(1:4);        % 4-digit station name
 
 
 %% HEADER
-fid = fopen(tropofile); l = 0;
+ 
 % Loop over header
+l = 0;
 while 1
     line = fgetl(fid); l = l + 1;
     if contains(line, '+TROP/SOLUTION')

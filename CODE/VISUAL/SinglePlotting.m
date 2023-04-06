@@ -335,11 +335,8 @@ if STOP_CALC; return; end
 %     -+-+-+-+- Figures: Multipath Detection  -+-+-+-+-
 if settings.PLOT.mp
     if (isfield(settings.OTHER, 'mp_detection') || settings.OTHER.mp_detection)
-        CodeDifference(epochs, storeData, label_x_epc, reset_h, rgb, settings, satellites);
-%         if isGPS; vis_mp_detection(storeData, 'G', settings.OTHER.mp_degree, settings.OTHER.mp_thresh, settings.OTHER.mp_cooldown, epochs); end
-%         if isGLO; vis_mp_detection(storeData, 'R', settings.OTHER.mp_degree, settings.OTHER.mp_thresh, settings.OTHER.mp_cooldown, epochs); end
-%         if isGAL; vis_mp_detection(storeData, 'E', settings.OTHER.mp_degree, settings.OTHER.mp_thresh, settings.OTHER.mp_cooldown, epochs); end
-%         if isBDS; vis_mp_detection(storeData, 'C', settings.OTHER.mp_degree, settings.OTHER.mp_thresh, settings.OTHER.mp_cooldown, epochs); end
+        C1_diff = zero2nan(storeData.mp_C1_diff_n);
+        PlotObsDiff(epochs, C1_diff, label_x_epc, rgb, 'C1 difference', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false);
     else
         fprintf('Multipath detection disabled.          \n')
         
@@ -378,19 +375,25 @@ if STOP_CALC; return; end
 if settings.PLOT.stream_corr && settings.ORBCLK.bool_brdc && ~isempty(settings.ORBCLK.file_corr2brdc)
     % load in corrections
     filename = settings.ORBCLK.file_corr2brdc;
+    if contains(filename, '$')
+        % replace potential pseudo-code
+        filename = ConvertStringDate(filename, obs.startdate(1:3));
+    end
     if ~contains(filename, '.mat'); filename = [filename, '.mat']; end
-    if isGPS	% Plot for GPS
-        load(filename, 'corr2brdc_GPS');
-        plotCorrection2BRDC(corr2brdc_GPS, obs, filename, 'G');
-    end
-    % ||| GLONASS is missing!!!
-    if isGAL	% Plot for Galileo
-        load(filename, 'corr2brdc_GAL');
-        plotCorrection2BRDC(corr2brdc_GAL, obs, filename, 'E');
-    end
-    if isBDS	% Plot for BeiDou
-        load(filename, 'corr2brdc_GAL');
-        plotCorrection2BRDC(corr2brdc_GAL, obs, filename, 'E');
+    if isfile(filename)
+        if isGPS	% Plot for GPS
+            load(filename, 'corr2brdc_GPS');
+            plotCorrection2BRDC(corr2brdc_GPS, obs, filename, 'G');
+        end
+        % ||| GLONASS is missing!!!
+        if isGAL	% Plot for Galileo
+            load(filename, 'corr2brdc_GAL');
+            plotCorrection2BRDC(corr2brdc_GAL, obs, filename, 'E');
+        end
+        if isBDS	% Plot for BeiDou
+            load(filename, 'corr2brdc_GAL');
+            plotCorrection2BRDC(corr2brdc_GAL, obs, filename, 'E');
+        end
     end
 end
 if STOP_CALC; return; end

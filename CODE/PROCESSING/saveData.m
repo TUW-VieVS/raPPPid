@@ -186,7 +186,7 @@ end
 %% save multipath detection data
 if settings.OTHER.mp_detection
     C1_diff_n = diff(Epoch.mp_C1(:,Epoch.sats), settings.OTHER.mp_degree, 1);
-    C1_diff_n_ = abs(C1_diff_n - median(C1_diff_n), 'omitnan'); 
+    C1_diff_n_ = abs(C1_diff_n - median(C1_diff_n, 'omitnan')); 
     storeData.mp_C1_diff_n(q,prns) = C1_diff_n_;
 end
 

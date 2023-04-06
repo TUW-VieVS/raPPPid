@@ -21,16 +21,21 @@ function [model, Epoch] = modelApproximately(settings, input, Epoch, param, obs,
 
 pos_XYZ = param(1:3);
 pos_WGS84 = cart2geo(param(1:3));
-num_freq = settings.INPUT.proc_freqs;
 n_num_frq  = settings.INPUT.num_freqs;  % number of input frequencies (e.g. 2 for IF-LC)
-frqs = 1:num_freq;
-num_sat = Epoch.no_sats;     % number of satellites in current epoch
+num_freq = settings.INPUT.proc_freqs;   % number of processed frequencies
+frqs = 1:num_freq;              % 1 : # processed frequencies
+num_sat = Epoch.no_sats;        % number of satellites in current epoch
 % indices of processed frequencies
 idx_frqs_gps = settings.INPUT.gps_freq_idx(frqs);
 idx_frqs_glo = settings.INPUT.glo_freq_idx(frqs);
 idx_frqs_gal = settings.INPUT.gal_freq_idx(frqs);
 idx_frqs_bds = settings.INPUT.bds_freq_idx(frqs);
-
+% remove frequencies set to OFF (if different number of frequencies is 
+% processed for different GNSS)
+idx_frqs_gps(idx_frqs_gps>DEF.freq_GPS(end)) = [];
+idx_frqs_glo(idx_frqs_glo>DEF.freq_GLO(end)) = [];
+idx_frqs_gal(idx_frqs_gal>DEF.freq_GAL(end)) = [];
+idx_frqs_bds(idx_frqs_bds>DEF.freq_BDS(end)) = [];
 
 
 % ----- Epoch-specific corrections -----
@@ -250,7 +255,7 @@ for i_sat = 1:num_sat
         elseif strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
             dX_PCO_REC_ECEF_corr(1) = e1.*dX_los(1) + e2.*dX_los(2) + e3.*dX_los(3);
         else                                        % no IF-LC
-            dX_PCO_REC_ECEF_corr(idx_frqs) = dX_los(idx_frqs);      % get values of processed frequencies
+            dX_PCO_REC_ECEF_corr(frqs) = dX_los(idx_frqs);      % get values of processed frequencies
         end
     end
 
@@ -290,7 +295,7 @@ for i_sat = 1:num_sat
         elseif strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
             dX_PCO_SAT_ECEF_corr(1) = e1.*dX_los(1) + e2.*dX_los(2) + e3.*dX_los(3);
         else                                        % no IF-LC
-            dX_PCO_SAT_ECEF_corr(idx_frqs) = dX_los(idx_frqs);
+            dX_PCO_SAT_ECEF_corr(frqs) = dX_los(idx_frqs);
         end
     end
     
@@ -322,10 +327,8 @@ for i_sat = 1:num_sat
     model.Rot_V(:,i_sat)  = Rot_V;  	% Sat Velocity after correcting the earth rotation during runtime tau 
     
     Epoch.exclude(i_sat,frqs) = cutoff;   	% boolean, true = do not use satellites (e.g. under cutoff angle)
-    Epoch.sat_statu(i_sat)    = status;   	
+    Epoch.sat_status(i_sat)    = status;   	
     
 end     % of loop over satellites
-
-
 
 

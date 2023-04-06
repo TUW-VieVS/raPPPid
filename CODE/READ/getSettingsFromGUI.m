@@ -33,8 +33,11 @@ settings.INPUT.pos_approx = ...
     str2double(get(handles.edit_y, 'String'));
     str2double(get(handles.edit_z, 'String'))];
 
-% check if real-time application
+% settings for real-time processing
 settings.INPUT.bool_realtime  = get(handles.checkbox_realtime,  'Value');
+% get defined start and end of real-time processing
+settings.INPUT.realtime_start_GUI = handles.edit_RT_from.String;
+settings.INPUT.realtime_ende_GUI  = handles.edit_RT_to.String;
 
 % get frequencies which should be processed
 settings.INPUT.able_GPS = get(handles.checkbox_GPS, 'Enable');
@@ -287,20 +290,20 @@ if strcmp(settings.AMBFIX.refSatChoice, 'manual choice (list):')
     str_refSatGPS = strrep(str_refSatGPS, ',', ' ');
     str_refSatGPS = strrep(str_refSatGPS, 'G', ' ');
     if ~isempty(str_refSatGPS)
-        settings.AMBFIX.refSatGPS = str2num(str_refSatGPS);     %#ok<ST2NM>
+        settings.AMBFIX.refSatGPS = str2num(str_refSatGPS);    
     end
     str_refSatGAL = get(handles.edit_refSatGAL, 'String');
     str_refSatGAL = strrep(str_refSatGAL, ',', ' ');
     str_refSatGAL = strrep(str_refSatGAL, 'E', ' ');
     if ~isempty(str_refSatGAL)
-        settings.AMBFIX.refSatGAL = str2num(str_refSatGAL);     %#ok<ST2NM>
+        settings.AMBFIX.refSatGAL = str2num(str_refSatGAL);    
         settings.AMBFIX.refSatGAL(settings.AMBFIX.refSatGAL < 300) = settings.AMBFIX.refSatGAL(settings.AMBFIX.refSatGAL < 300) + 300;
     end
     str_refSatBDS = get(handles.edit_refSatBDS, 'String');
     str_refSatBDS = strrep(str_refSatBDS, ',', ' ');
     str_refSatBDS = strrep(str_refSatBDS, 'C', ' ');
     if ~isempty(str_refSatBDS)
-        settings.AMBFIX.refSatBDS = str2num(str_refSatBDS);     %#ok<ST2NM>
+        settings.AMBFIX.refSatBDS = str2num(str_refSatBDS);     
         settings.AMBFIX.refSatBDS(settings.AMBFIX.refSatBDS < 200) = settings.AMBFIX.refSatBDS(settings.AMBFIX.refSatBDS < 200) + 200;
     end
 end
@@ -313,7 +316,7 @@ str_excl_fixing = strrep(str_excl_fixing, 'R', '1');
 str_excl_fixing = strrep(str_excl_fixing, 'E', '2');
 str_excl_fixing = strrep(str_excl_fixing, 'C', '3');
 if ~isempty(str_excl_fixing)
-    settings.AMBFIX.exclude_sats_fixing = str2num(str_excl_fixing);     %#ok<ST2NM>
+    settings.AMBFIX.exclude_sats_fixing = str2num(str_excl_fixing);    
 end
 % HMW fixing settings
 try
@@ -417,6 +420,8 @@ settings.PROC.method = string_all{value};
 settings.PROC.smooth_fac = str2double(get(handles.edit_smooth, 'String'));
 
 % Time span
+settings.PROC.timeFrameFrom = handles.edit_timeFrame_from.String;
+settings.PROC.timeFrameTo = handles.edit_timeFrame_to.String;
 settings.PROC.timeFrame(1) = str2double(get(handles.edit_timeFrame_from, 'String'));
 if strcmp(get(handles.edit_timeFrame_to, 'String'), 'end')
     settings.PROC.timeFrame(2) = 999999;        % processing till end of RINEX File

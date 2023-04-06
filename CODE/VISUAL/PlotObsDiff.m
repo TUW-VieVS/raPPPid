@@ -1,12 +1,18 @@
-function DopplerDifference(x, storeData, label_x, resets, rgb, settings, satellites)
-% Plots Doppler difference over time
+function PlotObsDiff(x, DIFF, label_x, rgb, str, settings, observed, thresh, level, unit, print)
+% Plots code difference over time
 % 
 % INPUT:
 % 	x           epochs
-% 	storeData   struct, data of processing
+% 	DIFF        matrix, differenced observation to plot
 % 	label_x     label for the x-axis
-%   resets      time of resets [hours]
 %   rgb         colors for plotting
+%   str         string, naming of the plot
+%   settings    struct, (processing) settings from GUI
+%   observed    matrix, number of epochs satellite is tracked
+%   thresh      threshold to plot
+%   level       degree of difference     
+%   unit        string
+%   print       boolean, true to standard-devation to command window
 % OUTPUT:
 %   []     
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
@@ -14,48 +20,62 @@ function DopplerDifference(x, storeData, label_x, resets, rgb, settings, satelli
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-D1_diff = zero2nan(storeData.D1_diff);
-thresh = NaN;
+
+if all(isnan(DIFF(:)))
+    return      % nothing to plot here
+end
+
 ms = 9;         % Marker Size
-fig_mp = figure('Name', ['Doppler difference, degree: ' num2str(settings.OTHER.CS.TD_degree)], 'NumberTitle','off');
+str_level = num2str(level);
+fig_mp = figure('Name', [str ', level: ' str_level], 'NumberTitle','off');
 
 % set plot colors
 coleurs_default = get(groot,'defaultAxesColorOrder');       % save default colors for reset
 set(groot,'defaultAxesColorOrder',rgb)      % change default colors for plotting
 
 % prepare legend
-obs_bool = logical(full(satellites.obs));   % number of epochs satellite is tracked
+obs_bool = logical(full(observed));         % true if satellite observed in the corresponding epoch
 idx = 1:size(obs_bool,2);
 obs_prns = idx(sum(obs_bool(:,idx),1) > 0);	% prns of observed satellites
+
+% prepare printing standard deviation
+if print
+    fprintf(['\n' str ', level ' str_level ', std ' unit '\n'])
+end
+
 
 n_plot = settings.INPUT.use_GPS+settings.INPUT.use_GLO+settings.INPUT.use_GAL+settings.INPUT.use_BDS;
 i_plot = 1;
 % plot enabled GNSS
 if settings.INPUT.use_GPS
+    if print; fprintf('GPS:     '); end
     obs_prns_G = obs_prns(obs_prns < 100);
     prns_string_G = sprintfc('%02.0f', obs_prns_G);        % satellite prns for legend
-    plot_code_difference(n_plot, x, D1_diff, obs_prns_G, prns_string_G, label_x, thresh, ms, i_plot)
+    plot_code_difference(n_plot, x, DIFF, obs_prns_G, prns_string_G, label_x, thresh, ms, i_plot, print)
     title('GPS')
     i_plot = i_plot + 1;
 end
 if settings.INPUT.use_GLO
+    if print; fprintf('GLONASS: '); end
     obs_prns_R = obs_prns(obs_prns > 100 & obs_prns < 200);
     prns_string_R = sprintfc('%02.0f', obs_prns_R);        % satellite prns for legend
-    plot_code_difference(n_plot, x, D1_diff, obs_prns_R, prns_string_R, label_x, thresh, ms, i_plot)
+    plot_code_difference(n_plot, x, DIFF, obs_prns_R, prns_string_R, label_x, thresh, ms, i_plot, print)
     title('GLONASS')
     i_plot = i_plot + 1;
 end
 if settings.INPUT.use_GAL
+    if print; fprintf('Galileo: '); end
     obs_prns_E = obs_prns(obs_prns > 200 & obs_prns < 300);
     prns_string_E = sprintfc('%02.0f', obs_prns_E);        % satellite prns for legend
-    plot_code_difference(n_plot, x, D1_diff, obs_prns_E, prns_string_E, label_x, thresh, ms, i_plot)
+    plot_code_difference(n_plot, x, DIFF, obs_prns_E, prns_string_E, label_x, thresh, ms, i_plot, print)
     title('Galileo')
     i_plot = i_plot + 1;
 end
 if settings.INPUT.use_BDS
+    if print; fprintf('BeiDou:  '); end
     obs_prns_C = obs_prns(obs_prns > 300);
     prns_string_C = sprintfc('%02.0f', obs_prns_C);        % satellite prns for legend
-    plot_code_difference(n_plot, x, D1_diff, obs_prns_C, prns_string_C, label_x, thresh, ms, i_plot)
+    plot_code_difference(n_plot, x, DIFF, obs_prns_C, prns_string_C, label_x, thresh, ms, i_plot, print)
     title('BeiDou')
 end
 
@@ -97,17 +117,24 @@ end
 
 
 
-function [] = plot_code_difference(n_plot, x, L1_diff, obs_prns_gnss, prns_string_gnss, label_x, thresh, ms, i_plot)
+function [] = plot_code_difference(n_plot, x, C1_diff, obs_prns_gnss, prns_string_gnss, label_x, thresh, ms, i_plot, print)
 % ---- plot code difference over time ----
 subplot(n_plot, 1, i_plot) 
 hold on
 for i = 1:numel(obs_prns_gnss)
-%     plot(x, L1_diff(:,obs_prns_gnss(i)), '-', 'MarkerSize', ms);
-    plot(x, L1_diff(:,obs_prns_gnss(i)), '.', 'MarkerSize', ms);
+%     plot(x, C1_diff(:,obs_prns_gnss(i)), '-', 'MarkerSize', ms);
+    plot(x, C1_diff(:,obs_prns_gnss(i)), '.', 'MarkerSize', ms);
 end
 
 % threshold
 hline( thresh, 'r--')
+
+% print standard-deviation to command window
+if print
+    yval = C1_diff(:,obs_prns_gnss);
+    stdev = std(yval(:), 'omitnan');
+    fprintf([sprintf('%6.3f', stdev) '\n']);
+end
 
 % ylim([-3*thresh, 3*thresh])
 xlabel(label_x)
@@ -115,6 +142,4 @@ legend on
 hleg = legend(prns_string_gnss);
 title(hleg, 'PRN')          % title for legend
 xlim([1 x(end)])
-ylabel('[Hz]')
-xlabel('Epochs')
 end

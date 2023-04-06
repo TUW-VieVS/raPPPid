@@ -33,7 +33,7 @@ fprintf(fileID,'%s\n','Input Data:');
 fprintf(fileID,'  %s%s\n','Obs-File: ', settings.INPUT.file_obs);
 fprintf(fileID,'  %s%.3f%s%.3f%s%.3f\n','Approx Pos [m]: ',settings.INPUT.pos_approx(1),' | ',settings.INPUT.pos_approx(2),' | ',settings.INPUT.pos_approx(3));
 if settings.INPUT.bool_realtime
-    fprintf(fileID,'  %s\n','Real-Time mode is on');
+    fprintf(fileID,'  %s\n', ['Real-Time processing from ' settings.INPUT.realtime_start_GUI ' to ' settings.INPUT.realtime_ende_GUI]);
 end
 fprintf(fileID,'\n');
 

@@ -26,16 +26,15 @@ pos_XYZ = param(1:3);       % current estimation of receiver position [XYZ]
 % .ph = phi = latitude [rad]; .la = lambda = longitude [rad]; .h = height [m]
 pos_WGS84 = cart2geo(pos_XYZ);	
 
+num_sat = Epoch.no_sats;                % number of satellites in current epoch
 n_proc_frq = settings.INPUT.proc_freqs; % number of processed frequencies (e.g. 1 for IF-LC)
 n_num_frq  = settings.INPUT.num_freqs;  % number of input frequencies (e.g. 2 for IF-LC)
-frqs = 1:n_proc_frq;
-num_sat = Epoch.no_sats;                % number of satellites in current epoch
-% indices of processed frequencies
-j = 1:n_num_frq;
-idx_frqs_gps = settings.INPUT.gps_freq_idx(j);
-idx_frqs_glo = settings.INPUT.glo_freq_idx(j);
-idx_frqs_gal = settings.INPUT.gal_freq_idx(j);
-idx_frqs_bds = settings.INPUT.bds_freq_idx(j);
+frqs = 1:n_proc_frq;                    % 1 : # processed frequencies
+j_proc = 1:n_num_frq;                   % 1 : # input frequencies
+idx_frqs_gps = settings.INPUT.gps_freq_idx(j_proc);
+idx_frqs_glo = settings.INPUT.glo_freq_idx(j_proc);
+idx_frqs_gal = settings.INPUT.gal_freq_idx(j_proc);
+idx_frqs_bds = settings.INPUT.bds_freq_idx(j_proc);
 % remove frequencies set to OFF (if different number of frequencies is 
 % processed for different GNSS)
 idx_frqs_gps(idx_frqs_gps>DEF.freq_GPS(end)) = [];
@@ -250,24 +249,21 @@ for i_sat = 1:num_sat
         SatOr_ECEF = getSatelliteOrientation(X_rot, model.sunECEF*1000);    % satellite orientation in ECEF
     else    % attitude data from ORBEX file
         dt = abs(Ttr - input.ORBCLK.OBX.ATT.sow);
-        if min(dt) < 60
-            idx = (dt == min(dt));
-            q0 = input.ORBCLK.OBX.ATT.q0(idx,prn);
-            q1 = input.ORBCLK.OBX.ATT.q1(idx,prn);
-            q2 = input.ORBCLK.OBX.ATT.q2(idx,prn);
-            q3 = input.ORBCLK.OBX.ATT.q3(idx,prn);
-        else  % ||| check interpolation for e.g. 1sec intervall
-            q0 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q0(:,prn), Ttr);
-            q1 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q1(:,prn), Ttr);
-            q2 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q2(:,prn), Ttr);
-            q3 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q3(:,prn), Ttr);
-        end
-        if isempty(q0) || isempty(q1) || isempty(q2) || isempty(q3)
-            SatOr_ECEF = NaN(3,3);
-        else
+        % take nearest satellite attitude information (no interpolation)
+        idx = (dt == min(dt));
+        q0 = input.ORBCLK.OBX.ATT.q0(idx,prn);
+        q1 = input.ORBCLK.OBX.ATT.q1(idx,prn);
+        q2 = input.ORBCLK.OBX.ATT.q2(idx,prn);
+        q3 = input.ORBCLK.OBX.ATT.q3(idx,prn);
+        % ||| check interpolation for e.g. high-rate observations (1sec observation interval)
+        %         q0 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q0(:,prn), Ttr);
+        %         q1 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q1(:,prn), Ttr);
+        %         q2 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q2(:,prn), Ttr);
+        %         q3 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q3(:,prn), Ttr);
+        SatOr_ECEF = NaN(3,3);
+        if ~isempty(q0) && ~isempty(q1) && ~isempty(q2) && ~isempty(q3)
             SatOr_ECEF = Quaternion2Matrix(q0(1), q1(1), q2(1), q3(1))';
         end
-        
     end
     
     
@@ -498,7 +494,7 @@ for i_sat = 1:num_sat
     if settings.OTHER.bool_eclipse && ~settings.ORBCLK.bool_obx
         cos_phi = dot(X_rot,model.sunECEF*1000) / (norm(X_rot)*norm(model.sunECEF)*1000);   % angle between satellite and sun
         if cos_phi < 0 && (norm(X_rot)*sqrt(1-cos_phi^2)) < Const.RE
-            if mod(Epoch.q, 100) == 0 && ~settings.INPUT.bool_parfor
+            if mod(floor(Epoch.gps_time), 600) == 0 && ~settings.INPUT.bool_parfor
                 fprintf('Eclipsing Satellite PRN %d \t                \n', prn)
             end
             exclude = true;              % eliminate satellite
@@ -534,7 +530,7 @@ for i_sat = 1:num_sat
         elseif strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
             dX_PCO_REC_ECEF_corr(1) = e1.*los_pco_r(j(1)) + e2.*los_pco_r(j(2)) + e3.*los_pco_r(j(3));
         else                                        % no IF-LC
-            dX_PCO_REC_ECEF_corr(j) = los_pco_r(j);      % get values of processed frequencies
+            dX_PCO_REC_ECEF_corr(j_proc) = los_pco_r(j);      % get values of processed frequencies
         end
     end
 
@@ -561,14 +557,14 @@ for i_sat = 1:num_sat
             case '3-Frequency-IF-LC'
                 dX_PCO_SAT_ECEF_corr(1) = e1.*los_pco_s(j(1)) + e2.*los_pco_s(j(2)) + e3.*los_pco_s(j(3));
             otherwise        % uncombined signals are processed
-                dX_PCO_SAT_ECEF_corr(j) = los_pco_s(j);
+                dX_PCO_SAT_ECEF_corr(j_proc) = los_pco_s(j);
         end
     end
 
     % --- Receiver Antenna Phase Center Variation Correction---
     dX_PCV_rec = [0,0,0];
     if settings.OTHER.bool_rec_pcv
-        if ~isempty(PCV_rec)    % check if PCV corrections are existing
+        if ~isempty(PCV_rec)    % check if PCV corrections are existing at all (in ANTEX)
             [dX_PCV_rec, ~] = calc_PCV_rec(PCV_rec, j, elev, az, settings.IONO.model, f1, f2, f3);
         end
     end
@@ -606,7 +602,7 @@ for i_sat = 1:num_sat
     model.iono(i_sat,frqs) = iono(frqs);        % Ionosphere delay
     model.mfw(i_sat,frqs)  = mfw;               % Wet tropo mapping function
     model.zwd(i_sat,frqs)  = zwd;               % zenith wet delay (need for building a priori + estimated zwd later)
-    model.zhd(i_sat,frqs)  = zhd;               % modelled zenith hydrostativ delay
+    model.zhd(i_sat,frqs)  = zhd;               % modeled zenith hydrostativ delay
     % Observation direction
     model.az(i_sat,frqs)   = az;                % Satellite azimuth [°]
     model.el(i_sat,frqs)   = elev;                % Satellite elevation [°]
@@ -619,7 +615,7 @@ for i_sat = 1:num_sat
     % group delay variation
     model.dX_GDV(i_sat,frqs)  = dX_GDV(frqs);                           % Group delay variation correction
     % phase center offsets and variations
-    model.los_APC(i_sat,j) = los_APC;
+    model.los_APC(i_sat,j_proc) = los_APC(frqs);
     model.dX_ARP_ECEF_corr(i_sat,frqs)= dX_ARP_ECEF_corr;               % Receiver antenna reference point correction in ECEF
     model.dX_PCO_rec_corr(i_sat,frqs) = dX_PCO_REC_ECEF_corr(frqs);     % Receiver phase center offset correction in ECEF
     model.dX_PCV_rec_corr(i_sat,frqs) = dX_PCV_rec(frqs);            	% Receiver phase center variation correction

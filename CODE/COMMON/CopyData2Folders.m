@@ -71,7 +71,7 @@ for i = 1:n
             % || monthly files
         case 'atx'
             tfolder = 'ANTEX';
-        case {'ssc', 'pos'}
+        case {'ssc', 'pos', 'snx'}
             tfolder = 'COORDS';
         case 'inx'
             tfolder = 'IONO';
@@ -102,7 +102,7 @@ for i = 1:n
             %     targetfolder = 'VMF3';
     end
     % analyze file-name to get the year and day of year
-    [subf_1, subf_2] = AnalyzeFileName(file, ext);
+    [subf_1, subf_2] = AnalyzeFileName(file, ext, curr_path);
     % create full path of target folder
     target = [datafolder tfolder '/' subf_1 '/' subf_2];
     % copy file
@@ -117,12 +117,12 @@ for i = 1:n
     end
 end
 
-msgbox('Data was copied successfully!', 'Achievement', 'help')
+msgbox('CopyData2Folders has finished.', 'Achievement', 'help')
 
 
 
 
-function [subf_1, subf_2] = AnalyzeFileName(file, ext)
+function [subf_1, subf_2] = AnalyzeFileName(file, ext, fpath)
 % This function tries to extract the year and the day of year belonging to
 % a GNSS related data file (e.g. RINEX, orbit,...)
 subf_1 = '';    % string with 4-digit year
@@ -172,7 +172,15 @@ elseif n == 11 && strcmp(ext, 'ssc')    % daily IGS coordinate solution (old sho
 elseif n == 9 && ext(end) == 'c'    % e.g. correction stream recorded with BNC
     subf_2 = file(6:8);
     subf_1  = ['20' ext(1:2)];
-
+    
+elseif ext(3) == 'o'            % RINEX observation file
+    % RINEX file and year+doy could not be extracted from filename
+    rheader = anheader_GUI(fpath);      % analyze header of RINEX file
+    jd = cal2jd_GT(rheader.first_obs(1), rheader.first_obs(2), rheader.first_obs(3));
+    [doy, yyyy] = jd2doy_GT(jd);
+    subf_1    = sprintf('%04d',yyyy);
+    subf_2 	= sprintf('%03d',doy);    
+    
 else
     fprintf([file ': date could not be extracted!\n']);
 end

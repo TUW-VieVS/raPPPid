@@ -12,6 +12,9 @@ function [obs] = assign_corr2brdc_biases_rinex2(obs, input)
 % *************************************************************************
 
 
+% ||| 2023/03/28: function is not up-to-date, has to be debugged
+
+
 obs.used_biases_GPS = cell(3,2);    % 1st column phase, 2nd column code
 
 % Code Biases

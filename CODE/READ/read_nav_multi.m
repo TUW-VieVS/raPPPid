@@ -1,5 +1,5 @@
 function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
-    read_nav_multi(path, leap_sec)
+    read_nav_multi(fData, leap_sec)
 % Function to read in a multi GNSS broadcast message file (only for RINEX 3
 % navigation files). Different time-systems are converted into GPS time
 % (seconds of week). 
@@ -9,7 +9,7 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 % e.g. RINEX Version 3.03, p.34, https://files.igs.org/pub/data/format/rinex304.pdf
 % 
 % INPUT:
-%   path            string, path to Multi-GNSS-navigation-file
+%   fData           cell, containing data of multi-GNSS navigation file
 %   leap_sec        integer, number of leap seconds between UTC and GPS time
 % OUTPUT:
 %   klob            coefficients of Klobuchar Model (GPS ionosphere model)
@@ -30,12 +30,12 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 
 % ||| conversion BDS time into GPS time
 
-
-% open and read file
-fide = fopen(path);
-fData = textscan(fide,'%s','Delimiter','\n');   fData = fData{1};
-fclose(fide);
-
+% check if data to read (real-time processing)
+klob = []; nequ = []; BDGIM = []; 
+Eph_GPS = []; Eph_GLO = []; Eph_GAL = []; Eph_BDS = [];
+if isempty(fData)
+    return
+end
 
 
 %% LOOP OVER HEADER
@@ -61,12 +61,11 @@ if i > 0                   	% find header end
             break;
         end
     end
-    if iHeadEnd == 0
-        error('No END of Header found in Multi-GNSS-Navigation-File.');
-    end
+    if iHeadEnd == 0;        iHeadEnd = 0;    end
 end
 
 for i = iHeadBegin:iHeadEnd  % Read header info
+    if i == 0; break; end                % no header data
     if contains(fData{i},'IONOSPHERIC CORR')        % ionosphere correction entry, RINEX 3.x
         if contains(fData{i},'GPSA')      	% Klobuchar-Model-alpha-Coefficients
             coeff_alpha = cell2mat(textscan(fData{i},'%*s %f %f %f %f'));
@@ -123,6 +122,12 @@ i = iHeadEnd + 1;
 i_gps = 1;      i_glo = 1;      i_gal = 1;     i_bds = 1;
 while i <= length(fData)            % loop from END OF HEADER to end of file
     line = fData{i};
+    
+    if isempty(strtrim(line))
+        % jump over empty lines
+        continue
+    end
+    
     
     %% ------ GPS navigation message
     if line(1) == 'G'
@@ -234,7 +239,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Eph_GPS(26,i_gps) = codes;      % codes on L2 channel
         Eph_GPS(27,i_gps) = weekno;     % gps-week, continuos number
         Eph_GPS(28,i_gps) = accuracy;   % [m], sat in space accuracy
-        Eph_GPS(29,i_gps) = tom;        % [sow]
+        Eph_GPS(29,i_gps) = tom;        % transmission time of message [sow]
         i_gps = i_gps + 1;
     end
     
@@ -310,7 +315,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Eph_GLO(12,i_glo) = Y_acc;       % [km/s^2], Y-acceleration of satellite in PZ90
         Eph_GLO(13,i_glo) = Z_acc;       % [km/s^2], Z-acceleration of satellite in PZ90
         Eph_GLO(14,i_glo) = health;      % health of satellite (0=OK)
-        Eph_GLO(15,i_glo) = f_num;       % frequency number/channel (-7, ..., 13)
+        Eph_GLO(15,i_glo) = f_num;       % channel number (-7, ..., 13)
         TauC = 0;
         Eph_GLO(16,i_glo) = TauC;        % [s], -TauC, Correction system time to UTC (SU)
         Eph_GLO(17,i_glo) = woe;         % gps-week, week of ephemerides
@@ -384,9 +389,10 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         datasource=int64(lData(2));	% for GALILEO data sources (FLOAT->INT)
         % bit 0 set: I/NAV E1-B
         % bit 1 set: F/NAV E5a-I
-        % bit 2 set: F/NAV E5b-I
-        % bit 8 set: af0-af2 toc are for E5a.E1
-        % bit 9 set: af0-af2 toc are for E5b.E1
+        % bit 2 set: I/NAV E5b-I
+        % bit 3 + 4 reserved for Galileo internal use
+        % bit 8 set: af0-af2, toc, SISA are for E5a-E1
+        % bit 9 set: af0-af2, toc, SISA are for E5b-E1
         weekno = lData(3);          % Galileo week
         % lData(4) is spare
         % -+-+- line 6 -+-+-
@@ -438,7 +444,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Eph_GAL(26,i_gal) = datasource;	% ???????????
         Eph_GAL(27,i_gal) = weekno;     % galileo-week
         Eph_GAL(28,i_gal) = sisa;       % signal in space accuracy [m]
-        Eph_GAL(29,i_gal) = tom;        % [sow]
+        Eph_GAL(29,i_gal) = tom;        % transmission time of message [sow]
         i_gal = i_gal + 1;
     end
     
@@ -558,6 +564,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Eph_BDS(26,i_bds) = tgd2;       % [s], time group delay B2/B3
         Eph_BDS(27,i_bds) = bdsweek;   	% bds-week
         Eph_BDS(28,i_bds) = SV_acc;     % [m], sat in space accuracy
+        Eph_BDS(29,i_bds) = tom;        % transmission time of message [sow]
         i_bds = i_bds + 1;
     end
     i = i + 1;

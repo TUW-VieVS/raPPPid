@@ -10,7 +10,7 @@ function [dX_PCV_sat, los_PCO_s] = ...
 %	PCV_sat         satellite phase center variations, internal format
 %   SatOr_ECEF      orientation of satellite in ECEF
 %   los0            line-of-sight-vector, unit vector, from receiver to satellite
-%   j_idx           indices of frequencies
+%   j_idx         	indices of frequencies
 %   iono_model      ionosphere model of processing
 %   f1,f2,f3        frequencies current satellites
 % OUTPUT:

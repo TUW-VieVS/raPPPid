@@ -47,7 +47,7 @@ bool_print = ~settings.INPUT.bool_parfor;
 
 % Prepare waitbar and print out of epochs to command window 
 if bool_print
-    WBAR = waitbar(0, 'Reading Data, please wait...', 'Name', 'Processing...');
+    WBAR = waitbar(0, 'Reading data, wait for processing start...', 'Name', 'Preparing...');
 end
 
 % Initialization and definition of global variable
@@ -70,15 +70,31 @@ bool_brdc_TGD = strcmp(settings.BIASES.code, 'Broadcasted TGD');
 
 
 
-%% -+-+-+-+-+-READ INPUT DATA-+-+-+-+-+-
+%% -+-+-+-+-+-READ/PREPARE INPUT DATA-+-+-+-+-+-
 
 % Read Input Data from Files (Ephemerides, Station Data, etc.)
 [input, obs, settings, RINEX] = readAllInputFiles(settings);
 
-% if necessary, convert time frame from seconds of day or hours of day into 
-% epochs of RINEX observation file (might be not completely correct in case 
-% of missing epochs)
-if settings.PROC.timeSpan_format_epochs
+% open files for real-time processing
+fid_obs = []; fid_navmess = []; fid_corr2brdc = [];
+q_update = 17;      % [epochs], update rate of, for example, waitbar 
+if settings.INPUT.bool_realtime
+    % open files for reading in real-time and jump to somewhere at the end of the file
+    fid_obs = fopen(settings.INPUT.file_obs, 'r');              % fseek(fid_obs,-100,'eof');
+    fid_navmess = fopen(settings.ORBCLK.file_nav_multi);    % do not jump
+    fid_corr2brdc = fopen(settings.ORBCLK.file_corr2brdc, 'r'); % fseek(fid_corr2brdc,-100,'eof');
+    input.Eph_GPS = []; input.Eph_GLO = []; input.Eph_GAL = []; input.Eph_BDS = [];
+    q_update = 1; 
+end
+
+
+% if necessary convert time frame to epochs of RINEX observation file 
+% ||| missing data epochs are not considered
+if settings.INPUT.bool_realtime
+    % determine approximate number of epochs to process in real-time (e.g.
+    % for initializing variables)
+    [settings.PROC.epochs, start_sow, ende_sow] = RealTimeEpochs(settings, obs);    
+elseif settings.PROC.timeSpan_format_epochs
     settings.PROC.epochs(1) = floor(settings.PROC.timeFrame(1));    % round to be on the safe side
     settings.PROC.epochs(2) = ceil (settings.PROC.timeFrame(2));
 elseif settings.PROC.timeSpan_format_SOD
@@ -162,19 +178,27 @@ for q = q_range         % loop over epochs
     Epoch.q = q;            % save number of epoch 
     [Epoch] = EpochlyReset_Epoch(Epoch);
     
-    n = settings.PROC.epochs(1) + q - 1;
-    % check if end of file is reached
-    if n > length(obs.epochheader)
-        settings.PROC.epochs(2) = settings.PROC.epochs(1) + q - 2;
-        q = q - 1;          %#ok<FXSET>
-        Epoch.q = q;
-        errordlg({['Epoch: ' sprintf(' %.0f',q)], 'End of Observation File reached!'}, ...
-            [obs.stationname sprintf(' %04.0f', obs.startdate(1)) sprintf('/%03.0f',obs.doy)]);
-        break;
+    n = settings.PROC.epochs(1) + q - 1;        
+    if ~settings.INPUT.bool_realtime
+        % post-processing: check if end of file is reached
+        if n > length(obs.epochheader)
+            settings.PROC.epochs(2) = settings.PROC.epochs(1) + q - 2;
+            q = q - 1;          %#ok<FXSET>
+            Epoch.q = q;
+            errordlg({['Epoch: ' sprintf(' %.0f',q)], 'End of Observation File reached!'}, ...
+                [obs.stationname sprintf(' %04.0f', obs.startdate(1)) sprintf('/%03.0f',obs.doy)]);
+            break;
+        end
+    end
+       
+    % ----- real-time processing: get RINEX observation data -----
+    if settings.INPUT.bool_realtime
+        [RINEX, fid_obs, fid_navmess, fid_corr2brdc, input, obs] = ...
+            ReadRinexRealTime(settings, input, obs, start_sow, fid_obs, fid_navmess, fid_corr2brdc);        
     end
     
     % ----- read in epoch data from RINEX observation file -----
-    [Epoch] = RINEX2epochData(RINEX, obs.epochheader, Epoch, n, obs.no_obs_types, obs.rinex_version, settings.PROC.LLI, settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS);
+    [Epoch] = RINEX2epochData(RINEX, obs.epochheader, Epoch, n, obs.no_obs_types, obs.rinex_version, settings);
     if ~Epoch.usable
         if bool_print
             fprintf('Epoch %d is skipped (not usable based on RINEX header)            \n', q)
@@ -190,6 +214,9 @@ for q = q_range         % loop over epochs
     % ----- Find column of broadcast-ephemeris of current satellite -----
     % check if satellites have broadcast ephemerides and are healthy, otherwise satellite is excluded
     if settings.ORBCLK.bool_brdc
+        if settings.INPUT.bool_realtime
+            [input, obs] = RealTimeEphCorr2Brdc(settings, input, obs, fid_navmess, fid_corr2brdc);
+        end
         Epoch = findEphCorr2Brdc(Epoch, input, settings);
     end 
     
@@ -290,31 +317,38 @@ for q = q_range         % loop over epochs
     % -+-+-+-+-+-START CALCULATION EPOCH-WISE SOLUTION-+-+-+-+-+- 
     [Adjust, Epoch, model, obs, HMW_12, HMW_23, HMW_13] = ...
         ZD_processing(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, input, satellites, obs);
-       
+      
     % Save results from epoch-wise processing
     [satellites, storeData, model_save] = ...
         saveData(Epoch, q, satellites, storeData, settings, Adjust, model, model_save, HMW_12, HMW_23, HMW_13);
     Epoch.delta_windup = model.delta_windup;        % [cycles], for calculation of Wind-Up correction in next epoch
-        
-    % update waitbar all 10 epochs
-    if bool_print && mod(q,10) == 0 && ishandle(WBAR)
+      
+    % update waitbar
+    if bool_print && mod(q,q_update) == 0 && ishandle(WBAR)
         progress = q/q_range(end);
-        remains = (toc(tStart)-read_time)/q*q_range(end) - ...
-            (toc(tStart)-read_time); 	% estimated remaining time for epoch-wise processing in seconds
-        mess = sprintf('%s%s\n%02.0f%s%d%s%d',...
-            'Estimated remaining time: ',datestr(remains/(24*60*60), 'HH:MM:SS'), progress*100, '% processed, current epoch: ', q, ' of ', q_range(end));
+        if ~settings.INPUT.bool_realtime
+            remains = (toc(tStart)-read_time)/q*q_range(end) - ...
+                (toc(tStart)-read_time); 	% estimated remaining time for epoch-wise processing in seconds
+            mess = sprintf('%s%s\n%02.0f%s%d%s%d',...
+                'Estimated remaining time: ',datestr(remains/(24*60*60), 'HH:MM:SS'), progress*100, '% processed, current epoch: ', q, ' of ', q_range(end));
+        else        % real-time processing
+            remains = ende_sow - Epoch.gps_time;
+            mess = sprintf('%s%s%s%s', 'Real-time processing until ', settings.INPUT.realtime_ende_GUI, ' (remaining ', datestr(remains/(24*60*60), 'HH:MM:SS'), ')');
+        end
         waitbar(progress, WBAR, mess)
     end
-    
-    % Check if user stopped calculation manually
-    if mod(q,20) == 0;   drawnow;   end     % get input from GUI every 20 epochs
-    if STOP_CALC
-        settings.PROC.epochs(2) = q + (settings.PROC.epochs(1)-1);
-        break;
+  
+    % Stop processing: if user stopped manually or end of real-time processing
+    if ~(settings.INPUT.bool_batch && settings.INPUT.bool_parfor)
+        if mod(q,q_update) == 0;   drawnow;   end
+        realtime_ende = settings.INPUT.bool_realtime && Epoch.gps_time >= ende_sow;
+        if STOP_CALC || realtime_ende
+            settings.PROC.epochs(2) = q + (settings.PROC.epochs(1)-1);
+            break;
+        end
     end
-
+ 
 end             % end of loop over epochs / epoch-wise calculations
-
 
 
 %% -+-+-+-+-+-VISUALS AND OUTPUT-+-+-+-+-+-
@@ -325,6 +359,10 @@ if bool_print
     if ishandle(WBAR);  waitbar(1,WBAR, mess);  end
 end
 
+% close files of real-time processing
+if settings.INPUT.bool_realtime
+    fclose(fid_obs);
+end
 
 % % Ambiguities are reduced by the following values of cycles
 % % (calculated from difference to C1 code) for numerical reasons:

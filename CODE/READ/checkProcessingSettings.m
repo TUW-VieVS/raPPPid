@@ -393,9 +393,9 @@ if (prec_prod_CODE_MGEX && strcmp(settings.BIASES.code, 'CODE OSBs')) ...
     valid_settings = false;     return
 end
 
-% 2xIF-LC is processed and receiver DCB estimation is disabled
+% 3-frequencies enabled, 2xIF-LC is processed and receiver DCB estimation is disabled
 if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && num_freq == 3 && ~settings.BIASES.estimate_rec_dcbs && ~prebatch
-    errordlg({'2xIF-LC is processed:', 'Please enable the receiver DCB estimation!'}, windowname);
+    errordlg({'Three frequencies and 2-Frequency-IF-LCs selected:', 'Please enable the receiver DCB estimation or deactivate the 3rd frequency!'}, windowname);
     valid_settings = false; return
 end
 
@@ -546,7 +546,7 @@ if settings.OTHER.mp_detection && ~isempty(rheader.interval) && rheader.interval
 end
 
 % Galileo HAS does not provide phase biases (yet)
-if settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'manually') && ...
+if contains(settings.PROC.method, 'Phase') && settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'manually') && ...
     contains(settings.ORBCLK.file_corr2brdc, 'SSRA00EUH0') && strcmp(settings.BIASES.phase, 'Correction Stream')
     errordlg({'Galileo HAS does not provide phase biases (yet).', 'Set phase biases to off!'}, windowname)
     valid_settings = false; return
@@ -558,8 +558,67 @@ if settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'manual
     valid_settings = false; return
 end
 
+% Real-time processing, check if all selected options are real-time capable
+if settings.INPUT.bool_realtime
+    bool_RT = true;
+    % Orbits/clocks
+    if settings.ORBCLK.bool_precise
+        fprintf(2, 'Orbit/Clock: Change to broadcast products.\n');
+        bool_RT = false;
+    end
+    % Biases
+    if ~settings.BIASES.code_corr2brdc_bool && ~strcmp(settings.BIASES.code, 'off') && ~strcmp(settings.BIASES.code, 'Broadcasted TGD')
+        fprintf(2, 'Code Biases: Change to correction stream, broadcasted TGD, or off.\n');
+        bool_RT = false;
+    end
+    if ~settings.BIASES.phase_corr2brdc_bool && ~strcmp(settings.BIASES.phase, 'off')
+        fprintf(2, 'Phase Biases: Change to correction stream, broadcasted TGD, or off.\n');
+        bool_RT = false;
+    end
+    % Ionosphere
+    if strcmp(settings.IONO.model, 'Estimate with ... as constraint') || ...
+            strcmp(settings.IONO.model, 'Correct with ...')
+        if strcmp(settings.IONO.source, 'IONEX File')
+            if ~strcmp(settings.IONO.file_source, 'IGS RT GIM') && ~strcmp(settings.IONO.file_source, 'GIOMO predicted')
+                fprintf(2, 'Ionosphere: Change to real-time capable product.\n')
+                bool_RT = false;
+            end
+        end
+        if strcmp(settings.IONO.source, 'CODE Spherical Harmonics')
+            fprintf(2, 'Ionosphere: Change to real-time capable product.\n')
+            bool_RT = false;
+        end
+    end
+    % Troposphere
+    if strcmp(settings.TROPO.zhd, 'VMF3') || strcmp(settings.TROPO.zwd, 'VMF3') || ...
+            strcmp(settings.TROPO.mfh, 'VMF3') || strcmp(settings.TROPO.mfw, 'VMF3') || ...
+            strcmp(settings.TROPO.Gh, 'GRAD') || strcmp(settings.TROPO.Gw, 'GRAD')
+        fprintf(2, 'Troposphere: Change to real-time capable model (e.g., GPT3).\n')
+        bool_RT = false;
+    end
+    if ~bool_RT
+        errordlg({'Your settings are not suitable for real-time processing!', ...
+            'Check the command window for details.'}, windowname)
+        valid_settings = false; return
+    end
+end
 
+% Batch-Processing and real-time processing activated
+if settings.INPUT.bool_batch && settings.INPUT.bool_realtime
+    errordlg({'Batch-processing and real-time processing activated!', ...
+        'Disable one of them.'}, windowname)
+    valid_settings = false; return
+end
 
+% Galileo HAS stream is used: GPS W should be placed at the end of the
+% observation ranking
+if ~prebatch && settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'manually') ...
+        && contains(settings.ORBCLK.file_corr2brdc, 'SSRA00EUH') && ...
+        settings.INPUT.gps_ranking(1) == 'W'
+    errordlg({'Galileo HAS does not provide C1W and C2W biases!', ...
+        'Move W at the end of the GPS observation ranking.'}, windowname)
+    valid_settings = false; return
+end
 
 % ||| to be continued
 
@@ -799,10 +858,10 @@ end
 if prebatch
     if settings.ORBCLK.bool_precise && strcmp(settings.ORBCLK.prec_prod, 'manually') ...
             && (~contains(settings.ORBCLK.file_sp3, '$') || ~contains(settings.ORBCLK.file_clk, '$'))
-        msgbox({'Batch processing and manually precise products:','File(s) only for one day defined, be careful!'}, 'Potential error', 'help')
+        msgbox({'Batch processing and manual selected satellite orbit & clocks:','File(s) only for one day defined, be careful!'}, 'Potential error', 'help')
     end
     if settings.BIASES.code_manually_Sinex_bool && ~contains(settings.BIASES.code_file, '$')
-        msgbox({'Batch processing and manually biases:','File only for one day defined, be careful!'}, 'Potential error!', 'help')        
+        msgbox({'Batch processing and manually selected biases:','File only for one day defined, be careful!'}, 'Potential error', 'help')        
     end    
 end
 

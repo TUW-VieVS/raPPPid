@@ -14,6 +14,9 @@ function [] = AnalyzeRINEX(settings)
 % *************************************************************************
 
 
+fprintf('\n--------------------------------------------------------\n\n')
+
+
 % read RINEX header and epochs
 [obs] = anheader(settings);
 [RINEX, epochheader] = readRINEX(settings.INPUT.file_obs, obs.rinex_version);
@@ -36,6 +39,18 @@ else
     fprintf('GAL: '); print_obs_types(obs.types_gal, 2);
     fprintf('BDS: '); print_obs_types(obs.types_bds, 2);
 end
+
+% Start-date in different time-formats
+hour = obs.startdate(4) + obs.startdate(5)/60 + obs.startdate(6)/3660;
+obs.startdate_jd = cal2jd_GT(obs.startdate(1),obs.startdate(2), obs.startdate(3) + hour/24);
+[obs.startGPSWeek, obs.startSow, ~] = jd2gps_GT(obs.startdate_jd);
+[obs.doy, ~] = jd2doy_GT(obs.startdate_jd);
+% print startdate of observation file
+fprintf('\nRINEX observation start:\n')
+t = datetime(obs.startdate(1), obs.startdate(2), obs.startdate(3), ...
+    obs.startdate(4), obs.startdate(5), obs.startdate(6), 'Format', 'yyyy-MM-dd HH:mm:ss.SSS');
+fprintf('  %s | %d/%d | %d/%03d\n', t, obs.startGPSWeek, floor(obs.startSow/86400), obs.startdate(1), floor(obs.doy))
+
 
 % number of epochs
 n = numel(epochheader);
@@ -69,7 +84,7 @@ setappdata(f,'canceling',0);
 for q = 1:n
     % get observations
     [Epoch] = EpochlyReset_Epoch(Epoch);    
-    [Epoch] = RINEX2epochData(RINEX, epochheader, Epoch, q, obs.no_obs_types, obs.rinex_version, settings.PROC.LLI, settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS);
+    [Epoch] = RINEX2epochData(RINEX, epochheader, Epoch, q, obs.no_obs_types, obs.rinex_version, settings);
     if ~Epoch.usable
         storeData.gpstime(q,1) = Epoch.gps_time;
         continue
@@ -154,33 +169,53 @@ vis_plotSatConstellation(hours, epochs, label_x_h, satellites, storeData.exclude
 
 
 if obs.interval < 5     % this plots make only sense for high-rate observation data
+    
+    print_std = true;       % true to print observation difference standard devation
+    
     % -+-+-+-+- Figure: Code Difference  -+-+-+-+-
     settings.OTHER.mp_thresh = NaN;
     degree_C = settings.OTHER.mp_degree;
-    storeData.mp_C1_diff_n = NaN(n,399);   	% code (L1) difference of last n epochs
-    storeData.mp_C1_diff_n(degree_C+1:end,:) = diff(C1, degree_C,1);
-    CodeDifference(epochs, storeData, label_x_epc, [], rgb, settings, satellites);
+    mp_C1_diff_n = NaN(n,399); mp_C2_diff_n = NaN(n,399); mp_C3_diff_n = NaN(n,399);   	
+    mp_C1_diff_n(degree_C+1:end,:) = diff(C1, degree_C,1); % code difference (C1) of last n epochs
+    PlotObsDiff(epochs, mp_C1_diff_n, label_x_epc, rgb, 'C1 difference' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std);
+    mp_C2_diff_n(degree_C+1:end,:) = diff(C2, degree_C,1);
+    PlotObsDiff(epochs, mp_C2_diff_n, label_x_epc, rgb, 'C2 difference' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std);
+    mp_C3_diff_n(degree_C+1:end,:) = diff(C3, degree_C,1);
+    PlotObsDiff(epochs, mp_C3_diff_n, label_x_epc, rgb, 'C3 difference' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std);
     
     % -+-+-+-+- Figure: Phase Difference  -+-+-+-+-
     degree_L = settings.OTHER.CS.TD_degree;	
-    storeData.cs_L1_diff = NaN(n,399);   	% phase (L1) difference of last n epochs
-    storeData.cs_L1_diff(degree_L+1:end,:) = diff(L1, degree_L,1);
-    storeData.float_reset_epochs = [];
-    PhaseDifference(epochs, storeData, label_x_epc, [], rgb, settings, satellites);
+    cs_L1_diff = NaN(n,399); cs_L2_diff = NaN(n,399); cs_L3_diff = NaN(n,399); 
+    cs_L1_diff(degree_L+1:end,:) = diff(L1, degree_L,1); % phase (L1) difference of last n epochs
+    PlotObsDiff(epochs, cs_L1_diff, label_x_epc, rgb, 'L1 difference' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std);
+    cs_L2_diff(degree_L+1:end,:) = diff(L2, degree_L,1);
+    PlotObsDiff(epochs, cs_L2_diff, label_x_epc, rgb, 'L2 difference' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std);
+    cs_L3_diff(degree_L+1:end,:) = diff(L3, degree_L,1); 
+    PlotObsDiff(epochs, cs_L3_diff, label_x_epc, rgb, 'L3 difference' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std);
     
     % -+-+-+-+- Figure: Doppler Difference  -+-+-+-+-
     degree_D = 3;
-    D1 = satellites.D1; D1(D1==0) = NaN;    
-    storeData.D1_diff = NaN(n,399);         % Doppler (D1) difference of last n epochs
-    storeData.D1_diff(degree_D+1:end,:) = diff(D1, degree_D,1);
-    DopplerDifference(epochs, storeData, label_x_epc, [], rgb, settings, satellites);
-    
-% for each satellite
-%     if isGPS; vis_cs_time_difference(storeData, 'G', degree_L, NaN); end
-%     if isGLO; vis_cs_time_difference(storeData, 'R', degree_L, NaN); end
-%     if isGAL; vis_cs_time_difference(storeData, 'E', degree_L, NaN); end
-%     if isBDS; vis_cs_time_difference(storeData, 'C', degree_L, NaN); end
+    if isfield(satellites, 'D1')
+        D1 = satellites.D1; D1(D1==0) = NaN;
+        D1_diff = NaN(n,399);
+        D1_diff(degree_D+1:end,:) = diff(D1, degree_D,1);  	% Doppler (D1) difference of last n epochs
+        PlotObsDiff(epochs, D1_diff, label_x_epc, rgb, 'D1 difference' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std);
+    end
+    if isfield(satellites, 'D2')
+        D2 = satellites.D2; D2(D2==0) = NaN;
+        D2_diff = NaN(n,399);
+        D2_diff(degree_D+1:end,:) = diff(D2, degree_D,1);
+        PlotObsDiff(epochs, D2_diff, label_x_epc, rgb, 'D2 difference' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std);
+    end
+    if isfield(satellites, 'D3')
+        D3 = satellites.D3; D3(D3==0) = NaN;
+        D3_diff = NaN(n,399);
+        D3_diff(degree_D+1:end,:) = diff(D3, degree_D,1);
+        PlotObsDiff(epochs, D3_diff, label_x_epc, rgb, 'D3 difference' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std);
+    end
 end
+
+fprintf('\n--------------------------------------------------------\n\n')
 
 
 

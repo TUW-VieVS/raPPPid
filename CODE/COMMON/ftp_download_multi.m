@@ -30,7 +30,11 @@ f = ftp(host);
 folder_old = 'empty';
 % Enter passive mode
 h = struct(f);
-h.jobject.enterLocalPassiveMode()
+try
+    h.jobject.enterLocalPassiveMode();
+catch   % on some PC the line above does not work (for whatever reason)
+    h.LocalDataConnectionMethod();
+end
 
 
 for i = 1:n

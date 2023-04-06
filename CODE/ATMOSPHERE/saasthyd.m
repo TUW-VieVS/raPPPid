@@ -17,7 +17,6 @@ function [zhd] = saasthyd(p, dlat, hell)
 %
 % p:     pressure in hPa
 % dlat:  ellipsoidal latitude in radians 
-% dlon:  longitude in radians 
 % hell:  ellipsoidal height in m 
 % 
 % output parameters:

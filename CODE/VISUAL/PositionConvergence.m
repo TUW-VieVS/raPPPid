@@ -113,8 +113,8 @@ if strcmp(event_obj.Target.LineStyle, '--')
     
 else
     i = 1;
-    if ~isempty(event_obj.Target.DisplayName) && isequal(event_obj.Target.Color, [1 0.44 0.44])
-        num_conv = erase(event_obj.Target.DisplayName, 'data');
+    if ~isempty(event_obj.Target.SeriesIndex) && isequal(event_obj.Target.Color, [1 0.44 0.44])
+        num_conv = sprintf('%d',event_obj.Target.SeriesIndex);
         output_txt{i} = ['Convergence Period: ', num_conv];
         i = i+1;
     end

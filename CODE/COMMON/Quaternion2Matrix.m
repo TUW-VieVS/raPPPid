@@ -3,11 +3,11 @@ function M = Quaternion2Matrix(varargin)
 % transformation with a matrix multiplikation
 %
 % INPUT:
-%	q       1x4, quaternion, [q0 q1 q2 q3]
+%	q                   1x4, quaternion, [q0 q1 q2 q3]
 %       or already
-% q0, q1, q2, q3
+%   q0, q1, q2, q3      all double, entries of quaternion
 % OUTPUT:
-%	M       3x3, matrix
+%	M                   3x3, rotation matrix
 %
 % Revision:
 %   ...

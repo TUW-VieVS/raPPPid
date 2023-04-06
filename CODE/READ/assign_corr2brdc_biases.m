@@ -1,4 +1,4 @@
-function [obs] = assign_corr2brdc_biases(obs, input, settings)
+function obs = assign_corr2brdc_biases(obs, input, settings)
 % finds the correct code and/or phase biases from CNES stream and assigns
 % it to obs.L1/L2/L3/C1/C2/C3_corr
 %
@@ -8,10 +8,14 @@ function [obs] = assign_corr2brdc_biases(obs, input, settings)
 %   settings    struct, processing settings from GUI
 % OUTPUT:
 %   obs         struct, updated with obs.C1/C2/C3_corr and obs.L1/L2/L3_corr
-%               and used_biases
+%               and C_/L_corr_time and used_biases
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
+
+
+% ||| assumes that the biases of all GNSS have the same time-stamp
+% ||| assumes that the stream contains GPS corrections
 
 
 % initialize used phase and code bias correction type (3-digit) for each GNSS
@@ -26,15 +30,29 @@ glo_cols = 100 + (1:DEF.SATS_GLO);
 gal_cols = 200 + (1:DEF.SATS_GAL);
 bds_cols = 300 + (1:DEF.SATS_BDS);
 
+% needed for initializing and checking for new data
+if settings.INPUT.use_GPS
+    corr2brdc = input.ORBCLK.corr2brdc_GPS;
+elseif settings.INPUT.use_GLO
+    corr2brdc = input.ORBCLK.corr2brdc_GLO;
+elseif settings.INPUT.use_GAL
+    corr2brdc = input.ORBCLK.corr2brdc_GAL;
+else
+    corr2brdc = input.ORBCLK.corr2brdc_BDS;
+end
+
+
 
 %% --- CODE BIASES ---
-if settings.BIASES.code_corr2brdc_bool
+if settings.BIASES.code_corr2brdc_bool && ~isempty(corr2brdc.cbias)
     
-    rows = length(input.ORBCLK.corr2brdc.t_code);
+    % initialize
+    obs.C_corr_time = corr2brdc.t_code;
+    rows = length(obs.C_corr_time);
     obs.C1_corr = zeros(rows,399); obs.C2_corr = zeros(rows,399); obs.C3_corr = zeros(rows,399);
     
     % -- GPS --
-    if settings.INPUT.use_GPS
+    if settings.INPUT.use_GPS && ~isempty(input.ORBCLK.corr2brdc_GPS.cbias)
         code_gps = fieldnames(input.ORBCLK.corr2brdc_GPS.cbias);             % fieldnames of GPS code bias corrections
         if isfield(obs.GPS, 'C1') && ~isempty(obs.GPS.C1)
             [obs.C1_corr(:,gps_cols), obs.used_biases_GPS{1,2}] = ...
@@ -51,7 +69,7 @@ if settings.BIASES.code_corr2brdc_bool
     end
     
     % -- Glonass
-    if settings.INPUT.use_GLO
+    if settings.INPUT.use_GLO && ~isempty(input.ORBCLK.corr2brdc_GLO.cbias)
         code_glo = fieldnames(input.ORBCLK.corr2brdc_GLO.cbias);             % fieldnames of Glonass code bias corrections
         if isfield(obs.GLO, 'C1') && ~isempty(obs.GLO.C1)
             [obs.C1_corr(:,glo_cols), obs.used_biases_GLO{1,2}] = ...
@@ -68,7 +86,7 @@ if settings.BIASES.code_corr2brdc_bool
     end
     
     % -- Galileo --
-    if settings.INPUT.use_GAL
+    if settings.INPUT.use_GAL && ~isempty(input.ORBCLK.corr2brdc_GAL.cbias)
         code_gal = fieldnames(input.ORBCLK.corr2brdc_GAL.cbias);             % fieldnames of Galileo code bias corrections
         if isfield(obs.GAL, 'C1') && ~isempty(obs.GAL.C1)
             [obs.C1_corr(:,gal_cols), obs.used_biases_GAL{1,2}] = ...
@@ -85,7 +103,7 @@ if settings.BIASES.code_corr2brdc_bool
     end
     
     % -- BeiDou --
-    if settings.INPUT.use_BDS
+    if settings.INPUT.use_BDS && ~isempty(input.ORBCLK.corr2brdc_BDS.cbias)
         code_bds = fieldnames(input.ORBCLK.corr2brdc_BDS.cbias);             % fieldnames of BeiDou code bias corrections
         if isfield(obs.BDS, 'C1') && ~isempty(obs.BDS.C1)
             [obs.C1_corr(:,bds_cols), obs.used_biases_BDS{1,2}] = ...
@@ -104,9 +122,10 @@ end
 
 
 %% --- PHASE BIASES ---
-if settings.BIASES.phase_corr2brdc_bool
+if settings.BIASES.phase_corr2brdc_bool && ~isempty(corr2brdc.pbias)
     
-    rows = length(input.ORBCLK.corr2brdc.t_phase);
+    obs.L_corr_time = corr2brdc.t_phase;
+    rows = length(obs.L_corr_time);
     obs.L1_corr = zeros(rows,399); obs.L2_corr = zeros(rows,399); obs.L3_corr = zeros(rows,399);
     
     % -- GPS --
@@ -195,12 +214,12 @@ else            % no suitable bias correction
             field = all_biases(idx_field);              % get fieldname
             biases_use = stream_biases.(field{1});      % save bias
             used_bias = field{1};
-            msgbox([string ' bias: ' char(field) ' instead of ' obs_signal ' used.'], 'Stream Biases', 'help')
+%             msgbox([string ' bias: ' char(field) ' instead of ' obs_signal ' used.'], 'Stream Biases', 'help')
             return
         end
     end
     
-    msgbox(['No Bias for ' string ' in correction stream!'], 'Stream Biases', 'help')
+%     msgbox(['No Bias for ' string ' in correction stream!'], 'Stream Biases', 'help')
     used_bias = [];
 end
 

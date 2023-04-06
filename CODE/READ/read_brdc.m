@@ -27,8 +27,12 @@ bool_print = ~settings.INPUT.bool_parfor;
 %% READ
 % --- MULTI GNSS NAVIGATION FILE (*.rnx)
 if settings.ORBCLK.bool_nav_multi || glo_channels
+    % open and read file
+    fide = fopen(settings.ORBCLK.file_nav_multi);
+    fData = textscan(fide,'%s','Delimiter','\n');   fData = fData{1};
+    fclose(fide);
     [input.IONO.klob_coeff, input.nequ_coeff, input.BDGIM_coeff, ....
-        Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi(settings.ORBCLK.file_nav_multi, leap_sec);
+        Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi(fData, leap_sec);
 end
 
 
