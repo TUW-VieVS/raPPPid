@@ -21,14 +21,15 @@ function [] = PositionConvergence(dN, dE, dH, dT, q68, q95, dT_all, PlotStruct, 
 % *************************************************************************
 
 
-n_conv = size(dT, 1);         % number of convergence periods
-dT = dT / 60;               % convert [s] in [min]
+n_conv = size(dT, 1);               % number of convergence periods
+dT = dT / 60;                       % convert [s] in [min]
 dT_all = dT_all / 60;
 d2D = sqrt(dN.^2 + dE.^2);          % calculate horizontal position error
 d3D = sqrt(dN.^2 + dE.^2 + dH.^2);	% calculate 3D position error
 
-bool = n_conv < 1500;           % very random threshold, but otherwise plot is too crowded
+bool = n_conv < 1500;               % very random threshold, but otherwise plot is too crowded
 
+coleur = [0.83 .35 .35];            % color of convergence periods
 
 % Vizualization, create and style plot
 fig_name = 'Position Error';
@@ -42,7 +43,7 @@ fig = figure('Name', fig_name, 'NumberTitle','off');
 subplot(2,1,1)
 hold on 
 if bool
-    p_11 = plot(dT',d2D', 'color',[1 .44 .44], 'linewidth',1);  	% plot vectorized
+    p_11 = plot(dT',d2D', 'color',coleur, 'linewidth',1);  	% plot vectorized
 end
 p_12 = hline(PlotStruct.thresh_2D, 'k--');      % convergence threshold
 p_13 = plot(dT_all, q68{4}, 'LineStyle', '-', 'Color', [.5 .5 .5], 'LineWidth',2);
@@ -63,7 +64,7 @@ legend([p_12; p_13; p_14; p_11], {thresh_str_2D, '68% Quantile', '95% Quantile',
 subplot(2,1,2)
 hold on 
 if bool
-    p_21 = plot(dT',d3D', 'color',[1 .44 .44], 'linewidth',1);  	% plot vectorized
+    p_21 = plot(dT',d3D', 'color',coleur, 'linewidth',1);  	% plot vectorized
 end
 p_22 = hline(PlotStruct.thresh_3D, 'k--');      % convergence threshold
 p_23 = plot(dT_all, q68{5},	'LineStyle', '-', 'Color', [.5 .5 .5], 'LineWidth',2);
@@ -113,7 +114,7 @@ if strcmp(event_obj.Target.LineStyle, '--')
     
 else
     i = 1;
-    if ~isempty(event_obj.Target.SeriesIndex) && isequal(event_obj.Target.Color, [1 0.44 0.44])
+    if ~isempty(event_obj.Target.SeriesIndex) && isequal(event_obj.Target.Color, [0.83    0.35    0.35])
         num_conv = sprintf('%d',event_obj.Target.SeriesIndex);
         output_txt{i} = ['Convergence Period: ', num_conv];
         i = i+1;

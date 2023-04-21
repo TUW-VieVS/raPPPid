@@ -38,7 +38,7 @@ C = kron(eye(2*n), C);
 % satellite 1 (code 1, code 2, code 3, phase 1, phase 2, phase 3),
 % satellite 2 (code 1, code 2, code 3, phase 1, phase 2, phase 3),
 P_fac = createWeights(Epoch, elev, settings);
-P_fac_3 = repmat(P_fac(:,1)',3,1);      % all frequencies weight factor from frequency 1
+P_fac_3 = repmat(P_fac(:,1)',3,1);      % initialitze all frequencies with weight factor from frequency 1
 P_fac_3(1:n_inp,:) = P_fac';            % replace weight factors on existing frequencies
 P_code  = settings.ADJ.var_code ./ P_fac_3;     % variance for all code observations and frequencies
 P_phase = settings.ADJ.var_phase./ P_fac_3; 	% variance for all phase observations and frequencies
@@ -136,7 +136,7 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') && Adjust.cons
         iono_var = v_end;
     end
     % create covariance and weigth-matrix
-    P_fac = sin(elev*pi/180).^2;
+    P_fac = sin(elev*pi/180).^2;    	% ionospheric pseudo-observations are elevation-weighted
     Q_iono = diag(iono_var ./ P_fac(:,1));
     Q = blkdiag(Q, Q_iono);
     P = blkdiag(P, inv(Q_iono));

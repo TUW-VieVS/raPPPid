@@ -754,6 +754,12 @@ try
     set(handles.edit_ss_thresh, 'String', num2str(structure.PROC.ss_thresh));
 end
 
+% Fit phase to code
+try
+    handles.checkbox_AdjustPhase.Value = structure.PROC.AdjustPhase2Code;
+catch
+    handles.checkbox_AdjustPhase.Value = 0;
+end
 
 % Loss of Lock Index ||| delete try/catch at some later point
 try

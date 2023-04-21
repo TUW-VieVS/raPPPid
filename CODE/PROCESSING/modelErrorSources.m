@@ -185,6 +185,8 @@ for i_sat = 1:num_sat
         Epoch.exclude(i_sat,frqs) = true; 	% eliminate satellite
         Epoch.sat_status(i_sat) = 15;
         Epoch.tracked(prn) = 1;
+        model.Rot_X(:,i_sat) = [0; 0; 0];
+        model.el(i_sat,frqs) = 0;
         continue
     end
     
@@ -576,10 +578,13 @@ for i_sat = 1:num_sat
     end
     
     % --- APC correction due to PCOs for raw processed frequencies---
-    % simplified version, https://doi.org/10.1186/s43020-021-00049-9 or
-    % https://doi.org/10.1007/s00190-022-01602-3
-    % for correcting HMW observation in create_HMW_LC.m
-    los_APC = PCO_rec(3,j).*sind(elev) + offset_LL(3,j);    
+    los_APC = [0,0,0];
+    if settings.AMBFIX.bool_AMBFIX && settings.AMBFIX.APC_MODEL
+        % simplified version, https://doi.org/10.1186/s43020-021-00049-9 or
+        % https://doi.org/10.1007/s00190-022-01602-3
+        % for correcting HMW observation in create_HMW_LC.m
+        los_APC = PCO_rec(3,j).*sind(elev) + offset_LL(3,j);
+    end
     
     
     %% Group Delay Variations
@@ -605,7 +610,7 @@ for i_sat = 1:num_sat
     model.zhd(i_sat,frqs)  = zhd;               % modeled zenith hydrostativ delay
     % Observation direction
     model.az(i_sat,frqs)   = az;                % Satellite azimuth [°]
-    model.el(i_sat,frqs)   = elev;                % Satellite elevation [°]
+    model.el(i_sat,frqs)   = elev;            	% Satellite elevation [°]
     % Windup
     model.delta_windup(i_sat,frqs) = delta_windup;          % Phase windup effect in cycles
     model.windup(i_sat,frqs)       = windupCorr(frqs);      % Phase windup effect, scaled to frequency

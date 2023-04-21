@@ -279,9 +279,9 @@ for q = q_range         % loop over epochs
     end
     
     % --- Adjust phase data to Code to limit the ambiguities ---
-%     if contains(settings.IONO.model,'2-Frequency-IF-LCs')	% ||| somehow this does not work for UC-Model?!?!?!
-%         [init_ambiguities, Epoch] = init_amb(Epoch, init_ambiguities, Epoch.old.sats);
-%     end
+    if strcmpi(settings.PROC.method, 'Code + Phase') && settings.PROC.AdjustPhase2Code
+        [init_ambiguities, Epoch] = AdjustPhase2Code(Epoch, init_ambiguities, Epoch.old.sats);
+    end
     
     % --- get and apply satellite biases for current epoch ---
     % get from correction stream (real-time code and phase biases)

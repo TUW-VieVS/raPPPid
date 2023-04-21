@@ -1,27 +1,27 @@
-function [init_ambs, Epoch] = init_amb(Epoch, init_ambs, prns_old)
-% Function to adjust phase data to Code to limit the ambiguities for
-% numerical reasons
+function [init_ambs, Epoch] = AdjustPhase2Code(Epoch, init_ambs, prns_old)
+% Function to adjust phase data to Code to, for example, limit the 
+% ambiguities for numerical reasons
 % 
 % INPUT:
-%   Epoch       struct, epoch-specific data for current epoch
-%   init_ambs       values from reducing ambiguities
+%   Epoch           struct, epoch-specific data for current epoch
+%   init_ambs       matrix, values from reducing ambiguities
 %   old_prns        satellites of last epoch
 % OUTPUT:
 %   init_ambs       updated
-%   Epoch       updated
+%   Epoch           updated
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
+prns = Epoch.sats;
 
 % keep initialized ambiguities only for satellites which are properly observed
-delete = true(3,399);
-sats = Epoch.sats(any(~Epoch.exclude & ~Epoch.cs_found,2));
-delete(:,sats) = false;
+sats = prns(any(~Epoch.exclude & ~Epoch.cs_found,2));       % satellites properly observed
+delete = true(3,399);       % delete all initialized ambiguities ...
+delete(:,sats) = false;     % ... except satellites with valid phase observations
 init_ambs(delete) = NaN;
 
-% get variables
-prns = Epoch.sats;
+% get initialized ambiguities for satellites observed in current epoch
 init_ambs_ep = init_ambs(:,prns);
 
 % adjust phase observations to code observations for 1st frequency
@@ -30,7 +30,7 @@ if any(idx_ep_1)       % check if there are satellites which have none initializ
     init_L1 = floor( (Epoch.C1 - Epoch.L1)./Epoch.l1 );     % difference code - phase in [cy]
     init_ambs(1, prns(idx_ep_1)) = init_L1(idx_ep_1);
 end
-Epoch.L1 = Epoch.L1 + Epoch.l1 .* init_ambs(1,prns)';
+Epoch.L1 = Epoch.L1 + Epoch.l1 .* init_ambs(1,prns)';       % align phase to code
 
 % adjust phase observations to code observations for 2nd frequency
 if ~isempty(Epoch.L2)

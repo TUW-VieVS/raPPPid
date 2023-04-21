@@ -86,10 +86,7 @@ while it < 15                           % Start iteration (because of linearizat
         idx_iono = n-no_sats+1:n;
         bool_iono = ( Adjust.param(idx_iono) == 0 );
         Adjust.param(idx_iono(bool_iono)) = model.iono(bool_iono,1);
-    end
-    
-    % --- create weights depending on weighting scheme for observations
-    P_diag = createWeights(Epoch, model.el, settings);
+    end  
     
     % --- update model with modeled observations
     [model.model_code, model.model_phase, model.model_doppler] = ...
@@ -144,7 +141,7 @@ while it < 15                           % Start iteration (because of linearizat
 %                 Adjust.param_pred = Adjust.param;
                 continue;       % start Kalman-Filter in next iteration
             end
-            Adjust = KalmanFilter(Adjust, Epoch, settings, model, P_diag);
+            Adjust = KalmanFilter(Adjust, Epoch, settings, model);
             break;
 
         case 'Kalman Filter Iterative'      % Kalman Filter with inner-epoch iteration

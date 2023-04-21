@@ -751,6 +751,7 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
         set(handles.text_float_ambiguities_m, 	           'Enable', 'Off');
         set(handles.popupmenu_filter_ambiguities_dynmodel, 'Enable', 'Off');
         set(handles.buttongroup_models_biases_phase,       'Visible', 'Off');
+        set(handles.checkbox_AdjustPhase,                     'Visible', 'Off');
     elseif strcmpi(proc_meth,'code + phase')
         set(handles.text_float_ambiguities, 	           'Enable', 'On');
         set(handles.edit_filter_ambiguities_sigma0,        'Enable', 'On');
@@ -758,6 +759,7 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
         set(handles.text_float_ambiguities_m, 	           'Enable', 'On');
         set(handles.popupmenu_filter_ambiguities_dynmodel, 'Enable', 'On');
         set(handles.buttongroup_models_biases_phase,       'Visible', 'On');
+        set(handles.checkbox_AdjustPhase,                     'Visible', 'On');
     end
     % activate smoothing window if needed
     if contains(proc_meth, 'smoothing')

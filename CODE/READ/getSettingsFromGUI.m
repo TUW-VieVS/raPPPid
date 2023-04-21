@@ -416,6 +416,9 @@ value = get(handles.popupmenu_process, 'Value');
 string_all = get(handles.popupmenu_process, 'String');
 settings.PROC.method = string_all{value};
 
+% Fit phase to code observations
+settings.PROC.AdjustPhase2Code = get(handles.checkbox_AdjustPhase, 'Value');
+
 % Smoothing factor
 settings.PROC.smooth_fac = str2double(get(handles.edit_smooth, 'String'));
 

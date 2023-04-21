@@ -638,11 +638,6 @@ if num_freq == 1 && ~prebatch
         errordlg({'Only 1-Frequency is processed:', 'Cycle-Slip Detection dL1-dL2 is not possible!'}, windowname);
         valid_settings = false; return
     end
-    % Some correction phase code biases is enabled
-    if ~strcmp(settings.BIASES.phase, 'off') && contains(settings.PROC.method, 'Phase') 
-        errordlg({'Only 1-Frequency is processed:', 'Please set phase bias correction to OFF!'}, windowname);
-        valid_settings = false; return
-    end
     if strcmp(settings.IONO.model,'2-Frequency-IF-LCs')
         errordlg({'Only 1-Frequency is processed:', 'Processing with 2-Frequency-IF-LC is not possible!'}, windowname);
         valid_settings = false; return
@@ -663,10 +658,6 @@ end
 if (num_freq == 2 || num_freq == 3) && ~prebatch
     if settings.OTHER.CS.l1c1
         errordlg('Cycle-Slip Detection with L1-C1 Difference only implemented for Single-Frequency-Processing.', windowname);
-        valid_settings = false; return
-    end
-    if settings.OTHER.CS.TimeDifference && contains(settings.PROC.method, 'Phase')
-        errordlg('Cycle-Slip Detection with time difference only implemented for Single-Frequency-Processing.', windowname);
         valid_settings = false; return
     end
 end

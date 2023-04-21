@@ -1,12 +1,11 @@
-function [Adjust] = KalmanFilter(Adjust, Epoch, settings, model, P_fac)
+function [Adjust] = KalmanFilter(Adjust, Epoch, settings, model)
 % calculating position solution with Kalman Filter following [00]: p.244-248
 %
 % INPUT: 
 %   Adjust      struct, containing all adjustment relevant data
-%   model           ...
+%   model       ...
 %   Epoch       ...
-%   settings        ...
-%   P_diag          vector, increase factor for variance of observations
+%   settings    ...
 % OUTPUT:
 %   Adjust      ...
 % 
@@ -16,10 +15,6 @@ function [Adjust] = KalmanFilter(Adjust, Epoch, settings, model, P_fac)
 
 % get variables from settings
 num_freq = settings.INPUT.proc_freqs;
-var_code = settings.ADJ.var_code;       % variance of code observations from GUI
-var_phase = settings.ADJ.var_phase;     % variance of phase observations from GUI
-PROC_method = settings.PROC.method;     % processing method (code, code+phase,...)
-IONO_constr = strcmpi(settings.IONO.model,'Estimate with ... as constraint');
 % get variables from Adjust
 omc = Adjust.omc;               % observed minus computed for current epoch
 A = Adjust.A;                   % Design-Matrix for current epoch

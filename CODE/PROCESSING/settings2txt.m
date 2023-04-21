@@ -39,30 +39,42 @@ fprintf(fileID,'\n');
 
 
 
-%% Processed Signals
+%% Selected Signals
+switch settings.PROC.method
+    case 'Code Only'
+        fprintf(fileID,'%s\n\n','Processing Method: Code Only');
+    case 'Code + Doppler'
+        fprintf(fileID,'%s\n\n','Processing Method: Code + Doppler');
+    case 'Code + Phase'
+        fprintf(fileID,'%s\n\n','Processing Method: Phase + Code');
+    case 'Code (Doppler Smoothing)'
+        fprintf(fileID,'%s\n\n','Processing Method: Code (Doppler Smoothing)');
+    otherwise
+        fprintf(fileID,'%s\n\n','Processing Method: Error');
+end
 if settings.INPUT.use_GPS
-    fprintf(fileID,'%s\n','Processed GPS Signals:');
+    fprintf(fileID,'%s\n','Selected GPS Signals:');
     fprintf(fileID,'  Code:     %s, %s, %s\n', obs.GPS.C1,obs.GPS.C2,obs.GPS.C3);
     fprintf(fileID,'  Phase:    %s, %s, %s\n', obs.GPS.L1,obs.GPS.L2,obs.GPS.L3);
     fprintf(fileID,'  Strength: %s, %s, %s\n', obs.GPS.S1,obs.GPS.S2,obs.GPS.S3);
     fprintf(fileID,'  Doppler:  %s, %s, %s\n', obs.GPS.D1,obs.GPS.D2,obs.GPS.D3);
 end
 if settings.INPUT.use_GLO
-    fprintf(fileID,'%s\n','Processed Glonass Signals:');
+    fprintf(fileID,'%s\n','Selected Glonass Signals:');
     fprintf(fileID,'  Code:     %s, %s, %s\n', obs.GLO.C1,obs.GLO.C2,obs.GLO.C3);
     fprintf(fileID,'  Phase:    %s, %s, %s\n', obs.GLO.L1,obs.GLO.L2,obs.GLO.L3);
     fprintf(fileID,'  Strength: %s, %s, %s\n', obs.GLO.S1,obs.GLO.S2,obs.GLO.S3);
     fprintf(fileID,'  Doppler:  %s, %s, %s\n', obs.GLO.D1,obs.GLO.D2,obs.GLO.D3);
 end
 if settings.INPUT.use_GAL
-    fprintf(fileID,'%s\n','Processed Galileo Signals:');    
+    fprintf(fileID,'%s\n','Selected Galileo Signals:');    
     fprintf(fileID,'  Code:     %s, %s, %s\n', obs.GAL.C1,obs.GAL.C2,obs.GAL.C3);
     fprintf(fileID,'  Phase:    %s, %s, %s\n', obs.GAL.L1,obs.GAL.L2,obs.GAL.L3);
     fprintf(fileID,'  Strength: %s, %s, %s\n', obs.GAL.S1,obs.GAL.S2,obs.GAL.S3);
     fprintf(fileID,'  Doppler:  %s, %s, %s\n', obs.GAL.D1,obs.GAL.D2,obs.GAL.D3);
 end
 if settings.INPUT.use_BDS
-    fprintf(fileID,'%s\n','Processed BeiDou Signals:');    
+    fprintf(fileID,'%s\n','Selected BeiDou Signals:');    
     fprintf(fileID,'  Code:     %s, %s, %s\n', obs.BDS.C1,obs.BDS.C2,obs.BDS.C3);
     fprintf(fileID,'  Phase:    %s, %s, %s\n', obs.BDS.L1,obs.BDS.L2,obs.BDS.L3);
     fprintf(fileID,'  Strength: %s, %s, %s\n', obs.BDS.S1,obs.BDS.S2,obs.BDS.S3);
@@ -416,18 +428,14 @@ if settings.INPUT.use_BDS
     fprintf(fileID,'  %s%s%s%s%s%s\n','BeiDou-Frequencies: ',settings.INPUT.bds_freq{1},', ',settings.INPUT.bds_freq{2},', ',settings.INPUT.bds_freq{3});
     fprintf(fileID,'  %s%s\n','BeiDou-Ranking: ', settings.INPUT.bds_ranking);
 end
-switch settings.PROC.method
-    case 'Code Only'
-        fprintf(fileID,'  %s\n','Processing Method: Code Only');
-    case 'Code + Doppler'
-        fprintf(fileID,'  %s\n','Processing Method: Code + Doppler');
-    case 'Code + Phase'
-        fprintf(fileID,'  %s\n','Processing Method: Phase + Code');
-    case 'Code (Doppler Smoothing)'
-        fprintf(fileID,'  %s\n','Processing Method: Code (Doppler Smoothing)');
-    otherwise
-        fprintf(fileID,'  %s\n','Processing Method: Error');
+
+% adjust phase to code
+if settings.PROC.AdjustPhase2Code
+    fprintf(fileID,'  %s\n','Adjust phase to code is ON');
+else
+    fprintf(fileID,'  %s\n','Adjust phase to code is OFF');
 end
+
 
 
 % print excluded satellites from processing

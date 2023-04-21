@@ -17,7 +17,7 @@ function Epoch = cycleSlip_TimeDifference(Epoch, use_column, settings)
 % *************************************************************************
 
 
-% get phase-observations on 1st frequency for current epoch [m]
+% get raw phase-observations on 1st frequency for current epoch [m]
 L1_gps = Epoch.obs(Epoch.gps, use_column{1,4});
 L1_glo = Epoch.obs(Epoch.glo, use_column{2,4});
 L1_gal = Epoch.obs(Epoch.gal, use_column{3,4});

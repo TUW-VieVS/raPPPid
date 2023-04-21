@@ -142,7 +142,7 @@ obs.use_column = [...
 
 
 %% save observation type and print it to command window
-if bool_print; fprintf('\nProcessed Frequencies and Signals:      \n'); end
+if bool_print; fprintf('\nSelected Frequencies and Signals:      \n'); end
 
 % --- GPS ---
 if settings.INPUT.use_GPS          

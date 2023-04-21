@@ -27,7 +27,8 @@ f1 = Epoch.f1;   	f2 = Epoch.f2;      f3 = Epoch.f3;
 
 % check if APC model is applied
 if ~settings.AMBFIX.APC_MODEL
-    % APC model is not applied -> set values in z to zero
+    % APC model is not applied -> set values in z to zero 
+    % (||| check if this code is necessary)
     z(:,:) = 0;
 end
 

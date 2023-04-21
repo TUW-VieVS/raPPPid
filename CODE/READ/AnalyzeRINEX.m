@@ -173,7 +173,6 @@ if obs.interval < 5     % this plots make only sense for high-rate observation d
     print_std = true;       % true to print observation difference standard devation
     
     % -+-+-+-+- Figure: Code Difference  -+-+-+-+-
-    settings.OTHER.mp_thresh = NaN;
     degree_C = settings.OTHER.mp_degree;
     mp_C1_diff_n = NaN(n,399); mp_C2_diff_n = NaN(n,399); mp_C3_diff_n = NaN(n,399);   	
     mp_C1_diff_n(degree_C+1:end,:) = diff(C1, degree_C,1); % code difference (C1) of last n epochs

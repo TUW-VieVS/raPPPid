@@ -1,10 +1,11 @@
-function [] = vis_cs_Doppler(storeData, sys, tresh)
+function [] = vis_cs_Doppler(storeData, sys, tresh, n_proc)
 % Plots the Doppler-Cycle-Slip-Detection
 %
 % INPUT:
 %   storeData       struct, collected data from all processed epochs
 %   sys             1-digit-char which represents GNSS (G=GPS, R=Glonass, E=Galileo)
 %   tresh           [cy], treshold for difference between L1 and predicted L1
+%   n_proc          number of processed frequencies
 % OUTPUT:
 %   []
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
@@ -33,13 +34,17 @@ else
     vec = 0:(3600*4):86400;    	% 4-h-intervall
 end
 ticks = sow2hhmm(vec);
+
 % Plot the Detection of Cycle-Slips with Doppler
-plotit(mod(storeData.gpstime,86400), full(storeData.cs_L1D1_diff), tresh, vec, ticks, [' L1 - ' sys], sys, mod(reset_sow, 86400))
-if any(storeData.cs_L2D2_diff(:))
-    plotit(mod(storeData.gpstime,86400), full(storeData.cs_L2D2_diff), tresh, vec, ticks, [' L2 - ' sys], sys, mod(reset_sow, 86400))
+cs_L1D1_diff = full(storeData.cs_L1D1_diff);
+plotit(mod(storeData.gpstime,86400), cs_L1D1_diff, tresh, vec, ticks, [' L1 - ' sys], sys, mod(reset_sow, 86400))
+if n_proc >= 2
+    cs_L2D2_diff = full(storeData.cs_L2D2_diff);
+    plotit(mod(storeData.gpstime,86400), cs_L2D2_diff, tresh, vec, ticks, [' L2 - ' sys], sys, mod(reset_sow, 86400))
 end
-if any(storeData.cs_L2D2_diff(:))
-    plotit(mod(storeData.gpstime,86400), full(storeData.cs_L3D3_diff), tresh, vec, ticks, [' L3 - ' sys], sys, mod(reset_sow, 86400))
+if n_proc >= 3
+    cs_L3D3_diff = full(storeData.cs_L3D3_diff);
+    plotit(mod(storeData.gpstime,86400), cs_L3D3_diff, tresh, vec, ticks, [' L3 - ' sys], sys, mod(reset_sow, 86400))
 end
 end
 

@@ -69,6 +69,9 @@ elseif PlotStruct.fixed
     no_fix = no_fix / numel(TTCF) * 100;        % [%]
 end
 
+% median 2D position error for all epochs
+median_2D    = median(d2D(:), 'omitnan') * 100;         % [cm]
+
 % median 3D position error for all epochs
 median_3D    = median(d3D(:), 'omitnan') * 100;         % [cm]
 
@@ -80,6 +83,9 @@ average_3D_n = mean(d3D_n(:), 'omitnan') * 100;         % [cm]
 
 % average 2D position error after n minutes
 average_2D_n = mean(d2D_n(:), 'omitnan') * 100;         % [cm]
+
+% median 2D position error after n minutes
+median_2D_n = median(d2D_n(:), 'omitnan') * 100;        % [cm]
 
 % median of the ZTD difference
 ZTD = abs(d.ZTD(:));
@@ -135,16 +141,28 @@ elseif PlotStruct.fixed
     fprintf('\n')   
 end
 
+fprintf('Median  2D position error of all epochs:       ')
+fprintf('%06.3f', median_2D)
+fprintf(' [cm]\n')
+
 fprintf('Median  3D position error of all epochs:       ')
 fprintf('%06.3f', median_3D)
 fprintf(' [cm]\n')
 
-fprintf(['Median  3D position error after ' n_str ' minutes: '])
-fprintf('%06.3f', median_3D_n)
-fprintf(' [cm]\n')
+% fprintf(['Median  3D position error after ' n_str ' minutes: '])
+% fprintf('%06.3f', median_3D_n)
+% fprintf(' [cm]\n')
 
 fprintf(['Average 3D position error after ' n_str ' minutes: '])
 fprintf('%06.3f', average_3D_n)
+fprintf(' [cm]\n')
+
+% fprintf(['Median  2D position error after ' n_str ' minutes: '])
+% fprintf('%06.3f', median_2D_n)
+% fprintf(' [cm]\n')
+
+fprintf(['Average 2D position error after ' n_str ' minutes: '])
+fprintf('%06.3f', average_2D_n)
 fprintf(' [cm]\n')
 
 fprintf('\n')  

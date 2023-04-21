@@ -167,20 +167,21 @@ L_diff2 = abs(L_now - L_pred);               % calculate difference between obse
 L_pred_ = L_old - dt*sqrt(D_now.*D_old);
 L_diff_2 = abs(L_now - L_pred_);
 % take 'correct' difference which changes for each satellite
-L_diff = nanmin([L_diff2; L_diff_2]);
+L_diff = min([L_diff2; L_diff_2], [], 'omitnan');
 new_cs_found = L_diff > thresh;
 
 cs_found = Epoch.cs_found;
 % print information about detected cycle-slips
 if any(new_cs_found)
-    cs_found(:,freq) = cs_found(:,freq) | new_cs_found(Epoch.sats)';    % save detected cycle-slips
+    idx_cs = new_cs_found(Epoch.sats);
+    cs_found(:,freq) = cs_found(:,freq) | idx_cs';    % save detected cycle-slips
     if bool_print
         fprintf('Cycle-Slip found on frequency %1.0f with Doppler in epoch %d:           \n', ...
             freq, Epoch.q);
+        fprintf('sow: %.2f, threshold = %.2f [cy]           \n', ...
+            Epoch.gps_time, thresh);        
         L_diff_sats = L_diff(Epoch.sats);
         fprintf('Sat %03.0f: %.3f [cy]           \n', ...
-            [Epoch.sats(cs_found(:,freq))'; L_diff_sats(cs_found(:,freq))]);
-        fprintf('sow: %.2f, threshold = %.2f [cy]           \n\n', ...
-            Epoch.gps_time, thresh);
+            [Epoch.sats(idx_cs)'; L_diff_sats(idx_cs)]);
     end
 end

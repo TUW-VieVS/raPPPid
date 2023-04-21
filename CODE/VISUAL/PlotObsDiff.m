@@ -128,6 +128,7 @@ end
 
 % threshold
 hline( thresh, 'r--')
+if print; hline(-thresh, 'r--'); end
 
 % print standard-deviation to command window
 if print

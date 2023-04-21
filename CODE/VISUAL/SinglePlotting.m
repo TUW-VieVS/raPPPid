@@ -312,10 +312,10 @@ if settings.PLOT.cs && strcmpi(settings.PROC.method,'Code + Phase')
     end
     % Doppler-Shift
     if settings.OTHER.CS.Doppler	
-        if isGPS; vis_cs_Doppler(storeData, 'G', settings.OTHER.CS.D_threshold); end
-        if isGLO; vis_cs_Doppler(storeData, 'R', settings.OTHER.CS.D_threshold); end
-        if isGAL; vis_cs_Doppler(storeData, 'E', settings.OTHER.CS.D_threshold); end
-        if isBDS; vis_cs_Doppler(storeData, 'C', settings.OTHER.CS.D_threshold); end
+        if isGPS; vis_cs_Doppler(storeData, 'G', settings.OTHER.CS.D_threshold, settings.INPUT.proc_freqs); end
+        if isGLO; vis_cs_Doppler(storeData, 'R', settings.OTHER.CS.D_threshold, settings.INPUT.proc_freqs); end
+        if isGAL; vis_cs_Doppler(storeData, 'E', settings.OTHER.CS.D_threshold, settings.INPUT.proc_freqs); end
+        if isBDS; vis_cs_Doppler(storeData, 'C', settings.OTHER.CS.D_threshold, settings.INPUT.proc_freqs); end
     else
         fprintf('Cycle-Slip-Detection with Doppler disabled.          \n')
     end
