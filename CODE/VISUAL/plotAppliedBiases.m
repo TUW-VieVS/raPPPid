@@ -51,7 +51,7 @@ hold on
 % GPS
 if use_GPS
     ax = gca;
-    ax.ColorOrder = distinguishable_colors(DEF.SATS_GPS);
+    ax.ColorOrder = colorcube(DEF.SATS_GPS);
     gps_biases = biases(:,   1:DEF.SATS_GPS);
     plot(gps_biases, '--')
     % prepare plotting text to each bias
@@ -80,7 +80,7 @@ end
 % Glonass
 if use_GLO
     ax = gca;
-    ax.ColorOrder = distinguishable_colors(DEF.SATS_GLO);
+    ax.ColorOrder = colorcube(DEF.SATS_GLO);
     glo_biases = biases(:, 101:(100+DEF.SATS_GLO));
     plot(glo_biases, '-.')
     % prepare plotting text to each bias
@@ -109,7 +109,7 @@ end
 % Galileo
 if use_GAL
     ax = gca;
-    ax.ColorOrder = distinguishable_colors(DEF.SATS_GAL);
+    ax.ColorOrder = colorcube(DEF.SATS_GAL);
     gal_biases = biases(:, 201:(200+DEF.SATS_GAL));
     plot(gal_biases, ':')
     % prepare plotting text to each bias
@@ -138,7 +138,7 @@ end
 % BeiDou
 if use_BDS
     ax = gca;
-    ax.ColorOrder = distinguishable_colors(DEF.SATS_BDS);
+    ax.ColorOrder = colorcube(DEF.SATS_BDS);
     bds_biases = biases(:, 301:(300+DEF.SATS_BDS));
     plot(bds_biases, ':')
     % prepare plotting text to each bias

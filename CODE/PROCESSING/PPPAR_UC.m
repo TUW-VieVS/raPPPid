@@ -162,7 +162,11 @@ if proc_frqs > 1
     end
     
     % fix ambiguities on 1st frequency with LAMBDA
-    [N1_SD_sub_fixed, sqnorm, Ps, Qz, Z, nfix] = LAMBDA(N1_cy_SD_sub, Q_NN_1_SD_sub, 5, 'P0', 0.99);
+    try     % requires Matlab Statistic and Machine Learning ToolBox
+        [N1_SD_sub_fixed, sqnorm, Ps, Qz, Z, nfix] = LAMBDA(N1_cy_SD_sub, Q_NN_1_SD_sub, 5, 'P0', DEF.AR_THRES_SUCCESS_RATE);
+    catch
+        N1_SD_sub_fixed = LAMBDA(NL_float, Q_NN_SD, 4);
+    end
     % get best ambiguity set and keep only integer fixes
     N1_SD_fix_sub = N1_SD_sub_fixed(:,1);
     bool_int = (N1_SD_fix_sub - floor(N1_SD_fix_sub)) == 0;

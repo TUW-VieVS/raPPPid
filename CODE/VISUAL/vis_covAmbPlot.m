@@ -11,7 +11,6 @@ function vis_covAmbPlot(hours, STD, s0_amb, label_x, rgb, observ, isGPS, isGLO, 
 %   isGPS, isGLO, isGAL, isBDS      boolean, true if GNSS is enabled
 % OUTPUT:
 %   []
-% using distinguishable_colors.m (c) 2010-2011, Tim Holy
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner

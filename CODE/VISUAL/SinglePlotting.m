@@ -11,7 +11,6 @@ function [] = SinglePlotting(satellites, storeData, obs, settings)
 % OUTPUT:
 %   []
 % 
-% using distinguishable_colors.m (c) 2010-2011, Tim Holy
 % 
 % Revision:
 %   ...
@@ -93,7 +92,7 @@ station = obs.stationname;
 [doy, yyyy] = jd2doy_GT(obs.startdate_jd(1));
 station_date = [station, ' ', sprintf('%4.0f',yyyy), '/', sprintf('%03.0f',doy)];
 
-rgb = distinguishable_colors(40);      % colors for plot, no GNSS has more than 40 satellites
+rgb = colorcube(40);      % colors for plot, no GNSS has more than 40 satellites
 
 
 %% START PLOTTING FIGURES OF GENERAL RESULTS

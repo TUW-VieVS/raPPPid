@@ -15,7 +15,7 @@ function [] = StationResultPlot(TABLE, PlotStruct)
 
 [unique_labels, ~, idx_label] = unique(TABLE(:,7), 'stable');
 n_labels = numel(unique_labels);
-coleurs = distinguishable_colors(n_labels);     % colors for each label
+coleurs = colorcube(n_labels);     % colors for each label
 % to store data for the station mean convergence graph
 G_conv_2D_mean = cell(1);   G_conv_3D_mean = cell(1);
 % to store data for the station median convergence graph

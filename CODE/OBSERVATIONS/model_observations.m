@@ -9,8 +9,9 @@ function [code_model, phase_model, doppler_model] = ...
 %   settings    [struct], settings of processing from GUI
 % 	Epoch 		[struct], epoch-specific data
 % OUTPUT:
-% 	code_model      modelled code observation
-% 	phase_model     modelled phase observation
+% 	code_model      modelled code observations
+% 	phase_model     modelled phase observations
+% 	doppler_model   modelled doppler observations
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -31,9 +32,9 @@ no_sats = numel(Epoch.sats);
 % If ionosphere is estimated use estimated ionospheric delay instead of 
 % modelled ionospheric delay to model the observation
 if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Estimate')
-    n = numel(Adjust.param);
+    n = numel(param);
     idx = (n-no_sats+1):n;
-    iono = Adjust.param(idx);   % estimated ionospheric delay on 1st frequency
+    iono = param(idx);   % estimated ionospheric delay on 1st frequency
     if num_freq > 1
         k_2 = f1.^2 ./ f2.^2;       % to convert estimated ionospheric delay to 2nd frequency
         iono(:,2) = iono(:,1) .* k_2;   
@@ -57,7 +58,7 @@ code_model = model.rho...                                 	% theoretical range
     + model.dX_PCV_rec_corr + model.dX_PCV_sat_corr...  	% Phase Center Variation correction
     - model.dX_ARP_ECEF_corr;                           	% Antenna Reference Point correction
 
-% eliminate code observations because of cut-off:
+% eliminate code observations because of, for example, cutoff angle:
 code_model = code_model .* ~exclude;
 
 
@@ -78,7 +79,7 @@ if contains(settings.PROC.method,'+ Phase')
         - model.dX_ARP_ECEF_corr...                       	% Antenna Reference Point correction
         + model.windup + ambig;                          	% Phase Wind-Up and ambiguities
     
-    % eliminate observations because of cut-off or cycle slip:
+    % eliminate phase observations because of, for example, cutoff angle:
     phase_model = phase_model .* ~exclude .* ~Epoch.cs_found;
 else
    phase_model = [];
@@ -89,7 +90,7 @@ end
 %% DOPPLER
 if contains(settings.PROC.method, 'Doppler') && ~strcmp(settings.PROC.method, 'Code (Doppler Smoothing)')
     % get receiver and satellite position and velocity (in ECEF)
-    rec_p = Adjust.param(1:3);
+    rec_p = param(1:3);
     sat_p = model.ECEF_X;
     rec_v = [0;0;0];
     sat_v = model.ECEF_V;
@@ -102,7 +103,7 @@ if contains(settings.PROC.method, 'Doppler') && ~strcmp(settings.PROC.method, 'C
     % model doppler observation
     doppler_model = dot(r,v)' ./Epoch.l1;               % put together, [Hz] (?)
     
-    % exclude satellites where cutoff is set
+    % exclude satellites because of, for example, cutoff angle:
     doppler_model(exclude) = 0;
 else
     doppler_model = [];

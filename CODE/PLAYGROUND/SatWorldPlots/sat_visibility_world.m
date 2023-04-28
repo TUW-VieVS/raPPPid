@@ -236,7 +236,7 @@ set(findall(h,'Tag','MLabel'),'visible','off')      % remove longitude captions 
 geoshow(LAT, LON, no_gnss_sats, 'DisplayType', 'texturemap')
 plotm(coastlat, coastlon, 'k', 'LineWidth', 1.5)   	% plot shape of continents
 % ugly, but useful (good to see the number of satellites)
-% colormap(distinguishable_colors(max(no_gnss_sats(:))-min(no_gnss_sats(:))))         
+% colormap(colorcube(max(no_gnss_sats(:))-min(no_gnss_sats(:))))         
 % colormap(flipud(autumn))
 colorbar
 end

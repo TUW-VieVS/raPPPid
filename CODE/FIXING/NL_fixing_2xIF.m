@@ -102,7 +102,11 @@ Q_NN_SD(rem, :) = [];   Q_NN_SD(:,rem) = [];
 N_float = ([NL_float; EN_float]);
 if ~isempty(NL_float)
     % fixing
-    [afixed,sqnorm,Ps,Qzhat,Z,nfixed,mu] = LAMBDA(N_float, Q_NN_SD, 5, 'P0', DEF.AR_THRES_SUCCESS_RATE);
+    try     % requires Matlab Statistic and Machine Learning ToolBox
+        [afixed,sqnorm,Ps,Qzhat,Z,nfixed,mu] = LAMBDA(NL_float, Q_NN_SD, 5, 'P0', DEF.AR_THRES_SUCCESS_RATE);
+    catch
+        afixed = LAMBDA(NL_float, Q_NN_SD, 4);
+    end
     % take best solution
     N_best = afixed(:,1);
     % take only those ambiguities which are integer

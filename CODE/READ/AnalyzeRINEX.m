@@ -132,7 +132,7 @@ end
 delete(f)
 
 %% PLOTS
-rgb = distinguishable_colors(40);      % colors for plot, no GNSS has more than 40 satellites
+rgb = colorcube(40);      % colors for plot, no GNSS has more than 40 satellites
 % GNSS to invastigate
 isGPS = settings.INPUT.use_GPS;          
 isGLO = settings.INPUT.use_GLO;
