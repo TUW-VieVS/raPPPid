@@ -50,8 +50,7 @@ set(gca, 'Units', 'pixels', 'Position', [18 516 900 80])
 axis off
 
 % Set Copyright and Version in the lower right
-set(handles.text_version, 'String', ['Version 1.5 ', char(169), ' TUW 2023']);
-set(handles.checkbox_realtime, 'Visible', 'Off');
+set(handles.text_version, 'String', ['Version 1.6 ', char(169), ' TUW 2023']);
 
 % load default filter settings for selected filter
 handles = LoadDefaultFilterSettings(handles);

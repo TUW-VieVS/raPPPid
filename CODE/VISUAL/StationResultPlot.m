@@ -126,20 +126,20 @@ for j = 1:n_labels
         if PlotStruct.fixed
             [TTFF, TTCF] = prepTTFF(TTFF, TTCF, d.FIXED,  PlotStruct.thresh_2D, d.dT, d.E, d.N, i);
         end
-        % calculate station accuracy (0.95 quantile)
+        % calculate station accuracy
         d2D = sqrt(d.N.^2 + d.E.^2);
         d3D = sqrt(d.N.^2 + d.E.^2 + d.H.^2);
-        ACC_2D(i)  = quantile(d2D(:), .95);
-        ACC_3D(i)  = quantile(d3D(:), .95);
         % calculate mean station convergence
         CONV_2D_mean(i) = mean(conv_2D, 'omitnan');
         CONV_3D_mean(i) = mean(conv_3D, 'omitnan');
         % calculate median station convergence
         CONV_2D_medi(i) = median(conv_2D, 'omitnan');
         CONV_3D_medi(i) = median(conv_3D, 'omitnan');        
-        % calculate quantiles of ZTD
-        ZTD_68(i) = quantile(abs(d.ZTD(:)), .68);
-        ZTD_95(i) = quantile(abs(d.ZTD(:)), .95);
+        % calculate quantiles
+        ACC_2D(i) = calc_quantile(d2D(:), .95);
+        ACC_3D(i) = calc_quantile(d3D(:), .95);
+        ZTD_68(i) = calc_quantile(abs(d.ZTD(:)), .68);
+        ZTD_95(i) = calc_quantile(abs(d.ZTD(:)), .95);
         
     end         % end of loop over files of current label
     

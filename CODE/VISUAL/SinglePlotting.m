@@ -178,7 +178,6 @@ if STOP_CALC; return; end
 % -+-+-+-+- Figure: Wet Troposphere Plot -+-+-+-+-
 if settings.PLOT.wet_tropo && settings.TROPO.estimate_ZWD
     TropoPlot(hours, label_x_h, storeData, reset_h, obs.startdate, obs.station_long)
-%     vis_plotTroposphere(hours, label_x_h, storeData, reset_h);    % OLD
 end
 if STOP_CALC; return; end
 
@@ -333,7 +332,7 @@ if STOP_CALC; return; end
 
 %     -+-+-+-+- Figures: Multipath Detection  -+-+-+-+-
 if settings.PLOT.mp
-    if (isfield(settings.OTHER, 'mp_detection') || settings.OTHER.mp_detection)
+    if (isfield(settings.OTHER, 'mp_detection') && settings.OTHER.mp_detection)
         C1_diff = zero2nan(storeData.mp_C1_diff_n);
         PlotObsDiff(epochs, C1_diff, label_x_epc, rgb, 'C1 difference', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false);
     else

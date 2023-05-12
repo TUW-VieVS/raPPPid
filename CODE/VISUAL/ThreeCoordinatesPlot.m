@@ -21,8 +21,13 @@ function ThreeCoordinatesPlot(interval, seconds, dN, dE, dH, resets, str_xAxis, 
 
 
 seconds = seconds(1:length(dN));    % if last epochs of processing delivered no results
-no_eps = numel(seconds);       % number of epochs;
-RMS_dN = rms(dN(dN~=0), 'omitnan'); RMS_dE = rms(dE(dE~=0), 'omitnan'); RMS_dH = rms(dH(dH~=0), 'omitnan');
+
+% RMS_dN = rms(dN(dN~=0), 'omitnan'); RMS_dE = rms(dE(dE~=0), 'omitnan'); RMS_dH = rms(dH(dH~=0), 'omitnan');
+% calculate rms with own implementation to avoid ToolBox Dependency
+RMS_dN = calculate_rms(dN);
+RMS_dE = calculate_rms(dE);
+RMS_dH = calculate_rms(dH);
+
 isnan_dN = isnan(dN); isnan_dE = isnan(dE); isnan_dH = isnan(dH);
 dN(isnan_dN) = 0;     dE(isnan_dE) = 0;     dH(isnan_dH) = 0;
 
@@ -122,4 +127,12 @@ else        % Processing time shorter than intervall
         txt = cellstr(txt);
     end
 end
+end
+
+
+
+function rms_calc = calculate_rms(vec)
+% calculate rms
+vec = vec(vec~=0 & ~isnan(vec));        % ignore zeros and NaNs
+rms_calc = sqrt(mean(vec.*vec));
 end

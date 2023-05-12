@@ -92,7 +92,8 @@ ZTD = abs(d.ZTD(:));
 ZTD_50 = median(ZTD, 'omitnan') * 100;        % [cm]
 
 % 68% quantile of the ZTD difference
-ZTD_68 = quantile(ZTD, .68) * 100;    % [cm]
+ZTD_68 = calc_quantile(ZTD, .68) * 100;    % [cm]
+
 
 
 %% Output to command window

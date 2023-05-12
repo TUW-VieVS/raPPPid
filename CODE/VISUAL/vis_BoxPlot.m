@@ -37,9 +37,13 @@ end
 
 % Plot
 figure('Name', txt, 'NumberTitle','off')
-boxplot(cell2mat(BOX), grp, 'Notch','on','Whisker',0, 'Symbol', 'o', 'OutlierSize',5, 'jitter', 1)
-% whiskers = 0, values outside the 75% and 25% quantile are outliers
-% jitter = 1, outliers are maximally distributed 
+try  % requires Statistics and Machine Learning Toolbox
+    boxplot(cell2mat(BOX), grp, 'Notch','on','Whisker',0, 'Symbol', 'o', 'OutlierSize',5, 'jitter', 1)
+    % whiskers = 0, values outside the 75% and 25% quantile are outliers
+    % jitter = 1, outliers are maximally distributed 
+catch
+    fprintf('BoxPlot will work in a future version of raPPPid.\n')
+end
 
 
 % Style

@@ -56,7 +56,7 @@ Epoch.fixable(Epoch.cs_found) = false;
 excl_prn = settings.AMBFIX.exclude_sats_fixing;
 if ~isempty(excl_prn)
     [~,ind] = ismember(Epoch.sats, excl_prn);
-    Epoch.fixable(boolean(ind),:) = false;
+    Epoch.fixable(logical(ind),:) = false;
 end
 
 
@@ -188,13 +188,13 @@ end
 
 
 
-function boolean = frequency_convert(boolean, settings)
+function bool = frequency_convert(bool, settings)
 % this function checks which ambiguities can not be fixed depending on the
 % processed PPP model and number of frequencies
 if settings.INPUT.proc_freqs == 1           % e.g. 2-frequency IF LC
     % only one frequency is used in the fixing process, therefore exclude
     % if any of the observations is unfixable
-    boolean = any(boolean,2);  
+    bool = any(bool,2);  
 end
 
 % ||| extend for other PPP-AR models

@@ -43,15 +43,15 @@ sv_GLO_cutoff = sv_GLO .* cutoff(epochs, idx_glo);
 sv_GAL_cutoff = sv_GAL .* cutoff(epochs, idx_gal);
 sv_BDS_cutoff = sv_BDS .* cutoff(epochs, idx_bds);
 % number of observed satellites and number of satellites under cut-off
-noAllGPS = nansum(observ_sats(:, idx_gps),2);
-noAllGLO = nansum(observ_sats(:, idx_glo),2);
-noAllGAL = nansum(observ_sats(:, idx_gal),2);
-noAllBDS = nansum(observ_sats(:, idx_bds),2);
+noAllGPS = sum(observ_sats(:, idx_gps),2,'omitnan');
+noAllGLO = sum(observ_sats(:, idx_glo),2,'omitnan');
+noAllGAL = sum(observ_sats(:, idx_gal),2,'omitnan');
+noAllBDS = sum(observ_sats(:, idx_bds),2,'omitnan');
 noAllGNSS = noAllGPS+noAllGLO+noAllGAL+noAllBDS;
-notUsedGPS = nansum( cutoff(:, idx_gps),2 );
-notUsedGLO = nansum( cutoff(:, idx_glo),2 );
-notUsedGAL = nansum( cutoff(:, idx_gal),2 );   
-notUsedBDS = nansum( cutoff(:, idx_bds),2 );   
+notUsedGPS = sum( cutoff(:, idx_gps),2,'omitnan');
+notUsedGLO = sum( cutoff(:, idx_glo),2,'omitnan');
+notUsedGAL = sum( cutoff(:, idx_gal),2,'omitnan');   
+notUsedBDS = sum( cutoff(:, idx_bds),2,'omitnan');   
 UsedGPS = noAllGPS-notUsedGPS;
 UsedGLO = noAllGLO-notUsedGLO;
 UsedGAL = noAllGAL-notUsedGAL;
@@ -107,8 +107,8 @@ if isGPS
     legend_txt{end+1} = 'GPS visible';
     legend_txt{end+1} = 'GPS used';
     if ~isGLO && ~isGAL && ~isBDS       % plot number of GPS L5 satellites
-        noGPS_L5 = nansum(observ_sats(:, DEF.PRNS_GPS_L5),2);
-        notUsed_L5 = nansum( cutoff(:, DEF.PRNS_GPS_L5),2 );
+        noGPS_L5 = sum(observ_sats(:, DEF.PRNS_GPS_L5),2,'omitnan');
+        notUsed_L5 = sum( cutoff(:, DEF.PRNS_GPS_L5),2,'omitnan');
         UsedGPS_L5 = noGPS_L5-notUsed_L5;
         plot(hours, noGPS_L5,    '.', 'Color', [1 .65 0.8])
         plot(hours, UsedGPS_L5,  '.', 'Color', [1 .65 0])

@@ -77,19 +77,20 @@ end
 % find quantiles of position differences
 if n ~= 1
     % calculate 68% quantile
-    dN_68   = quantile(dN_all , 0.68);       % quantile() is slow
-    dE_68   = quantile(dE_all , 0.68);
-    dH_68   = quantile(dH_all , 0.68);
-    d2D_68  = quantile(d2D_all, 0.68);
-    d3D_68  = quantile(d3D_all, 0.68);
-    dZTD_68 = quantile(dZTD_all, 0.68);
+    dN_68   = calc_quantile(dN_all , 0.68);       
+    dE_68   = calc_quantile(dE_all , 0.68);
+    dH_68   = calc_quantile(dH_all , 0.68);
+    d2D_68  = calc_quantile(d2D_all, 0.68);
+    d3D_68  = calc_quantile(d3D_all, 0.68);
+    dZTD_68 = calc_quantile(dZTD_all, 0.68);
     % calculate 95% quantile
-    dN_95   = quantile(dN_all , 0.95);
-    dE_95   = quantile(dE_all , 0.95);
-    dH_95   = quantile(dH_all , 0.95);
-    d2D_95  = quantile(d2D_all, 0.95);
-    d3D_95  = quantile(d3D_all, 0.95);
-    dZTD_95 = quantile(dZTD_all, 0.95);
+    dN_95   = calc_quantile(dN_all , 0.95);
+    dE_95   = calc_quantile(dE_all , 0.95);
+    dH_95   = calc_quantile(dH_all , 0.95);
+    d2D_95  = calc_quantile(d2D_all, 0.95);
+    d3D_95  = calc_quantile(d3D_all, 0.95);
+    dZTD_95 = calc_quantile(dZTD_all, 0.95);
+
 else    % only one convergence period
     dN_68  = NaN(1,m);  dE_68 = NaN(1,m); dH_68  = NaN(1,m);
     d2D_68 = NaN(1,m); d3D_68 = NaN(1,m); dZTD_68 = NaN(1,m);

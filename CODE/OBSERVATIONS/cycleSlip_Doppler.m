@@ -154,7 +154,7 @@ function [cs_found, L_diff] = detect_CS_Doppler(L_now, L_old, D_now, D_old, dt, 
 % L_diff_ = abs(L_now - L_pred_);
 % new_cs_found_ = L_diff_ > thresh;
 % % take the right prediction (+ or -), this is different for each receiver
-% if nansum(L_diff_) < nansum(L_diff)
+% if nansum(L_diff_) < nansum(L_diff)			% nansum should not be used
 %     new_cs_found = new_cs_found_;
 %     L_diff = L_diff_;
 % end
