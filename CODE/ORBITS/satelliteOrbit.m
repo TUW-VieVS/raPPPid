@@ -91,7 +91,7 @@ else        % calculate satellite position from navigation message
         else
             % no valid SSR orbit correction
             exclude = true;
-            status = 6;
+            status(:) = 6;
         end
     end
 end

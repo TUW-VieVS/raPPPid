@@ -58,7 +58,7 @@ end
 % get true position
 bool_zero = all(pos_cart == 0,2);   % all three coordinates are zero
 if isa(settings.PLOT.pos_true, 'double') || ~isfile(settings.PLOT.pos_true)
-    pos_true = settings.PLOT.pos_true;
+    pos_true = settings.PLOT.pos_true;          % static reference coordinates
     bool_true_pos = true;
     if any(isnan(pos_true) | pos_true == 0 | pos_true == 1)     % no valid true position
         pos_cart(bool_zero, :) = [];        % remove those
@@ -333,8 +333,18 @@ if STOP_CALC; return; end
 %     -+-+-+-+- Figures: Multipath Detection  -+-+-+-+-
 if settings.PLOT.mp
     if (isfield(settings.OTHER, 'mp_detection') && settings.OTHER.mp_detection)
-        C1_diff = zero2nan(storeData.mp_C1_diff_n);
-        PlotObsDiff(epochs, C1_diff, label_x_epc, rgb, 'C1 difference', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false);
+        if isfield(storeData, 'mp_C1_diff_n')
+            C1_diff = zero2nan(storeData.mp_C1_diff_n);
+            PlotObsDiff(epochs, C1_diff, label_x_epc, rgb, 'C1 difference', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false);
+        end
+        if isfield(storeData, 'mp_C2_diff_n')
+            C2_diff = zero2nan(storeData.mp_C2_diff_n);
+            PlotObsDiff(epochs, C2_diff, label_x_epc, rgb, 'C2 difference', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false);
+        end
+        if isfield(storeData, 'mp_C3_diff_n')
+            C3_diff = zero2nan(storeData.mp_C3_diff_n);
+            PlotObsDiff(epochs, C3_diff, label_x_epc, rgb, 'C3 difference', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false);
+        end
     else
         fprintf('Multipath detection disabled.          \n')
         

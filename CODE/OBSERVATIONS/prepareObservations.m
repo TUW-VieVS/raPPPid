@@ -1,5 +1,6 @@
 function [Epoch, obs] = prepareObservations(settings, obs, Epoch, q)
 % prepares the observations for the epoch-wise processing
+% 
 % INPUT:
 %   settings        struct, settings from GUI
 %   obs             struct, observations and data from rinex-obs-file
@@ -131,10 +132,39 @@ end
 %% (7) Remove sats and get observations
 % Remove Satellites with specific observations of value 0 or NaN and get the
 % observations from the RINEX file and save them in observation matrix
-[Epoch, obs] = get_obs(Epoch, obs, settings);
+[Epoch] = get_obs(Epoch, obs, settings);
 
 % set zeros (=missing observations) in Epoch.C3/L3/S3 to NaN
 Epoch.C3(Epoch.C3 == 0) = NaN;
 Epoch.L3(Epoch.L3 == 0) = NaN;
 Epoch.S3(Epoch.L3 == 0) = NaN;
 
+
+
+%% (8) Update the struct Epoch
+% as now the number of satellites of current epoch is clear
+m = numel(Epoch.sats);                      % number of satellites in current epoch
+num_freq = settings.INPUT.proc_freqs;       % number of processed frequencies
+Epoch.code  = zeros(m, num_freq);
+Epoch.phase = zeros(m, num_freq);
+Epoch.C1_bias = zeros(m,1);
+Epoch.C2_bias = zeros(m,1);
+Epoch.C3_bias = zeros(m,1);
+Epoch.L1_bias = zeros(m,1);
+Epoch.L2_bias = zeros(m,1);
+Epoch.L3_bias = zeros(m,1);
+Epoch.exclude  = false(m, num_freq);
+Epoch.cs_found  = false(m, num_freq);
+Epoch.sat_status  = ones(m,num_freq);
+Epoch.fixable = true(m, num_freq);          % boolean, satellite usable for fixing?
+
+% check if some phase observations are (completely) missing
+if isempty(Epoch.L1)
+    Epoch.L1 = zeros(m,1);
+end
+if isempty(Epoch.L2)
+    Epoch.L2 = zeros(m,1);
+end
+if isempty(Epoch.L3)
+    Epoch.L3 = zeros(m,1);
+end

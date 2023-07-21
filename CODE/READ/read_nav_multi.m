@@ -1,10 +1,8 @@
 function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
-    read_nav_multi(fData, leap_sec)
+    read_nav_multi(NAV, leap_sec)
 % Function to read in a multi GNSS broadcast message file (only for RINEX 3
 % navigation files). Different time-systems are converted into GPS time
 % (seconds of week). 
-% ||| BeiDou: not sure about the time system, handled later on, difference
-% GPST and BDT is 14s
 % a detailed description can be found in the Rinex v3 format specifications
 % e.g. RINEX Version 3.03, p.34, https://files.igs.org/pub/data/format/rinex304.pdf
 % 
@@ -12,8 +10,8 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 %   fData           cell, containing data of multi-GNSS navigation file
 %   leap_sec        integer, number of leap seconds between UTC and GPS time
 % OUTPUT:
-%   klob            coefficients of Klobuchar Model (GPS ionosphere model)
-%   nequ            coefficients of Nequick Model (Galileo ionosphere model)
+%   klob            2x4, coefficients of Klobuchar Model (GPS ionosphere model)
+%   nequ            1x3, coefficients of Nequick Model (Galileo ionosphere model)
 %   BDGIM           coefficients of BeiDou global broadcast ionosphere
 %                   delay correction model (BeiDou ionosphere model)
 %   Eph_GPS         GPS navigation data
@@ -27,13 +25,15 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-
+% ||| BeiDou: not sure about the time system, handled later on, difference
+% GPST and BDT is 14s
 % ||| conversion BDS time into GPS time
+% ||| read in of BDS iono model coefficients is only experimental
 
 % check if data to read (real-time processing)
 klob = []; nequ = []; BDGIM = []; 
 Eph_GPS = []; Eph_GLO = []; Eph_GAL = []; Eph_BDS = [];
-if isempty(fData)
+if isempty(NAV)
     return
 end
 
@@ -45,9 +45,9 @@ coeff_alpha = [];       coeff_beta  = [];
 nequ  = [];
 BDGIM_alpha = [];       BDGIM_beta = [];
 
-for i = 1:length(fData)     % find header start and version
-    if contains(fData{i}, 'RINEX VERSION')
-        temp = fData{i};
+for i = 1:length(NAV)     % find header start and version
+    if contains(NAV{i}, 'RINEX VERSION')
+        temp = NAV{i};
         version = str2double(temp(1));
         iHeadBegin = i;
         break;
@@ -55,8 +55,8 @@ for i = 1:length(fData)     % find header start and version
 end
 
 if i > 0                   	% find header end
-    for i = 1:length(fData)
-        if contains(fData{i},'END OF HEADER')
+    for i = 1:length(NAV)
+        if contains(NAV{i},'END OF HEADER')
             iHeadEnd = i;
             break;
         end
@@ -66,26 +66,26 @@ end
 
 for i = iHeadBegin:iHeadEnd  % Read header info
     if i == 0; break; end                % no header data
-    if contains(fData{i},'IONOSPHERIC CORR')        % ionosphere correction entry, RINEX 3.x
-        if contains(fData{i},'GPSA')      	% Klobuchar-Model-alpha-Coefficients
-            coeff_alpha = cell2mat(textscan(fData{i},'%*s %f %f %f %f'));
+    if contains(NAV{i},'IONOSPHERIC CORR')        % ionosphere correction entry, RINEX 3.x
+        if contains(NAV{i},'GPSA')      	% Klobuchar-Model-alpha-Coefficients
+            coeff_alpha = cell2mat(textscan(NAV{i},'%*s %f %f %f %f'));
         end
-        if contains(fData{i},'GPSB')      	% Klobuchar-Model-beta-Coefficients
-            coeff_beta = cell2mat(textscan(fData{i},'%*s %f %f %f %f'));
+        if contains(NAV{i},'GPSB')      	% Klobuchar-Model-beta-Coefficients
+            coeff_beta = cell2mat(textscan(NAV{i},'%*s %f %f %f %f'));
         end
-        if contains(fData{i},'GAL')         % Nequick-Model-Coefficients
-            nequ = cell2mat(textscan(fData{i},'%*s %f %f %f'));
+        if contains(NAV{i},'GAL')         % Nequick-Model-Coefficients
+            nequ = cell2mat(textscan(NAV{i},'%*s %f %f %f'));
         end
-        if contains(fData{i},'BDSA')     	% BDGIM, alpha coefficients
-            lData = textscan(fData{i},'%*s %f %f %f %f %s %f');
+        if contains(NAV{i},'BDSA')     	% BDGIM, alpha coefficients
+            lData = textscan(NAV{i},'%*s %f %f %f %f %s %f');
             % convert char to start of hour of transmission time [sow] 
             % ||| BDT or GPST?!
             char = lData{5}{1};
             hour = upper(char) - 65;
             BDGIM_alpha(end+1,:) = [1, cell2mat(lData(1:3)), hour, lData{6}];
         end
-        if contains(fData{i},'BDSB')     	% BDGIM, alpha coefficients
-            lData = textscan(fData{i},'%*s %f %f %f %f %s %f');
+        if contains(NAV{i},'BDSB')     	% BDGIM, alpha coefficients
+            lData = textscan(NAV{i},'%*s %f %f %f %f %s %f');
             % convert char to start of hour of transmission time [sow] 
             % ||| BDT or GPST?!
             char = lData{5}{1};
@@ -104,7 +104,7 @@ BDGIM = [BDGIM_alpha; BDGIM_beta];
 
 
 %% Initialize Navigation Data Variables
-CharGNSS = cellfun( @(a) a(1,1), fData(iHeadEnd+1:end));
+CharGNSS = cellfun( @(a) a(1,1), NAV(iHeadEnd+1:end));
 no_eph_gps = sum(CharGNSS == 'G');
 no_eph_glo = sum(CharGNSS == 'R');
 no_eph_gal = sum(CharGNSS == 'E');
@@ -120,8 +120,8 @@ Eph_BDS = zeros(28, no_eph_bds);
 % LOOP OVER DATA RECORDS
 i = iHeadEnd + 1;
 i_gps = 1;      i_glo = 1;      i_gal = 1;     i_bds = 1;
-while i <= length(fData)            % loop from END OF HEADER to end of file
-    line = fData{i};
+while i <= length(NAV)            % loop from END OF HEADER to end of file
+    line = NAV{i};
     
     if isempty(strtrim(line))
         % jump over empty lines
@@ -156,7 +156,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         [~, toc, ~] = jd2gps_GT(jd);                   % ~, seconds of gps-week
         % -+-+- line 1 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         IODE   = lData(1);          % Issue of Data (IOD)
         crs    = lData(2);          % [m]
@@ -164,7 +164,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         M0     = lData(4);          % [rad]
         % -+-+- line 2 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         cuc   = lData(1);           % [rad]
         ecc   = lData(2);           % Eccentricity
@@ -172,7 +172,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         roota = lData(4);           % sqrt(a) [sqrt(m)]
         % -+-+- line 3 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         toe = lData(1);             % time of ephemeris [sow]
         cic = lData(2);             % [rad]
@@ -180,7 +180,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         cis = lData(4);             % [rad]
         % -+-+- line 4 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         i0       = lData(1);        % [rad]
         crc      = lData(2);        % [m]
@@ -188,7 +188,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Omegadot = lData(4);        % [rad/s]
         % -+-+- line 5 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         idot = lData(1);            % [rad/s]
         codes = int64(lData(2));    % GPS: codes on L2 channel
@@ -198,7 +198,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         end
         % -+-+- line 6 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         accuracy = lData(1);        % sat in space accuracy [m]
         svhealth = int64(lData(2)); % GPS: bits 17-22 w 3 sf 1
@@ -206,7 +206,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         IODC = lData(4);            % GPS: IOD clocks
         % -+-+- line 7 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         tom = lData(1);             % transmission time of message [sow]
         % save data
@@ -267,9 +267,9 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         [~,sow_utc,~] = jd2gps_GT(jd);
         sod_moscow = mod(round(sow_utc) + 3*3600,86400);
         IOD = floor(sod_moscow/900);
-        jd = jd + leap_sec/(60*60*24); % Introduction of leap second between GPS and UTC
+        jd = jd + leap_sec/(60*60*24);      % Introduction of leap second between GPS and UTC
         [week,sow,~] = jd2gps_GT(jd);
-        toe = sow;  	% epoch of ephemerides GPS (converted from UTC)
+        toe = sow;                  % epoch of ephemerides GPS (converted from UTC)
         woe = week;
         % remaining entries
         TauN    = lData(8);         % SV clock bias [s]
@@ -277,7 +277,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         tk      = lData(10);        % Meassage frame time in [s] of UTC week
         % -+-+- line 1 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         X       = lData(1);         % [km]
         X_vel	= lData(2);         % [km/s]
@@ -285,7 +285,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         health 	= lData(4);         % 0=OK
         % -+-+- line 2 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         Y       = lData(1);
         Y_vel   = lData(2);
@@ -293,7 +293,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         f_num   = lData(4);         % frequency number, integer number
         % -+-+- line 3 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         Z = lData(1);
         Z_vel = lData(2);
@@ -351,7 +351,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         [~, toc, ~] = jd2gps_GT(jd);                   % ~, seconds of gps-week
         % -+-+- line 1 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         IODE   = lData(1);          % Issue of Data (IOD)
         crs    = lData(2);          % [m]
@@ -359,7 +359,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         M0     = lData(4);          % [rad]
         % -+-+- line 2 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         cuc   = lData(1);           % [rad]
         ecc   = lData(2);           % Eccentricity
@@ -367,7 +367,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         roota = lData(4);           % sqrt(a) [sqrt(m)]
         % -+-+- line 3 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         toe = lData(1);             % time of ephemeris [sow]
         cic = lData(2);             % [rad]
@@ -375,7 +375,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         cis = lData(4);             % [rad]
         % -+-+- line 4 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         i0       = lData(1);        % [rad]
         crc      = lData(2);        % [m]
@@ -383,7 +383,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Omegadot = lData(4);        % [rad/s]
         % -+-+- line 5 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         idot = lData(1);            % [rad/s]
         datasource=int64(lData(2));	% for GALILEO data sources (FLOAT->INT)
@@ -397,7 +397,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         % lData(4) is spare
         % -+-+- line 6 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         sisa = lData(1);         	% signal in space accuracy [m]
         svhealth = int64(lData(2));	% GALILEO:(FLOAT->INT)
@@ -411,7 +411,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         bgd_b = lData(4);          	% Broadcasted Group Delay E5b/E1 [s]
         % -+-+- line 7 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         tom = lData(1);             % transmission time of message [sow]
         
@@ -466,16 +466,16 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         day    = lData(4);                          % day
         hour   = lData(5);                          % hour
         minute = lData(6);                          % min
-        second = lData(7);                          % sec of clock
+        second = lData(7) - 00;                   	% sec, ||| convert to GPS time
         af0    = lData(8);                          % sv clock bias [s]
         af1    = lData(9);                          % sv clock drift [s/s]
         af2    = lData(10);                         % sv clock drift rate [s/s^2]
         hour   = hour + minute/60 + second/3600;    % decimal hour of clock
         jd = cal2jd_GT(year,month,day+hour/24);        % Julian day of clock
-        [~, toc, ~] = jd2gps_GT(jd);                   % ~, seconds of BDT week (?)
+        [~, toc, ~] = jd2gps_GT(jd);                   % ~, seconds of GPS week
         % -+-+- line 1 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         AODE   = lData(1);          % Age of Data
         crs    = lData(2);          % [m]
@@ -483,7 +483,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         M0     = lData(4);        	% [rad]
         % -+-+- line 2 -+-+-
         i = i+1;
-        line  = fData{i};
+        line  = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         cuc     = lData(1);           % [rad]
         ecc     = lData(2);           % Eccentricity
@@ -491,15 +491,15 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         roota   = lData(4);           % sqrt(a) [sqrt(m)]
         % -+-+- line 3 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
-        toe = lData(1);             % time of ephemeris [s of BDS week]
+        toe = lData(1) - 00;       	% time of ephemeris, ||| [s of ??? week]
         cic = lData(2);             % [rad]
         Omega0 = lData(3);          % [rad]
         cis = lData(4);             % [rad]
         % -+-+- line 4 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         i0       = lData(1);        % [rad]
         crc      = lData(2);        % [m]
@@ -507,7 +507,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         Omegadot = lData(4);        % [rad/s]
         % -+-+- line 5 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         if numel(lData) ~= 2
             idot = lData(1);            % [rad/s]
@@ -520,7 +520,7 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         end
         % -+-+- line 6 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         SV_acc = lData(1);          % SV accuracy [m]
         SatH1 = lData(2);           % satellite health, 0 = good, 1 = not
@@ -528,9 +528,9 @@ while i <= length(fData)            % loop from END OF HEADER to end of file
         tgd2 = lData(4);            % time group delay B2/B3 [s]
         % -+-+- line 7 -+-+-
         i = i+1;
-        line = fData{i};
+        line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
-        tom = lData(1);             % transmission time of message [s of BDS week]
+        tom = lData(1) - 00;     	% transmission time of message ||| [s of ?? week]
         AODC = lData(2);            % Age of Data Clock
 %         spare = lData(3);           % empty
 %         spare = lData(3);           % empty

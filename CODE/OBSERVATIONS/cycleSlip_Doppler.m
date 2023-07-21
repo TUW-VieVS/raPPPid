@@ -49,6 +49,11 @@ obs_old_C = Epoch.old.obs(Epoch.old.bds, :);
 
 
 
+% ||| convert Doppler from m/s to Hz in the case of smartphone raw data
+% processing
+
+
+
 %% Check for Cycle-Slips
 
 % --- 1st frequency
@@ -68,6 +73,12 @@ D1_C = use_column{4,10};
 [L1_now, L1_old, D1_now, D1_old] = ...
     getPhaseDoppler(obs_now_G, obs_old_G, obs_now_R, obs_old_R, obs_now_E, obs_old_E, obs_now_C, obs_old_C,...
     L1_G, L1_R, L1_E, L1_C, D1_G, D1_R, D1_E, D1_C, G_now, G_old, R_now, R_old, E_now, E_old, C_now, C_old);
+% make sure that everything is in the correct unit
+if settings.INPUT.rawDataAndroid        % smartphone raw data processing
+    f1 = NaN(1,399);   f1(Epoch.sats) = Epoch.f1;   % get frequency         
+    [L1_now, L1_old, D1_now, D1_old] = convert2cycles(L1_now, L1_old, D1_now, D1_old, Const.C ./ f1);
+end
+% detect cycles slips
 [Epoch.cs_found, L1_diff] = ...
     detect_CS_Doppler(L1_now, L1_old, D1_now, D1_old, dt, 1, Epoch, thresh, bool_print);
 Epoch.cs_L1D1_diff = L1_diff;
@@ -82,6 +93,10 @@ if settings.INPUT.proc_freqs > 1
     [L2_now, L2_old, D2_now, D2_old] = ...
         getPhaseDoppler(obs_now_G, obs_old_G, obs_now_R, obs_old_R, obs_now_E, obs_old_E, obs_now_C, obs_old_C,...
         L2_G, L2_R, L2_E, L2_C, D2_G, D2_R, D2_E, D2_C, G_now, G_old, R_now, R_old, E_now, E_old, C_now, C_old);
+    if settings.INPUT.rawDataAndroid  
+        f2 = NaN(1,399);   f2(Epoch.sats) = Epoch.f2;  
+        [L2_now, L2_old, D2_now, D2_old] = convert2cycles(L2_now, L2_old, D2_now, D2_old, Const.C ./ f2);
+    end
     [Epoch.cs_found, L2_diff] = ...
         detect_CS_Doppler(L2_now, L2_old, D2_now, D2_old, dt, 2, Epoch, thresh, bool_print);
     Epoch.cs_L2D2_diff = L2_diff;
@@ -97,6 +112,10 @@ if settings.INPUT.proc_freqs > 2
     [L3_now, L3_old, D3_now, D3_old] = ...
         getPhaseDoppler(obs_now_G, obs_old_G, obs_now_R, obs_old_R, obs_now_E, obs_old_E, obs_now_C, obs_old_C,...
         L3_G, L3_R, L3_E, L3_C, D3_G, D3_R, D3_E, D3_C, G_now, G_old, R_now, R_old, E_now, E_old, C_now, C_old);
+    if settings.INPUT.rawDataAndroid
+        f3 = NaN(1,399);   f3(Epoch.sats) = Epoch.f3;
+        [L3_now, L3_old, D3_now, D3_old] = convert2cycles(L3_now, L3_old, D3_now, D3_old, Const.C ./ f3);
+    end
     [Epoch.cs_found, L3_diff] = ...
         detect_CS_Doppler(L3_now, L3_old, D3_now, D3_old, dt, 3, Epoch, thresh, bool_print);
     Epoch.cs_L3D3_diff = L3_diff;
@@ -140,6 +159,16 @@ if ~isempty(l_bds) && ~isempty(d_bds)
     D_now(bds_now) = obs_now_bds(:,d_bds);
     D_old(bds_old) = obs_old_bds(:,d_bds);
 end
+
+
+function [L_now, L_old, D_now, D_old] = convert2cycles(L_now, L_old, D_now, D_old, wl)
+% in the case of smartphone raw gnss data processing phase and Doppler have
+% to be converted to the unit of cycles
+% wl ... wavelength of current frequency frequency [m]
+L_now = L_now ./ wl;        % convert phase from [m] to [cy]
+L_old = L_old ./ wl;
+D_now = D_now ./ wl;        % convert Doppler from [m/s] to [Hz]
+D_old = D_old ./ wl;
 
 
 % check for cycle-slips

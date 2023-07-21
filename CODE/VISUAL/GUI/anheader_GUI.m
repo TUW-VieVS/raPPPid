@@ -33,11 +33,19 @@ function rheader = anheader_GUI(file)
 % *************************************************************************
 
 
+%% PRECHECK RINEX
+fid = fopen(file,'rt');         % open observation-file
+line = fgetl(fid);              % get next line
+if ~contains(line,'RINEX VERSION / TYPE')
+    % not a RINEX file at all!
+    rheader = []; fclose(fid); return
+end
+
+
+
 %% PREPARATIONS
 interval = [];
-version_full = 0;
 pos_approx = [0; 0; 0];
-fid = fopen(file,'rt');         % open observation-file
 
 first_obs = []; last_obs = []; rinex2_obs_types = [];
 station = ''; station_long = ''; antenna_type = ''; receiver_type = '';
@@ -54,10 +62,31 @@ ind_glo_freq = [0 0 0];
 ind_gal_freq = [0 0 0];
 ind_bds_freq = [0 0 0];
 
+% detect RINEX version
+version_full = line(6:9);
+version_full = sscanf(version_full, '%f');
+if ~contains(upper(line), 'OBSERVATION')   	% check if this RINEX File contains observation data
+    [~, obs_filename, ext] = fileparts(file);
+    errordlg({[obs_filename ext ':'], 'Is not recognized as Rinex Observation File.'}, 'Wrong File-Format');
+    ind_gps_freq = [];
+    ind_gal_freq = [];
+    rheader = save2struct(pos_approx, version_full, interval, first_obs, last_obs, ...
+        time_system, gps_ranking, glo_ranking, gal_ranking, bds_ranking, ...
+        ind_gps_freq, ind_glo_freq, ind_gal_freq, ind_bds_freq, station, station_long, ...
+        antenna_type, receiver_type);
+    return
+end
+
+
 
 %% LOOP TO GOBBLE THE HEADER
 while 1
+    
     line = fgetl(fid);          % get next line
+    
+    if contains(line,'PRN / # OF OBS')              % run over these lines
+        continue
+    end
     
     if contains(line,'MARKER NAME')
         station = upper(strtrim(line(1:4)));        % make sure that uppercase
@@ -67,18 +96,7 @@ while 1
     if contains(line,'END OF HEADER') || feof(fid)
         break                   % end of header or file reached
     end
-    
-    if contains(line,'RINEX VERSION / TYPE')      	% rinex version
-        version_full = line(6:9);
-        version_full = sscanf(version_full, '%f');
-        if ~contains(upper(line), 'OBSERVATION')   	% check if this RINEX File contains observation data
-            [~, obs_filename, ext] = fileparts(file);
-            errordlg({[obs_filename ext ':'], 'Is not recognized as Rinex Observation File.'}, 'Wrong File-Format');
-            ind_gps_freq = []; ind_gal_freq = [];
-            return
-        end
-    end
-    
+       
     if contains(line,'ANT # / TYPE')                % Antenna type
         antenna_type = line(21:40);
     end
@@ -225,6 +243,21 @@ ind_bds_freq = sort(ind_bds_freq);
 
 
 %% Save into struct
+rheader = save2struct(pos_approx, version_full, interval, first_obs, last_obs, ...
+    time_system, gps_ranking, glo_ranking, gal_ranking, bds_ranking, ...
+    ind_gps_freq, ind_glo_freq, ind_gal_freq, ind_bds_freq, station, station_long, ...
+    antenna_type, receiver_type);
+end % end of anheader_GUI.m
+
+
+
+
+
+%% AUXILIARY FUNCTION
+function rheader = save2struct(pos_approx, version_full, interval, first_obs, last_obs, ...
+    time_system, gps_ranking, glo_ranking, gal_ranking, bds_ranking, ...
+    ind_gps_freq, ind_glo_freq, ind_gal_freq, ind_bds_freq, station, station_long, ...
+    antenna_type, receiver_type)
 rheader.pos_approx = pos_approx;
 rheader.version_full = version_full;
 rheader.interval = interval;
@@ -243,15 +276,8 @@ rheader.station = station;
 rheader.station_long = station_long;
 rheader.antenna = antenna_type;
 rheader.receiver = receiver_type;
+end
 
-
-end % end of anheader_GUI.m
-
-
-
-
-
-%% AUXILIARY FUNCTION
 function ranking = check_obs_types(ranking, types)
 % loop over default ranking to exclude those letters of observation types
 % which are not observed in the currently selected RINEX file

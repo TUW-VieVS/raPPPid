@@ -1,11 +1,10 @@
-function [init_ambs, Epoch] = AdjustPhase2Code(Epoch, init_ambs, prns_old)
-% Function to adjust phase data to Code to, for example, limit the 
-% ambiguities for numerical reasons
+function [init_ambs, Epoch] = AdjustPhase2Code(Epoch, init_ambs)
+% Function to adjust phase data to C1 code to, for example, limiting the 
+% ambiguities for numerical reasons.
 % 
 % INPUT:
 %   Epoch           struct, epoch-specific data for current epoch
 %   init_ambs       matrix, values from reducing ambiguities
-%   old_prns        satellites of last epoch
 % OUTPUT:
 %   init_ambs       updated
 %   Epoch           updated

@@ -4,7 +4,7 @@ function [] = DownloadDaily30sIGS(stations, doys, year)
 % of raPPPid.
 % The stations of which data should be downloaded can be either delivered as
 % cell or entered in the IGS_r3_stations.txt (same folder as this function)
-% For a (uncomplete) list of IGS MGEX station check comment lines below the function
+% For a (uncomplete) list of IGS MGEX station check IGS_r3_stations.txt
 % open('..\CODE\OBSERVATIONS\ObservationDownload\IGS_r3_stations.txt')
 % 
 % Example call: 

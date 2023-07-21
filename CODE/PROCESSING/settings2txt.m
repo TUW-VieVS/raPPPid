@@ -500,7 +500,7 @@ end
 
 fprintf(fileID,'  Satellite Exclusion Criteria:\n');
 fprintf(fileID,'    %s%d%s\n', 'Elevation Cutoff: ',settings.PROC.elev_mask,' [°]');
-fprintf(fileID,'    %s%d%s\n', 'SNR Cutoff: ',settings.PROC.SNR_mask,' [db-Hz]');
+fprintf(fileID,'    %s%s%s\n', 'SNR Cutoff: ', num2str(settings.PROC.SNR_mask),' [db-Hz]');
 fprintf(fileID,'    %s%d\n', 'Signal Strength Threshold: ',settings.PROC.ss_thresh);
 if settings.PROC.check_omc
     fprintf(fileID,'    %s\n', 'Check of observed minus (omc) computed is ON.');

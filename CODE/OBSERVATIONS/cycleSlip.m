@@ -53,5 +53,5 @@ if contains(settings.PROC.method, 'Phase')  % except code only solution
    
 
     % save detected cycle slips in Epoch.sat_status
-    Epoch.sat_status(any(Epoch.cs_found, 2)) = 3;
+    Epoch.sat_status(Epoch.cs_found) = 3;
 end

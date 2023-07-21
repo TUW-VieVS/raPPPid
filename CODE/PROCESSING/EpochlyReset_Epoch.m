@@ -71,7 +71,7 @@ Epoch.other_systems = [];
 Epoch.sats = [];
 Epoch.no_sats = [];
 Epoch.delta_windup = [];
-Epoch.rinex_header = [];
+Epoch.rinex_header = '';
 Epoch.usable = [];
 Epoch.exclude = [];
 Epoch.fixable = [];
@@ -90,4 +90,7 @@ Epoch.cs_dL2dL3 = [];
 Epoch.cs_pred_SF = NaN(399,1);
 % satellite status
 Epoch.sat_status = [];
+% multipath detection
+Epoch.mp_C_diff = NaN(3,399);
+
 

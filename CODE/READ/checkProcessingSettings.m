@@ -52,6 +52,7 @@ if ~prebatch
     % extract some information from header of observation file
     try
         rheader = anheader_GUI(settings.INPUT.file_obs);
+        rheader = analyzeAndroidRawData_GUI(settings.INPUT.file_obs, rheader);
     catch
         errordlg({'Wrong path to observation file!' 'Try to reload Observation File in GUI.'}, 'File Error');
         valid_settings = false;     return;
@@ -61,10 +62,11 @@ if ~prebatch
     obs_frqs_glo = DEF.freq_GLO_names(rheader.ind_glo_freq);
     obs_frqs_gal = DEF.freq_GAL_names(rheader.ind_gal_freq);
     obs_frqs_bds = DEF.freq_BDS_names(rheader.ind_bds_freq);
-    % create windowname for potential error
+    % create some time-dependent variables
     jd = cal2jd_GT(rheader.first_obs(1), rheader.first_obs(2), rheader.first_obs(3));
     [doy, yyyy] = jd2doy_GT(jd);
     [gpsweek, ~, ~] = jd2gps_GT(jd);
+    % create windowname for potential error
     windowname = [rheader.station ' ' sprintf('%04.0f', yyyy) '/' sprintf('%03.0f', doy)];
 else
     windowname = 'Error';
@@ -179,7 +181,7 @@ end
 
 % Start and end of processing time span do not fit together or start is not valid
 if settings.PROC.timeFrame(1) >= settings.PROC.timeFrame(2) 
-    errordlg('Check settings of epochs!', windowname);
+    errordlg('Check time span to process (panel: Processing Options)!', windowname);
     valid_settings = false; return
 end
 
@@ -446,8 +448,15 @@ if (settings.PROC.ss_thresh <= 0) || (settings.PROC.ss_thresh > 9)
 end
 
 % Input for the SNR cutoff is useless (e.g. negative)
-if (settings.PROC.SNR_mask <= 0) || (settings.PROC.SNR_mask > 99)
-    errordlg('Please enter a sensible value for the SNR Cutoff [db-Hz].', windowname);
+if any(settings.PROC.SNR_mask <= 0) || any(settings.PROC.SNR_mask > 99)
+    errordlg('Please enter sensible values for the SNR Cutoff [db-Hz].', windowname);
+    valid_settings = false; return
+end
+
+% SNR cutoff does not fit to the number of input frequencies
+n_SNR_mask = numel(settings.PROC.SNR_mask);
+if n_SNR_mask ~= 1 && num_freq > n_SNR_mask
+    errordlg({'Define a single SNR cutoff or a', 'SNR cutoff for each processed frequency!'}, windowname);
     valid_settings = false; return
 end
 
@@ -520,13 +529,6 @@ if settings.ADJ.weight_mplc && num_freq ~= 2
     valid_settings = false; return
 end
 
-% Single Point Positioning with BeiDou (or the brdc message) is not
-% implemented
-if BDS_on && settings.ORBCLK.bool_brdc && ~contains(settings.ORBCLK.CorrectionStream, 'Archive')
-    errordlg({'SPP with BeiDou is not implemented.', 'Disable the processing of BeiDou!'}, windowname)
-    valid_settings = false; return
-end
-
 % Stream Archive IGC01 contains only GPS data
 if (GLO_on || GAL_on || BDS_on) && settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'IGC01 Archive')
     errordlg({'Stream Archive IGC01 contains only GPS data.', 'Process only GPS!'}, windowname)
@@ -549,12 +551,6 @@ end
 if contains(settings.PROC.method, 'Phase') && settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'manually') && ...
     contains(settings.ORBCLK.file_corr2brdc, 'SSRA00EUH0') && strcmp(settings.BIASES.phase, 'Correction Stream')
     errordlg({'Galileo HAS does not provide phase biases (yet).', 'Set phase biases to off!'}, windowname)
-    valid_settings = false; return
-end
-
-% Correction stream is only implemented for GPS and Galileo
-if settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'manually') && (GLO_on || BDS_on)
-    errordlg({'Real-time correction stream is implemented for GPS+Galileo.', 'Disable the processing of GLONASS and BeiDou!'}, windowname)
     valid_settings = false; return
 end
 
@@ -619,6 +615,30 @@ if ~prebatch && settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionSt
         'Move W at the end of the GPS observation ranking.'}, windowname)
     valid_settings = false; return
 end
+
+% Check if the in situ meteo values are realistic
+if (settings.TROPO.p < 300 || settings.TROPO.p > 1150)
+    answer = questdlg('The inserted in situ pressure is unrealistic. Do you really want to continue?');
+    if ~strcmpi(answer,'yes')
+        valid_settings = false; return
+    end
+end
+if (settings.TROPO.T < -60 || settings.TROPO.T > 55)
+    answer = questdlg('The inserted in situ temperature is unrealistic. Do you really want to continue?');
+    if ~strcmpi(answer,'yes')
+        valid_settings = false; return
+    end
+end
+if (settings.TROPO.q < 0 || settings.TROPO.q > 100)
+    answer = questdlg('The inserted in situ relative humidity is unrealistic. Do you really want to continue?');
+    if ~strcmpi(answer,'yes')
+       valid_settings = false; return
+    end
+end
+
+
+
+
 
 % ||| to be continued
 

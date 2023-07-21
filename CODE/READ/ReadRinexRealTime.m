@@ -58,7 +58,7 @@ end
 
 
 
-% read RINEX data and prepare for RINEX2epochData
+% read RINEX data and prepare for RINEX2Epoch
 RINEX{1,1} = line;
 while true
     line = fgetl(fid_obs);

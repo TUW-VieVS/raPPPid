@@ -77,6 +77,12 @@ end
 % multipath detection
 if settings.OTHER.mp_detection
     storeData.mp_C1_diff_n = sparse(storeData.mp_C1_diff_n);
+    if num_freqs >= 2
+        storeData.mp_C2_diff_n = sparse(storeData.mp_C2_diff_n);
+    end
+    if num_freqs >= 3
+        storeData.mp_C3_diff_n = sparse(storeData.mp_C3_diff_n);
+    end
 end
 
 % code and phase observations on each frequency
@@ -136,7 +142,6 @@ end
 satellites.elev     = sparse(satellites.elev);
 satellites.az       = sparse(satellites.az);
 satellites.obs      = sparse(satellites.obs);
-satellites.status   = sparse(satellites.status);
 
 % --- variables depending on number of input frequencies
 % Signal-to-Noise-Ratio

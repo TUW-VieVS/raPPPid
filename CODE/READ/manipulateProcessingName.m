@@ -50,6 +50,7 @@ end
 if contains(settings.PROC.name, '$')
     proc_name = settings.PROC.name;
     rheader = anheader_GUI(settings.INPUT.file_obs);    % get information about observation file
+    rheader = analyzeAndroidRawData_GUI(settings.INPUT.file_obs, rheader);
     if isempty(rheader.station);    rheader.station  = 'none';      end
     if isempty(rheader.receiver);  	rheader.receiver = 'none';      end
     if isempty(rheader.interval);  	rheader.interval = 'none';      end

@@ -1,9 +1,9 @@
-function [ ah , aw , zhd , zwd , Gn_h , Ge_h , Gn_w , Ge_w , V3GR_grid_file ] ...
-    = v3gr_grid_adapted ( indir_V3GR_grid , url_V3GR_grid , V3GR_grid_file , mjd , lat , lon , h_ell , grid_res )
+function [ah, aw, zhd, zwd, Gn_h, Ge_h, Gn_w, Ge_w, V3GR_grid_file] ...
+    = v3gr_grid_adapted(indir_V3GR_grid, url_V3GR_grid, V3GR_grid_file, mjd, lat, lon, h_ell, grid_res)
 %
 % v3gr_grid_adapted.m
 % ATTENTION: This is an adapted version of vmf3_grid.m! It outputs ah and
-% aw instead of zhd and zw and also gradients!!!
+% aw instead of mfh and mfw and also gradients!!!
 %
 % This routine determines mapping functions plus zenith delays from the
 % gridded V3GR files, as available from:
@@ -202,7 +202,7 @@ if load_new == 1
             % check if the file is available or if it has to be downloaded first, then open it
             if ~exist([indir_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)],'file')
                 mkdir([indir_V3GR_grid '/' num2str(year(1))]);
-                urlwrite([url_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)], [indir_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)]);
+                websave([indir_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)], [url_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)]);
             end
             dat = fopen([indir_V3GR_grid '\' num2str(year(1)) '\' filename(1,:)]);
             
@@ -211,7 +211,7 @@ if load_new == 1
             % check if the file is available or if it has to be downloaded first, then open it
             if ~exist([indir_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)],'file')
                 mkdir([indir_V3GR_grid '/' num2str(year(i_file+1))]);
-                urlwrite([url_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)], [indir_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)]);
+                websave([indir_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)], [url_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)]);
             end
             dat = fopen([indir_V3GR_grid '\' num2str(year(i_file+1)) '\' filename(i_file,:)]);
             

@@ -24,7 +24,7 @@ store.L1 = NaN(n,350);
 
 % loop over epochs to read out data
 for q = 1:n
-    [Epoch] = RINEX2epochData(RINEX, epochheader, [], q, obs.no_obs_types, ...
+    [Epoch] = RINEX2Epoch(RINEX, epochheader, [], q, obs.no_obs_types, ...
         obs.rinex_version, 0, 1, 1, 1, 1);
     % save
     store.obs{q} = Epoch.obs;

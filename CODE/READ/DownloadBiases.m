@@ -156,11 +156,20 @@ switch settings.BIASES.code
         URL_host = 'igs.ign.fr:21';
         URL_folder = {['/pub/igs/products/mgex/' gpsweek, '/']};
         file = {['GFZ0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+        if file_status == 0
+            URL_host_2 = 'ftp.gfz-potsdam.de:21';
+            if str2double(gpsweek) > 2245
+                URL_folder_2 = {['/pub/GNSS/products/mgex/' gpsweek '_IGS20' '/']};
+            else
+                URL_folder_2 = {['/pub/GNSS/products/mgex/' gpsweek '/']};
+            end
+            file_status = ftp_download(URL_host_2, URL_folder_2{1}, file{1}, target{1}, true);
+        end
         if file_status == 1   ||   file_status == 2
             unzip_and_delete(file(1), target(1));
         elseif file_status == 0
-            errordlg('No CNES MGEX Biases found on server. Please specify different source!', 'Error');
+            errordlg('No GFZ MGEX Biases found on server. Please specify different source!', 'Error');
         end
         [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
         settings.BIASES.code_file = [target{1} '/' file{1}];
@@ -213,7 +222,7 @@ switch settings.BIASES.code
         else
             file = {['COM', gpsweek, dow, '.BIA.Z']};
         end
-        % download, unzip, save file-path
+        % download and unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
         if file_status == 1   ||   file_status == 2
             unzip_and_delete(file(1), target(1));

@@ -36,25 +36,21 @@ function [obs] = anheader(settings)
 %% Get variables from settings
 % string, filename and path of RINEX observation file
 path_file = settings.INPUT.file_obs;    
-% vectors containing processed frequencies
-gps_freq = settings.INPUT.gps_freq;     
-glo_freq = settings.INPUT.glo_freq;
-gal_freq = settings.INPUT.gal_freq;
-bds_freq = settings.INPUT.bds_freq;
-% ranking of observation types
-gps_ranking = settings.INPUT.gps_ranking;   
-glo_ranking = settings.INPUT.glo_ranking;
-gal_ranking = settings.INPUT.gal_ranking;
-bds_ranking = settings.INPUT.bds_ranking;
-% labels for code, phase and signal strength
-LABELS = [];   
 % check if output is printed to command window
 bool_print = ~settings.INPUT.bool_parfor;
 
 
 %% PREPARATIONS
-fid = fopen(path_file,'rt');            % open observation-file
-version = 0; version_full = 0;          % initialize
+
+% open and check observation-file
+fid = fopen(path_file,'rt');            
+line = fgetl(fid);              % get next line
+if ~contains(line,'RINEX VERSION / TYPE')
+    % not a RINEX file at all!
+    obs = []; fclose(fid); return
+end
+
+% initialize       
 obs_types_gps = [];     obs_types_glo = [];     obs_types_gal = [];     obs_types_bds = [];
 obs_types_gps_3 = [];   obs_types_glo_3 = [];   obs_types_gal_3 = []; 	obs_types_bds_3 = [];
 ranking_gps = [];       ranking_glo = [];     	ranking_gal = [];       ranking_bds = [];
@@ -66,19 +62,23 @@ glo_channel = NaN(99,1);
 stationname = ''; stationname_long = '';
 time_system = 'GPS';        % GPS time system is default
 
+% detect RINEX version
+version = sscanf(line(6), '%f');
+version_full = sscanf(line(6:9), '%f');
+
+
 
 %% LOOP TO GOBBLE THE HEADER
 while 1
+    
     line = fgetl(fid);          % get next line
+    
+    if contains(line,'PRN / # OF OBS')              % run over these lines
+        continue
+    end
     
     if contains(line,'END OF HEADER') || ~ischar(line) 
         break                   % end of header or file reached
-    end
-    
-    % Rinex version
-    if contains(line,'RINEX VERSION / TYPE')
-        version = sscanf(line(6), '%f');
-        version_full = sscanf(line(6:9), '%f');
     end
     
     % Antenna delta
@@ -169,7 +169,7 @@ while 1
         obs_types_3 = regexprep(obs_line, ' ', '');     % delete empty spaces
         for i = 3:3:length(obs_types_3)         % loop over observation types
             type3 = obs_types_3(i-2:i);            
-            [type2, rank] = obs_convert(type3, system, gps_freq, glo_freq, gal_freq, bds_freq, gps_ranking, glo_ranking, gal_ranking, bds_ranking, LABELS);
+            [type2, rank] = obs_convert(type3, system, settings);
             obs_types = [obs_types, type2];
             ranking   = [ranking,    rank];
         end
@@ -288,7 +288,7 @@ if ~isempty(shiftlines)
             otherwise
                 continue
         end
-        [type2, ~] = obs_convert(type3, system, gps_freq, gal_freq, glo_freq, bds_freq, gps_ranking, glo_ranking, gal_ranking, bds_ranking, LABELS);
+        [type2, ~] = obs_convert(type3, system, settings);
         if strcmp(type2, '??') || strcmp(type2, '?x') || isempty(col)    
             continue;           % observation-type of current phase-shift is not used
         end
@@ -365,6 +365,7 @@ obs.station_long 	= upper(stationname_long);
 obs.antenna_type 	= antenna_type;
 obs.receiver_type   = receiver_type;
 obs.rec_ant_delta 	= [ant_delta(3); ant_delta(2); ant_delta(1)];   % North / East / Height
+
 
 
 

@@ -1,18 +1,16 @@
-function [type2, rank] = obs_convert(type, system, gps_freq, glo_freq, gal_freq, bds_freq, ...
-    gps_ranking, glo_ranking, gal_ranking, bds_ranking, LABELS)
-% function to convert the RINEX v3 denomination to the one which is used in
+function [type2, rank] = obs_convert(type, system, settings)
+% Function to convert the RINEX v3 denomination to the one which is used in
 % VieVS PPP. Compare this function with RINEX v3 format specification
+% For example, the phase observation type processed on the 2nd frequency is
+% converted to L2 or the code observation type processed on the 3rd
+% frequency to C3.
 % Observation types which are converted in '?x' or '??' are not used in the
 % further processing
 %
 % INPUT:
 %   type            3-digit-string, observation-type from RINEX File
 %   system          char, G=GPS, R=Glonass, E=Galileo, C=BeiDou
-%   gps_/glo_/gal_/bds_freq        
-%                   settings for used GNSS frequencies from GUI (settings.INPUT.gps_freq/...)
-%   gps_/glo_/gal_/ranking     
-%                   string, ranking of rinex 3 observations for each GNSS
-%   LABELS          empty, possibility to change the nomination of the types in which is converted
+%   settings        struct, processing settings from GUI
 % OUTPUT:
 %   type2           2-digit-string, nomination of observation in this software
 %   rank            rank of this observation used if multiple observations of this type
@@ -24,18 +22,22 @@ function [type2, rank] = obs_convert(type, system, gps_freq, glo_freq, gal_freq,
 % *************************************************************************
 
 
+CODE    = ['C1'; 'C2'; 'C3'];
+PHASE   = ['L1'; 'L2'; 'L3'];
+SIGSTR  = ['S1'; 'S2'; 'S3'];
+DOPPLER = ['D1'; 'D2'; 'D3'];
 
-if isempty(LABELS)      % normal case
-    CODE    = ['C1'; 'C2'; 'C3'];
-    PHASE   = ['L1'; 'L2'; 'L3'];
-    SIGSTR  = ['S1'; 'S2'; 'S3'];
-    DOPPLER = ['D1'; 'D2'; 'D3'];
-else
-    CODE    = LABELS(:,:,1);
-    PHASE   = LABELS(:,:,2);
-    SIGSTR  = LABELS(:,:,3);
-    DOPPLER = LABELS(:,:,4);
-end
+% vectors containing processed frequencies
+gps_freq = settings.INPUT.gps_freq;     
+glo_freq = settings.INPUT.glo_freq;
+gal_freq = settings.INPUT.gal_freq;
+bds_freq = settings.INPUT.bds_freq;
+% ranking of observation types
+gps_ranking = settings.INPUT.gps_ranking;   
+glo_ranking = settings.INPUT.glo_ranking;
+gal_ranking = settings.INPUT.gal_ranking;
+bds_ranking = settings.INPUT.bds_ranking;  
+
 
 % find ranking of observation in string with observation ranking
 obs_char = type(3);
@@ -403,7 +405,6 @@ switch system
     otherwise       % all other systems (e.g. Compass/Beidou)
          rank = 99; type2 = '??';
 end
-end
 
 
 
@@ -417,4 +418,4 @@ str = LABEL(strcmpi(freq,number), :); 	% check if frequency is processed and ret
 if isempty(str)	
     str = 'xx';                     % frequency is not processed
 end
-end
+

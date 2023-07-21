@@ -24,7 +24,10 @@ WBAR = waitbar(0, 'Creating Multi-Plot...', 'Name','Progress of creating Multi-P
 global STOP_CALC;   STOP_CALC = 0;
 unique_labels = unique(LABELS, 'stable');  	% existing labels, keep order
 n_unique = numel(unique_labels);          	% number of different labels
-PlotStruct.coleurs = colorcube(n_unique);      % colors for each label
+coleur = colorcube(n_unique);
+coleur(all(coleur,2), :) = .90;             % avoid white color
+PlotStruct.coleurs = coleur;                % colors for each label
+
 PlotStruct.solution = 'float';
 if PlotStruct.fixed; PlotStruct.solution = 'fixed'; end
 

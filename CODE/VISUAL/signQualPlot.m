@@ -26,8 +26,11 @@ n = settings.INPUT.proc_freqs;          % number of processed frequencies
 cutoff = settings.PROC.elev_mask;       % cutoff angle [°]
 try
     snr_thresh = settings.PROC.SNR_mask;
+    if numel(snr_thresh) == 1
+        snr_thresh = [snr_thresh snr_thresh snr_thresh];
+    end
 catch
-    snr_thresh = NaN;
+    snr_thresh = [NaN NaN NaN];
 end
     
 % get observed satellites prns
@@ -153,7 +156,7 @@ for j = 1:n
         set(hLeg,'visible','off')
     end
     title(sprintf('Signal-to-Noise-Ratio on Frequency %d', j))    	% title of plot
-    hline(snr_thresh, 'k--')        % add cutoff angle as vertical line
+    hline(snr_thresh(j), 'k--')        % add cutoff angle as vertical line
 end
 
 
@@ -190,7 +193,7 @@ for j = 1:n
     limsy = get(gca,'YLim');        % set only lower limit of y-axis
     set(gca,'Ylim',[0 limsy(2)]);
     vline(cutoff, 'k--')            % add cutoff angle as vertical line
-    hline(snr_thresh, 'k--')        % add cutoff angle as vertical line
+    hline(snr_thresh(j), 'k--')        % add cutoff angle as vertical line
     prns = prns';       % create letters for legend:
     lettr = char( (prns<100)*71 + (prns<200&prns>100)*82 + (prns<300&prns>200)*69 + (prns<400&prns>300)*67 );
     content = strcat(lettr, num2str(mod(prns,100), '%02.0f'));                     % letters and prn-number

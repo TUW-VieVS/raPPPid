@@ -50,7 +50,7 @@ set(gca, 'Units', 'pixels', 'Position', [18 516 900 80])
 axis off
 
 % Set Copyright and Version in the lower right
-set(handles.text_version, 'String', ['Version 1.6 ', char(169), ' TUW 2023']);
+set(handles.text_version, 'String', ['Version 2.0 ', char(169), ' TUW 2023']);
 
 % load default filter settings for selected filter
 handles = LoadDefaultFilterSettings(handles);
@@ -409,7 +409,7 @@ end
 function pushbutton_obs_file_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/OBS/'], handles.paths.obs_1, handles.paths.rinex_date);
 if ~exist(folder, 'dir'); folder = [Path.DATA '/OBS/']; end     % e.g., data folder was deleted
-[FileName, PathName] = uigetfile({'*.*o;*.rnx;*.obs'}, 'Select the Observation File', folder);
+[FileName, PathName] = uigetfile({'*.*o;*.rnx;*.obs;*.txt'}, 'Select the Observation File', folder);
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName        % uigetfile cancelled
     return;
@@ -418,14 +418,15 @@ set(handles.edit_obs, 'String',FileName);
 handles.paths.obs_1 = PathName;
 handles.paths.obs_2 = FileName;
 
-% Analyze header of RINEX file and change GUI according to it
+% Analyze header of e.g. RINEX file and change GUI according to it
 rheader = anheader_GUI([PathName,FileName]);
+rheader = analyzeAndroidRawData_GUI([PathName,FileName], rheader);
 
 % create messagebox which frequencies are observed in RINEX File
 gps_freq = repmat({'Off'},3,1);   % initialize with 'Off', because it can happen that there are less than 3 frequencies contained and these shall then be 'Off'
-glo_freq = repmat({'Off'},3,1); 
-gal_freq = repmat({'Off'},3,1); 
-bds_freq = repmat({'Off'},3,1); 
+glo_freq = repmat({'Off'},3,1);
+gal_freq = repmat({'Off'},3,1);
+bds_freq = repmat({'Off'},3,1);
 if all(rheader.ind_gps_freq ~= 0)
     gps_freq(1:length(rheader.ind_gps_freq)) = DEF.freq_GPS_names(rheader.ind_gps_freq);
 end
@@ -451,7 +452,6 @@ msgbox({...
     ['BeiDou Frequencies: ', bds_freq_temp(1:end-3)]}, ...
     'Frequencies', 'help')   % (1:end-3) in order to cut the needless ' - ' at the end of the string
 
-
 % change popupmenues of processed frequencies
 set(handles.popupmenu_gps_1, 'Value', find(strcmpi(DEF.freq_GPS_names,gps_freq{1})));
 set(handles.popupmenu_gps_2, 'Value', find(strcmpi(DEF.freq_GPS_names,gps_freq{2})));
@@ -466,13 +466,7 @@ set(handles.popupmenu_bds_1, 'Value', find(strcmpi(DEF.freq_BDS_names,bds_freq{1
 set(handles.popupmenu_bds_2, 'Value', find(strcmpi(DEF.freq_BDS_names,bds_freq{2})));
 set(handles.popupmenu_bds_3, 'Value', find(strcmpi(DEF.freq_BDS_names,bds_freq{3})));
 
-% set approximate position into GUI
-pos_approx = num2str(rheader.pos_approx, '%.4f');
-set(handles.edit_x, 'String', pos_approx(1,:));
-set(handles.edit_y, 'String', pos_approx(2,:));
-set(handles.edit_z, 'String', pos_approx(3,:));
-
-% convert from date of first RINEX observation into path of folder structure
+% convert from date of first RINEX observation into path of raPPPid folder structure
 dd = rheader.first_obs(3);
 mm = rheader.first_obs(2);
 yyyy = rheader.first_obs(1);
@@ -482,7 +476,17 @@ jd = cal2jd_GT(yyyy,mm,dd);
 yyyy    = sprintf('%04d',yyyy);
 doy 	= sprintf('%03d',doy);
 % save subfolder into struct path
-handles.paths.rinex_date = ['/' yyyy '/' doy '/'];
+if isfile([Path.DATA '/OBS/' yyyy '/' doy '/' FileName])
+    handles.paths.rinex_date = ['/' yyyy '/' doy '/'];
+else
+    handles.paths.rinex_date = '/0000/000/';
+end
+
+% set approximate position into GUI
+pos_approx = num2str(rheader.pos_approx, '%.4f');
+set(handles.edit_x, 'String', pos_approx(1,:));
+set(handles.edit_y, 'String', pos_approx(2,:));
+set(handles.edit_z, 'String', pos_approx(3,:));
 
 % Enable/Disable stuff on GUI depending on observation file
 % ||| check for Doppler observation and en/disable CS detection with Doppler
@@ -512,20 +516,29 @@ set(handles.text_glo_time_offset_m,              'Enable', 'On');
 set(handles.popupmenu_filter_glonass_offset_dynmodel, 'Enable', 'On');
 
 if floor(rheader.version_full) >= 3
-     able_version(handles, 'On')
-     set(handles.edit_gps_rank, 'String', rheader.gps_ranking);
-     set(handles.edit_glo_rank, 'String', rheader.glo_ranking);
-     set(handles.edit_gal_rank, 'String', rheader.gal_ranking);
-     set(handles.edit_bds_rank, 'String', rheader.bds_ranking);
-     set(handles.checkbox_GAL, 'Value', 1);
-     set(handles.checkbox_BDS, 'Value', 1);
-     onoff = 'On';
+    able_version(handles, 'On')
+    set(handles.edit_gps_rank, 'String', rheader.gps_ranking);
+    set(handles.edit_glo_rank, 'String', rheader.glo_ranking);
+    set(handles.edit_gal_rank, 'String', rheader.gal_ranking);
+    set(handles.edit_bds_rank, 'String', rheader.bds_ranking);
+    set(handles.checkbox_GAL, 'Value', 1);
+    set(handles.checkbox_BDS, 'Value', 1);
+    onoff = 'On';
 elseif floor(rheader.version_full) == 2
     able_version(handles, 'Off')
     set(handles.checkbox_GAL, 'Value', 0);
     set(handles.checkbox_BDS, 'Value', 0);
     onoff = 'Off';
     set(handles.popupmenu_gps_3, 'Value', 4);
+elseif rheader.version_full == 0        % raw Android sensor data
+    able_version(handles, 'On')
+    set(handles.edit_gps_rank, 'String', rheader.gps_ranking);
+    set(handles.edit_glo_rank, 'String', rheader.glo_ranking);
+    set(handles.edit_gal_rank, 'String', rheader.gal_ranking);
+    set(handles.edit_bds_rank, 'String', rheader.bds_ranking);
+    set(handles.checkbox_GAL, 'Value', 1);
+    set(handles.checkbox_BDS, 'Value', 1);
+    onoff = 'On';
 end
 % handle Galileo
 set(handles.popupmenu_gal_1,                          'Enable', onoff);
@@ -556,11 +569,6 @@ else
     handles.pushbutton_analyze_rinex.Enable = 'on';
 end
 
-% clear true position
-set(handles.edit_x_true,  'String', '');
-set(handles.edit_y_true,  'String', '');
-set(handles.edit_z_true,  'String', '');
-
 guidata(hObject, handles);
 end         % of pushbutton_obs_file_Callback
 
@@ -569,7 +577,7 @@ end         % of pushbutton_obs_file_Callback
 function pushbutton_analyze_rinex_Callback(hObject, eventdata, handles)
 settings = getSettingsFromGUI(handles);
 if ~isfile(settings.INPUT.file_obs); return; end
-AnalyzeRINEX(settings)
+AnalyzeObsFile(settings)
 end
 
 
@@ -583,6 +591,7 @@ if get(handles.checkbox_GPS, 'Value')	% GPS processing enabled
     PathName = getFolderPath([Path.DATA '/OBS/'], handles.paths.obs_1, handles.paths.rinex_date);
     if isempty(FileName) || ~isfile([PathName,FileName]);   return;     end
     rheader = anheader_GUI([PathName,FileName]);
+    rheader = analyzeAndroidRawData_GUI([PathName,FileName], rheader);
     
     gps_freq = repmat({'Off'},3,1);   % initialize with 'Off', because it can happen that there are less than 3 frequencies contained and these shall then be 'Off'
     if all(rheader.ind_gps_freq ~= 0)
@@ -607,6 +616,14 @@ if get(handles.checkbox_GPS, 'Value')	% GPS processing enabled
     elseif floor(rheader.version_full) == 2
         able_version(handles, 'Off')
         set(handles.popupmenu_gps_3, 'Value', 4);
+    elseif floor(rheader.version_full) == 0         % Android raw sensor data
+        set(handles.text_proc_freq,  'Enable', 'On');
+        set(handles.text_rank,       'Enable', 'On');
+        set(handles.edit_gps_rank,   'Enable', 'On');
+        set(handles.popupmenu_gps_1, 'Enable', 'On');
+        set(handles.popupmenu_gps_2, 'Enable', 'On');
+        set(handles.popupmenu_gps_3, 'Enable', 'On');
+        set(handles.edit_gps_rank, 'String', rheader.gps_ranking);
     end
     
     set(handles.edit_filter_rec_clock_Q,             'Enable', 'On');
@@ -643,6 +660,7 @@ if get(handles.checkbox_GLO, 'Value')	% Glonass processing enabled
     PathName = getFolderPath([Path.DATA '/OBS/'], handles.paths.obs_1, handles.paths.rinex_date);
     if isempty(FileName) || ~isfile([PathName,FileName]);   return;     end
     rheader = anheader_GUI([PathName,FileName]);
+    rheader = analyzeAndroidRawData_GUI([PathName,FileName], rheader);
 
     glo_freq = repmat({'Off'},3,1);   % initialize with 'Off', because it can happen that there are less than 3 frequencies contained and these shall then be 'Off'
     if all(rheader.ind_glo_freq ~= 0)
@@ -667,6 +685,14 @@ if get(handles.checkbox_GLO, 'Value')	% Glonass processing enabled
     elseif floor(rheader.version_full) == 2
         able_version(handles, 'Off')
         set(handles.popupmenu_glo_3, 'Value', 4);
+    elseif floor(rheader.version_full) == 0         % Android raw sensor data
+        set(handles.text_proc_freq,  'Enable', 'On');
+        set(handles.text_rank,       'Enable', 'On');
+        set(handles.edit_glo_rank,   'Enable', 'On');
+        set(handles.popupmenu_glo_1, 'Enable', 'On');
+        set(handles.popupmenu_glo_2, 'Enable', 'On');
+        set(handles.popupmenu_glo_3, 'Enable', 'On');
+        set(handles.edit_glo_rank, 'String', rheader.glo_ranking); 
     end
     
     set(handles.edit_filter_glonass_offset_Q,             'Enable', 'On');
@@ -702,6 +728,7 @@ if get(handles.checkbox_GAL, 'Value')	% Galileo processing enabled
     PathName = getFolderPath([Path.DATA '/OBS/'], handles.paths.obs_1, handles.paths.rinex_date);
     if isempty(FileName) || ~isfile([PathName,FileName]);   return;     end
     rheader = anheader_GUI([PathName,FileName]);
+    rheader = analyzeAndroidRawData_GUI([PathName,FileName], rheader);
     
     gal_freq = repmat({'Off'},3,1);   % initialize with 'Off', because it can happen that there are less than 3 frequencies contained and these shall then be 'Off'
     if all(rheader.ind_gal_freq ~= 0)
@@ -726,6 +753,14 @@ if get(handles.checkbox_GAL, 'Value')	% Galileo processing enabled
     elseif floor(rheader.version_full) == 2
         able_version(handles, 'Off')
         set(handles.checkbox_GAL, 'Value', 0);
+    elseif floor(rheader.version_full) == 0         % Android raw sensor data
+        set(handles.text_proc_freq,  'Enable', 'On');
+        set(handles.text_rank,       'Enable', 'On');
+        set(handles.edit_gal_rank,   'Enable', 'On');
+        set(handles.popupmenu_gal_1, 'Enable', 'On');
+        set(handles.popupmenu_gal_2, 'Enable', 'On');
+        set(handles.popupmenu_gal_3, 'Enable', 'On');
+        set(handles.edit_gal_rank, 'String', rheader.gal_ranking);     
     end
     
     set(handles.edit_filter_galileo_offset_Q,             'Enable', 'On');
@@ -761,6 +796,7 @@ if get(handles.checkbox_BDS, 'Value')	% BeiDou processing enabled
     PathName = getFolderPath([Path.DATA '/OBS/'], handles.paths.obs_1, handles.paths.rinex_date);
     if isempty(FileName) || ~isfile([PathName,FileName]);   return;     end
     rheader = anheader_GUI([PathName,FileName]);
+    rheader = analyzeAndroidRawData_GUI([PathName,FileName], rheader);
     
     bds_freq = repmat({'Off'},3,1);   % initialize with 'Off', because it can happen that there are less than 3 frequencies contained and these shall then be 'Off'
     if all(rheader.ind_bds_freq ~= 0)
@@ -785,6 +821,13 @@ if get(handles.checkbox_BDS, 'Value')	% BeiDou processing enabled
     elseif floor(rheader.version_full) == 2
         able_version(handles, 'Off')
         set(handles.checkbox_BDS, 'Value', 0);
+    elseif floor(rheader.version_full) == 0         % Android raw sensor data
+        set(handles.text_proc_freq,  'Enable', 'On');
+        set(handles.text_rank,       'Enable', 'On');
+        set(handles.edit_bds_rank,   'Enable', 'On');
+        set(handles.popupmenu_bds_1, 'Enable', 'On');
+        set(handles.popupmenu_bds_2, 'Enable', 'On');
+        set(handles.popupmenu_bds_3, 'Enable', 'On');
     end
     
     set(handles.edit_filter_beidou_offset_Q,             'Enable', 'On');
@@ -1444,6 +1487,12 @@ switch col      % action depending of column where event happened
             TABLE(idx,:) = [];
         else                    % write new station name
             TABLE(idx,2) = {value};
+            XYZ = getOwnCoordinates({value}, [0 0 0], [0 0 0]);
+            if any(XYZ~=0)      % check if coordinates were found in Coords.txt
+                TABLE{row,3} = XYZ(1);
+                TABLE{row,4} = XYZ(2);
+                TABLE{row,5} = XYZ(3);
+            end
         end
     case {3,4,5}   	% X, Y, Z true coordinates
         if isnan(value)
@@ -4175,7 +4224,7 @@ if handles.checkbox_batch_proc.Value
     if ishandle(WBAR);	close(WBAR);	end
 
 else            % download data for single file
-    if contains(handles.paths.rinex_date, '0000/000')
+    if isempty(handles.paths.obs_1) || isempty(handles.paths.obs_2)
         errordlg('Please (re)load observation file to enable download.', 'Download not possible');
         return
     end
@@ -4188,6 +4237,7 @@ else            % download data for single file
     
     % get observation date
     rheader = anheader_GUI(settings_temp.INPUT.file_obs);
+    rheader = analyzeAndroidRawData_GUI(settings_temp.INPUT.file_obs, rheader);
     
     % download the input files which are currently selected in GUI
     [~] = downloadInputFiles(settings_temp, rheader.first_obs, false);

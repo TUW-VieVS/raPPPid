@@ -106,8 +106,11 @@ if resetnow
     
     % reset collected data of multipath detection
     if settings.OTHER.mp_detection
-        Epoch.mp_C1(:,:) = NaN;
-        Epoch.mp_last(:) = NaN;
+        Epoch.mp_C1_diff(:,:) = NaN; 
+		Epoch.mp_C2_diff(:,:) = NaN; 
+		Epoch.mp_C3_diff(:,:) = NaN;
+		Epoch.mp_C_diff(:,:) = NaN;
+        Epoch.mp1_last(:) = NaN;
     end
     
     % handle old Epoch: this is not a total reset but sufficient

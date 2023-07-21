@@ -104,8 +104,11 @@ if settings.OTHER.CS.TimeDifference
    Epoch.cs_phase_obs = NaN(settings.OTHER.CS.TD_degree+1,399);
 end
 if settings.OTHER.mp_detection
-    Epoch.mp_C1 = NaN(settings.OTHER.mp_degree+1,399);
-    Epoch.mp_last = NaN(1,399);
+    Epoch.mp_C1_diff = NaN(settings.OTHER.mp_degree+1,399);		% C1 of last epochs
+	Epoch.mp_C2_diff = NaN(settings.OTHER.mp_degree+1,399);
+	Epoch.mp_C3_diff = NaN(settings.OTHER.mp_degree+1,399);
+	Epoch.mp_C_diff = NaN(3,399);	% result of checkMultipath.m (code difference) for each frequency
+    Epoch.mp_last = NaN(3,399);		% last Multipath event on each frequency
 end
 
 % variables for ambiguity fixing
@@ -149,7 +152,7 @@ Epoch.L3_bias = [];
 Epoch.sats = [];
 Epoch.no_sats = [];
 Epoch.delta_windup = [];
-Epoch.rinex_header = [];
+Epoch.rinex_header = '';
 Epoch.usable = [];
 Epoch.exclude = [];
 Epoch.fixable = [];
@@ -272,6 +275,12 @@ end
 % multipath detection
 if settings.OTHER.mp_detection
     storeData.mp_C1_diff_n = zeros(tot_eps,399); % code (C1) difference of last n epochs
+    if num_frqs >= 2
+        storeData.mp_C2_diff_n = zeros(tot_eps,399); % C2 difference of last n epochs
+    end
+    if num_frqs >= 3
+        storeData.mp_C3_diff_n = zeros(tot_eps,399); % C3 difference of last n epochs
+    end
 end
 
 
@@ -309,7 +318,6 @@ end
 satellites.elev   = zeros(tot_eps,399);
 satellites.az     = zeros(tot_eps,399);
 satellites.obs    = zeros(tot_eps,399);   	% true if satellite observed
-satellites.status = zeros(tot_eps,399);  	% info about satellite status
 
 % variables depending on the number of frequencies
 % Signal-to-Noise-Ration

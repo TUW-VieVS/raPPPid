@@ -26,6 +26,10 @@ end
 n = numel(stations);
 XYZ = zeros(n,3);
 
+if cellfun(@isempty,stations)   
+    return      % no station names to get coordinates
+end
+
 % ----- check Coords.txt -----
 XYZ = getOwnCoordinates(stations, dates, XYZ);
 if all( abs(XYZ(:)) > 1e4 );   return;   end             % only bias or no coordinates found

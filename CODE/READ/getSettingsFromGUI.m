@@ -87,7 +87,7 @@ settings.ORBCLK.prec_prod_type = handles.uibuttongroup_prec_prod_type.SelectedOb
 % get source of navigation message
 value = get(handles.popupmenu_nav_multi, 'Value');
 string_all = get(handles.popupmenu_nav_multi, 'String');
-settings.ORBCLK.multi_nav =   string_all{value};
+settings.ORBCLK.multi_nav = string_all{value};      % source of navigation message
 % get source of correction stream
 value = get(handles.popupmenu_CorrectionStream, 'Value');
 string_all = get(handles.popupmenu_CorrectionStream, 'String');
@@ -126,7 +126,7 @@ else   % if broadcast + correction is enabled
     end
 end
 
-% check if ORBEX file is used (at the moment only manually selectable)
+% check if ORBEX file is used 
 settings.ORBCLK.bool_obx = handles.checkbox_obx.Value;
 
 
@@ -437,7 +437,7 @@ settings.PROC.timeSpan_format_HOD    = get(handles.radiobutton_timeSpan_format_H
 
 % Satellite Exclusion Criteria
 settings.PROC.elev_mask = str2double(get(handles.edit_Elevation_Mask, 'String'));
-settings.PROC.SNR_mask = str2double(get(handles.edit_SNR_Mask, 'String'));
+settings.PROC.SNR_mask = str2num(get(handles.edit_SNR_Mask, 'String'));
 settings.PROC.ss_thresh = str2double(get(handles.edit_ss_thresh, 'String'));
 settings.PROC.check_omc = handles.checkbox_check_omc.Value;
 settings.PROC.omc_code_thresh = str2double(get(handles.edit_omc_thresh_c, 'String'));

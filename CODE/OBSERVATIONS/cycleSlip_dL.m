@@ -87,6 +87,16 @@ w2_old_bds = Epoch.old.l2(Epoch.old.bds);
 w3_now_bds = Epoch.l3(Epoch.bds);
 w3_old_bds = Epoch.old.l3(Epoch.old.bds);
 
+% in the case of Android raw gnss data processing the phase observations in
+% Epoch.obs are already [m] -> no conversion from [cy] to [m] needed
+if settings.INPUT.rawDataAndroid
+    % set wavelengths to one
+    w1_now_gps(:)=1; w1_old_gps(:)=1; w2_now_gps(:)=1; w2_old_gps(:)=1; w3_now_gps(:)=1; w3_old_gps(:)=1;
+    w1_now_glo(:)=1; w1_old_glo(:)=1; w2_now_glo(:)=1; w2_old_glo(:)=1; w3_now_glo(:)=1; w3_old_glo(:)=1;
+    w1_now_gal(:)=1; w1_old_gal(:)=1; w2_now_gal(:)=1; w2_old_gal(:)=1; w3_now_gal(:)=1; w3_old_gal(:)=1;
+    w1_now_bds(:)=1; w1_old_bds(:)=1; w2_now_bds(:)=1; w2_old_bds(:)=1; w3_now_bds(:)=1; w3_old_bds(:)=1;
+end
+
 % get observations of last and current epoch in [m]
 [L1_now, L1_old] = getPhase(obs_now_gps, obs_old_gps, obs_now_glo, obs_old_glo, obs_now_gal, obs_old_gal, obs_now_bds, obs_old_bds, l1_gps, l1_glo, l1_gal, l1_bds, gps_now, gps_old, glo_now, glo_old, gal_now, gal_old, bds_now, bds_old, w1_now_gps, w1_old_gps, w1_now_glo, w1_old_glo, w1_now_gal, w1_old_gal, w1_now_bds, w1_old_bds);
 [L2_now, L2_old] = getPhase(obs_now_gps, obs_old_gps, obs_now_glo, obs_old_glo, obs_now_gal, obs_old_gal, obs_now_bds, obs_old_bds, l2_gps, l2_glo, l2_gal, l2_bds, gps_now, gps_old, glo_now, glo_old, gal_now, gal_old, bds_now, bds_old, w2_now_gps, w2_old_gps, w2_now_glo, w2_old_glo, w2_now_gal, w2_old_gal, w2_now_bds, w2_old_bds);
@@ -194,20 +204,20 @@ function [L_now, L_old] = ...
 L_old = NaN(1,399);   L_now = NaN(1,399);
 % extract observations
 if ~isempty(l_gps)
-    L_now(gps_now) = obs_now_gps(:,l_gps) .* w_now_gps;     % Phase-observations of current epoch
-    L_old(gps_old) = obs_old_gps(:,l_gps) .* w_old_gps; 	% Phase-observations of last epoch
+    L_now(gps_now) = obs_now_gps(:,l_gps) .* w_now_gps;     % Phase-observations of current epoch [m]
+    L_old(gps_old) = obs_old_gps(:,l_gps) .* w_old_gps; 	% Phase-observations of last epoch [m]
 end
 if ~isempty(l_glo)
-    L_now(glo_now) = obs_now_glo(:,l_glo) .* w_now_glo;     % Phase-observations of current epoch
-    L_old(glo_old) = obs_old_glo(:,l_glo) .* w_old_glo;     % Phase-observations of last epoch
+    L_now(glo_now) = obs_now_glo(:,l_glo) .* w_now_glo;     % Phase-observations of current epoch [m]
+    L_old(glo_old) = obs_old_glo(:,l_glo) .* w_old_glo;     % Phase-observations of last epoch [m]
 end
 if ~isempty(l_gal)
-    L_now(gal_now) = obs_now_gal(:,l_gal) .* w_now_gal;     % Phase-observations of current epoch
-    L_old(gal_old) = obs_old_gal(:,l_gal) .* w_old_gal;     % Phase-observations of last epoch
+    L_now(gal_now) = obs_now_gal(:,l_gal) .* w_now_gal;     % Phase-observations of current epoch [m]
+    L_old(gal_old) = obs_old_gal(:,l_gal) .* w_old_gal;     % Phase-observations of last epoch [m]
 end
 if ~isempty(l_bds)
-    L_now(bds_now) = obs_now_bds(:,l_bds) .* w_now_bds;     % Phase-observations of current epoch
-    L_old(bds_old) = obs_old_bds(:,l_bds) .* w_old_bds;     % Phase-observations of last epoch
+    L_now(bds_now) = obs_now_bds(:,l_bds) .* w_now_bds;     % Phase-observations of current epoch [m]
+    L_old(bds_old) = obs_old_bds(:,l_bds) .* w_old_bds;     % Phase-observations of last epoch [m]
 end
 % replace zeros with NaN
 L_old(L_old == 0) = NaN;

@@ -1,4 +1,4 @@
-function [Epoch, obs] = get_obs(Epoch, obs, settings)
+function [Epoch] = get_obs(Epoch, obs, settings)
 
 % Function to remove satellites which have a missing (or zero) observation 
 % which would be needed later on. Then the needed observations are extracted 
@@ -8,8 +8,7 @@ function [Epoch, obs] = get_obs(Epoch, obs, settings)
 % 	obs   			struct, observations and corresponding data
 %	settings        struct, settings from GUI
 % OUTPUT:
-% 	Epoch:      updated
-% 	obs:   			new list of satellites as occuring in new_obs
+% 	Epoch:      updated, with .C1, .L2, .S3, ...
 %
 %   Revision:
 %   23 Jan 2020, MFG: changing satellite exclusion depending on PPP model
@@ -31,6 +30,8 @@ Epoch.L1 = []; Epoch.L2 = []; Epoch.L3 = [];
 Epoch.C1 = []; Epoch.C2 = []; Epoch.C3 = []; 
 Epoch.S1 = []; Epoch.S2 = []; Epoch.S3 = [];
 Epoch.D1 = []; Epoch.D2 = []; Epoch.D3 = [];
+% check if phase measurements have to be converted to meters
+bool_m = settings.INPUT.rawDataAndroid;         % already in [m]
 % check processed PPP model
 code_only = strcmpi(settings.PROC.method,'Code Only');
 doppler = contains(settings.PROC.method, 'Doppler');
@@ -50,7 +51,7 @@ if settings.INPUT.use_GPS
     D1 = obs.use_column{1,10}; D2 = obs.use_column{1,11}; D3 = obs.use_column{1,12};
     % perform check and get observations
     lambda_G = Const.GPS_L(idx_frqs_gps);
-    [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3,...
+    [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, bool_m,...
     Epoch.gps, lambda_G, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, num_freq);
 end
 
@@ -96,9 +97,6 @@ if settings.INPUT.use_GLO
         % occured (e.g. L2 missing -> next epoch ambiguity wrong, missing
         % reset?)
         remove_sat = no_C1;
-        if num_freq > 1 && ~isempty(no_C2)      % at least observations on two frequencies are needed
-            remove_sat = remove_sat | no_C2;
-        end
         
     elseif IF_LC_2fr_1x     % two frequencies are needed
         remove_sat = no_C1 | no_C2;
@@ -140,9 +138,13 @@ if settings.INPUT.use_GLO
     Epoch.other_systems(remove_sat) = [];
         
     % Get observations from observation matrix 
+    
     lambda_1 = Const.C ./ Epoch.f1_glo;
     lambda_2 = Const.C ./ Epoch.f2_glo;
     lambda_3 = Const.C ./ Epoch.f3_glo;
+    if bool_m     % check if phase observation have to be converted to [m]
+        lambda_1(:) = 1; lambda_2(:) = 1; lambda_3(:) = 1;
+    end
     if ~code_only
         Epoch.L1 = [Epoch.L1; Epoch.obs(Epoch.glo,L1) .* lambda_1];     % [m]
         Epoch.L2 = [Epoch.L2; Epoch.obs(Epoch.glo,L2) .* lambda_2]; 	% [m]
@@ -209,7 +211,7 @@ if settings.INPUT.use_GAL
     D1 = obs.use_column{3,10}; D2 = obs.use_column{3,11}; D3 = obs.use_column{3,12};
     % perform check and get observations
     lambda_E = Const.GAL_L(idx_frqs_gal);
-    [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3,...
+    [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, bool_m, ...
     Epoch.gal, lambda_E, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, num_freq);
 end
 
@@ -225,46 +227,15 @@ if settings.INPUT.use_BDS
     D1 = obs.use_column{4,10}; D2 = obs.use_column{4,11}; D3 = obs.use_column{4,12};
     % perform check and get observations
     lambda_C = Const.BDS_L(idx_frqs_bds);
-    [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3,...
+    [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, bool_m, ...
     Epoch.bds, lambda_C, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, num_freq);
 end
 
 
 
-%% update struct Epoch
-% as now the number of satellites of current epoch is clear
-m = numel(Epoch.sats);
-num_freq = settings.INPUT.proc_freqs;
-Epoch.code  = zeros(m, num_freq);
-Epoch.phase = zeros(m, num_freq);
-Epoch.C1_bias = zeros(m,1);
-Epoch.C2_bias = zeros(m,1);
-Epoch.C3_bias = zeros(m,1);
-Epoch.L1_bias = zeros(m,1);
-Epoch.L2_bias = zeros(m,1);
-Epoch.L3_bias = zeros(m,1);
-Epoch.exclude  = false(m, num_freq);
-Epoch.cs_found  = false(m, num_freq);
-Epoch.sat_status  = ones(m,1);
-Epoch.fixable = true(m, num_freq);          % satellite is usable for fixing
 
-% check if some phase observations are (completely) missing
-if isempty(Epoch.L1)
-    Epoch.L1 = zeros(m,1);
-end
-if isempty(Epoch.L2)
-    Epoch.L2 = zeros(m,1);
-end
-if isempty(Epoch.L3)
-    Epoch.L3 = zeros(m,1);
-end
-
-
-
-
-
-
-function [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3,...
+%% ------------------ AUXILIARY FUNCTIONS ------------------
+function [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, convert_cy2m, ...
     bool_gnss, lambda, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, n)
 % This function checks which satellites have to be removed and removes
 % them. It is used for each GNSS except Glonass (FDMA...).
@@ -289,11 +260,6 @@ no_C3 = (isnan(Obs(:,C3)) | Obs(:,C3)==0) & bool_gnss;
 
 if no_LC             	% 1st frequency is needed for sure
     remove_sat = no_C1;
-%     if n > 1            % at least observations on two frequencies are needed
-% why ???? not sure about this condition, maybe only if enough satellites
-% to make sure that position can calculated
-%        remove_sat = remove_sat | no_C2 | ~code_only .* no_L2;
-%     end
     
 elseif IF_LC_2fr_1x     % two frequencies are needed to build LC
     remove_sat = no_C1 | no_C2;
@@ -345,6 +311,8 @@ Epoch.C1 = [Epoch.C1; add_C1];
 Epoch.C2 = [Epoch.C2; add_C2];
 Epoch.C3 = [Epoch.C3; add_C3];
 if ~code_only
+    % check if phase observation have to be converted to [m]
+    if convert_cy2m;        lambda(:) = 1;    end
     Epoch.L1 = [Epoch.L1; add_L1 .* lambda(1)]; 	% [m]
     Epoch.L2 = [Epoch.L2; add_L2 .* lambda(2)]; 	% [m]
     Epoch.L3 = [Epoch.L3; add_L3 .* lambda(3)]; 	% [m]

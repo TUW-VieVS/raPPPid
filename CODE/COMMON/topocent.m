@@ -3,12 +3,13 @@ function [Az, El] = topocent(X, dx)
 % origin at X
 % (c) by Kai Borre 11-24-96 (slightly modified)
 % $Revision: 1.0 $  $Date: 1997/09/26  $
+% 
 % INPUT:
-%   X...........origin of topocenter (3x1) e.g. position of receiver
-%	dx..........vector to be transformed (3x1) e.g. vector from receiver to satellite
+%   X           origin of topocenter (3x1) e.g. position of receiver
+%	dx          vector to be transformed (3x1) e.g. vector from receiver to satellite
 % Returns:
-%	Az..........azimuth from north positive clockwise [°]
-%	El..........elevation angle [°]
+%	Az          azimuth from north positive clockwise [°]
+%	El          elevation angle [°]
 %  
 %   Revision:
 %   ...

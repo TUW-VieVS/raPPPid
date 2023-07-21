@@ -26,7 +26,7 @@ targets = {...
 mkdir(targets{1});
 mkdir(targets{2});
 URL_host = 'igs.ign.fr:21';                                 % default ftp-server
-URL_host_2 = 'https://cddis.nasa.gov'; URL_folders_2 = '';  files_2 = ''; % option 2
+URL_host_2 = 'https://cddis.nasa.gov'; URL_folders_2 = '';  files_2 = ''; % option 2: CDDIS
 download = true;    % boolean variable if products need still to be downloaded
 multiple = false;   % is set to true if multiple sp3-files are needed (e.g. ???)
 
@@ -317,7 +317,11 @@ switch settings.ORBCLK.prec_prod
                     
                 case 'Rapid'
                     % ftp adress without 'pub' does only work in the browser
-                    URL_folders = repmat({['/pub/GNSS/products/mgex/' gpsweek, '/']},2,1);
+                    if str2double(gpsweek) > 2245
+                        URL_folders = repmat({['/pub/GNSS/products/mgex/' gpsweek '_IGS20' '/']},2,1);
+                    else
+                        URL_folders = repmat({['/pub/GNSS/products/mgex/' gpsweek '/']},2,1);
+                    end
                     if str2double(gpsweek) > 2230
                         URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
                     else

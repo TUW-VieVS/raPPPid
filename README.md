@@ -30,9 +30,10 @@ Documentation: https://vievswiki.geo.tuwien.ac.at/en/raPPPid
 ## Reference
 If you publish results obtained with raPPPid, please give credit by citing the current references:
 
+Glaner, M. F. & Weber, R. (2023). An open-source software package for Precise Point Positioning: raPPPid. GPS Solut 27(4):174. https://doi.org/10.1007/s10291-023-01488-4
+
 Glaner, M. F. (2022). Towards instantaneous PPP convergence using multiple GNSS signals [Dissertation, Technische Universität Wien]. reposiTUm. https://doi.org/10.34726/hss.2022.73610
 
-Glaner, M., & Weber, R. (2023). An open-source software for Precise Point Positioning: raPPPid. To be published in GPS Solutions
 
 
 ## Getting Started

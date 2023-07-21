@@ -73,7 +73,7 @@ bool_brdc_TGD = strcmp(settings.BIASES.code, 'Broadcasted TGD');
 %% -+-+-+-+-+-READ/PREPARE INPUT DATA-+-+-+-+-+-
 
 % Read Input Data from Files (Ephemerides, Station Data, etc.)
-[input, obs, settings, RINEX] = readAllInputFiles(settings);
+[input, obs, settings, OBSDATA] = readAllInputFiles(settings);
 
 % open files for real-time processing
 fid_obs = []; fid_navmess = []; fid_corr2brdc = [];
@@ -98,9 +98,9 @@ elseif settings.PROC.timeSpan_format_epochs
     settings.PROC.epochs(1) = floor(settings.PROC.timeFrame(1));    % round to be on the safe side
     settings.PROC.epochs(2) = ceil (settings.PROC.timeFrame(2));
 elseif settings.PROC.timeSpan_format_SOD
-    settings.PROC.epochs = sod2epochs(RINEX, obs.epochheader, settings.PROC.timeFrame, obs.rinex_version);  
+    settings.PROC.epochs = sod2epochs(OBSDATA, obs.newdataepoch, settings.PROC.timeFrame, obs.rinex_version);  
 elseif settings.PROC.timeSpan_format_HOD
-    settings.PROC.epochs = sod2epochs(RINEX, obs.epochheader, settings.PROC.timeFrame*3600, obs.rinex_version);   % *3600 in order to convert from seconds to hours
+    settings.PROC.epochs = sod2epochs(OBSDATA, obs.newdataepoch, settings.PROC.timeFrame*3600, obs.rinex_version);   % *3600 in order to convert from seconds to hours
 end
 % convert start of fixing from minutes (GUI) to epochs for calculations
 if settings.AMBFIX.bool_AMBFIX
@@ -119,7 +119,7 @@ end
 % create init_ambiguities
 init_ambiguities = NaN(3, 399);     % columns = satellites, rows = frequencies
 
-% initialize matrices for Hatch-Melbourne-Wübbenab (HMW) LC between
+% initialize matrices for Hatch-Melbourne-Wübbena (HMW) LC between
 % different frequencies, e.g., for GPS L1-L2-L5 processing
 HMW_12 = []; HMW_23 = []; HMW_13 = [];
 if settings.AMBFIX.bool_AMBFIX
@@ -164,7 +164,6 @@ if bool_print
 end
 
 
-
 %% -+-+-+-+-+-EPOCH-WISE CALCULATION-+-+-+-+-+-
 for q = q_range         % loop over epochs
     
@@ -179,9 +178,9 @@ for q = q_range         % loop over epochs
     [Epoch] = EpochlyReset_Epoch(Epoch);
     
     n = settings.PROC.epochs(1) + q - 1;        
-    if ~settings.INPUT.bool_realtime
+    if ~settings.INPUT.bool_realtime && ~settings.INPUT.rawDataAndroid
         % post-processing: check if end of file is reached
-        if n > length(obs.epochheader)
+        if n > length(obs.newdataepoch)
             settings.PROC.epochs(2) = settings.PROC.epochs(1) + q - 2;
             q = q - 1;          %#ok<FXSET>
             Epoch.q = q;
@@ -193,12 +192,18 @@ for q = q_range         % loop over epochs
        
     % ----- real-time processing: get RINEX observation data -----
     if settings.INPUT.bool_realtime
-        [RINEX, fid_obs, fid_navmess, fid_corr2brdc, input, obs] = ...
+        [OBSDATA, fid_obs, fid_navmess, fid_corr2brdc, input, obs] = ...
             ReadRinexRealTime(settings, input, obs, start_sow, fid_obs, fid_navmess, fid_corr2brdc);        
     end
     
-    % ----- read in epoch data from RINEX observation file -----
-    [Epoch] = RINEX2epochData(RINEX, obs.epochheader, Epoch, n, obs.no_obs_types, obs.rinex_version, settings);
+    % ----- read in epoch data -----
+    if ~settings.INPUT.rawDataAndroid       % from RINEX observation file
+        [Epoch] = RINEX2Epoch(OBSDATA, obs.newdataepoch, Epoch, n, obs.no_obs_types, obs.rinex_version, settings);
+    else                                % from Android raw sensor data
+        [Epoch] = RawSensor2Epoch(OBSDATA, obs.newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column);
+    end
+    
+    % ----- check usability of epoch -----
     if ~Epoch.usable
         if bool_print
             fprintf('Epoch %d is skipped (not usable based on RINEX header)            \n', q)
@@ -207,7 +212,7 @@ for q = q_range         % loop over epochs
         continue
     end
     
-    % reset solution
+    % ----- reset solution -----
     [Adjust, Epoch, settings, HMW_12, HMW_23, HMW_13, storeData, init_ambiguities] = ...
         resetSolution(Adjust, Epoch, settings, HMW_12, HMW_23, HMW_13, storeData, obs.interval, init_ambiguities);
     
@@ -280,7 +285,7 @@ for q = q_range         % loop over epochs
     
     % --- Adjust phase data to Code to limit the ambiguities ---
     if strcmpi(settings.PROC.method, 'Code + Phase') && settings.PROC.AdjustPhase2Code
-        [init_ambiguities, Epoch] = AdjustPhase2Code(Epoch, init_ambiguities, Epoch.old.sats);
+        [init_ambiguities, Epoch] = AdjustPhase2Code(Epoch, init_ambiguities);
     end
     
     % --- get and apply satellite biases for current epoch ---

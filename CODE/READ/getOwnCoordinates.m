@@ -87,7 +87,7 @@ end
 stations_found = stations(xyz_found);
 n = numel(stations_found);
 if n > 0
-    fprintf('The following station were found in Coords.txt:\n');
+    fprintf('Following station(s) found in Coords.txt:\n');
     for i = 1:n
         fprintf('%s ', stations_found{i});
         if mod(i,10)==0; fprintf('\n'); end

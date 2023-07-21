@@ -18,11 +18,17 @@ function Epoch = cycleSlip_TimeDifference(Epoch, use_column, settings)
 
 
 % get raw phase-observations on 1st frequency for current epoch [m]
-L1_gps = Epoch.obs(Epoch.gps, use_column{1,4});
-L1_glo = Epoch.obs(Epoch.glo, use_column{2,4});
-L1_gal = Epoch.obs(Epoch.gal, use_column{3,4});
-L1_bds = Epoch.obs(Epoch.bds, use_column{4,4});
-L1  = [L1_gps; L1_glo; L1_gal; L1_bds]; 	
+L1_gps = Epoch.obs(Epoch.gps, use_column{1,1});
+L1_glo = Epoch.obs(Epoch.glo, use_column{2,1});
+L1_gal = Epoch.obs(Epoch.gal, use_column{3,1});
+L1_bds = Epoch.obs(Epoch.bds, use_column{4,1});
+L1  = [L1_gps; L1_glo; L1_gal; L1_bds]; 
+if ~settings.INPUT.rawDataAndroid
+    % convert phase to [m] if necessary (e.g., RINEX file)
+    lambda_1 = Const.C ./ Epoch.f1;     % wavelength [m]
+    L1 = L1 .* lambda_1;                % convert from [cy] to [m]
+end
+	
 
 % move phase observations of past epochs "down"
 Epoch.cs_phase_obs(2:end,:) = Epoch.cs_phase_obs(1:end-1,:);  

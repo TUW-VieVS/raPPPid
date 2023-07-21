@@ -1,4 +1,4 @@
-function  [input, obs, settings, RINEX] = readAllInputFiles(settings)
+function  [input, obs, settings, OBSDATA] = readAllInputFiles(settings)
 
 % Reads in all input files: o-file, navigation-files, correction-stream to
 % broadcast-orbits, precise ephemeris, precise clocks, ionex-file,
@@ -17,21 +17,37 @@ input = []; Biases = [];
 
 %% Files - Set input files
 
-% Read the header of the observation file
-obs = anheader(settings);
-glo_channels = settings.INPUT.use_GLO & any(isnan(obs.glo_channel));
+% Analyze header of observation file
+settings.INPUT.rawDataAndroid = false;
+obs = anheader(settings);       % read the header of RINEX observation file
+if isempty(obs)
+    % no RINEX file -> analyze the Android raw sensor data file
+    obs = analyzeAndroidRawData(settings.INPUT.file_obs, settings);
+    settings.INPUT.rawDataAndroid = true;
+end
 
-% Looking for the observation types and the right column number
+
+% Look for the observation types and the corresponding column number
+% (create obs.use_column)
 obs = find_obs_col(obs, settings);
+% save and print information to obs and command window
+obs = SavePrintObsType(obs, settings);
 
 % Read-in RINEX observation file in the case of postprocessing
 if ~settings.INPUT.bool_realtime
-    [RINEX, obs.epochheader] = readRINEX(settings.INPUT.file_obs, obs.rinex_version);
-    if settings.PROC.timeFrame(2) == 999999        % processing till end of RINEX file
-        settings.PROC.timeFrame(2) = numel(obs.epochheader);   % process all epochs of RINEX file
+    if ~settings.INPUT.rawDataAndroid
+        % RINEX file
+        [OBSDATA, obs.newdataepoch] = readRINEX(settings.INPUT.file_obs, obs.rinex_version);
+    else
+        % raw sensor data from Android (e.g., smartphone)
+        [OBSDATA, obs.newdataepoch] = readAndroidRawSensorData(settings.INPUT.file_obs, obs.vars_raw);
+    end
+    if settings.PROC.timeFrame(2) == 999999        % processing till end of observation file
+        % determine number of epochs to process all epochs contained in observation file
+        settings.PROC.timeFrame(2) = numel(obs.newdataepoch) - 1;
     end
 else
-    RINEX = {}; obs.epochheader = [];
+    OBSDATA = {}; obs.newdataepoch = [];
 end
 
 % Start-date in different time-formats
@@ -41,11 +57,14 @@ obs.startdate_jd = cal2jd_GT(obs.startdate(1),obs.startdate(2), obs.startdate(3)
 [obs.doy, ~] = jd2doy_GT(obs.startdate_jd);
 % print startdate of observation file
 if bool_print
-    fprintf('\nRINEX observation start:\n')
+    fprintf('\nObservation start:\n')
     t = datetime(obs.startdate(1), obs.startdate(2), obs.startdate(3), ...
         obs.startdate(4), obs.startdate(5), obs.startdate(6), 'Format', 'yyyy-MM-dd HH:mm:ss.SSS');
     fprintf('  %s | %d/%d | %d/%03d\n\n', t, obs.startGPSWeek, floor(obs.startSow/86400), obs.startdate(1), floor(obs.doy))
 end
+
+% check if GLONASS channels could be detected (e.g., RINEX header)
+glo_channels = settings.INPUT.use_GLO & any(isnan(obs.glo_channel));
 
 % automatic download of the files which are needed for processing and some
 % changes (filepaths and booleans) in the struct settings for the futher processing
@@ -189,7 +208,7 @@ end
 % Assign code and phase biases from recorded correction-stream to observation types
 if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && ~settings.INPUT.bool_realtime && ...
         (settings.BIASES.code_corr2brdc_bool || settings.BIASES.phase_corr2brdc_bool)
-    if obs.rinex_version >= 3       % 3-digit-obs-types from Rinex 3 onwards
+    if obs.rinex_version >= 3 || obs.rinex_version == 0  	% 3-digit-obs-types from Rinex 3 onwards
         [obs] = assign_corr2brdc_biases(obs, input, settings);
     else                            % Rinex 2 observation file (2-digit-obs-types)
         [obs] = assign_corr2brdc_biases_rinex2(obs, input);
@@ -200,67 +219,46 @@ end
 
 %% Models - Troposphere
 
-% read the V3GR file(s)
 if ~(strcmpi(settings.TROPO.zhd,'no')   &&   strcmpi(settings.TROPO.zwd,'no'))
-    if strcmpi(settings.TROPO.zhd,'VMF3')   ||   strcmpi(settings.TROPO.zwd,'VMF3')   ||   strcmpi(settings.TROPO.mfh,'VMF3')   ||   strcmpi(settings.TROPO.mfw,'VMF3')   ||   strcmpi(settings.TROPO.Gh,'GRAD')   ||   strcmpi(settings.TROPO.Gw,'GRAD')
-        
+    
+    % read the V3GR file(s)
+    if strcmpi(settings.TROPO.zhd,'VMF3') || strcmpi(settings.TROPO.zwd,'VMF3') || ...
+            strcmpi(settings.TROPO.mfh,'VMF3') ||   strcmpi(settings.TROPO.mfw,'VMF3') || ...
+            strcmpi(settings.TROPO.Gh,'GRAD')  ||   strcmpi(settings.TROPO.Gw,'GRAD')
         % only proceed if the year is >= 1980 and the date is at least 2 days behind the current date, otherwise use GPT3
         current_time = clock;
         current_jd = cal2jd_GT(current_time(1),current_time(2),current_time(3));
         if obs.startdate(1) < 1980   ||   obs.startdate_jd+2 > current_jd
-            
-            if obs.startdate(1) < 1980
+            % GPT3 has to be used because VMF3 is not available yet
+            if obs.startdate(1) < 1980              % print info to command window
                 fprintf('%s%4.0f%s\n' , 'No VMF3 data available for the year ',obs.startdate(1),' => GPT3 used instead!');
             elseif obs.startdate_jd+2 > current_jd
                 fprintf('%s\n' , 'VMF3 data is only available with 1 day latency => GPT3 used instead!');
             end
-            
-            if strcmpi(settings.TROPO.zhd,'VMF3')
-                settings.TROPO.zhd = 'p (GPT3) + Saastamoinen';
-            end
+            if strcmpi(settings.TROPO.zhd,'VMF3') 	% overwrite settings
+                settings.TROPO.zhd = 'p (GPT3) + Saastamoinen';     end
             if strcmpi(settings.TROPO.zwd,'VMF3')
-                settings.TROPO.zwd = 'e (GPT3) + Askne';
-            end
+                settings.TROPO.zwd = 'e (GPT3) + Askne';            end
             if strcmpi(settings.TROPO.mfh,'VMF3')
-                settings.TROPO.mfh = 'GPT3';
-            end
+                settings.TROPO.mfh = 'GPT3';                        end
             if strcmpi(settings.TROPO.mfw,'VMF3')
-                settings.TROPO.mfw = 'GPT3';
-            end
+                settings.TROPO.mfw = 'GPT3';                        end
             if strcmpi(settings.TROPO.Gh,'GRAD')
-                settings.TROPO.Gh = 'GPT3';
-            end
+                settings.TROPO.Gh = 'GPT3';                         end
             if strcmpi(settings.TROPO.Gw,'GRAD')
-                settings.TROPO.Gw = 'GPT3';
-            end
+                settings.TROPO.Gw = 'GPT3';                         end
             
         else
-            
-            input = get_V3GR(obs, input, settings);    % call the function which handles VMF3+GRAD
-            
+            % call the function which handles VMF3+GRAD
+            input = get_V3GR(obs, input, settings);
         end
         
-    end
-end
-
-
-% Check if the in situ meteo values are realistic and give messages, if not
-if (settings.TROPO.p<300   ||   settings.TROPO.p>1150)
-    answer = questdlg('The inserted in situ pressure is unrealistic. Do you really want to continue?');
-    if ~strcmpi(answer,'yes')
-        error('The execution was stopped by the user.');
-    end
-end
-if (settings.TROPO.T<-60   ||   settings.TROPO.T>55)
-    answer = questdlg('The inserted in situ temperature is unrealistic. Do you really want to continue?');
-    if ~strcmpi(answer,'yes')
-        error('The execution was stopped by the user.');
-    end
-end
-if (settings.TROPO.q<0   ||   settings.TROPO.q>100)
-    answer = questdlg('The inserted in situ relative humidity is unrealistic. Do you really want to continue?');
-    if ~strcmpi(answer,'yes')
-        error('The execution was stopped by the user.');
+        % get and read the files for VMF1
+        if strcmpi(settings.TROPO.zhd,'VMF1') || strcmpi(settings.TROPO.zwd,'VMF1') || ...
+                strcmpi(settings.TROPO.mfh,'VMF1') ||   strcmpi(settings.TROPO.mfw,'VMF1')
+            input = get_VMF1(obs, input, settings);
+        end
+        
     end
 end
 
@@ -288,7 +286,8 @@ if strcmpi(settings.TROPO.zhd,'Tropo file') || strcmpi(settings.TROPO.zwd,'Tropo
 end
 
 
-% read the GPT3 grid (this is done here in the end of the troposphere section, because perhaps GPT3 was defined as backup in the code above)
+% read the GPT3 grid (this is done here in the end of the troposphere 
+% section, because perhaps GPT3 was defined as backup in the code above)
 if strcmpi(settings.TROPO.zhd,'p (GPT3) + Saastamoinen')   ||   strcmpi(settings.TROPO.zwd,'e (GPT3) + Askne')   ||   strcmpi(settings.TROPO.zwd,'e (in situ) + Askne')   ||   strcmpi(settings.TROPO.mfh,'GPT3')   ||   strcmpi(settings.TROPO.mfw,'GPT3')   ||   strcmpi(settings.TROPO.zhd,'Tropo file')   ||   strcmpi(settings.TROPO.Gh,'GPT3')   ||   strcmpi(settings.TROPO.Gw,'GPT3')
     input.TROPO.GPT3.cell_grid = gpt3_5_fast_readGrid;
 end

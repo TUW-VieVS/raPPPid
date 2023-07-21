@@ -31,8 +31,6 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q
         if num_freqs > 2; satellites.D3 = satellites.D3(eps,:); end
     end
     
-    satellites.status = satellites.status(eps,:);
-    
     % storeData
     storeData.float             = storeData.float(eps);
     storeData.param             = storeData.param(eps,:);
@@ -128,6 +126,12 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q
     % multipath detection
     if settings.OTHER.mp_detection
         storeData.mp_C1_diff_n	= storeData.mp_C1_diff_n(eps,:);
+        if num_freqs >= 2
+            storeData.mp_C2_diff_n	= storeData.mp_C2_diff_n(eps,:);
+        end
+        if num_freqs >= 3
+            storeData.mp_C3_diff_n	= storeData.mp_C3_diff_n(eps,:);
+        end
     end
     
     % data from ambiguity fixing
@@ -212,9 +216,9 @@ end
 
 
 % obs
-% obs.epochheader, obs.C1_bias, obs.C2_bias, obs.C3_bias, obs.L1_bias, obs.L2_bias, obs.L3_bias
+% obs.newdataepoch, obs.C1_bias, obs.C2_bias, obs.C3_bias, obs.L1_bias, obs.L2_bias, obs.L3_bias
 if ~settings.EXP.obs_epochheader
-    obs = rmfield(obs, 'epochheader');
+    obs = rmfield(obs, 'newdataepoch');
 end
 if isfield(obs, 'C1_bias') && ~settings.EXP.obs_epochheader
     obs = rmfield(obs, 'C1_bias');

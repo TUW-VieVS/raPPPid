@@ -153,7 +153,7 @@ if bool_phase
         Adjust.phase_omc(end, Epoch.sats) = mean(omc_phase_,2, 'omitnan');
     end
     
-    Epoch.sat_status(any(outlier_p,2)) = 11;
+    Epoch.sat_status(outlier_p) = 11;
 
 end
 
@@ -161,6 +161,6 @@ end
 %% save results to Epoch
 Epoch.exclude  = exclude;
 Epoch.cs_found = cs_found;
-Epoch.sat_status(any(outlier_c,2)) = 11;
+Epoch.sat_status(outlier_c) = 11;
 
 

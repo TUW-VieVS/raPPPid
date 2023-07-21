@@ -26,7 +26,8 @@ function [satellites, storeData, model_save] = ...
 % *************************************************************************
 
 
-proc_frqs = settings.INPUT.proc_freqs;
+proc_frqs = settings.INPUT.proc_freqs;      % number of processed frequencies
+num_frqs = settings.INPUT.num_freqs;        % number of input frequencies
 NO_PARAM = Adjust.NO_PARAM;		% number of estimated parameters
 prns = Epoch.sats;              % prn numbers of satellites
 no_sats = numel(prns);        	% number of satellites in current epoch
@@ -38,7 +39,6 @@ bool_float = Adjust.float;      % true if float position is achieved in current 
 satellites.obs(q,prns)  = Epoch.tracked(prns);  	% save number of epochs satellite is tracked
 satellites.elev(q,prns) = model.el(:,1);	% save elevation of satellites
 satellites.az  (q,prns) = model.az(:,1); 	% save azimuth [°] of satellites
-satellites.status(q,prns) = Epoch.sat_status;
 
 % Save Signal-to-noise ratio
 if ~isempty(Epoch.S1)
@@ -185,9 +185,13 @@ end
 
 %% save multipath detection data
 if settings.OTHER.mp_detection
-    C1_diff_n = diff(Epoch.mp_C1(:,Epoch.sats), settings.OTHER.mp_degree, 1);
-    C1_diff_n_ = abs(C1_diff_n - median(C1_diff_n, 'omitnan')); 
-    storeData.mp_C1_diff_n(q,prns) = C1_diff_n_;
+    storeData.mp_C1_diff_n(q,:) = Epoch.mp_C_diff(1,:);
+    if num_frqs >= 2
+        storeData.mp_C2_diff_n(q,:) = Epoch.mp_C_diff(2,:);
+    end
+    if num_frqs >= 3
+        storeData.mp_C3_diff_n(q,:) = Epoch.mp_C_diff(3,:);
+    end
 end
 
 
@@ -339,6 +343,7 @@ if settings.EXP.model_save
     model_save.Rot_V(q,prns,2)	= model.Rot_V(2,:);
     model_save.Rot_V(q,prns,3)	= model.Rot_V(3,:);
 end
+
 
 
 

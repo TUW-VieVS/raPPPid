@@ -31,11 +31,16 @@ L1_glo = Epoch.obs(Epoch.glo, use_column{2,4});
 L1_gal = Epoch.obs(Epoch.gal, use_column{3,4});
 L1_bds = Epoch.obs(Epoch.bds, use_column{4,4});
 L1  = [L1_gps; L1_glo; L1_gal; L1_bds];
+if ~settings.INPUT.rawDataAndroid
+    % convert phase to [m] if necessary (e.g., RINEX file)
+    lambda_1 = Const.C ./ Epoch.f1;     % wavelength [m]
+    L1 = L1 .* lambda_1;                % convert from [cy] to [m]
+end
 
 % calculate L1-C1 over epochs, kind of GF-LC [m]
 Epoch.cs_L1C1(2:end,:) = Epoch.cs_L1C1(1:end-1,:);      % "move past epochs down"
 Epoch.cs_L1C1(1,:) = NaN;           % overwrite old values
-Epoch.cs_L1C1(1,sats) = L1 - C1;    % save L1-C1 of current epoch
+Epoch.cs_L1C1(1,sats) = L1 - C1;    % save L1-C1 of current epoch [m]
 
 % find biggest possible window size for each satellite
 windowSize = zeros(1,numel(sats));

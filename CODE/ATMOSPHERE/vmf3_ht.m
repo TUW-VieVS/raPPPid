@@ -1,7 +1,8 @@
 function [mfh, mfw] = vmf3_ht(ah, aw, mjd, lat, lon, h_ell, el)
 
 % vmf3_ht.m
-      
+% slightly modified!
+% 
 %     !!! This is the version with height correction !!!  
 %     !!! It has to be used with the grid !!!   
 %

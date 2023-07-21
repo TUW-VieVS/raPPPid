@@ -5,6 +5,11 @@ function Epoch = cycleSlip_articifial(Epoch, use_column)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
+
+% ATTENTION:
+% if settings.INPUT.rawDataAndroid phase observations in Epoch.obs are in [m]
+
+
 cs_on = false;
 
 if cs_on

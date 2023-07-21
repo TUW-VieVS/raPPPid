@@ -32,7 +32,7 @@ if all(precEph.t(:,sv) == 0)     % no precise ephemeris data for this satellite 
 %     end
     X = NaN(3,1); V = NaN(3,1);
     cutoff = true;
-    status = 6;
+    status(:) = 6;
     return
 end
 
@@ -76,7 +76,7 @@ if isempty(epochs) || any((X_ipol == 0) | (Y_ipol == 0) | (Z_ipol == 0))
     end
     X = NaN(3,1); V = NaN(3,1);
     cutoff = true;
-    status = 6;
+    status(:) = 6;
     return
 end
 

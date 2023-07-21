@@ -5,6 +5,7 @@ function [] = DownloadHourly01sIGS(stations, hours, doys, year)
 % The stations of which data should be downloaded can be either delivered as
 % cell or entered in the IGS_r3_stations.txt (same folder as this function)
 % open('..\CODE\OBSERVATIONS\ObservationDownload\IGS_r3_highrate_stations.txt')
+% 
 % Example call: 
 % DownloadHourly01sIGS('', [], 001, 2020)
 % DownloadHourly01sIGS('BRUX00BEL_S_', [], 160, 2022)

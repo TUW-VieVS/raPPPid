@@ -28,23 +28,30 @@ FTP_h_ign = 'igs.ign.fr:21';
 FTP_f_ign = {['/pub/igs/data/' yyyy '/' doy '/']};
 % define alternative FTP host and folder
 FTP_h_esa = 'gssc.esa.int:21';
-FTP_f_esa = {['/gnss/data/daily/', yyyy, '/', doy, '/']};
+FTP_f_esa = {['/gnss/data/daily/', yyyy, '/brdc/']};
 % define alternative FTP host and folder
 URL_cddis = 'https://cddis.nasa.gov'; 
-folder_cddis = ['/archive/gnss/data/daily/' yyyy '/' doy '/' yyyy(3:4) 'p'];  
+folder_cddis = ['/archive/gnss/data/daily/' yyyy '/brdc/'];  
 
 % booleans for sources
-bool_ign = true;
-bool_esa = true;
-bool_cddis = true;
+bool_ign = true; bool_esa = true; bool_cddis = true;
+file_status = 0;
 
 switch option
     case 'IGS'
-        file = {['BRDC00IGS_R_', yyyy, doy, '0000', '_01D_MN.rnx.gz']};
+        file = {['BRDC00IGS_R_' yyyy doy '0000_01D_MN.rnx.gz']};
         
     case 'IGN'
-        file = {['BRDC00IGN_R_', yyyy, doy, '0000', '_01D_MN.rnx.gz']};
+        file = {['BRDC00IGN_R_' yyyy doy '0000_01D_MN.rnx.gz']};
         bool_esa = false; bool_cddis = false;
+    case 'DLR, BRD4'
+        file = {['BRD400DLR_S_' yyyy doy '0000_01D_MN.rnx.gz']};
+        bool_ign = false;
+    case 'DLR, BRDM'
+        file = {['BRDM00DLR_S_' yyyy doy '0000_01D_MN.rnx.gz']};
+        bool_ign = false;
+    otherwise
+        errordlg({'DownloadBrdcNavMess.m failed. Please', 'specify a different navigation file!'}, 'Error');
 end
 
 % try to download from igs.ign.fr

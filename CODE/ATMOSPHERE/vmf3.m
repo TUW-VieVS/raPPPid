@@ -1,7 +1,8 @@
 function [mfh, mfw] = vmf3(ah, aw, mjd, lat, lon, el)
 
 % vmf3.m 
-%
+% slightly modified!
+% 
 % (c) Department of Geodesy and Geoinformation, Vienna University of
 % Technology, 2016
 %

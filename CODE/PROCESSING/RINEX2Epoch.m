@@ -1,4 +1,4 @@
-function [Epoch] = RINEX2epochData(RINEX, epochheader, Epoch, n, ...
+function [Epoch] = RINEX2Epoch(RINEX, epochheader, Epoch, n, ...
     no_obs_types, r_version, settings)
 % This function is called at the beginning of the epoch-wise calculation. 
 % It gets all data from the RINEX file for the current epoch and saves it 
@@ -106,7 +106,7 @@ if r_version == 2
     % check for receiver clock offset is not implemented
     
     % --------- EPOCH DATA ----------
-    no_lines = ceil(no_obs_types(1)/5);         % eventuell ceil(max(No_Obs)/5)
+    no_lines = ceil(no_obs_types(1)/5);         % probably ceil(max(No_Obs)/5)
     OBS = NaN(No_Sv, no_obs_types(1));
     LLI_bit = zeros(No_Sv, no_obs_types(1));
     ss_digit = zeros(No_Sv, no_obs_types(1));

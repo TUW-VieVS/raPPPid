@@ -67,7 +67,6 @@ for i = 1:n
             URL_file = ['igs' yyyy_str(3:4), 'P', gpsweek_str, dow_str, '.ssc.Z'];
             cddis_folder = ['/archive/gnss/products/' gpsweek_str];
         case 'IGS20'
-            % currently (January 2022) no IGS combination is provided yet
             URL_folder = ['/pub/igs/products/', gpsweek_str, '/'];
             URL_file = ['IGS0OPSSNX_' yyyy_str doy_str '0000_01D_01D_CRD.SNX.gz'];
             cddis_folder = ['/archive/gnss/products/' gpsweek_str];

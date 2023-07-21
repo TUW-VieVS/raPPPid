@@ -281,6 +281,8 @@ end
 switch structure.TROPO.zhd
     case 'VMF3'
         set(handles.radiobutton_models_troposphere_zhd_VMF3,       'Value', 1);
+    case 'VMF1'
+        set(handles.radiobutton_models_troposphere_zhd_VMF1,       'Value', 1);
     case 'Tropo file'
         set(handles.radiobutton_models_troposphere_zhd_tropoFile,  'Value', 1);
     case 'p (GPT3) + Saastamoinen'
@@ -295,7 +297,9 @@ end
 
 switch structure.TROPO.mfh
     case 'VMF3'
-        set(handles.radiobutton_models_troposphere_mfh_VMF3, 'Value', 1);
+        set(handles.radiobutton_models_troposphere_mfh_VMF3, 'Value', 1);    
+    case 'VMF1'
+        set(handles.radiobutton_models_troposphere_mfh_VMF1, 'Value', 1);
     case 'GPT3'
         set(handles.radiobutton_models_troposphere_mfh_GPT3, 'Value', 1);
     otherwise
@@ -318,6 +322,8 @@ end
 switch structure.TROPO.zwd
     case 'VMF3'
         set(handles.radiobutton_models_troposphere_zwd_VMF3,       'Value', 1);
+    case 'VMF1'
+        set(handles.radiobutton_models_troposphere_zwd_VMF1,       'Value', 1);
     case 'Tropo file'
         set(handles.radiobutton_models_troposphere_zwd_tropoFile,  'Value', 1);
     case 'e (GPT3) + Askne'
@@ -333,6 +339,8 @@ end
 switch structure.TROPO.mfw
     case 'VMF3'
         set(handles.radiobutton_models_troposphere_mfw_VMF3, 'Value', 1);
+    case 'VMF1'
+        set(handles.radiobutton_models_troposphere_mfw_VMF1, 'Value', 1);
     case 'GPT3'
         set(handles.radiobutton_models_troposphere_mfw_GPT3, 'Value', 1);
     otherwise
@@ -421,7 +429,7 @@ end
 switch structure.IONO.model_ionex
     case 'Source:'
         string_all = get(handles.popupmenu_iono_source,'String');
-        value = find(contains(string_all,num2str(structure.IONO.file_source)));
+        value = find(strcmp(string_all,num2str(structure.IONO.file_source)));
         set(handles.popupmenu_iono_source, 'Value', value);
     case 'Auto-Detection:'
         set(handles.radiobutton_models_ionosphere_ionex_autodetect,'Value', 1);

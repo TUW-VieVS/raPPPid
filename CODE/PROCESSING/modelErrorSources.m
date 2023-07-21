@@ -65,33 +65,31 @@ if isempty(model)
 end
 
 
-% do the following only, if the a priori zenith delays should be modeled at all
+% troposphere: if the a priori zenith delays should be modeled at all
 if ~(strcmpi(settings.TROPO.zhd,'no')   &&   strcmpi(settings.TROPO.zwd,'no'))
     
     % VMF3: interpolate to the respective mjd
-    if strcmpi(settings.TROPO.zhd,'VMF3')   ||   strcmpi(settings.TROPO.zwd,'VMF3')   ||   strcmpi(settings.TROPO.mfh,'VMF3')   ||   strcmpi(settings.TROPO.mfh,'VMF3')
-        ah_VMF3  = interp1(input.TROPO.V3GR.data{2},input.TROPO.V3GR.data{3},Epoch.mjd,'spline',9999);
-        aw_VMF3  = interp1(input.TROPO.V3GR.data{2},input.TROPO.V3GR.data{4},Epoch.mjd,'spline',9999);
-        zhd_VMF3 = interp1(input.TROPO.V3GR.data{2},input.TROPO.V3GR.data{5},Epoch.mjd,'spline',9999);
-        zwd_VMF3 = interp1(input.TROPO.V3GR.data{2},input.TROPO.V3GR.data{6},Epoch.mjd,'spline',9999);
-        
-        if ah_VMF3==9999   ||   aw_VMF3==9999   ||   zhd_VMF3==9999   ||   zwd_VMF3==9999      % actually, this should never happen
-            errordlg('The interpolation of VMF3 failed because the mjd is out of bounds. Check the code in readAllInputFiles.m!')
-            error('The interpolation of VMF3 failed because the mjd is out of bounds. Check the code in readAllInputFiles.m!')
-        end
+    if strcmpi(settings.TROPO.zhd,'VMF3') || strcmpi(settings.TROPO.zwd,'VMF3') || strcmpi(settings.TROPO.mfh,'VMF3') || strcmpi(settings.TROPO.mfh,'VMF3')
+        ah_VMF3  = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{3}, Epoch.mjd, 'spline', 9999);
+        aw_VMF3  = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{4}, Epoch.mjd, 'spline', 9999);
+        zhd_VMF3 = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{5}, Epoch.mjd, 'spline', 9999);
+        zwd_VMF3 = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{6}, Epoch.mjd, 'spline', 9999);
     end
+    
+    % VMF1: interpolate to the respective mjd
+    if strcmpi(settings.TROPO.zhd,'VMF1') || strcmpi(settings.TROPO.zwd,'VMF1') || strcmpi(settings.TROPO.mfh,'VMF1') || strcmpi(settings.TROPO.mfh,'VMF1')
+        ah_VMF1  = interp1(input.TROPO.VMF1.data{2}, input.TROPO.VMF1.data{3}, Epoch.mjd, 'spline', 9999);
+        aw_VMF1  = interp1(input.TROPO.VMF1.data{2}, input.TROPO.VMF1.data{4}, Epoch.mjd, 'spline', 9999);
+        zhd_VMF1 = interp1(input.TROPO.VMF1.data{2}, input.TROPO.VMF1.data{5}, Epoch.mjd, 'spline', 9999);
+        zwd_VMF1 = interp1(input.TROPO.VMF1.data{2}, input.TROPO.VMF1.data{6}, Epoch.mjd, 'spline', 9999);
+    end    
     
     % GRAD: interpolate to the respective mjd
     if strcmpi(settings.TROPO.Gh,'GRAD')   ||   strcmpi(settings.TROPO.Gw,'GRAD')
-        Gn_h_GRAD = interp1(input.TROPO.V3GR.data{2},input.TROPO.V3GR.data{10},Epoch.mjd,'spline',9999)/1000;   % [mm] --> [m]
-        Ge_h_GRAD = interp1(input.TROPO.V3GR.data{2},input.TROPO.V3GR.data{11},Epoch.mjd,'spline',9999)/1000;   % [mm] --> [m]
-        Gn_w_GRAD = interp1(input.TROPO.V3GR.data{2},input.TROPO.V3GR.data{12},Epoch.mjd,'spline',9999)/1000;   % [mm] --> [m]
-        Ge_w_GRAD = interp1(input.TROPO.V3GR.data{2},input.TROPO.V3GR.data{13},Epoch.mjd,'spline',9999)/1000;   % [mm] --> [m]
-        
-        if Gn_h_GRAD==9999   ||   Ge_h_GRAD==9999   ||   Gn_w_GRAD==9999   ||   Ge_w_GRAD==9999      % actually, this should never happen
-            errordlg('The interpolation of GRAD failed because the mjd is out of bounds. Check the code in readAllInputFiles.m!')
-            error('The interpolation of GRAD failed because the mjd is out of bounds. Check the code in readAllInputFiles.m!')
-        end
+        Gn_h_GRAD = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{10}, Epoch.mjd, 'spline', 9999)/1000;   % [mm] --> [m]
+        Ge_h_GRAD = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{11}, Epoch.mjd, 'spline', 9999)/1000;   % [mm] --> [m]
+        Gn_w_GRAD = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{12}, Epoch.mjd, 'spline', 9999)/1000;   % [mm] --> [m]
+        Ge_w_GRAD = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{13}, Epoch.mjd, 'spline', 9999)/1000;   % [mm] --> [m]
     end
 
     
@@ -125,10 +123,10 @@ for i_sat = 1:num_sat
         e3 = (y2.^2 -y2.*y3 -y3 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
     end
     % initialize
-    dT_rel = 0;     dt_rx = 0;      mfw_VMF3 = [];
+    dT_rel = 0;     mfw_VMF3 = [];     mfw_VMF1 = [];     mfw_GPT3 = [];
     % get cutoff (could be already set!) and satellite status
-    exclude = Epoch.exclude(i_sat);	status = Epoch.sat_status(i_sat);
-    % receiver clock offset [s]
+    exclude = Epoch.exclude(i_sat);	status = Epoch.sat_status(i_sat,:);
+    % receiver clock error [s]
 	dt_rx = (param(5) + isGLO*param(8) + isGAL*param(11) + isBDS*param(14))/Const.C;      
     
     %% get input data and frequency indices depending on GNSS of satellite
@@ -197,7 +195,7 @@ for i_sat = 1:num_sat
     if isnan(dT_sat) || dT_sat == 0 || noclock       % no clock correction
         % if ~settings.INPUT.bool_parfor; fprintf('No precise clock data for satellite %d in SOW %0.3f              \n', prn, Ttr); end
         exclude = true;                      % eliminate satellite
-        status = 5;
+        status(:) = 5;
         Epoch.tracked(prn) = 1;             % set epoch counter for this satellite to 1
     end
 
@@ -218,10 +216,10 @@ for i_sat = 1:num_sat
                -sin(omegatau) cos(omegatau)     0;
                 0               0               1];
         X_rot = R3*X;
-        Rot_V = R3*V;
+        V_rot = R3*V;
         
         % --- Relativistic correction ---
-        dT_rel = -2/Const.C^2 * dot2(X_rot, Rot_V);     % [s], ICD GPS, 20.3.3.3.3.1
+        dT_rel = -2/Const.C^2 * dot2(X_rot, V_rot);     % [s], ICD GPS, 20.3.3.3.3.1
         if isGLO && settings.ORBCLK.bool_brdc %&& input.Eph_GLO(3,k) ~= 0  % ||| GLO
             dT_rel = 0;     % already applied in satelliteClock.m
         end
@@ -232,10 +230,10 @@ for i_sat = 1:num_sat
     %% Vectors, Angles, Distance between Receiver and Satellite
     
     % --- Azimuth, Elevation, zenith distance, cutoff-angle ---
-    [az, elev] = topocent(pos_XYZ,X_rot-pos_XYZ); 	% calculate azimuth and elevation [°]
+    [az, elev] = topocent(pos_XYZ, X_rot-pos_XYZ); 	% calculate azimuth and elevation [°]
     if elev < settings.PROC.elev_mask            	% elevation is under cut-off-angle
-        exclude = true;                              % eliminate satellite
-        status = 2;
+        exclude = true;                            	% eliminate satellite
+        status(:) = 2;
     end   
     
     
@@ -249,19 +247,29 @@ for i_sat = 1:num_sat
     % --- Satellite Orientation ---
     if ~settings.ORBCLK.bool_obx || ~isfield(input.ORBCLK, 'OBX')
         SatOr_ECEF = getSatelliteOrientation(X_rot, model.sunECEF*1000);    % satellite orientation in ECEF
+        
     else    % attitude data from ORBEX file
         dt = abs(Ttr - input.ORBCLK.OBX.ATT.sow);
-        % take nearest satellite attitude information (no interpolation)
-        idx = (dt == min(dt));
-        q0 = input.ORBCLK.OBX.ATT.q0(idx,prn);
-        q1 = input.ORBCLK.OBX.ATT.q1(idx,prn);
-        q2 = input.ORBCLK.OBX.ATT.q2(idx,prn);
-        q3 = input.ORBCLK.OBX.ATT.q3(idx,prn);
-        % ||| check interpolation for e.g. high-rate observations (1sec observation interval)
-        %         q0 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q0(:,prn), Ttr);
-        %         q1 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q1(:,prn), Ttr);
-        %         q2 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q2(:,prn), Ttr);
-        %         q3 = interp1(input.ORBCLK.OBX.ATT.sow, input.ORBCLK.OBX.ATT.q3(:,prn), Ttr);
+        if min(dt) < 16     % nearest attitude information is closer than 16 seconds
+            % no interpolation, simply take nearest satellite attitude information
+            idx = (dt == min(dt));
+            q0 = input.ORBCLK.OBX.ATT.q0(idx,prn);
+            q1 = input.ORBCLK.OBX.ATT.q1(idx,prn);
+            q2 = input.ORBCLK.OBX.ATT.q2(idx,prn);
+            q3 = input.ORBCLK.OBX.ATT.q3(idx,prn);
+        else
+            % interpolate between two nearest attitude data entries
+            dtt = Ttr - input.ORBCLK.OBX.ATT.sow;
+            idx1 = find(dtt > 0, 1, 'last');        % index of last attitude 
+            idx2 = find(dtt < 0, 1, 'first');       % index of next attitude 
+            % calculate interval fraction
+            f = (Ttr - input.ORBCLK.OBX.ATT.sow(idx1)) / (input.ORBCLK.OBX.ATT.sow(idx2)-input.ORBCLK.OBX.ATT.sow(idx1));
+            % get last and next quaternion
+            quat_1 = [input.ORBCLK.OBX.ATT.q0(idx1,prn) input.ORBCLK.OBX.ATT.q1(idx1,prn) input.ORBCLK.OBX.ATT.q2(idx1,prn) input.ORBCLK.OBX.ATT.q3(idx1,prn)];
+            quat_2 = [input.ORBCLK.OBX.ATT.q0(idx2,prn) input.ORBCLK.OBX.ATT.q1(idx2,prn) input.ORBCLK.OBX.ATT.q2(idx2,prn) input.ORBCLK.OBX.ATT.q3(idx2,prn)];
+            quat = quatinterp(quat_1, quat_2, f, 'slerp');      % interpolate
+            q0 = quat(1); q1 = quat(2); q2 = quat(3); q3 = quat(4);
+        end
         SatOr_ECEF = NaN(3,3);
         if ~isempty(q0) && ~isempty(q1) && ~isempty(q2) && ~isempty(q3)
             SatOr_ECEF = Quaternion2Matrix(q0(1), q1(1), q2(1), q3(1))';
@@ -296,10 +304,12 @@ for i_sat = 1:num_sat
     
     %% Troposphere
 
-    % Model of Hydrostatic Zenith Delay
+    % Hydrostatic Zenith Delay
     switch settings.TROPO.zhd       
         case 'VMF3'
             zhd = zhd_VMF3;
+        case 'VMF1'
+            zhd = zhd_VMF1;
         case 'Tropo file'
             ztd = interp1(input.TROPO.tropoFile.data(:,3), input.TROPO.tropoFile.data(:,4), mod(round(Epoch.gps_time),86400),'cubic');    % Zenith Total Delay, [m]
             zhd = saasthyd(p_GPT3, pos_WGS84.ph, pos_WGS84.h );
@@ -314,21 +324,29 @@ for i_sat = 1:num_sat
             error('There is something wrong here...') 
     end
     
-    % calculate mf and gradients only if there is a zenith delay modelled at all
+    % Hydrostatic mapping function and gradients
     if ~strcmpi(settings.TROPO.zhd,'no')   
-        switch settings.TROPO.mfh       % Model of hydrostatic mf
+        % hydrostatic mf
+        switch settings.TROPO.mfh       
             case 'VMF3'
                 if strcmpi(input.TROPO.V3GR.version,'sitewise')
-                    [mfh, mfw_VMF3] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, elev*pi/180 );
+                    [mfh, mfw_VMF3] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, elev*pi/180);
                 elseif strcmpi(input.TROPO.V3GR.version,'gridwise')
-                    [mfh, mfw_VMF3] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180 );
+                    [mfh, mfw_VMF3] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180);
+                end
+            case 'VMF1'
+                if strcmpi(input.TROPO.VMF1.version,'sitewise')
+                    [mfh, mfw_VMF1] = vmf1(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.ph, elev*pi/180);
+                elseif strcmpi(input.TROPO.VMF1.version,'gridwise')
+                    [mfh, mfw_VMF1] = vmf1_ht(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.ph, pos_WGS84.h, elev*pi/180);
                 end
             case 'GPT3'
-                [mfh, mfw_GPT3] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180 );
+                [mfh, mfw_GPT3] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180);
             otherwise
                 error('There is something wrong here...')
         end
-        switch settings.TROPO.Gh        % Model of hydrostatic gradient
+        % hydrostatic gradient
+        switch settings.TROPO.Gh        
             case 'GRAD'
                 Gn_h = Gn_h_GRAD;
                 Ge_h = Ge_h_GRAD;
@@ -346,12 +364,13 @@ for i_sat = 1:num_sat
         Gn_h = 0;
         Ge_h = 0;
     end
-    
-    
-    % Model of zenith wet delay    
+
+    % Wet zenith delay    
     switch settings.TROPO.zwd           
         case 'VMF3'
             zwd = zwd_VMF3;
+        case 'VMF1'
+            zwd = zwd_VMF1;
         case 'Tropo file'
             % everything concerning the tropo file was already defined above
         case 'e (GPT3) + Askne'
@@ -365,8 +384,9 @@ for i_sat = 1:num_sat
             error('There is something wrong here...')
     end
 
+    % Wet mapping function and gradients
     if ~strcmpi(settings.TROPO.zwd,'no')   
-        switch settings.TROPO.mfw       % Model of wet mapping function
+        switch settings.TROPO.mfw       % wet mapping function
             case 'VMF3'
                 if ~isempty(mfw_VMF3)           % check if this was already calculated
                     mfw = mfw_VMF3;
@@ -375,8 +395,16 @@ for i_sat = 1:num_sat
                 elseif strcmpi(input.TROPO.V3GR.version,'gridwise')
                     [~,mfw] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180);
                 end
+            case 'VMF1'
+                if ~isempty(mfw_VMF1)           % check if this was already calculated
+                    mfw = mfw_VMF1;
+                elseif strcmpi(input.TROPO.VMF1.version,'sitewise')
+                    [~,mfw] = vmf1(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.ph, elev*pi/180);
+                elseif strcmpi(input.TROPO.V3GR.version,'gridwise')
+                    [~,mfw] = vmf1_ht(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.ph, pos_WGS84.h, elev*pi/180);
+                end
             case 'GPT3'
-                if exist('mfw_GPT3', 'var')     % check if this was already calculated
+                if ~isempty(mfw_GPT3)           % check if this was already calculated
                     mfw = mfw_GPT3;
                 else
                     [~,mfw] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180 );
@@ -384,7 +412,8 @@ for i_sat = 1:num_sat
             otherwise
                 error('There is something wrong here...')
         end
-        switch settings.TROPO.Gw        % Model of wet gradient
+        % wet gradient
+        switch settings.TROPO.Gw        
             case 'GRAD'
                 Gn_w = Gn_w_GRAD;
                 Ge_w = Ge_w_GRAD;
@@ -500,7 +529,7 @@ for i_sat = 1:num_sat
                 fprintf('Eclipsing Satellite PRN %d \t                \n', prn)
             end
             exclude = true;              % eliminate satellite
-            status = 13;
+            status(:) = 13;
         end
     end
     
@@ -630,10 +659,10 @@ for i_sat = 1:num_sat
     model.ECEF_X(:,i_sat) = X;          % Sat Position before correcting the earth rotation during runtime tau
     model.ECEF_V(:,i_sat) = V;          % Sat Velocity before correcting the earth rotation during runtime tau
     model.Rot_X(:,i_sat)  = X_rot;      % Sat Position after correcting the earth rotation during runtime tau
-    model.Rot_V(:,i_sat)  = Rot_V;  	% Sat Velocity after correcting the earth rotation during runtime tau  
+    model.Rot_V(:,i_sat)  = V_rot;  	% Sat Velocity after correcting the earth rotation during runtime tau  
     
     Epoch.exclude(i_sat,frqs) = exclude;   	% boolean, true = do not use satellite (e.g. cutoff angle)
-    Epoch.sat_status(i_sat) = status;   
+    Epoch.sat_status(i_sat,:) = status;   
     
 end     % of loop over satellites
 

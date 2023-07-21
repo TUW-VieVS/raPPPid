@@ -69,7 +69,7 @@ for i_sat = 1:num_sat
     end
     dT_rel = 0;
     cutoff = false;                 % cutoff-angle
-    status = Epoch.sat_status(i_sat);
+    status = Epoch.sat_status(i_sat,:);
     dt_rx = (isGAL*param(4) + isGLO*param(5) + isGAL*param(6) + isBDS*param(7))/Const.C;     % receiver clock offset, [s?]
     
     
@@ -85,7 +85,7 @@ for i_sat = 1:num_sat
     if settings.ORBCLK.bool_brdc && isnan(k)      % no ephemeris
         fprintf('No broadcast orbit data for satellite %d in SOW %.3f              \n', prn, Ttr);
         cutoff = true;      % eliminate satellite
-        status = 15;
+        status(:) = 15;
         Epoch.tracked(prn) = 1;
         continue
     end
@@ -97,7 +97,7 @@ for i_sat = 1:num_sat
     if isnan(dT_sat) || dT_sat == 0 || cutoff       % no clock correction
         if ~settings.INPUT.bool_parfor; fprintf('No precise clock data for satellite %d in SOW %0.3f              \n', prn, Ttr); end
         cutoff = true;                      % eliminate satellite
-        status = 5;
+        status(:) = 5;
         Epoch.tracked(prn) = 1;         % set epoch counter for this satellite to 1
     end   
     
@@ -134,7 +134,7 @@ for i_sat = 1:num_sat
     [az, el] = topocent(pos_XYZ,Rot_X-pos_XYZ);     % calculate azimuth and elevation [°]
     if el < settings.PROC.elev_mask         % elevation is under cut-off-angle
         cutoff = true;                      % eliminate satellite
-        status = 2;
+        status(:) = 2;
     end
     % ||| geodetic2aer.m could be used instead (vectoriell)
     
@@ -210,7 +210,7 @@ for i_sat = 1:num_sat
 %            fprintf('Warning! Eclipsing Satellite PRN %d \t                \n', prn)
 %        end
         cutoff = true;              % eliminate satellite
-        status = 13;
+        status(:) = 13;
     end
     
     
@@ -327,7 +327,7 @@ for i_sat = 1:num_sat
     model.Rot_V(:,i_sat)  = Rot_V;  	% Sat Velocity after correcting the earth rotation during runtime tau 
     
     Epoch.exclude(i_sat,frqs) = cutoff;   	% boolean, true = do not use satellites (e.g. under cutoff angle)
-    Epoch.sat_status(i_sat)    = status;   	
+    Epoch.sat_status(i_sat,:) = status;   	
     
 end     % of loop over satellites
 

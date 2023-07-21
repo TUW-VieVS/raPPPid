@@ -77,6 +77,28 @@ switch ext
                 return
         end
         
+    case '.gpx'
+        gpx_data = gpxread(filepath);       % read gpx file
+        % get latitude, longitude, and height
+        lat_wgs84 = gpx_data.Latitude' / 180 * pi;       % convert [°] to [rad]
+        lon_wgs84 = gpx_data.Longitude' / 180 * pi;
+        h_wgs84 = gpx_data.Elevation';
+        % convert to UTM coordinates
+        [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
+        % get utc timestamp of gpx
+        utc = gpx_data.Time;
+        utc = strrep(utc, 'T', ' ');        % there might be a more elegant way to do this conversion
+        utc = strrep(utc, 'Z', '');
+        utc = datetime(utc);
+        % convert utc to gps time
+        utc = hour(utc)*3600 + minute(utc)*60 + second(utc);
+        sod_true = utc' + leap_sec;
+        % exclude NaN values
+        exclude = isnan(sod_true);
+        sod_true(exclude) = [];   lat_wgs84(exclude) = [];
+        lon_wgs84(exclude) = [];    h_wgs84(exclude) = [];
+        East_true(exclude) = []; North_true(exclude) = [];
+        
     otherwise
         pos_ref_geo.ph = NaN;
         pos_ref_geo.la = NaN;

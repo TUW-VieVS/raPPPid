@@ -29,10 +29,20 @@ bool_print = ~settings.INPUT.bool_parfor;
 if settings.ORBCLK.bool_nav_multi || glo_channels
     % open and read file
     fide = fopen(settings.ORBCLK.file_nav_multi);
-    fData = textscan(fide,'%s','Delimiter','\n');   fData = fData{1};
+    NAVDATA = textscan(fide,'%s','Delimiter','\n');   NAVDATA = NAVDATA{1};
     fclose(fide);
-    [input.IONO.klob_coeff, input.nequ_coeff, input.BDGIM_coeff, ....
-        Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi(fData, leap_sec);
+    % choose read-in function depending on RINEX version
+    rversion = str2double(NAVDATA{1}(1));
+    if rversion == 3
+        [input.IONO.klob_coeff, input.nequ_coeff, input.BDGIM_coeff, ....
+            Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi(NAVDATA, leap_sec);
+    elseif rversion >= 4
+        [input.IONO.klob_coeff, input.nequ_coeff, input.BDGIM_coeff, ....
+            Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi_r4(NAVDATA, leap_sec);
+        % ||| implement
+    else
+        errordlg('Check read_brdc.m and version of navigation message!', 'HUGE error');
+    end
 end
 
 

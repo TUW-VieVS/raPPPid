@@ -138,16 +138,23 @@ if bool_BATCH_PROC          % batch processing
     
 else        % Start Processing of single file
     
+
+    
     settings = getSettingsFromGUI(handles);         % get input from GUI and save it in structure "settings"
     save([pwd,   '/', 'settings.mat'], 'settings') 	% save settings from GUI as .mat
+    
+    [~,file,ext] = fileparts(settings.INPUT.file_obs);
     
     % check if settings for processing are valid
     valid_settings = checkProcessingSettings(settings, false);
     if ~valid_settings
         return
     end
+    
+    % manipulate name of processing (e.g., add GNSS at the beginning)
     settings = manipulateProcessingName(settings);
-    [~,file,ext] = fileparts(settings.INPUT.file_obs);
+    
+    % print some information to the command window
     fprintf('\n---------------------------------------------------------------------\n');
     fprintf('%s%s\n\n','Observation file: ',[file ext]);
     

@@ -53,7 +53,7 @@ while 1
         end
     end
     
-    if version == 3 && contains(line, '> ')
+    if version >= 3 && contains(line, '> ')
         linvalues = textscan(line,'%*c %f %f %f %f %f %f %d %2d %f');
         % convert date into gps-time [sow]
         h = linvalues{4} + linvalues{5}/60 + linvalues{6}/3600;         % fractional hour

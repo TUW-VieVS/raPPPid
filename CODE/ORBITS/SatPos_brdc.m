@@ -20,10 +20,8 @@ GM = isGPS*Const.GM + isGALBDS*Const.GM_GAL;
 % earth rotation rate [rad/s]
 we_dot = Const.WE;       
 
-%  Units are either [second], [meter] or [radian]
-%  Assigning the local variables to eph
-% svprn   =  eph(01);     % satellite number
-% af2     =  eph(02);     % clock drift rate
+% Get variables for calculating satellite position from eph, units are 
+% either [second], [meter] or [radian]
 M0      =  eph(03);     % mean anomaly
 roota   =  eph(04);     % square-root of semi-major axis
 deltan  =  eph(05);     % mean motion value
@@ -40,10 +38,6 @@ cis     =  eph(15);     % amplitude of the ....
 Omega0  =  eph(16);     % longitude of the ascending node
 Omegadot=  eph(17);     % rate of the right ascension
 toe     =  eph(18);     % time of ephemeris
-% af0     =  eph(19);     % clock bias
-% af1     =  eph(20);     % clock drift
-% toc     =  eph(21);     % time of clock
-% tgd     =  eph(22);     % time of group delay
 
 % Start coordinate calculation
 A  = roota*roota;      	% semi-major axis

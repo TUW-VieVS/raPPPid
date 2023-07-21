@@ -47,6 +47,7 @@ while true      % loop to read new data lines of textfile
 end
 
 % read-in new navigation message data
+% ||| check rinex version (e.g., 4!)
 [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi(NAVMESS, obs.leap_sec);
 
 % ||| how to obtain broadcasted ionosphere models?

@@ -1,6 +1,7 @@
-function [] = AnalyzeRINEX(settings)
-% This function performs a raw analysis of a RINEX file and, thereby, uses 
-% many function from raPPPid. 
+function [] = AnalyzeObsFile(settings)
+% This function performs a raw analysis of a RINEX file or a file 
+% containing raw Android sensor data and, thereby, uses many function from 
+% raPPPid. 
 % 
 % INPUT:
 %   settings        struct, settings from GUI
@@ -16,19 +17,37 @@ function [] = AnalyzeRINEX(settings)
 
 fprintf('\n--------------------------------------------------------\n\n')
 
+% Create waitbar with option to cancel
+f = waitbar(0,'Reading header...','Name','Analyzing Observation File', 'CreateCancelBtn','setappdata(gcbf,''canceling'',1)');
+setappdata(f,'canceling',0);
 
-% read RINEX header and epochs
-[obs] = anheader(settings);
-[RINEX, epochheader] = readRINEX(settings.INPUT.file_obs, obs.rinex_version);
+% read header
+[obs] = anheader(settings);     % RINEX file
+if isempty(obs)                 % Android raw data
+    [obs] = analyzeAndroidRawData(settings.INPUT.file_obs, settings);
+end
 
+% read observation file
+if obs.rinex_version > 0
+    bool_RINEX = true;      % RINEX file
+    [OBSDATA, newdataepoch] = readRINEX(settings.INPUT.file_obs, obs.rinex_version);
+    n = numel(newdataepoch);
+    fprintf('\nRINEX version: %.2f',  obs.rinex_version_full)
+else
+    bool_RINEX = false;     % raw Android sensor data
+    [OBSDATA, newdataepoch] = readAndroidRawSensorData(settings.INPUT.file_obs, obs.vars_raw);
+    n = numel(newdataepoch) - 1;
+    fprintf('\nRaw Android sensor data')
+end
+    
 % print some information
 fprintf('\nStation: %s',  obs.stationname);
 fprintf('\nReceiver: %s', obs.receiver_type);
 fprintf('\nAntenna: %s',  obs.antenna_type);
 
-% print observation types indicated in RINEX header
-fprintf('\n\nObservation types (RINEX header)\n')
-if obs.rinex_version == 3
+% print observation types (e.g., indicated in RINEX header)
+fprintf('\n\nObservation types (RINEX notation)\n')
+if obs.rinex_version == 3 || obs.rinex_version == 0
     fprintf('GPS: '); print_obs_types(obs.types_gps_3, 3);
     fprintf('GLO: '); print_obs_types(obs.types_glo_3, 3);
     fprintf('GAL: '); print_obs_types(obs.types_gal_3, 3);
@@ -46,16 +65,14 @@ obs.startdate_jd = cal2jd_GT(obs.startdate(1),obs.startdate(2), obs.startdate(3)
 [obs.startGPSWeek, obs.startSow, ~] = jd2gps_GT(obs.startdate_jd);
 [obs.doy, ~] = jd2doy_GT(obs.startdate_jd);
 % print startdate of observation file
-fprintf('\nRINEX observation start:\n')
+fprintf('\nObservation start:\n')
 t = datetime(obs.startdate(1), obs.startdate(2), obs.startdate(3), ...
     obs.startdate(4), obs.startdate(5), obs.startdate(6), 'Format', 'yyyy-MM-dd HH:mm:ss.SSS');
 fprintf('  %s | %d/%d | %d/%03d\n', t, obs.startGPSWeek, floor(obs.startSow/86400), obs.startdate(1), floor(obs.doy))
 
 
-% number of epochs
-n = numel(epochheader);
-fprintf('\n%s%.0f', 'Total number of epochs: ', n);
-fprintf('\n%s%.0f\n', 'Observation interval [s]: ', obs.interval);
+fprintf('\n%s%.0f', 'Total number of epochs: ', n);                     % number of epochs
+fprintf('\n%s%.0f\n', 'Observation interval [s]: ', obs.interval);      % observation interval
 % hardcode some settings
 settings.PROC.timeFrame(2) = 1; settings.PROC.timeFrame(2) = n;
 settings.PROC.epochs(1) = 1; settings.PROC.epochs(2) = n;
@@ -68,23 +85,27 @@ settings.INPUT.proc_freqs = settings.INPUT.num_freqs;
 settings.PROC.method = 'Code + Phase + Doppler';
 settings.IONO.model = 'off';
 settings.EXP.satellites_D = 1;
+settings.INPUT.rawDataAndroid = false;
 
 % Prepare variables
 [Epoch, satellites, storeData, ~, ~, ~] = initProcessing(settings, obs);
 
-% Looking for the observation types and the right column number
+% Looking for the observation types and the right column number (create obs.use_column)
 obs = find_obs_col(obs, settings);
-
-% Create waitbar with option to cancel
-f = waitbar(0,'0%','Name','Analyzing RINEX File', 'CreateCancelBtn','setappdata(gcbf,''canceling'',1)');
-setappdata(f,'canceling',0);
+% save and print information to obs and command window
+obs = SavePrintObsType(obs, settings);
 
 
-%% LOOP OVER RINEX DATA
+%% LOOP OVER OBSERVATION DATA
 for q = 1:n
     % get observations
     [Epoch] = EpochlyReset_Epoch(Epoch);    
-    [Epoch] = RINEX2epochData(RINEX, epochheader, Epoch, q, obs.no_obs_types, obs.rinex_version, settings);
+    if bool_RINEX
+        [Epoch] = RINEX2Epoch(OBSDATA, newdataepoch, Epoch, q, obs.no_obs_types, obs.rinex_version, settings);
+    else
+        [Epoch] = RawSensor2Epoch(OBSDATA, newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column);
+    end
+    
     if ~Epoch.usable
         storeData.gpstime(q,1) = Epoch.gps_time;
         continue
