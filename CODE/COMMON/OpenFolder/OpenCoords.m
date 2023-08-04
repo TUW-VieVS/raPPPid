@@ -12,4 +12,4 @@ function [] = OpenCoords()
 if ~contains(pwd, 'WORK')
     return
 end
-open('..\DATA\COORDS\Coords.txt')
+open('../DATA/COORDS/Coords.txt')

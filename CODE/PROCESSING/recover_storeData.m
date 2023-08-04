@@ -20,7 +20,7 @@ storeData = struct;
 storeData.float_reset_epochs = 1;
 
 %% read out results of float solution from textfile
-floatpath = [folderstring '\results_float.txt'];
+floatpath = [folderstring '/results_float.txt'];
 if isfile(floatpath)
 
     % --- read header ---
@@ -81,7 +81,7 @@ end
 
 
 %% read out results of fixed solution from textfile
-fixedpath = [folderstring '\results_fixed.txt'];
+fixedpath = [folderstring '/results_fixed.txt'];
 if isfile(fixedpath)
     storeData.fixed_reset_epochs = 1;
     

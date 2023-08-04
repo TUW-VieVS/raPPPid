@@ -68,18 +68,21 @@ if settings.ORBCLK.bool_sp3        % precise orbit file
         = prec_satpos(preciseEph, prn, sv, Ttr, exclude, status, bool_print);
 
 else        % calculate satellite position from navigation message
-    if isGPS || isGAL || isBDS
-        if isBDS; Ttr = Ttr - 14; end       % somehow necessary to convert GPST to BDT, ||| check!!
-        [X,V] = SatPos_brdc(Ttr, Eph_brdc(:,k), isGPS, isGAL|isBDS);
+    if isGPS || isGAL
+        [X,V] = SatPos_brdc(Ttr, Eph_brdc(:,k), isGPS, isGAL);
+    elseif isBDS
+        Ttr_ = Ttr - Const.BDST_GPST;        % convert GPST to BDT
+        [X,V] = SatPos_brdc(Ttr_, Eph_brdc(:,k), isGPS, isBDS);
+        % ||| convert from BDCS to WGS84
     elseif isGLO
         [X,V] = SatPos_brdc_GLO(Ttr, prn, input.Eph_GLO);
-        [X] = PZ90toWGS84(X); % very small influence
+        [X] = PZ90toWGS84(X);   % very small influence
         [V] = PZ90toWGS84(V);
     end
-    if settings.ORBCLK.corr2brdc_orb        % corrections to BRDC orbits
+    if settings.ORBCLK.corr2brdc_orb        % apply corrections to BRDC orbits
         dt = Ttr - corr_orb(1); 	% time difference between signal transmission time and orbit correction
-        radial   = corr_orb(2);   along  = corr_orb(3);   outof  = corr_orb(4);
-        v_radial = corr_orb(5); v_along  = corr_orb(6); v_outof  = corr_orb(7);
+        radial   = corr_orb(2);   along  = corr_orb(3);   outof  = corr_orb(4);     % position corrections
+        v_radial = corr_orb(5); v_along  = corr_orb(6); v_outof  = corr_orb(7);     % velocity corrections
         if any(corr_orb ~= 0)
             % corrections at nearest lower time of correction
             dr = [radial; along; outof];            % position-corrections

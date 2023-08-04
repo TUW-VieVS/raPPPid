@@ -38,14 +38,17 @@ if ~settings.INPUT.bool_realtime
     if ~settings.INPUT.rawDataAndroid
         % RINEX file
         [OBSDATA, obs.newdataepoch] = readRINEX(settings.INPUT.file_obs, obs.rinex_version);
+        if settings.PROC.timeFrame(2) == 999999        % processing till end of observation file
+            settings.PROC.timeFrame(2) = numel(obs.newdataepoch);       % determine number of epochs contained in observation file
+        end
     else
         % raw sensor data from Android (e.g., smartphone)
         [OBSDATA, obs.newdataepoch] = readAndroidRawSensorData(settings.INPUT.file_obs, obs.vars_raw);
+        if settings.PROC.timeFrame(2) == 999999        % processing till end of observation file
+            settings.PROC.timeFrame(2) = numel(obs.newdataepoch) - 1; 	% number of all epochs
+        end
     end
-    if settings.PROC.timeFrame(2) == 999999        % processing till end of observation file
-        % determine number of epochs to process all epochs contained in observation file
-        settings.PROC.timeFrame(2) = numel(obs.newdataepoch) - 1;
-    end
+
 else
     OBSDATA = {}; obs.newdataepoch = [];
 end
@@ -484,7 +487,7 @@ input = checkAntex(input, settings, obs.antenna_type);
 if settings.OTHER.ocean_loading
     input.OTHER.OcLoad = read_blq('..\DATA\OceanLoading.blq', obs.stationname);
     if isempty(input.OTHER.OcLoad)
-        settings.OTHER.ocean_loading = false; 	% station was not found in OceanLoading.blq
+        fprintf(2, '\nStation was not found in OceanLoading.blq!\n')
     end
 end
 

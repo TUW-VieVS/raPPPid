@@ -12,7 +12,7 @@ function [] = check_sp3()
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-[FileName, PathName] = uigetfile({'*.sp3*;*.eph*'}, 'Select sp3 to check', [Path.DATA '\ORBIT']);
+[FileName, PathName] = uigetfile({'*.sp3*;*.eph*'}, 'Select sp3 to check', [Path.DATA '/ORBIT']);
 path_sp3 = [PathName FileName];
 
 if ~ischar(FileName) || ~ischar(PathName)

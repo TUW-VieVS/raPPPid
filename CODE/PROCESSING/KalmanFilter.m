@@ -38,7 +38,7 @@ Q_l = Adjust.Q;     % new function createObsCovariance.m is used, overwrite Q_l
 % remove the columns of those parameters which do not contribute to the 
 % adjustment which is somehow necessary
 zero_columns = all(A == 0, 1);                  % check which columns are zero 
-zero_columns(Adjust.NO_PARAM:end) = 0;          % do not remove ambiguities or estimated ionosphere
+zero_columns(Adjust.NO_PARAM+1:end) = 0;        % do not remove ambiguities or estimated ionosphere
 A(:,zero_columns) = [];
 Q_x(:,zero_columns) = [];
 Q_x(zero_columns,:) = [];

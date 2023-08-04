@@ -1,8 +1,9 @@
 function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
     read_nav_multi(NAV, leap_sec)
 % Function to read in a multi GNSS broadcast message file (only for RINEX 3
-% navigation files). Different time-systems are converted into GPS time
-% (seconds of week). 
+% navigation files). GLONASS time is converted in GPS time, while BDS time 
+% is considered during the PPP calculations. 
+% 
 % a detailed description can be found in the Rinex v3 format specifications
 % e.g. RINEX Version 3.03, p.34, https://files.igs.org/pub/data/format/rinex304.pdf
 % 
@@ -25,9 +26,6 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-% ||| BeiDou: not sure about the time system, handled later on, difference
-% GPST and BDT is 14s
-% ||| conversion BDS time into GPS time
 % ||| read in of BDS iono model coefficients is only experimental
 
 % check if data to read (real-time processing)
@@ -494,6 +492,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1};
         toe = lData(1) - 00;       	% time of ephemeris, ||| [s of ??? week]
+        IOD = mod(toe/720,240);     % calculate IOD (IGS SSR v1.00, 7.1)
         cic = lData(2);             % [rad]
         Omega0 = lData(3);          % [rad]
         cis = lData(4);             % [rad]
@@ -557,7 +556,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         Eph_BDS(19,i_bds) = af0;        % [s], sv clock bias
         Eph_BDS(20,i_bds) = af1;        % [s/s], sv clock drift
         Eph_BDS(21,i_bds) = toc;        % [s], seconds of gps-week
-        Eph_BDS(22,i_bds) = 0;          % empty
+        Eph_BDS(22,i_bds) = IOD;        % Issue of Data
         Eph_BDS(23,i_bds) = SatH1;      % satellite health, 0 = good, 1 = not
         Eph_BDS(24,i_bds) = AODE;       % Age of Data
         Eph_BDS(25,i_bds) = tgd1;       % [s], time group delay B1/B3

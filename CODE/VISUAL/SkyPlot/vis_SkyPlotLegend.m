@@ -17,8 +17,8 @@ function handles = vis_SkyPlotLegend(handles, val_min, val_max, LUT)
 % *************************************************************************
 
 
-set(handles.text_snr_max, 'String', sprintf('%d', val_max));    % maximum SNR
-set(handles.text_snr_min, 'String', sprintf('%d', val_min));    % minimum SNR
+set(handles.text_snr_max, 'String', sprintf('%d', val_max));    % maximum C/N0
+set(handles.text_snr_min, 'String', sprintf('%d', val_min));    % minimum C/N0
 axes(handles.axes_legend);
 LUT_legend = flipud(LUT);           % flip for legend
 T(:,1,1) = LUT_legend(:,1);
@@ -35,6 +35,6 @@ ytick_pos = 1:stepsize:no_colors;
 values = val_max:-1:val_min;        % values of colorcoding
 yticks(ytick_pos)                   % set positions of yticks
 str_yticks = sprintfc('%d', values(ytick_pos));
-yticklabels(str_yticks)             % set SNR value as text of yticks
+yticklabels(str_yticks)             % set C/N0 value as text of yticks
 set(gca, 'YAxisLocation', 'right')  % move yticks to the right
 set(gca,'xtick',[]);                % remove any xticks

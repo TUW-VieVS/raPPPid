@@ -1,14 +1,19 @@
-function dx = solid_tides(recECEF, phi, sunECEF, moonECEF)
+function dx = solid_tides(recECEF, lat, lon, sunECEF, moonECEF, mjd)
 % Formulae according to IERS CONVENTIONS 2010 chapter 7 - 
 % first and second degree tidal corrections
 % 
 % INPUT:
 %   recECEF     receiver ECEF coordinates [m]
-%   phi         latitude [rad]
+%   lat         receiver latitude [rad]
+%   lon         receiver longitude [rad]
 %   sunECEF     sun ECEF coordinates [m]
 %   moonECEF   	moon ECEF coordinates [m]
+%   mjd        	modified julian date
 % OUTPUT:
 %   dx          displacement vector in ECEF [m]
+% 
+% Revision:
+%   2023/07/26, MFG: adding height correction term
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -25,8 +30,8 @@ l2 =  0.0002;	% Shida number l0 of degree 2
 l3 =  0.0150;	% Shide number of degree 3 
 
 % corrected love and shida numbers, (7.2)
-h2 = h0 + h2*((3*sin(phi)^2-1)/2);
-l2 = l0 + l2*((3*sin(phi)^2-1)/2);
+h2 = h0 + h2*((3*sin(lat)^2-1)/2);
+l2 = l0 + l2*((3*sin(lat)^2-1)/2);
 
 % calculate distances
 sunDist  = norm(sunECEF, 'fro');            	% receiver to sun
@@ -52,3 +57,7 @@ dx = dx + MS2E * a^5/sunDist^4 *...
           MM2E * a^5/moonDist^4 *...
     (h3*rec_0 * (5/2 * scalMR^3 - 3/2 * scalMR) + l3 * (15/2 * scalMR^2 - 3/2)*(moon_0 - scalMR * rec_0));
 
+% add height correction term [Kouba, A Guide to using International GNSS
+% Service (IGS) Products, 2009 or 2015], last part of equation 21
+GMST = jd2GMST(mjd2jd_GT(mjd));  	% Greenwich mean sidereal time, [rad]
+dx = dx + (-0.025 * sin(lat) * cos(lat) * sin(GMST + lon)) * rec_0;

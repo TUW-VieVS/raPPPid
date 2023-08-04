@@ -47,7 +47,7 @@ switch mf
 end
 
 % calculate ionospheric pierce point
-[Lat_IPP, Lon_IPP] = calcIPP(pos_geo.ph, pos_geo.la, az*pi/180, el*pi/180, H);
+[Lat_IPP, Lon_IPP] = calcIPP(pos_geo.lat, pos_geo.lon, az*pi/180, el*pi/180, H);
 % convert at_IPP and Lon_IPP from radiant to degree
 Lat_IPP = Lat_IPP/pi*180;
 Lon_IPP = Lon_IPP/pi*180;

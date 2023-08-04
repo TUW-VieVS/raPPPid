@@ -47,14 +47,20 @@ switch prec_prod_source
         end
         
     case 'CNES'
-            handles.radiobutton_prec_prod_final.Enable = 'On';
-            handles.radiobutton_prec_prod_rapid.Enable = 'Off';
-            handles.radiobutton_prec_prod_ultrarapid.Enable = 'Off';
+        handles.radiobutton_prec_prod_final.Enable = 'On';
+        handles.radiobutton_prec_prod_rapid.Enable = 'Off';
+        handles.radiobutton_prec_prod_ultrarapid.Enable = 'Off';
         
     case 'CODE'
-            handles.radiobutton_prec_prod_final.Enable = 'On';
+        handles.radiobutton_prec_prod_final.Enable = 'On';
+        if handles.checkbox_MGEX.Value
             handles.radiobutton_prec_prod_rapid.Enable = 'Off';
             handles.radiobutton_prec_prod_ultrarapid.Enable = 'Off';
+        else
+            handles.radiobutton_prec_prod_rapid.Enable = 'On';
+            handles.radiobutton_prec_prod_ultrarapid.Enable = 'On';
+        end
+        
         
     case 'GFZ'
         if handles.checkbox_MGEX.Value
@@ -83,9 +89,15 @@ switch prec_prod_source
         handles.uibuttongroup_prec_prod_type.Visible = 'Off';
         handles.checkbox_MGEX.Value = 1;
         
+    case 'JGX'
+        handles.radiobutton_prec_prod_final.Enable = 'On';
+        handles.radiobutton_prec_prod_rapid.Enable = 'On';
+        handles.radiobutton_prec_prod_ultrarapid.Enable = 'Off';
+        handles.checkbox_MGEX.Visible = 'Off';
+        
     case 'manually'
         handles.checkbox_MGEX.Visible = 'Off';
-        handles.uibuttongroup_prec_prod_type.Visible = 'Off';
+        handles.uibuttongroup_prec_prod_type.Visible = 'Off';    
         
     otherwise
         % nothing to do here

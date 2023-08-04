@@ -179,11 +179,15 @@ fprintf(fileID,'%s\n', 'Troposphere:');
 fprintf(fileID,'  %s%s\n','zhd: ',settings.TROPO.zhd);
 if strcmpi(settings.TROPO.zhd,'p (in situ) + Saastamoinen')
     fprintf(fileID,'    %s%7.2f%s\n','p: ',settings.TROPO.p,' hPa');
+elseif strcmpi(settings.TROPO.zhd,'Tropo file') && strcmpi(settings.TROPO.tropo_file,'manually')
+    fprintf(fileID,'    %s: %s\n', 'manually', settings.TROPO.tropo_filepath);
 end
 fprintf(fileID,'  %s%s\n','zwd: ',settings.TROPO.zwd);
 if strcmpi(settings.TROPO.zwd,'e (in situ) + Askne')
     fprintf(fileID,'    %s%5.2f%s\n','q: ',settings.TROPO.q,' %');
     fprintf(fileID,'    %s%6.2f%s\n','T: ',settings.TROPO.T,' °C');
+elseif strcmpi(settings.TROPO.zwd,'Tropo file') && strcmpi(settings.TROPO.tropo_file,'manually')
+    fprintf(fileID,'    %s: %s\n', 'manually', settings.TROPO.tropo_filepath);    
 end
 fprintf(fileID,'  %s%s\n','mfh: ',settings.TROPO.mfh);
 fprintf(fileID,'  %s%s\n','mfw: ',settings.TROPO.mfw);
@@ -319,9 +323,9 @@ elseif settings.ADJ.weight_elev
     fprintf(fileID,'%s%s\n','Elevation, function: ', strrep(func2str(settings.ADJ.elev_weight_fun), '@(e)', ''));
 elseif settings.ADJ.weight_sign_str
     if ischar(settings.ADJ.snr_weight_fun)
-        fprintf(fileID,'%s%s\n','SNR: ', settings.ADJ.snr_weight_fun);
+        fprintf(fileID,'%s%s\n','C/N0: ', settings.ADJ.snr_weight_fun);
     else
-        fprintf(fileID,'%s%s\n','SNR, function: ', strrep(func2str(settings.ADJ.snr_weight_fun), '@(snr)', ''));
+        fprintf(fileID,'%s%s\n','C/N0, function: ', strrep(func2str(settings.ADJ.snr_weight_fun), '@(snr)', ''));
     end
 elseif settings.ADJ.weight_none
     fprintf(fileID,'%s\n','None');
@@ -500,7 +504,7 @@ end
 
 fprintf(fileID,'  Satellite Exclusion Criteria:\n');
 fprintf(fileID,'    %s%d%s\n', 'Elevation Cutoff: ',settings.PROC.elev_mask,' [°]');
-fprintf(fileID,'    %s%s%s\n', 'SNR Cutoff: ', num2str(settings.PROC.SNR_mask),' [db-Hz]');
+fprintf(fileID,'    %s%s%s\n', 'C/N0 Cutoff: ', num2str(settings.PROC.SNR_mask),' [db-Hz]');
 fprintf(fileID,'    %s%d\n', 'Signal Strength Threshold: ',settings.PROC.ss_thresh);
 if settings.PROC.check_omc
     fprintf(fileID,'    %s\n', 'Check of observed minus (omc) computed is ON.');

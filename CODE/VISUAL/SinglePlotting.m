@@ -67,7 +67,7 @@ if isa(settings.PLOT.pos_true, 'double') || ~isfile(settings.PLOT.pos_true)
     end
     % transform true positions in phi, lambda, h of WGS84 and into UTM
     pos_true_geo = cart2geo(pos_true);   % true ellipsoidal coordinates
-    [North_true, East_true] = ell2utm_GT(pos_true_geo.ph, pos_true_geo.la);   % true UTM North and East coordinates
+    [North_true, East_true] = ell2utm_GT(pos_true_geo.lat, pos_true_geo.lon);   % true UTM North and East coordinates
 else        % reference trajectory
     bool_true_pos = true;
     [pos_true_geo, North_true, East_true] = ...
@@ -135,7 +135,7 @@ if settings.PLOT.map
         velocityPlot(pos_cart, seconds, bool_zero, label_x_sec)
     end
     vis_MaPlot(pos_geo(:,1)*180/pi, pos_geo(:,2)*180/pi, bool_true_pos, ...
-        pos_true_geo.ph*180/pi, pos_true_geo.la*180/pi, station_date, floatfix)
+        pos_true_geo.lat*180/pi, pos_true_geo.lon*180/pi, station_date, floatfix)
 end
 if STOP_CALC; return; end
 

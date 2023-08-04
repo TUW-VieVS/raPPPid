@@ -49,7 +49,7 @@ for i = 1:n
             case 6
                 str_add = 'no satellite orbit';
             case 7
-                str_add = 'below SNR threshold';
+                str_add = 'below C/N0 threshold';
             case 8
                 str_add = 'SSR digit too low';
             case 9

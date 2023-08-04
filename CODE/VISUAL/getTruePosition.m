@@ -15,5 +15,5 @@ end
 % transform true position
 pos_geo_true = cart2geo(xyz_true);      % true ellipsoidal coordinates WGS84
 [North_true, East_true] = ...           % true UTM North and East coordinates
-    ell2utm_GT(pos_geo_true.ph, pos_geo_true.la);
+    ell2utm_GT(pos_geo_true.lat, pos_geo_true.lon);
 pos_cart_true = xyz_true;               % cartesian xyz coordinates

@@ -71,7 +71,7 @@ gps_prns = []; glo_prns = []; gal_prns = []; bds_prns = [];
 % get elevation
 elev = full(satellites.elev);       % elevation for all satellites and epochs
 
-% get SNR
+% get C/N0
 SNR_1 = full(satellites.SNR_1);
 if n > 1; SNR_2 =  full(satellites.SNR_2); end
 if n > 2; SNR_3 =  full(satellites.SNR_3); end
@@ -172,15 +172,15 @@ end
 
 % ivall = 3;      % to make plot clearer
 % code_residuals(abs(code_residuals)<=10^-4) = NaN;       % due to numerical reasons
-% figure('Name', 'Residuals over SNR, frequency 1', 'NumberTitle','off');
+% figure('Name', 'Residuals over C/N0, frequency 1', 'NumberTitle','off');
 % plot(SNR_1(1:ivall:end,:), code_residuals(1:ivall:end,:,1), '.')
 % prns = 1:399;
 % prns = prns(any(~isnan(code_residuals(:,:,1))));
 % prns_string = sprintfc('%02.0f', prns);
 % legend(prns_string)
 % ylabel('Residuals [m]')
-% xlabel('SNR [dB-Hz]')
-% title('Residuals over SNR, frequency 1')
+% xlabel('C/N0 [dB-Hz]')
+% title('Residuals over C/N0, frequency 1')
 
 end
 

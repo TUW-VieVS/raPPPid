@@ -24,8 +24,8 @@ function [stec] = corr2brdc_stec(C_nm, S_nm, az, elev, pos_geo, t)
 % Preparations
 h_I = 450;                  % height of ionospheric layer [km]
 R_e = Const.RE / 1000;      % radius of earth [km]
-lat_U = pos_geo.ph;         % latitude/phi of receiver [rad] 
-lon_U = pos_geo.la;         % longitude/lambda of receiver [rad]
+lat_U = pos_geo.lat;         % latitude/phi of receiver [rad] 
+lon_U = pos_geo.lon;         % longitude/lambda of receiver [rad]
 h_U   = pos_geo.h/1000;   	% height of receiver [km]
 elev = elev/180*pi;         % convert elevation into [rad]
 az = az/180*pi;             % convert azimuth into [rad]

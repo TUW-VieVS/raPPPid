@@ -4,7 +4,7 @@ function [] = DownloadHourly01sIGS(stations, hours, doys, year)
 % The data is saved automatically in the right folder of raPPPid.
 % The stations of which data should be downloaded can be either delivered as
 % cell or entered in the IGS_r3_stations.txt (same folder as this function)
-% open('..\CODE\OBSERVATIONS\ObservationDownload\IGS_r3_highrate_stations.txt')
+% open('../CODE/OBSERVATIONS/ObservationDownload/IGS_r3_highrate_stations.txt')
 % 
 % Example call: 
 % DownloadHourly01sIGS('', [], 001, 2020)
@@ -62,7 +62,7 @@ end
 % check if stations list from file
 if isempty(stations)
     % open and read txt file
-    fid = fopen('..\CODE\OBSERVATIONS\ObservationDownload\IGS_r3_highrate_stations.txt');         
+    fid = fopen('../CODE/OBSERVATIONS/ObservationDownload/IGS_r3_highrate_stations.txt');         
     stations = textscan(fid,'%s', 'delimiter','\n', 'whitespace','');
     stations = stations{1};
     fclose(fid);

@@ -80,6 +80,8 @@ for i = 1:n
             if strcmp(file(end-1:end), 'MN')
                 tfolder = 'BROADCAST';
             end
+        case 'txt'
+            tfolder = 'OBS';            
         otherwise
             switch ext(3)
                 case 'o'
@@ -100,6 +102,7 @@ for i = 1:n
             %     targetfolder = 'SIM';
             %     targetfolder = 'V3GR';
             %     targetfolder = 'VMF3';
+
     end
     % analyze file-name to get the year and day of year
     [subf_1, subf_2] = AnalyzeFileName(file, ext, curr_path);
@@ -179,8 +182,15 @@ elseif ext(3) == 'o'            % RINEX observation file
     jd = cal2jd_GT(rheader.first_obs(1), rheader.first_obs(2), rheader.first_obs(3));
     [doy, yyyy] = jd2doy_GT(jd);
     subf_1    = sprintf('%04d',yyyy);
-    subf_2 	= sprintf('%03d',doy);    
-    
+    subf_2 	= sprintf('%03d',doy);  
+elseif strcmp(ext, 'txt') && contains(file, 'gnss_log')     % Android raw sensor data
+    subf_1 = file(10:13);       % year
+    year  = str2double(subf_1);
+    month = str2double(file(15:16));
+    day   = str2double(file(18:19));
+    jd = cal2jd_GT(year, month, day);
+    [doy, ~] = jd2doy_GT(jd);
+    subf_2 	= sprintf('%03d',doy);  
 else
     fprintf([file ': date could not be extracted!\n']);
 end

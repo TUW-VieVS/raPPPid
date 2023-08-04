@@ -40,7 +40,7 @@ satellites.obs(q,prns)  = Epoch.tracked(prns);  	% save number of epochs satelli
 satellites.elev(q,prns) = model.el(:,1);	% save elevation of satellites
 satellites.az  (q,prns) = model.az(:,1); 	% save azimuth [°] of satellites
 
-% Save Signal-to-noise ratio
+% Save Carrier-to-Noise density
 if ~isempty(Epoch.S1)
     satellites.SNR_1(q,prns) = Epoch.S1';
 end

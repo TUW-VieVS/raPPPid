@@ -15,7 +15,7 @@ function [time_sow, AZ, EL, SNR, C_res, P_res, I_res, MP] = ...
 % *************************************************************************
 
 
-% Signal-to-Noise-Ratio
+% Carrier-to-Noise density
 if isfield(satellites, 'SNR_3')
     SNR_ = (full(satellites.SNR_1) + full(satellites.SNR_2) + full(satellites.SNR_3)) ./ 3;
 elseif isfield(satellites, 'SNR_2')
@@ -86,7 +86,7 @@ end
 time_sow     = storeData.gpstime;       % vector with time of epochs in [sow]
 AZ           = full(satellites.az);  	% azimuths
 EL           = full(satellites.elev); 	% elevations
-SNR          = abs(SNR_);               % Signal-to-Noise-Ratio for color-coding
+SNR          = abs(SNR_);               % Carrier-to-Noise density for color-coding
 C_res        = abs(code_res);           % Code residual for color-coding
 P_res        = abs(100*phase_res);      % Phase residual [mm] for color-coding
 I_res        = abs(10*iono_res);       	% Difference between ionosphere model and estimation

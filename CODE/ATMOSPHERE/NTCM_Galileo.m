@@ -26,8 +26,8 @@ function STEC = NTCM_Galileo(pos_WGS84, elev, doy, Ttr, nequ_coeff)
 
 
 % get variables
-phi = pos_WGS84.ph;         % [radiant]
-lambda = pos_WGS84.la;      % [radiant]
+phi = pos_WGS84.lat;         % [radiant]
+lambda = pos_WGS84.lon;      % [radiant]
 LT = mod(Ttr,86400)/3600;  	% local time, [hours]
 doy = floor(doy);           % day of year
 

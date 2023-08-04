@@ -81,7 +81,7 @@ ADR_reset = bitand(ADR_state, 2^1);
 ADR_cs    = bitand(ADR_state, 2^2);
 Phase(ADR_reset | ADR_cs) = NaN;                    % exclude observations with reset or cycle slip detected
 
-% -) get SNR
+% -) get C/N0
 SNR = gnssRaw.Cn0DbHz;
 
 % -) get Doppler shift in [m/s]
@@ -173,7 +173,7 @@ D_data_ = D_data(bool_data);
 % save observatio data into Epoch.obs
 obs(idx_a, frq    ) = L_data_(idx_b);     % phase
 obs(idx_a, frq + 2) = C_data_(idx_b);     % code
-obs(idx_a, frq + 4) = S_data_(idx_b);     % SNR
+obs(idx_a, frq + 4) = S_data_(idx_b);     % C/N0
 obs(idx_a, frq + 6) = D_data_(idx_b);     % Doppler
 
 
@@ -188,7 +188,7 @@ end
 if ~isempty(use_column{2})      % code
     Epoch_obs(bool, use_column{2}) = obs(bool, idx(2));
 end
-if ~isempty(use_column{3})      % SNR
+if ~isempty(use_column{3})      % C/N0
     Epoch_obs(bool, use_column{3}) = obs(bool, idx(3));
 end
 if ~isempty(use_column{4})      % Doppler

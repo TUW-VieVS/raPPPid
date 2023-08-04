@@ -8,7 +8,7 @@ function [settings] = DownloadOrbitClock(settings, gpsweek, dow, yyyy, mm, doy)
 %   dow             string, 1-digit, day of week
 %   yyyy            string, 4-digit, year
 %   mm              string, 2-digit, month
-%   doy             string, 3-digit, day of year
+%   doy             string, 3-digit, day of yearbool_archive
 % OUTPUT:
 %	settings        updated
 %
@@ -29,7 +29,7 @@ URL_host = 'igs.ign.fr:21';                                 % default ftp-server
 URL_host_2 = 'https://cddis.nasa.gov'; URL_folders_2 = '';  files_2 = ''; % option 2: CDDIS
 download = true;    % boolean variable if products need still to be downloaded
 multiple = false;   % is set to true if multiple sp3-files are needed (e.g. ???)
-
+bool_archive = true;         % true, if archives are downloaded
 
 
 %% switch source of orbits/clocks
@@ -281,7 +281,7 @@ switch settings.ORBCLK.prec_prod
                     if str2double(gpsweek) >= 2238
                         files = {...
                             ['COD0OPSFIN_' yyyy doy '0000_01D_05M_ORB.SP3.gz']
-                            ['COD0OPSFIN_' yyyy doy '0000_01D_05S_CLK.CLK.gz']};
+                            ['COD0OPSFIN_' yyyy doy '0000_01D_30S_CLK.CLK.gz']};
                     else
                         files = {...
                             ['COD', gpsweek, dow, '.EPH.Z']
@@ -289,10 +289,16 @@ switch settings.ORBCLK.prec_prod
                     end
                     
                 case 'Rapid'
-                    errordlg(['Precise Product: "' settings.ORBCLK.prec_prod ', ' settings.ORBCLK.prec_prod_type '" is not implemented.'], 'Error');
-                
+                    URL_folders = repmat({'/CODE/'},2,1);
+                    files = {...
+                        ['CODMOPSRAP_' yyyy doy '0000_01D_05M_ORB.SP3']
+                        ['CODMOPSRAP_' yyyy doy '0000_01D_30S_CLK.CLK']};
+                    bool_archive = false;
+                    
                 case 'Ultra-Rapid'
-                    errordlg(['Precise Product: "' settings.ORBCLK.prec_prod ', ' settings.ORBCLK.prec_prod_type '" is not implemented.'], 'Error');
+                    URL_folders = {'/CODE/'};
+                    files = {['COD0OPSULT_' yyyy doy '0000_01D_05M_ORB.SP3']};
+                    bool_archive = false;
                     
                 otherwise
                     errordlg(['Precise Product: "' settings.ORBCLK.prec_prod ', ' settings.ORBCLK.prec_prod_type '" is not implemented.'], 'Error');
@@ -382,7 +388,26 @@ switch settings.ORBCLK.prec_prod
                     errordlg(['Precise Product: "' settings.ORBCLK.prec_prod ', ' settings.ORBCLK.prec_prod_type '" is not implemented.'], 'Error');
             end
         end
-
+        
+    case 'JGX'
+        URL_folders = repmat({['/pub/igs/products/', gpsweek, '/']},2,1);
+        URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
+        switch settings.ORBCLK.prec_prod_type
+            case 'Final'
+                files = {...
+                    ['JGX0OPSFIN_' yyyy doy '0000_01D_05M_ORB.SP3.gz']
+                    ['JGX0OPSFIN_' yyyy doy '0000_01D_30S_CLK.CLK.gz']};
+                
+            case 'Rapid'
+                files = {...
+                    ['JGX0OPSRAP_' yyyy doy '0000_01D_05M_ORB.SP3.gz']
+                    ['JGX0OPSRAP_' yyyy doy '0000_01D_30S_CLK.CLK.gz']};
+                
+            otherwise
+                errordlg(['Precise Product: "' settings.ORBCLK.prec_prod ', ' settings.ORBCLK.prec_prod_type '" is not implemented.'], 'Error');
+        end
+   
+        
 
     case 'JAXA'
         if settings.ORBCLK.MGEX
@@ -481,6 +506,9 @@ while download   &&   i <= length(files)
     file_status = 0;
     try     %#ok<TRYNC>                             % try to download from igs.ign.fr
         [file_status] = ftp_download(URL_host, URL_folders{i}, files{i}, targets{i}, true);
+        if ~bool_archive       % pretend archive, otherwise the following code does not work 
+            files{i} = [files{i} '.gz'];
+        end
     end
     if file_status == 1   ||   file_status == 2
         unzip_and_delete(files(i), targets(i));
@@ -526,10 +554,10 @@ end
 
 
 %% save file-path into settings
-settings.ORBCLK.file_sp3 = [targets{1} '/' files{1}];
-if numel(files) > 1
+settings.ORBCLK.file_sp3 = [targets{1} '/' files{1}];       % save path to orbits (sp3)
+if numel(files) > 1                                         % save path to clocks (clk)
     settings.ORBCLK.file_clk = [targets{2} '/' files{2}];
-else
+else        % e.g. ultra-rapid products only have a sp3 file
     settings.ORBCLK.file_clk = '';
     settings.ORBCLK.bool_clk = false;
 end

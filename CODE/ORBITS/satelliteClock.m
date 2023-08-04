@@ -99,9 +99,10 @@ else
     % coefficients for navigation clock correction
     if isGPS || isGAL || isBDS
         a2 = Eph(2,k);        a1 = Eph(20,k);        a0 = Eph(19,k);
-        if isBDS; Ttr = Ttr - 14; end       % somehow necessary to convert GPST to BDT, ||| check!!!
-        dT = check_t(Ttr - toc);            % time difference between transmission time and time of clock
-        dT_clk = a2*dT^2 + a1*dT + a0;      % 2nd degree polynomial clock correctionyou
+        Ttr_ = Ttr;
+        if isBDS; Ttr_ = Ttr - Const.BDST_GPST; end      % convert GPST to BDT
+        dT = check_t(Ttr_ - toc);           % time difference between transmission time and time of clock
+        dT_clk = a2*dT^2 + a1*dT + a0;      % 2nd degree polynomial clock correction
     elseif isGLO
         toe = Eph(18,k);    % sow in GPS time (only leap seconds accounted)
         dT = check_t(Ttr - toe);

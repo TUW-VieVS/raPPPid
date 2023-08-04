@@ -320,7 +320,7 @@ satellites.az     = zeros(tot_eps,399);
 satellites.obs    = zeros(tot_eps,399);   	% true if satellite observed
 
 % variables depending on the number of frequencies
-% Signal-to-Noise-Ration
+% Carrier-to-Noise density
 satellites.SNR_1 =  zeros(tot_eps,399);
 if num_frqs > 1; satellites.SNR_2 = zeros(tot_eps,399); end
 if num_frqs > 2; satellites.SNR_3 = zeros(tot_eps,399); end

@@ -102,13 +102,13 @@ for i = 1:numel(Epoch.sats)
         
     elseif Epoch.bds(i) && settings.INPUT.use_BDS
         Eph_gnss = input.Eph_BDS; 
-        r_toc = 21; r_iode = 24; r_health = 23; r_tom = 29;
+        r_toc = 21; r_iode = 22; r_health = 23; r_tom = 29;
         if corr2brdc
             corr = input.ORBCLK.corr2brdc_BDS;
             orb_idx = orb_idx_C;
             clk_idx = clk_idx_C;
         end
-        
+        t = t - Const.BDST_GPST;            % consider time shift between GPS and BDS time
     else
         continue
         
@@ -134,7 +134,7 @@ for i = 1:numel(Epoch.sats)
         
         if corr2brdc
             % -) correction stream is used
-            if corr_orb_IOD==corr_clk_IOD   % orbit IOD isequal to clock IOD (usually the case) 
+            if corr_orb_IOD == corr_clk_IOD     % orbit IOD isequal to clock IOD (usually the case) 
                 % check which ephemeris IOD are equal to the stream IODs
                 k = idx_sat(corr_orb_IOD == Eph_sat(r_iode, :));
                 if numel(k) > 1
@@ -162,6 +162,7 @@ for i = 1:numel(Epoch.sats)
                     Epoch.corr2brdc_clk(:,sat) = clkcorr_sat;
                 end
             end
+
         else
             % -) only broadcast message is used
             k = idx_sat(dt_eph == min(dt_eph)); 	% column of ephemeris, take nearest
@@ -181,9 +182,6 @@ for i = 1:numel(Epoch.sats)
     end
     
 end     % end of loop over satellites
-
-
-
 
 
 

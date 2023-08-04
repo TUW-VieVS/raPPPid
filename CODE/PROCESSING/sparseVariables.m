@@ -144,7 +144,7 @@ satellites.az       = sparse(satellites.az);
 satellites.obs      = sparse(satellites.obs);
 
 % --- variables depending on number of input frequencies
-% Signal-to-Noise-Ratio
+% Carrier-to-Noise density
 satellites.SNR_1 = sparse(satellites.SNR_1);
 if num_freqs > 1; satellites.SNR_2 = sparse(satellites.SNR_2); end
 if num_freqs > 2; satellites.SNR_3 = sparse(satellites.SNR_3); end

@@ -34,7 +34,6 @@ PseudorangeRateUncertaintyMetersPerSecond = gnssRaw.PseudorangeRateUncertaintyMe
 ConstellationType = gnssRaw.ConstellationType;
 
 % some constants
-Const.C = 299792458;        % [m/s], speed of light
 gpsweek_no_s = 604800;      % [s],   number of seconds in a week
 MAX_PR_R_UNC = 10;          % [m/s], maximum pseudorange rate uncertainty
 MAX_TOW_UNC = 500;          % [ns],  maximum Tow uncertainty
@@ -68,7 +67,7 @@ idx1 = (ConstellationType == 1 | ConstellationType == 6) & bitand(State, 2^3);
 GPSGAL_tow_decoded = - gps_week_ns;
 % - BeiDou, TOW decoded
 idx2 = (ConstellationType == 5) & bitand(State, 2^3);
-BDS_tow_decoded = - gps_week_ns - 14*1e9;
+BDS_tow_decoded = - gps_week_ns - Const.BDST_GPST*1e9;
 % - Galileo, E1C 2nd code status
 idx3 = (ConstellationType == 6) & bitand(State, 2^11);
 GAL_E1C_2nd = - gps_week_ns ;    % somehow this works although it should not

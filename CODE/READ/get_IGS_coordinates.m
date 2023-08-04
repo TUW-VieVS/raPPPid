@@ -61,6 +61,11 @@ for i = 1:n
     URL_host = 'igs.ign.fr:21';
     % check which coordinate system
     sys = coordsyst{i};
+    if isempty(sys)         % raPPPid could not detect the coordinate system
+        sys = questdlg('Please choose the coordinate system.', ...
+            'Menu', 'IGS14', 'IGS20', 'No idea', 'No idea');
+    end
+    % to IGS coordinate estimation depending on the coordinate system
     switch sys
         case {'IGS14', 'IGb14', ''}
             URL_folder = ['/pub/igs/products/', gpsweek_str, '/'];

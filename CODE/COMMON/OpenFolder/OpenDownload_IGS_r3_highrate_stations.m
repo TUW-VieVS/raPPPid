@@ -11,5 +11,5 @@ function [] = OpenDownload_IGS_r3_highrate_stations()
 % *************************************************************************
 
 
-uiopen('..\CODE\OBSERVATIONS\ObservationDownload\IGS_r3_highrate_stations.txt',1)
+uiopen('../CODE/OBSERVATIONS/ObservationDownload/IGS_r3_highrate_stations.txt',1)
 

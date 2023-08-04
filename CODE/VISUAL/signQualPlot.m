@@ -2,9 +2,9 @@ function signQualPlot(satellites, label_xaxis, hours, isGPS, isGLO, isGAL, isBDS
 % creates three different plots of the Signal Quality:
 % -) Code-minus-Phase-Plot: for each frequency the difference between code
 % and phase measurements in meters for all observed satellites
-% -) Signal-to-Noise-Ratio-Plot: for each frequency the values of SNR from
+% -) Carrier-to-Noise density Plot: for each frequency the values of C/N0 from
 % the RINEX-File for all observed satellites
-% -) SNR-over-Elevation-Plot: SNR over the elevation for each frequency and
+% -) C/N0-over-Elevation-Plot: SNR over the elevation for each frequency and
 % all observed satellites
 % 
 % INPUT:
@@ -117,7 +117,7 @@ if contains(settings.PROC.method, 'Phase')
 end
 
 
-%% Signal to Noise Ratio (SNR) Plot
+%% Signal to Noise Ratio (C/N0) Plot
 sats = 399;
 fig_SNR = figure('Name', 'Signal Quality: SNR', 'NumberTitle','off');
 % add customized datatip
@@ -133,7 +133,7 @@ for j = 1:n
     ylabel('[dB.Hz]')
     grid on
     prns = [];          % to save the satellite prns with data
-    % get SNR data for current frequency (e.g. satellites.SNR_1)
+    % get C/N0 data for current frequency (e.g. satellites.SNR_1)
     field = sprintf('SNR_%1.0f', j);
     SNR_j = full(satellites.(field));
     SNR_j(SNR_j==0 ) = NaN;
@@ -155,12 +155,12 @@ for j = 1:n
     if j == 2
         set(hLeg,'visible','off')
     end
-    title(sprintf('Signal-to-Noise-Ratio on Frequency %d', j))    	% title of plot
+    title(sprintf('Carrier-to-Noise Density on Frequency %d', j))    	% title of plot
     hline(snr_thresh(j), 'k--')        % add cutoff angle as vertical line
 end
 
 
-%% SNR-over-Elevation-Plot
+%% C/N0-over-Elevation-Plot
 sats = 399;
 Elev = full(satellites.elev);	% [epochs x sats x frequencies], elevation of satellites
 if ~any(Elev(:)~=0); return; end
@@ -174,10 +174,10 @@ for j = 1:n
     subplot(n, 1, j)
     hold on
     xlabel('Elevation [°]')
-    ylabel('SNR [dB-Hz]')
+    ylabel('C/N0 [dB-Hz]')
     grid on
     prns = [];          % to save the satellite prns with data
-    % get SNR data for current frequency (e.g. satellites.SNR_1)
+    % get C/N0 data for current frequency (e.g. satellites.SNR_1)
     field = sprintf('SNR_%1.0f', j);
     SNR_j = full(satellites.(field));
     SNR_j(SNR_j==0 ) = NaN;
@@ -201,7 +201,7 @@ for j = 1:n
     if j == 2
         set(hLeg,'visible','off')
     end
-    title(sprintf('SNR over Elevation on Frequency %d', j))         % title of plot
+    title(sprintf('C/N0 over Elevation on Frequency %d', j))         % title of plot
 end
 
 
@@ -228,6 +228,6 @@ value = pos(2);
 % create cell with strings as output (which will be shown when clicking)
 output_txt{1} = event_obj.Target.DisplayName;               % name of clicked line e.g. satellite
 output_txt{2} = ['Elevation: ',  sprintf('%.3f', elev)];	% time of day
-output_txt{3} = ['SNR: ', sprintf('%.3f', value)];          % value
+output_txt{3} = ['C/N0: ', sprintf('%.3f', value)];          % value
 
 end

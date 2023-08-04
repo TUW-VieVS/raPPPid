@@ -720,7 +720,7 @@ try     % write elevation weighting function to text-field
     set(handles.edit_elevation_weighting_function,  'String', strrep(func2str(structure.ADJ.elev_weight_fun), '@(e)', ''));
 end
 set(handles.radiobutton_Signal_Strength_Dependency, 'Value', structure.ADJ.weight_sign_str );
-try     % write SNR weighting function to text-field
+try     % write C/N0 weighting function to text-field
     try
     set(handles.edit_snr_weighting_function,  'String', structure.ADJ.snr_weight_fun);
     end

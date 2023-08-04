@@ -28,7 +28,7 @@ cookie    = '../CODE/OBSERVATIONS/ObservationDownload/cookie.txt';
 ntrc_is_valid = check_netrcfile(netrcfile);
 if ~ntrc_is_valid
     % Create an EarthData Account: https://urs.earthdata.nasa.gov/
-    % Go to \CODE\OBSERVATIONS\ObservationDownload\cURL
+    % Go to raPPPid/CODE/OBSERVATIONS/ObservationDownload/cURL
     % Rename example.netrc to .netrc
     % Windows: If you get the error message "You must type a file name",
     % rename example.netrc to .netrc.

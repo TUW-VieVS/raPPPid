@@ -39,7 +39,6 @@ if settings.ORBCLK.bool_nav_multi || glo_channels
     elseif rversion >= 4
         [input.IONO.klob_coeff, input.nequ_coeff, input.BDGIM_coeff, ....
             Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi_r4(NAVDATA, leap_sec);
-        % ||| implement
     else
         errordlg('Check read_brdc.m and version of navigation message!', 'HUGE error');
     end

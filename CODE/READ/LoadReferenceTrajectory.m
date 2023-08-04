@@ -8,7 +8,7 @@ function [pos_ref_geo, North_ref, East_ref] = ...
 %   gpstime         vector, gps time (sow) of processing's epochs
 % OUTPUT: reference positions interpolated from the reference trajectory to
 %         the points in time of the PPP solution
-%	pos_ref_geo     struct [.ph, .la, h], WGS84 reference points
+%	pos_ref_geo     struct [.lat, .lon, h], WGS84 reference points
 %   North_ref       vector, UTM North reference points
 %   East_ref        vector, UTM East reference points
 %
@@ -44,9 +44,9 @@ switch ext
         North_true = lat_wgs84; East_true = lat_wgs84;
         for i = 1:n
             temp_geo = cart2geo([X(i), Y(i), Z(i)]);
-            [North_true(i), East_true(i)] = ell2utm_GT(temp_geo.ph, temp_geo.la);
-            lat_wgs84(i) = temp_geo.ph;
-            lon_wgs84(i) = temp_geo.la;
+            [North_true(i), East_true(i)] = ell2utm_GT(temp_geo.lat, temp_geo.lon);
+            lat_wgs84(i) = temp_geo.lat;
+            lon_wgs84(i) = temp_geo.lon;
             h_wgs84(i) = temp_geo.h;
         end
         
@@ -68,8 +68,8 @@ switch ext
                 [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
                 
             otherwise
-                pos_ref_geo.ph = NaN;
-                pos_ref_geo.la = NaN;
+                pos_ref_geo.lat = NaN;
+                pos_ref_geo.lon = NaN;
                 pos_ref_geo.h  = NaN;
                 North_ref = NaN;
                 East_ref = NaN;
@@ -100,8 +100,8 @@ switch ext
         East_true(exclude) = []; North_true(exclude) = [];
         
     otherwise
-        pos_ref_geo.ph = NaN;
-        pos_ref_geo.la = NaN;
+        pos_ref_geo.lat = NaN;
+        pos_ref_geo.lon = NaN;
         pos_ref_geo.h  = NaN;
         North_ref = NaN;
         East_ref = NaN;
@@ -127,8 +127,8 @@ h_ref   = resample(tseries_h, sod);
 N_ref   = resample(tseries_North, sod);
 E_ref   = resample(tseries_East, sod);
 % save in output variables
-pos_ref_geo.ph = lat_ref.Data;
-pos_ref_geo.la = lon_ref.Data;
+pos_ref_geo.lat = lat_ref.Data;
+pos_ref_geo.lon = lon_ref.Data;
 pos_ref_geo.h  = h_ref.Data;
 North_ref      = N_ref.Data;
 East_ref       = E_ref.Data;

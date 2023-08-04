@@ -50,7 +50,7 @@ set(gca, 'Units', 'pixels', 'Position', [18 516 900 80])
 axis off
 
 % Set Copyright and Version in the lower right
-set(handles.text_version, 'String', ['Version 2.0 ', char(169), ' TUW 2023']);
+set(handles.text_version, 'String', ['Version 2.1 ', char(169), ' TUW 2023']);
 
 % load default filter settings for selected filter
 handles = LoadDefaultFilterSettings(handles);
@@ -96,10 +96,14 @@ handles.paths = path;
 guidata(hObject, handles);
 
 % save (overwrite) the default parameters file
-defaultParamFilename='PARAMETERS/default.mat';
-settings = getSettingsFromGUI(handles);   % get input from GUI and put it into structure "settings"
-parameters = settings2parameters(settings);   % change the settings to parameters
-save(defaultParamFilename, 'parameters')    % save variable settings into file
+defaultParamFilename = 'PARAMETERS/default.mat';
+settings = getSettingsFromGUI(handles);         % get input from GUI and put it into structure "settings"
+parameters = settings2parameters(settings);     % change the settings to parameters
+try
+    save(defaultParamFilename, 'parameters')        % save variable settings into file
+catch
+    errordlg('Saving default parameters failed.', 'Error');
+end
 
 end
 
@@ -1198,7 +1202,7 @@ for i = 1:rows
     end
 end
 
-startfolder = [Path.DATA, '\OBS'];
+startfolder = [Path.DATA, '/OBS'];
 while true      % loop to add multiple files
     PathName = uigetdir(startfolder, 'Select folder to process');
     if PathName == 0
@@ -1211,7 +1215,7 @@ while true      % loop to add multiple files
     WBAR = waitbar(0, 'Loading Rinex-Files...', 'Name','Writing Batch-Processing table');
     
     % search all Rinex Files with extension *.rnx, *.*o, *.obs
-    AllFiles = [dir([PathName '\**\*.rnx']); dir([PathName '\**\*.*o']); dir([PathName '\**\*.obs'])];
+    AllFiles = [dir([PathName '/**/*.rnx']); dir([PathName '/**/*.*o']); dir([PathName '/**/*.obs'])];
     n = length(AllFiles);
     
     % initialize some variables
@@ -1600,7 +1604,7 @@ while true      % loop to add multiple files
     PathName = relativepath(PathName);      	% convert absolute path to relative path
     
     % search all data4plot.mat and add it to table
-    AllFiles = dir([PathName '\**\data4plot.mat']);     % get all data4plot.files in folder and subfolders
+    AllFiles = dir([PathName '/**/data4plot.mat']);     % get all data4plot.files in folder and subfolders
     n = length(AllFiles);
     
     if n < 1; continue; end         % nothing found
@@ -1652,7 +1656,7 @@ while true      % loop to add multiple files
     if ~isempty(i_fail)
         stations(i_fail) = '';    	
         startdates(i_fail,:) = '';
-        coordsyst(i_fail,:) = '';
+        coordsyst(i_fail) = '';
         path_column(i_fail) = '';
         row_label(i_fail) = '';
         n = n - numel(i_fail);      % reduce number of files/rows

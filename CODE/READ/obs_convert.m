@@ -86,8 +86,8 @@ switch system
             case 'L1L'; type2 = convert(PHASE, gps_freq, 'L1');
             case 'L1X'; type2 = convert(PHASE, gps_freq, 'L1');
             % L1: Signal Strength
-            case 'S1C'; type2 = convert(SIGSTR, gps_freq, 'L1');    % SNR of C/A code
-            case 'S1W'; type2 = convert(SIGSTR, gps_freq, 'L1');    % SNR of P1 code
+            case 'S1C'; type2 = convert(SIGSTR, gps_freq, 'L1');    % C/N0 of C/A code
+            case 'S1W'; type2 = convert(SIGSTR, gps_freq, 'L1');    % C/N0 of P1 code
             case 'S1N'; type2 = convert(SIGSTR, gps_freq, 'L1');
             case 'S1S'; type2 = convert(SIGSTR, gps_freq, 'L1');
             case 'S1L'; type2 = convert(SIGSTR, gps_freq, 'L1');

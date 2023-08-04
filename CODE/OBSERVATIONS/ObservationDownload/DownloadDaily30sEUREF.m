@@ -4,7 +4,7 @@ function [] = DownloadDaily30sEUREF(stations, doys, year)
 % of raPPPid
 % The station of which data should be downloaded can be either delivered as
 % cell or entered in the EUREF_r3_stations.txt (same folder as this function)
-% open('..\CODE\OBSERVATIONS\ObservationDownload\EUREF_r3_stations.txt')
+% open('../CODE/OBSERVATIONS/ObservationDownload/EUREF_r3_stations.txt')
 % Example call: 
 % DownloadDaily30sEUREF({'BAIA00ROU', 'BOGO00POL', 'CAEN00FRA'}, 001, 2020)
 % DownloadDaily30sEUREF('BAIA00ROU', 032, 2020)
@@ -39,7 +39,7 @@ end
 % check if stations list from file
 if isempty(stations)
     % open and read txt file
-    fid = fopen('..\CODE\OBSERVATIONS\ObservationDownload\EUREF_r3_stations.txt');         
+    fid = fopen('../CODE/OBSERVATIONS/ObservationDownload/EUREF_r3_stations.txt');         
     stations = textscan(fid,'%s', 'delimiter','\n', 'whitespace','');
     stations = stations{1};
     fclose(fid);

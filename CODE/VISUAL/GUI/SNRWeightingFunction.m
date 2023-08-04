@@ -1,5 +1,5 @@
 function [funhandle] = SNRWeightingFunction(funstring)
-% Convert SNR weighting string from GUI to function handle
+% Convert C/N0 weighting string from GUI to function handle
 % 
 % INPUT:
 %   funstring           string, function for elevation weighting from GUI      

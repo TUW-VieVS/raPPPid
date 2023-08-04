@@ -12,7 +12,7 @@ function [] = check_clk()
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-[FileName, PathName] = uigetfile({'*.clk*;*clk.mat*'}, 'Select clk file to check', [Path.DATA '\CLOCK']);
+[FileName, PathName] = uigetfile({'*.clk*;*clk.mat*'}, 'Select clk file to check', [Path.DATA '/CLOCK']);
 path_clk = [PathName FileName];
 
 if ~ischar(FileName) || ~ischar(PathName)

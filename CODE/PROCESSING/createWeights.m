@@ -55,7 +55,7 @@ elseif settings.ADJ.weight_none
 elseif settings.ADJ.weight_sign_str
     
     if ischar(settings.ADJ.snr_weight_fun)
-        % hardcoded SNR weighting function
+        % hardcoded C/N0 weighting function
         switch settings.ADJ.snr_weight_fun
             case 'option_1'
                 if ~isempty(Epoch.S1)
@@ -70,7 +70,7 @@ elseif settings.ADJ.weight_sign_str
         end
         
     else
-        % SNR weighting function from GUI (user input)
+        % C/N0 weighting function from GUI (user input)
         SNR = [Epoch.S1, Epoch.S2, Epoch.S3];
         if contains(func2str(settings.ADJ.snr_weight_fun), 'max(')
             % function-handle does not work with max()-function and vector
@@ -122,11 +122,11 @@ end
 
 
 function P_diag = goGPS_SNR_weighting(P_diag, SNR, frq)
-% Creating weights depending on Signal-to-Noise-Ratio following [05]: (5.1) 
+% Creating weights depending on Carrier-to-Noise density following [05]: (5.1) 
 % 
 % INPUT:
 %   P_diag      values for diagonal of weight matrix P
-%   SNR         Signal-to-Noise-Ration of current frequency
+%   C/N0        Carrier-to-Noise Density of current frequency
 %   frq         frequency or column of P_diag which should be manipulated
 % OUTPUT:
 %   P_diag      calculated weights added
@@ -134,12 +134,12 @@ function P_diag = goGPS_SNR_weighting(P_diag, SNR, frq)
 
 % some constants
 a = 30;         % defines bending of the curve
-s_1 = 50;       % SNR > this threshold, weight = 1
-s_0 = 20;       % defines SNR where function is forced to have the weight defined by A
+s_1 = 50;       % C/N0 > this threshold, weight = 1
+s_0 = 20;       % defines C/N0 where function is forced to have the weight defined by A
 A = 30;     	% ... however, 1/is used here already
 % calculate weights
 q_R = 10.^(-(SNR-s_1)/a) .* ( (A/10.^(-(s_0-s_1)/a)-1)./(s_0-s_1).*(SNR-s_1)+1 );
 P_diag(:,frq) = P_diag(:,frq) ./ q_R;        	% weight for observations
-P_diag(SNR >= s_1, frq) = 1;                    % 1 for SNR > snr_1
+P_diag(SNR >= s_1, frq) = 1;                    % 1 for C/N0 > snr_1
 
 end

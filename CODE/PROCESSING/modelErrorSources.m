@@ -23,7 +23,7 @@ function [model, Epoch] = modelErrorSources(settings, input, Epoch, model, Adjus
 param = Adjust.param;
 pos_XYZ = param(1:3);       % current estimation of receiver position [XYZ]
 % ellipsoidal coordinates of WGS84 ellipsoid
-% .ph = phi = latitude [rad]; .la = lambda = longitude [rad]; .h = height [m]
+% .lat = phi = latitude [rad]; .lon = lambda = longitude [rad]; .h = height [m]
 pos_WGS84 = cart2geo(pos_XYZ);	
 
 num_sat = Epoch.no_sats;                % number of satellites in current epoch
@@ -55,13 +55,13 @@ if isempty(model)
     model.moonECEF = moonPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h);
     % --- Calculate epoch-dependent tide corrections (only approximate position needed) ---
     if settings.OTHER.bool_solid_tides
-        model.solid_tides_ECEF = solid_tides(pos_XYZ, pos_WGS84.ph, model.sunECEF*1000, model.moonECEF);
+        model.solid_tides_ECEF = solid_tides(pos_XYZ, pos_WGS84.lat, pos_WGS84.lon, model.sunECEF*1000, model.moonECEF, Epoch.mjd);
     end
-    if settings.OTHER.ocean_loading
+    if settings.OTHER.ocean_loading && ~isempty(input.OTHER.OcLoad)
         model.ocean_loading_ECEF = ocean_loading(Epoch.gps_time, pos_XYZ, input.OTHER.OcLoad, 19+obs.leap_sec, obs.startGPSWeek);
     end
     % --- Rotation Matrix from Local Level to ECEF ---
-    model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.ph, pos_WGS84.la);
+    model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
 end
 
 
@@ -96,7 +96,7 @@ if ~(strcmpi(settings.TROPO.zhd,'no')   &&   strcmpi(settings.TROPO.zwd,'no'))
     % GPT3: read the model values for the respective mjd
     if strcmpi(settings.TROPO.zhd,'p (GPT3) + Saastamoinen')   ||   strcmpi(settings.TROPO.zwd,'e (GPT3) + Askne')   ||   strcmpi(settings.TROPO.zwd,'e (in situ) + Askne')   ||   strcmpi(settings.TROPO.mfh,'GPT3')   ||   strcmpi(settings.TROPO.mfw,'GPT3')  ||   strcmpi(settings.TROPO.Gh,'GPT3')   ||   strcmpi(settings.TROPO.Gw,'GPT3')   ||   strcmpi(settings.TROPO.zhd,'Tropo file')
         [ p_GPT3, ~, ~, Tm_GPT3, e_GPT3, ah_GPT3, aw_GPT3, lambda_GPT3, ~, Gn_h_GPT3, Ge_h_GPT3, Gn_w_GPT3, Ge_w_GPT3 ] = ...
-            gpt3_5_fast(Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, 0, input.TROPO.GPT3.cell_grid );
+            gpt3_5_fast(Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, pos_WGS84.h, 0, input.TROPO.GPT3.cell_grid );
     end
 
 end
@@ -203,7 +203,7 @@ for i_sat = 1:num_sat
         dT_sat_rel = dT_sat + dT_rel;
         
         % --- correction of Time of emission ---
-        tau = (code_dist + Const.C*dT_sat_rel)/Const.C;     % corrected signal runtime 8s9
+        tau = (code_dist + Const.C*dT_sat_rel)/Const.C;     % corrected signal runtime
         Ttr = Epoch.gps_time - tau;   	% time of emission = time of obs. - runtime
         
         % --- Satellite-Orbit: precise ephemeris (.sp3-file) or broadcast navigation data (perhaps + correction stream) ---
@@ -312,12 +312,12 @@ for i_sat = 1:num_sat
             zhd = zhd_VMF1;
         case 'Tropo file'
             ztd = interp1(input.TROPO.tropoFile.data(:,3), input.TROPO.tropoFile.data(:,4), mod(round(Epoch.gps_time),86400),'cubic');    % Zenith Total Delay, [m]
-            zhd = saasthyd(p_GPT3, pos_WGS84.ph, pos_WGS84.h );
+            zhd = saasthyd(p_GPT3, pos_WGS84.lat, pos_WGS84.h );
             zwd = ztd - zhd;
         case 'p (GPT3) + Saastamoinen'
-            zhd = saasthyd(p_GPT3, pos_WGS84.ph, pos_WGS84.h );
+            zhd = saasthyd(p_GPT3, pos_WGS84.lat, pos_WGS84.h );
         case 'p (in situ) + Saastamoinen'
-            zhd = saasthyd(settings.TROPO.p, pos_WGS84.ph, pos_WGS84.h );
+            zhd = saasthyd(settings.TROPO.p, pos_WGS84.lat, pos_WGS84.h );
         case 'no'
             zhd = 0;
         otherwise
@@ -330,18 +330,18 @@ for i_sat = 1:num_sat
         switch settings.TROPO.mfh       
             case 'VMF3'
                 if strcmpi(input.TROPO.V3GR.version,'sitewise')
-                    [mfh, mfw_VMF3] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, elev*pi/180);
+                    [mfh, mfw_VMF3] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, elev*pi/180);
                 elseif strcmpi(input.TROPO.V3GR.version,'gridwise')
-                    [mfh, mfw_VMF3] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180);
+                    [mfh, mfw_VMF3] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, pos_WGS84.h, elev*pi/180);
                 end
             case 'VMF1'
                 if strcmpi(input.TROPO.VMF1.version,'sitewise')
-                    [mfh, mfw_VMF1] = vmf1(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.ph, elev*pi/180);
+                    [mfh, mfw_VMF1] = vmf1(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.lat, elev*pi/180);
                 elseif strcmpi(input.TROPO.VMF1.version,'gridwise')
-                    [mfh, mfw_VMF1] = vmf1_ht(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.ph, pos_WGS84.h, elev*pi/180);
+                    [mfh, mfw_VMF1] = vmf1_ht(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.lat, pos_WGS84.h, elev*pi/180);
                 end
             case 'GPT3'
-                [mfh, mfw_GPT3] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180);
+                [mfh, mfw_GPT3] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, pos_WGS84.h, elev*pi/180);
             otherwise
                 error('There is something wrong here...')
         end
@@ -391,23 +391,23 @@ for i_sat = 1:num_sat
                 if ~isempty(mfw_VMF3)           % check if this was already calculated
                     mfw = mfw_VMF3;
                 elseif strcmpi(input.TROPO.V3GR.version,'sitewise')
-                    [~,mfw] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, elev*pi/180);
+                    [~,mfw] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, elev*pi/180);
                 elseif strcmpi(input.TROPO.V3GR.version,'gridwise')
-                    [~,mfw] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180);
+                    [~,mfw] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, pos_WGS84.h, elev*pi/180);
                 end
             case 'VMF1'
                 if ~isempty(mfw_VMF1)           % check if this was already calculated
                     mfw = mfw_VMF1;
                 elseif strcmpi(input.TROPO.VMF1.version,'sitewise')
-                    [~,mfw] = vmf1(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.ph, elev*pi/180);
+                    [~,mfw] = vmf1(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.lat, elev*pi/180);
                 elseif strcmpi(input.TROPO.V3GR.version,'gridwise')
-                    [~,mfw] = vmf1_ht(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.ph, pos_WGS84.h, elev*pi/180);
+                    [~,mfw] = vmf1_ht(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.lat, pos_WGS84.h, elev*pi/180);
                 end
             case 'GPT3'
                 if ~isempty(mfw_GPT3)           % check if this was already calculated
                     mfw = mfw_GPT3;
                 else
-                    [~,mfw] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.ph, pos_WGS84.la, pos_WGS84.h, elev*pi/180 );
+                    [~,mfw] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, pos_WGS84.h, elev*pi/180 );
                 end
             otherwise
                 error('There is something wrong here...')
@@ -463,7 +463,7 @@ for i_sat = 1:num_sat
                 iono(2) = mappingf * 40.3e16/f2^2* vtec;
                 iono(3) = mappingf * 40.3e16/f3^2* vtec;
             case 'Klobuchar model'
-                iono(1) = iono_klobuchar(pos_WGS84.ph*(180/pi), pos_WGS84.la*(180/pi), az, elev, Ttr, input.IONO.klob_coeff);
+                iono(1) = iono_klobuchar(pos_WGS84.lat*(180/pi), pos_WGS84.lon*(180/pi), az, elev, Ttr, input.IONO.klob_coeff);
                 iono(2) = iono(1) * ( f1.^2 ./ f2.^2 );     % convert Klobuchar correction from L1 to L2
                 iono(3) = iono(1) * ( f1.^2 ./ f3.^2 );     % convert Klobuchar correction from L2 to L3
             case 'NeQuick model'
@@ -478,7 +478,7 @@ for i_sat = 1:num_sat
 %                 iono(3) = 40.3e16/f3^2 * STEC;
 
             case 'CODE Spherical Harmonics'
-                stec = iono_coeff_global(pos_WGS84.ph, pos_WGS84.la, az, elev, round(Ttr), input.IONO.ion, obs.leap_sec);
+                stec = iono_coeff_global(pos_WGS84.lat, pos_WGS84.lon, az, elev, round(Ttr), input.IONO.ion, obs.leap_sec);
                 iono(1) = 40.3/f1^2 * stec;
                 iono(2) = 40.3/f2^2 * stec;
                 iono(3) = 40.3/f3^2 * stec;
@@ -607,7 +607,7 @@ for i_sat = 1:num_sat
     end
     
     % --- APC correction due to PCOs for raw processed frequencies---
-    los_APC = [0,0,0];
+    los_APC = zeros(1, n_num_frq);
     if settings.AMBFIX.bool_AMBFIX && settings.AMBFIX.APC_MODEL
         % simplified version, https://doi.org/10.1186/s43020-021-00049-9 or
         % https://doi.org/10.1007/s00190-022-01602-3
@@ -649,7 +649,7 @@ for i_sat = 1:num_sat
     % group delay variation
     model.dX_GDV(i_sat,frqs)  = dX_GDV(frqs);                           % Group delay variation correction
     % phase center offsets and variations
-    model.los_APC(i_sat,j_proc) = los_APC(frqs);
+    model.los_APC(i_sat,j_proc) = los_APC;
     model.dX_ARP_ECEF_corr(i_sat,frqs)= dX_ARP_ECEF_corr;               % Receiver antenna reference point correction in ECEF
     model.dX_PCO_rec_corr(i_sat,frqs) = dX_PCO_REC_ECEF_corr(frqs);     % Receiver phase center offset correction in ECEF
     model.dX_PCV_rec_corr(i_sat,frqs) = dX_PCV_rec(frqs);            	% Receiver phase center variation correction

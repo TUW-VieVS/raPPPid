@@ -47,7 +47,7 @@ h = mod(Epoch.gps_time,86400)/3600;
 model.sunECEF  = sunPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h);
 model.moonECEF = moonPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h);
 % --- Rotation Matrix from Local Level to ECEF ---
-model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.ph, pos_WGS84.la);
+model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
 
 
 
@@ -172,7 +172,7 @@ for i_sat = 1:num_sat
                 iono(2) = mappingf * 40.3e16/f2^2* vtec;
                 iono(3) = mappingf * 40.3e16/f3^2* vtec;
             case 'Klobuchar model'
-                iono(1) = iono_klobuchar(pos_WGS84.ph*(180/pi), pos_WGS84.la*(180/pi), az, el, Ttr, input.IONO.klob_coeff);
+                iono(1) = iono_klobuchar(pos_WGS84.lat*(180/pi), pos_WGS84.lon*(180/pi), az, el, Ttr, input.IONO.klob_coeff);
                 iono(2) = iono(1) * ( f1.^2 ./ f2.^2 );     % convert Klobuchar correction from L1 to L2
                 iono(3) = iono(1) * ( f1.^2 ./ f3.^2 );     % convert Klobuchar correction from L2 to L3
             case 'NeQuick model'
@@ -181,7 +181,7 @@ for i_sat = 1:num_sat
                 iono(2) = 40.3/f2^2 * stec;
                 iono(3) = 40.3/f3^2 * stec;
             case 'CODE Spherical Harmonics'
-                stec = iono_coeff_global(pos_WGS84.ph, pos_WGS84.la, az, el, round(Ttr), input.IONO.ion, obs.leap_sec);
+                stec = iono_coeff_global(pos_WGS84.lat, pos_WGS84.lon, az, el, round(Ttr), input.IONO.ion, obs.leap_sec);
                 iono(1) = 40.3/f1^2 * stec;
                 iono(2) = 40.3/f2^2 * stec;
                 iono(3) = 40.3/f3^2 * stec;

@@ -118,7 +118,7 @@ for q = 1:n
     prns = Epoch.sats;
     % increase epoch counter
     Epoch.tracked(prns) = Epoch.tracked(prns) + 1;
-    % save Signal-to-noise ratio
+    % save Carrier-to-Noise density
     if ~isempty(Epoch.S1); satellites.SNR_1(q,prns) = Epoch.S1'; end
     if ~isempty(Epoch.S2); satellites.SNR_2(q,prns) = Epoch.S2'; end
     if ~isempty(Epoch.S3); satellites.SNR_3(q,prns) = Epoch.S3'; end

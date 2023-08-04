@@ -12,7 +12,7 @@ function [] = check_bia()
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-[FileName, PathName] = uigetfile({'*.bia*;*.mat;*.bsx*'}, 'Select SINEX bias to check', [Path.DATA '\BIASES']);
+[FileName, PathName] = uigetfile({'*.bia*;*.mat;*.bsx*'}, 'Select SINEX bias to check', [Path.DATA '/BIASES']);
 path_bia = [PathName FileName];
 
 if ~ischar(FileName) || ~ischar(PathName)

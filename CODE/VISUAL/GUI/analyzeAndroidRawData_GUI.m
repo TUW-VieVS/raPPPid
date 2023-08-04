@@ -33,10 +33,10 @@ interval = 1;
 time_system = 'GPS';
 pos_approx = [0; 0; 0];
 % default naming of frequency
-ind_gps_freq = [0 0 0];
-ind_glo_freq = [0 0 0];
-ind_gal_freq = [0 0 0];
-ind_bds_freq = [0 0 0];
+ind_gps_freq = [];
+ind_glo_freq = [];
+ind_gal_freq = [];
+ind_bds_freq = [];
 
 
 

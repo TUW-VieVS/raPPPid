@@ -266,7 +266,7 @@ for q = q_range         % loop over epochs
     % increase epoch counter
     Epoch.tracked(prn_Id) = Epoch.tracked(prn_Id) + 1;
     
-    % --- check SNR and signal strength threshold  ---
+    % --- check C/N0 and signal strength threshold  ---
     [Epoch] = check_SNR(Epoch, settings, obs.use_column);
     
     % --- perform multipath detection ---

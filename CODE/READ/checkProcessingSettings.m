@@ -231,8 +231,8 @@ if (GAL_on || BDS_on) && ~prebatch
 end
 
 % Final CODE products are for GPS and Glonass only
-if (GAL_on || BDS_on) && settings.ORBCLK.bool_precise && prec_prod_CODE
-    errordlg({'Final precise products from CODE are for GPS+Glonass!',  'Please choose CODE MGEX.'}, windowname);
+if BDS_on && settings.ORBCLK.bool_precise && prec_prod_CODE
+    errordlg({'IGS operational products of CODE are for GPS+GLONASS+Galileo!',  'Please choose CODE MGEX.'}, windowname);
     valid_settings = false;     return;
 end
 
@@ -447,13 +447,13 @@ if (settings.PROC.ss_thresh <= 0) || (settings.PROC.ss_thresh > 9)
     valid_settings = false; return
 end
 
-% Input for the SNR cutoff is useless (e.g. negative)
+% Input for the C/N0 cutoff is useless (e.g. negative)
 if any(settings.PROC.SNR_mask <= 0) || any(settings.PROC.SNR_mask > 99)
     errordlg('Please enter sensible values for the SNR Cutoff [db-Hz].', windowname);
     valid_settings = false; return
 end
 
-% SNR cutoff does not fit to the number of input frequencies
+% C/N0 cutoff does not fit to the number of input frequencies
 n_SNR_mask = numel(settings.PROC.SNR_mask);
 if n_SNR_mask ~= 1 && num_freq > n_SNR_mask
     errordlg({'Define a single SNR cutoff or a', 'SNR cutoff for each processed frequency!'}, windowname);
@@ -493,18 +493,18 @@ if settings.ADJ.weight_elev
     end
 end
 
-% check if SNR weighting function is valid
+% check if C/N0 weighting function is valid
 if settings.ADJ.weight_sign_str && isa(settings.ADJ.snr_weight_fun,'function_handle')
     % check the variable used in the function string
     if ~(contains(func2str(settings.ADJ.snr_weight_fun), 'snr') || contains(func2str(settings.ADJ.snr_weight_fun), 'SNR'))
         errordlg({'Please check the SNR weighting function!', 'Use "SNR" as variable.'}, windowname)
         valid_settings = false; return
     end
-    % check if conversion was successful with SNR = 30 and 40
+    % check if conversion was successful with C/N0 = 30 and 40
     try
         settings.ADJ.snr_weight_fun([30 40]);
     catch
-        errordlg({'Please check the SNR weighting function!', 'To allow elementwise operations, use "."'}, windowname)
+        errordlg({'Please check the C/N0 weighting function!', 'To allow elementwise operations, use "."'}, windowname)
         valid_settings = false; return
     end
 end

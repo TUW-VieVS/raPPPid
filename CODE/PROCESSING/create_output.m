@@ -79,15 +79,15 @@ zhd_model = storeData.zhd;
 
 for i = 1:size(posFloat,1)
     temp_geo = cart2geo(posFloat(i,1:3));
-    %[temp_geo.ph,temp_geo.la,temp_geo.h] = xyz2ell_GT(posFloat(1,i),posFloat(2,i),posFloat(3,i));   % would do the same as above
-    [North, East] = ell2utm_GT(temp_geo.ph, temp_geo.la);
-    posFloat_geo(i,:) = [temp_geo.ph, temp_geo.la, temp_geo.h];
+    %[temp_geo.lat,temp_geo.lon,temp_geo.h] = xyz2ell_GT(posFloat(1,i),posFloat(2,i),posFloat(3,i));   % would do the same as above
+    [North, East] = ell2utm_GT(temp_geo.lat, temp_geo.lon);
+    posFloat_geo(i,:) = [temp_geo.lat, temp_geo.lon, temp_geo.h];
     posFloat_utm(i,:) = [North,  East,  temp_geo.h];
     if settings.AMBFIX.bool_AMBFIX
         temp_geo = cart2geo(posFixed(i,1:3));
-        %temp_utm = ell2utm_GT(temp_geo.ph, temp_geo.la);
-        [North, East] = ell2utm_GT(temp_geo.ph, temp_geo.la);
-        posFixed_geo(i,:) = [temp_geo.ph, temp_geo.la, temp_geo.h];
+        %temp_utm = ell2utm_GT(temp_geo.lat, temp_geo.lon);
+        [North, East] = ell2utm_GT(temp_geo.lat, temp_geo.lon);
+        posFixed_geo(i,:) = [temp_geo.lat, temp_geo.lon, temp_geo.h];
         posFixed_utm(i,:) = [North,  East,  temp_geo.h];
     end
 end
@@ -261,8 +261,8 @@ end
 if ~settings.INPUT.bool_parfor
     approx_pos_WGS84 = cart2geo(settings.INPUT.pos_approx);
     fprintf('Approximate Position (WGS84)\n');
-    fprintf('phi:\t %9.5f [°]\n',    approx_pos_WGS84.ph*(180/pi));
-    fprintf('lambda:\t %9.5f [°]\n', approx_pos_WGS84.la*(180/pi));
+    fprintf('phi:\t %9.5f [°]\n',    approx_pos_WGS84.lat*(180/pi));
+    fprintf('lambda:\t %9.5f [°]\n', approx_pos_WGS84.lon*(180/pi));
     fprintf('h:\t\t %9.3f [m]\n',  approx_pos_WGS84.h);
     fprintf('X:\t%12.3f [m]\n',  settings.INPUT.pos_approx(1));
     fprintf('Y:\t%12.3f [m]\n',  settings.INPUT.pos_approx(2));

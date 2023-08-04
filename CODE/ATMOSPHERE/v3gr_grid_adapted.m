@@ -204,7 +204,7 @@ if load_new == 1
                 mkdir([indir_V3GR_grid '/' num2str(year(1))]);
                 websave([indir_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)], [url_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)]);
             end
-            dat = fopen([indir_V3GR_grid '\' num2str(year(1)) '\' filename(1,:)]);
+            dat = fopen([indir_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)]);
             
         else
             
@@ -213,7 +213,7 @@ if load_new == 1
                 mkdir([indir_V3GR_grid '/' num2str(year(i_file+1))]);
                 websave([indir_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)], [url_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)]);
             end
-            dat = fopen([indir_V3GR_grid '\' num2str(year(i_file+1)) '\' filename(i_file,:)]);
+            dat = fopen([indir_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)]);
             
         end
         

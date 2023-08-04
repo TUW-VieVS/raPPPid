@@ -18,7 +18,9 @@ function [settings] = DownloadBiases(settings, gpsweek, dow, yyyy, mm, doy)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-% ||| could be solved more elegant
+% ||| could be solved more elegant (much code is repeated)
+
+bool_archive = true;        % true if archive is downloaded
 
 
 switch settings.BIASES.code
@@ -179,17 +181,29 @@ switch settings.BIASES.code
         target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
         mkdir(target{1});
         URL_host = 'ftp.aiub.unibe.ch:21';
-        URL_folder = {['/CODE/' yyyy '/']};
-        if str2double(gpsweek) >= 2238
-            file = {['COD0OPSFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};  
-        else
-            file = {['COD', gpsweek, dow, '.BIA.Z']};
+        switch settings.ORBCLK.prec_prod_type
+            case 'Final'
+                URL_folder = {['/CODE/' yyyy '/']};
+                if str2double(gpsweek) >= 2238
+                    file = {['COD0OPSFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+                else
+                    file = {['COD', gpsweek, dow, '.BIA.Z']};
+                end
+            case 'Rapid'
+                URL_folder = {'/CODE/'};
+                file = {['COD0OPSRAP_' yyyy doy '0000_01D_01D_OSB.BIA']};
+                bool_archive = false;
+            otherwise
+                errordlg([settings.ORBCLK.prec_prod_type ' CODE OSBs are not implemented!'], 'Error');
         end
+
         % download, unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        if ~bool_archive        % pretend archive, otherwise code does not work
+            file{1} = [file{1} '.gz'];
+        end
         if file_status == 1   ||   file_status == 2
             unzip_and_delete(file(1), target(1));
-
         end
         [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
         settings.BIASES.code_file = [target{1} '/' file{1}];

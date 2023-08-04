@@ -1,5 +1,5 @@
 function Epoch = check_SNR(Epoch, settings, use_column)
-% This function checks the code observations for their SNR and their
+% This function checks the code observations for their C/N0s and their
 % signal strength value from the Rinex observation file. Thresholds are
 % specified in the GUI and code observations under the thresholds are
 % excluded. If a observation on any frequency is under the threshold the
@@ -22,14 +22,14 @@ function Epoch = check_SNR(Epoch, settings, use_column)
 num = settings.INPUT.num_freqs;
 pro = settings.INPUT.proc_freqs;
 
-% SNR cutoff
+% C/N0 cutoff
 if any(~isnan(settings.PROC.SNR_mask))
     no_sats = numel(Epoch.sats);
     SNR = NaN(no_sats, num);
     % get column of SNR observation for all GNSS and frequencies
     col_G = cell2mat(use_column(1,7:9));    col_R = cell2mat(use_column(2,7:9));
     col_E = cell2mat(use_column(3,7:9));    col_C = cell2mat(use_column(4,7:9));
-    % number of columns of SNR observations
+    % number of columns of C/N0 observations
     n_G = numel(col_G);                     n_R = numel(col_R);
     n_E = numel(col_E);                     n_C = numel(col_C);
     % get SNR for all satellites and input frequencies
@@ -45,7 +45,7 @@ if any(~isnan(settings.PROC.SNR_mask))
     if settings.INPUT.use_BDS
         SNR(Epoch.bds, 1:n_C) = Epoch.obs(Epoch.bds, col_C);
     end
-    % determine SNR threshold
+    % determine C/N0s threshold
     SNR_threshold = settings.PROC.SNR_mask;
     if numel(SNR_threshold) ~= 1    % is threshold frequency-specific?
         SNR_threshold = SNR_threshold(1:num);
