@@ -29,9 +29,9 @@ end
 % check string for valid beginning for conversion
 if funstring(1) ~= '@' || ~strcmp(funstring, '@(snr)')
     if contains(funstring, 'snr')
-        funstring = append('@(snr)', funstring);
+        funstring = ['@(snr)' funstring];
     else
-        funstring = append('@(SNR)', funstring);
+        funstring = ['@(SNR)' funstring];
     end
 end
 

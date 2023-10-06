@@ -1,11 +1,11 @@
-function valid_settings = checkProcessingSettings(settings, prebatch)
+function valid_settings = checkProcessingSettings(settings, prebatch_check)
 % This function checks if the settings from the GUI are valid for the 
 % processing. If something is wrong it throws an error message and the
 % processing will not be started
 % 
 % INPUT:
 %   settings        struct, settings for processing from GUI
-%   prebatch        boolean, set to true if check should be performed 
+%   prebatch_check  boolean, set to true if check should be performed 
 %                       ONLY before batch processing or false if check
 %                       should not be performed before batch processing
 %                       (e.g., number of frequencies)
@@ -43,9 +43,9 @@ proc_frqs_glo = settings.INPUT.glo_freq;
 proc_frqs_gal = settings.INPUT.gal_freq;
 proc_frqs_bds = settings.INPUT.bds_freq;
 
-if ~prebatch
+if ~prebatch_check
     % No observation file selected
-    if isempty(settings.INPUT.file_obs) && ~prebatch
+    if isempty(settings.INPUT.file_obs) && ~prebatch_check
         errordlg('Single-File-Processing: No observation file defined!', 'Error');
         valid_settings = false;     return;
     end
@@ -63,9 +63,9 @@ if ~prebatch
     obs_frqs_gal = DEF.freq_GAL_names(rheader.ind_gal_freq);
     obs_frqs_bds = DEF.freq_BDS_names(rheader.ind_bds_freq);
     % create some time-dependent variables
-    jd = cal2jd_GT(rheader.first_obs(1), rheader.first_obs(2), rheader.first_obs(3));
-    [doy, yyyy] = jd2doy_GT(jd);
-    [gpsweek, ~, ~] = jd2gps_GT(jd);
+    jd_start = cal2jd_GT(rheader.first_obs(1), rheader.first_obs(2), rheader.first_obs(3));
+    [doy, yyyy] = jd2doy_GT(jd_start);
+    [gpsweek, ~, ~] = jd2gps_GT(jd_start);
     % create windowname for potential error
     windowname = [rheader.station ' ' sprintf('%04.0f', yyyy) '/' sprintf('%03.0f', doy)];
 else
@@ -80,7 +80,7 @@ prec_prod_CODE = strcmpi(settings.ORBCLK.prec_prod,'CODE') && ~settings.ORBCLK.M
 
 
 %% Check different number of processed frequencies (only for IF LC PPP models)
-if (strcmp(settings.IONO.model,'2-Frequency-IF-LCs') || strcmp(settings.IONO.model,'3-Frequency-IF-LC')) && ~prebatch
+if (strcmp(settings.IONO.model,'2-Frequency-IF-LCs') || strcmp(settings.IONO.model,'3-Frequency-IF-LC')) && ~prebatch_check
     % Different number of processed frequencies for GPS and Galileo
     if GPS_on && GAL_on
         if no_freq_gps ~= no_freq_gal
@@ -196,7 +196,7 @@ end
 
 
 % All GNSS are disabled
-if ~GPS_on && ~GLO_on && ~GAL_on && ~BDS_on && ~prebatch
+if ~GPS_on && ~GLO_on && ~GAL_on && ~BDS_on && ~prebatch_check
     errordlg('All GNSS are disabled!', windowname);
     valid_settings = false;     return;
 end
@@ -213,7 +213,7 @@ end
 
 % ESA precise products, IGS precise products are GPS only
 % CODE DCBs are GPS+GLO only
-if (GAL_on || BDS_on) && ~prebatch
+if (GAL_on || BDS_on) && ~prebatch_check
     if settings.ORBCLK.bool_precise && strcmpi(settings.ORBCLK.prec_prod,'IGS')
         errordlg('IGS precise products are GPS only!', windowname);
         valid_settings = false;     return;
@@ -223,7 +223,7 @@ if (GAL_on || BDS_on) && ~prebatch
         valid_settings = false;     return;
     end
 end
-if (GAL_on || BDS_on) && ~prebatch
+if (GAL_on || BDS_on) && ~prebatch_check
     if strcmp(settings.BIASES.code, 'CODE DCBs (P1P2, P1C1, P2C2)')
         errordlg('CODE DCBs are for Dual-Frequency GPS+GLO only!', windowname);
         valid_settings = false;     return;
@@ -237,7 +237,7 @@ if BDS_on && settings.ORBCLK.bool_precise && prec_prod_CODE
 end
 
 % 3-Frequency-IF-LC but only two frequencies selected
-if strcmp(settings.IONO.model,'3-Frequency-IF-LC') && ~prebatch
+if strcmp(settings.IONO.model,'3-Frequency-IF-LC') && ~prebatch_check
     if GPS_on && no_freq_gps < 3
         errordlg('Not enough GPS frequencies for 3-Frequency-IF-LC selected!', windowname);
         valid_settings = false;     return;
@@ -312,13 +312,13 @@ end
 
 % User wants to process a frequency which is not observed
 for j = 1:3
-    if GPS_on && ~strcmp(settings.INPUT.gps_freq{j}, 'OFF') && ~prebatch
+    if GPS_on && ~strcmp(settings.INPUT.gps_freq{j}, 'OFF') && ~prebatch_check
         if ~any(contains(obs_frqs_gps, proc_frqs_gps{j}))
             errordlg(['Frequency ' proc_frqs_gps{j} ' is not observed and can not be processed!'], windowname);
             valid_settings = false; return
         end
     end
-    if GAL_on && ~strcmp(settings.INPUT.gal_freq{j}, 'OFF') && ~prebatch
+    if GAL_on && ~strcmp(settings.INPUT.gal_freq{j}, 'OFF') && ~prebatch_check
         if ~any(contains(obs_frqs_gal, proc_frqs_gal{j}))
             errordlg(['Frequency ' proc_frqs_gal{j} ' is not observed and can not be processed!'], windowname);
             valid_settings = false; return
@@ -327,7 +327,7 @@ for j = 1:3
 end
 
 % check for errors related to estimation of receiver DCBs
-if settings.BIASES.estimate_rec_dcbs && ~prebatch
+if settings.BIASES.estimate_rec_dcbs && ~prebatch_check
     if num_freq == 1
         errordlg({'Only 1-Frequency is processed:', 'Please disable estimation of Receiver DCBs!'}, windowname);
         valid_settings = false; return
@@ -355,7 +355,7 @@ if strcmp(settings.BIASES.phase(1:3), 'WHU') && ~strcmp(settings.BIASES.code, 'o
 end
 
 % Wuhan Phase Biases are GPS only
-if strcmp(settings.BIASES.phase(1:3), 'WHU') && (GLO_on || GAL_on || BDS_on) && ~prebatch
+if strcmp(settings.BIASES.phase(1:3), 'WHU') && (GLO_on || GAL_on || BDS_on) && ~prebatch_check
     errordlg({'Phase biases from Wuhan University are for GPS only:', 'Please process only GPS!'}, windowname);
     valid_settings = false; return
 end
@@ -375,7 +375,7 @@ if strcmp(settings.BIASES.code, 'CODE OSBs')
     % As the processed signals can not be checked here only
     % the processed frequencies are checked here
     if GPS_on
-        if any(strcmp(proc_frqs_gps, 'L5')) && ~prebatch
+        if any(strcmp(proc_frqs_gps, 'L5')) && ~prebatch_check
             errordlg({'CODE OSBs do not contain a bias for L5!', 'They are for the IF-LC of GPS: C1C/C1W/C2W only.'}, windowname);
             valid_settings = false;     return
         end
@@ -396,19 +396,19 @@ if (prec_prod_CODE_MGEX && strcmp(settings.BIASES.code, 'CODE OSBs')) ...
 end
 
 % 3-frequencies enabled, 2xIF-LC is processed and receiver DCB estimation is disabled
-if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && num_freq == 3 && ~settings.BIASES.estimate_rec_dcbs && ~prebatch
+if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && num_freq == 3 && ~settings.BIASES.estimate_rec_dcbs && ~prebatch_check
     errordlg({'Three frequencies and 2-Frequency-IF-LCs selected:', 'Please enable the receiver DCB estimation or deactivate the 3rd frequency!'}, windowname);
     valid_settings = false; return
 end
 
 % WL Fixing needs at least two epochs
-if ~prebatch && settings.AMBFIX.bool_AMBFIX && ~isempty(rheader.interval) && (settings.AMBFIX.start_WL_sec/rheader.interval < 2)
+if ~prebatch_check && settings.AMBFIX.bool_AMBFIX && ~isempty(rheader.interval) && (settings.AMBFIX.start_WL_sec/rheader.interval < 2)
     errordlg({'Check start of Fixing!', 'For WL-Fixing at least 2 epochs are needed.'}, windowname);
     valid_settings = false; return
 end
 
 % check time system of observations, until now only GPS seen
-if ~prebatch && ~strcmp(rheader.time_system, 'GPS') && ~isempty(rheader.time_system)
+if ~prebatch_check && ~strcmp(rheader.time_system, 'GPS') && ~isempty(rheader.time_system)
     errordlg({'Observation time system error:', ['Only GPS is implemented, found: ' rheader.time_system]}, windowname);
     valid_settings = false; return
 end
@@ -460,12 +460,12 @@ if n_SNR_mask ~= 1 && num_freq > n_SNR_mask
     valid_settings = false; return
 end
 
-% Hydrostatic AND wet delay have to be used together from tropo file
-if strcmp(settings.TROPO.zwd, 'Tropo file') && ~strcmp(settings.TROPO.zhd, 'Tropo file') ...
-        || strcmp(settings.TROPO.zhd, 'Tropo file') && ~strcmp(settings.TROPO.zwd, 'Tropo file')
-    errordlg('Troposphere: Please use "Tropo file" for the hydrostatic AND wet delay.', windowname);
-    valid_settings = false; return
-end
+% % Hydrostatic AND wet delay have to be used together from tropo file
+% if strcmp(settings.TROPO.zwd, 'Tropo file') && ~strcmp(settings.TROPO.zhd, 'Tropo file') ...
+%         || strcmp(settings.TROPO.zhd, 'Tropo file') && ~strcmp(settings.TROPO.zwd, 'Tropo file')
+%     errordlg('Troposphere: Please use "Tropo file" for the hydrostatic AND wet delay.', windowname);
+%     valid_settings = false; return
+% end
 
 % Check GNSS weights
 if any([settings.ADJ.fac_GPS settings.ADJ.fac_GLO settings.ADJ.fac_GAL settings.ADJ.fac_BDS] < 1) || ...
@@ -484,7 +484,7 @@ end
 
 % check if elevation weighting function is valid
 if settings.ADJ.weight_elev
-    % check if conversion was successful with elev = 45°
+    % check if conversion was successful with elev = 45Â°
     try 
         settings.ADJ.elev_weight_fun([pi/4 pi/5]);
     catch
@@ -543,7 +543,7 @@ if (strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmp
 end
 
 % Multipath detection makes only sense with high observation interval
-if settings.OTHER.mp_detection && ~isempty(rheader.interval) && rheader.interval > 5
+if ~prebatch_check && settings.OTHER.mp_detection && ~isempty(rheader.interval) && rheader.interval > 5
     msgbox({'Be careful: Observation interval might',  'be too low for Multipath detection!'}, 'MP Detection', 'help')
 end
 
@@ -586,9 +586,10 @@ if settings.INPUT.bool_realtime
         end
     end
     % Troposphere
-    if strcmp(settings.TROPO.zhd, 'VMF3') || strcmp(settings.TROPO.zwd, 'VMF3') || ...
+    if strcmp(structure.TROPO.vmf_version, 'operational') && (...
+            strcmp(settings.TROPO.zhd, 'VMF3') || strcmp(settings.TROPO.zwd, 'VMF3') || ...
             strcmp(settings.TROPO.mfh, 'VMF3') || strcmp(settings.TROPO.mfw, 'VMF3') || ...
-            strcmp(settings.TROPO.Gh, 'GRAD') || strcmp(settings.TROPO.Gw, 'GRAD')
+            strcmp(settings.TROPO.Gh, 'GRAD') || strcmp(settings.TROPO.Gw, 'GRAD'))
         fprintf(2, 'Troposphere: Change to real-time capable model (e.g., GPT3).\n')
         bool_RT = false;
     end
@@ -608,7 +609,7 @@ end
 
 % Galileo HAS stream is used: GPS W should be placed at the end of the
 % observation ranking
-if ~prebatch && settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'manually') ...
+if ~prebatch_check && settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'manually') ...
         && contains(settings.ORBCLK.file_corr2brdc, 'SSRA00EUH') && ...
         settings.INPUT.gps_ranking(1) == 'W'
     errordlg({'Galileo HAS does not provide C1W and C2W biases!', ...
@@ -636,6 +637,57 @@ if (settings.TROPO.q < 0 || settings.TROPO.q > 100)
     end
 end
 
+% Check if myAntex.atx is existing
+if settings.OTHER.antex_rec_manual && ~isfile(Path.myAntex)
+    errordlg({['The file ' Path.myAntex ' does not exist.'], 'Create it or deactivate ANTEX corrections from myAntex.atx!'}, windowname)
+    valid_settings = false; return
+end
+
+% Check if myAntex.atx contains corrections for antenna specified in RINEX
+% file header
+if ~prebatch_check && settings.OTHER.antex_rec_manual
+    % read data from myAntex.atx
+    fid = fopen(Path.myAntex);
+    lines = textscan(fid,'%s', 'delimiter','\n', 'whitespace','');
+    lines = lines{1};
+    fclose(fid);
+    % check if myAntex.atx contains data for this specific antenna (RINEX header)
+    if isempty(rheader.antenna) || isempty(strtrim(rheader.antenna))
+        % antenna type is empty
+        errordlg({['Corrections from ' Path.myAntex ' can not be applied'],  'because the antenna type in the RINEX header is empty '}, windowname)
+        valid_settings = false; return
+    elseif any(contains(lines, rheader.antenna))
+        % everything is fine, continue with other checks
+    else
+        % MyAntex.atx has no suitable corrections
+        errordlg({[Path.myAntex ' does not contains corrections for'], rheader.antenna, 'Disable myAntex.atx or add PCO+PCV corrections.'}, windowname)
+        valid_settings = false; return
+    end
+end
+
+
+% check if VMF coefficients are existing (year is >= 1980 and the date is 
+% at least 2 days behind the current date)
+if ~prebatch_check && (...
+        strcmpi(settings.TROPO.zhd,'VMF3') || strcmpi(settings.TROPO.zwd,'VMF3') || ...
+        strcmpi(settings.TROPO.mfh,'VMF3') ||   strcmpi(settings.TROPO.mfw,'VMF3') || ...
+        strcmpi(settings.TROPO.Gh,'GRAD')  ||   strcmpi(settings.TROPO.Gw,'GRAD') || ...
+        strcmpi(settings.TROPO.zhd,'VMF1') || strcmpi(settings.TROPO.zwd,'VMF1') || ...
+        strcmpi(settings.TROPO.mfh,'VMF1') ||   strcmpi(settings.TROPO.mfw,'VMF1'))
+    current_time = clock;   % get current date
+    current_jd = cal2jd_GT(current_time(1), current_time(2), current_time(3));
+    if rheader.first_obs(1) < 1980      % VMF data starts 1980
+        errordlg({'No VMF data available (only from year 1980 onwards).', 'Please change the troposphere model to GPT3!'}, windowname);
+        valid_settings = false; return
+    end
+    if strcmp(settings.TROPO.vmf_version, 'operational') && ...
+            jd_start + 2 > current_jd        % VMF operational data is available with two-day delay
+        errordlg({'No operational VMF data available yet (latency: 2 days).', ...
+            'Please change the troposphere model to GPT3!'}, windowname);
+        valid_settings = false; return
+    end
+end
+
 
 
 
@@ -647,12 +699,12 @@ end
 
 
 %% Errors depending on number of processed frequencies
-if num_freq == 0 && ~prebatch       % all frequencies are off
+if num_freq == 0 && ~prebatch_check       % all frequencies are off
     errordlg({'All frequencies are OFF:', 'Please select frequencies to process!'}, windowname);
     valid_settings = false; return
 end
 % 1 Frequency Processing
-if num_freq == 1 && ~prebatch
+if num_freq == 1 && ~prebatch_check
     % Cycle Slip Detection with dL1-dL2-difference is not possible
     if settings.OTHER.CS.DF && contains(settings.PROC.method, 'Phase')
         errordlg({'Only 1-Frequency is processed:', 'Cycle-Slip Detection dL1-dL2 is not possible!'}, windowname);
@@ -675,14 +727,14 @@ if num_freq == 1 && ~prebatch
     end
 end
 % 2 or 3 Frequencies are processed
-if (num_freq == 2 || num_freq == 3) && ~prebatch
+if (num_freq == 2 || num_freq == 3) && ~prebatch_check
     if settings.OTHER.CS.l1c1
         errordlg('Cycle-Slip Detection with L1-C1 Difference only implemented for Single-Frequency-Processing.', windowname);
         valid_settings = false; return
     end
 end
 % 3 Frequency-Processing
-if num_freq == 3 && ~prebatch
+if num_freq == 3 && ~prebatch_check
     % CODE DCBs are only for two frequencies
     if strcmp(settings.BIASES.code, 'CODE DCBs (P1P2, P1C1, P2C2)')
         errordlg('CODE DCBs are only for two frequencies of GPS+GLO !', windowname);
@@ -772,7 +824,7 @@ end
 %% Check if all file-paths are correct and the needed files are existing
 
 % Observation File
-if ~prebatch
+if ~prebatch_check
     valid_settings = checkFileExistence(settings.INPUT.file_obs, 'RINEX Observation File', valid_settings);
 end
 
@@ -848,7 +900,7 @@ if ~settings.OTHER.CS.TimeDifference && ~settings.OTHER.CS.l1c1 && ~settings.OTH
 end
 
 % Intervall is (maybe?) too long for Cycle-Slip Detection with Doppler
-if ~prebatch && ~isempty(rheader.interval) && rheader.interval > 5 && settings.OTHER.CS.Doppler  
+if ~prebatch_check && ~isempty(rheader.interval) && rheader.interval > 5 && settings.OTHER.CS.Doppler  
     msgbox('Be careful: Observation intervall may be too long for Cycle-Slip-Detection with Doppler!', 'Cycle-Slip-Detection', 'help')
 end
 
@@ -866,7 +918,7 @@ end
 % Batch processing and manually selected for only one day selected orbits, 
 % clocks or biases. This could lead to errors if observation files from
 % multiple days are processd
-if prebatch
+if prebatch_check
     if settings.ORBCLK.bool_precise && strcmp(settings.ORBCLK.prec_prod, 'manually') ...
             && (~contains(settings.ORBCLK.file_sp3, '$') || ~contains(settings.ORBCLK.file_clk, '$'))
         msgbox({'Batch processing and manual selected satellite orbit & clocks:','File(s) only for one day defined, be careful!'}, 'Potential error', 'help')
@@ -882,7 +934,7 @@ if GAL_on && settings.ORBCLK.bool_precise && prec_prod_CODE_MGEX && ~strcmp(sett
 end
 
 % check if RINEX files continues over day boundary
-if ~prebatch && ~isempty(rheader.first_obs) && ~isempty(rheader.last_obs)
+if ~prebatch_check && ~isempty(rheader.first_obs) && ~isempty(rheader.last_obs)
     if ~all(rheader.first_obs(1:3) == rheader.last_obs(1:3))
         msgbox({'Be careful: RINEX file contains observation of multiple days.', 'Processing over the day boundary might fail!'}, windowname);
     end

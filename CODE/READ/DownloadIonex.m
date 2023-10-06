@@ -19,7 +19,7 @@ function [settings] = DownloadIonex(settings, gpsweek, dow, yyyy, mm, doy)
 
 % create folder and prepare the download
 target = {[Path.DATA, 'IONO/', yyyy, '/', doy '/']};
-mkdir(target{1});
+[~, ~] = mkdir(target{1});
 switch settings.IONO.file_source
     case 'IGS'
         URL_host = 'gssc.esa.int:21';

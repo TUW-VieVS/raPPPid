@@ -6,7 +6,7 @@ function [boolean, MultiPlot] = checkMultiPlotSelection(MultiPlot, handles)
 
 boolean = ...
     MultiPlot.coord_conv || MultiPlot.histo_conv || MultiPlot.bar || MultiPlot.box || ...
-    MultiPlot.pos_conv || MultiPlot.ttff || MultiPlot.pos_acc || MultiPlot.quant_conv ...
+    MultiPlot.pos_conv || MultiPlot.ttff || MultiPlot.convaccur || MultiPlot.quant_conv ...
     || MultiPlot.graph || MultiPlot.tropo;
 
 if ~boolean
@@ -18,7 +18,7 @@ if ~boolean
         MultiPlot.bar           = handles.paths.last_multi_plot.bar;
         MultiPlot.pos_conv      = handles.paths.last_multi_plot.pos_conv;
         MultiPlot.ttff          = handles.paths.last_multi_plot.ttff;
-        MultiPlot.pos_acc       = handles.paths.last_multi_plot.pos_acc;   
+        MultiPlot.convaccur     = handles.paths.last_multi_plot.convaccur;   
         MultiPlot.box           = handles.paths.last_multi_plot.box;
         MultiPlot.quant_conv    = handles.paths.last_multi_plot.quant_conv; 
 		MultiPlot.graph      	= handles.paths.last_multi_plot.graph; 

@@ -7,7 +7,7 @@ function [MultiPlot] = getMultiPlotSelection(handles)
 % check which plots are en/disabled
 MultiPlot.pos_conv   = get(handles.checkbox_pos_conv,       'Value');
 MultiPlot.coord_conv = get(handles.checkbox_coord_conv,     'Value');
-MultiPlot.pos_acc    = get(handles.checkbox_pos_acc,        'Value');
+MultiPlot.convaccur  = get(handles.checkbox_convaccur,      'Value');
 MultiPlot.histo_conv = get(handles.checkbox_histo_conv,  	'Value');
 MultiPlot.box        = get(handles.checkbox_box_plot,       'Value');
 MultiPlot.quant_conv = get(handles.checkbox_quantile_conv,  'Value');

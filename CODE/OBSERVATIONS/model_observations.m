@@ -64,13 +64,14 @@ code_model = code_model .* ~exclude;
 
 
 %% PHASE
+phase_model = [];
 if contains(settings.PROC.method,'+ Phase')
     idx = (NO_PARAM+1):(NO_PARAM+no_sats*num_freq);
     ambig = param(idx);
     ambig = reshape(ambig, [length(ambig)/num_freq , num_freq, 1]);     % convert to vector
     phase_model = model.rho...                            	% theoretical range
         - Const.C * model.dT_sat_rel...                    	% satellite and receiver clock
-        + model.dt_rx_clock - model.dcbs ...              	% receiver clock and DCBs
+        + model.dt_rx_clock - model.dcbs ...                % receiver clock and DCBs
         + model.trop + model.mfw*zwd - iono ...           	% atmosphere
         - model.dX_solid_tides_corr ...                   	% solid tides
 		- model.dX_ocean_loading ...                   		% ocean loading
@@ -81,13 +82,12 @@ if contains(settings.PROC.method,'+ Phase')
     
     % eliminate phase observations because of, for example, cutoff angle:
     phase_model = phase_model .* ~exclude .* ~Epoch.cs_found;
-else
-   phase_model = [];
 end   
 
 
 
 %% DOPPLER
+doppler_model = [];
 if contains(settings.PROC.method, 'Doppler') && ~strcmp(settings.PROC.method, 'Code (Doppler Smoothing)')
     % get receiver and satellite position and velocity (in ECEF)
     rec_p = param(1:3);
@@ -105,7 +105,5 @@ if contains(settings.PROC.method, 'Doppler') && ~strcmp(settings.PROC.method, 'C
     
     % exclude satellites because of, for example, cutoff angle:
     doppler_model(exclude) = 0;
-else
-    doppler_model = [];
 end
 

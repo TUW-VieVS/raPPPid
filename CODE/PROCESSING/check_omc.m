@@ -1,9 +1,8 @@
 function [Epoch, Adjust] = check_omc(Epoch, model, Adjust, settings, obs_intval)
 % Check observed minus computed for extreme outliers which could be
 % multipath (code observations) or undetected cycle slips (phase
-% observations). The cutoff is set true for satellite which are detected as
-% outliers. The omc values are saved in the function calc_float_solution
-% into Adjust.code_/phase_omc.
+% observations). Satellites with too large omc are assumed as outliers and
+% excluded from the parameter estimation.
 %
 % INPUT:
 %   Epoch       struct, contains epoch-specific data
@@ -91,7 +90,6 @@ if any(outlier_c(:))
     end
 end
 
-
 if ~isnan(settings.PROC.omc_window)
     % save mean code omc value for each satellite
     Adjust.code_omc(end, Epoch.sats) = mean(omc_code_, 2, 'omitnan');
@@ -119,7 +117,6 @@ if bool_phase
     omc_phase_(Epoch.glo,:) = abs(omc_phase(Epoch.glo,:) - median(omc_phase(Epoch.glo,:), 'omitnan'));
     omc_phase_(Epoch.gal,:) = abs(omc_phase(Epoch.gal,:) - median(omc_phase(Epoch.gal,:), 'omitnan'));
     omc_phase_(Epoch.bds,:) = abs(omc_phase(Epoch.bds,:) - median(omc_phase(Epoch.bds,:), 'omitnan'));
-    
     
     % calculate threshold for observed minus computed check of phase observations
     if time_last_reset/obs_intval >= n
@@ -153,7 +150,7 @@ if bool_phase
         Adjust.phase_omc(end, Epoch.sats) = mean(omc_phase_,2, 'omitnan');
     end
     
-    Epoch.sat_status(outlier_p) = 11;
+    Epoch.sat_status(outlier_p) = 11;       % set satellite status
 
 end
 
@@ -161,6 +158,6 @@ end
 %% save results to Epoch
 Epoch.exclude  = exclude;
 Epoch.cs_found = cs_found;
-Epoch.sat_status(outlier_c) = 11;
+Epoch.sat_status(outlier_c) = 11;           % set satellite status
 
 

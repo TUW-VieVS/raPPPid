@@ -13,14 +13,17 @@ function plotZTDHisto(dZTD, PlotStruct, label, i)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
+
+% check if anything to plot
+if isempty(dZTD) || all(isnan(dZTD(:))); return; end
+
+% create plot figure
 fig_histo =  figure('Name', 'Histogram of ZTD Difference', 'NumberTitle','off');
+
 % add customized datatip
 dcm = datacursormode(fig_histo);
 datacursormode on
 set(dcm, 'updatefcn', @vis_customdatatip_histo)
-
-% check if anything to plot
-if isempty(dZTD) || all(isnan(dZTD(:))); return; end
 
 % prepare plot
 dZTD = dZTD(:)*100;         % convert from [m] to [cm]

@@ -1,5 +1,5 @@
 function dx = KalmanFilterIterative(Adjust, x_pred)
-% Function for Kalm Filter with inner-epoch iteration. 
+% Function for Kalman Filter with inner-epoch iteration. 
 % The change of the parameters is estimated as pseudo-observation trough 
 % an inner-epoch iteration. Start of the iteration is the zero-vector as 
 % the change of the parameters is expected to be zero.
@@ -9,16 +9,16 @@ function dx = KalmanFilterIterative(Adjust, x_pred)
 %   Adjust  containing all adjustment relevant data [struct]	 
 %  	x_pred      predicted parameters [| vector]
 % OUTPUT:     
-%   struct x with   
-%       x.x        	vector of adjusted parameters [| vector]
-%       x.sigma2   	empirical variance of parameters
-%       x.l      	vector of adjusted observations [| vector]
-%       x.v     	residual vector [| vector]
-%       x.r         redundancy [scalar]
-%       x.Qxx       Cofactor Matrix of Parameters
-%       x.Sxx       Covariance Matrix of Parameters
-%       x.Qvv       Cofactor Matrix of Residuals
-%       x.Svv       Covariance Matrix of Residuals
+%   struct dx with   
+%      dx.x        	vector of adjusted parameters [| vector]
+%      dx.sigma2   	empirical variance of parameters
+%      dx.l      	vector of adjusted observations [| vector]
+%      dx.v     	residual vector [| vector]
+%      dx.r         redundancy [scalar]
+%      dx.Qxx       Cofactor Matrix of Parameters
+%      dx.Sxx       Covariance Matrix of Parameters
+%      dx.Qvv       Cofactor Matrix of Residuals
+%      dx.Svv       Covariance Matrix of Residuals
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -48,7 +48,7 @@ P_x(zero_columns,:) = [];
 x_pred(zero_columns) = [];
 
 
-%% comment here
+%% estimate
 n = numel(omc);         % number of observations
 m = sum(sum(A)~=0);   	% number of parameters = number of rows in Design-Matrix
 r = n - m;              % Redundancy
@@ -61,8 +61,8 @@ v = l_adj - omc;                            % Residual vector
 %% save results
 idx = ~zero_columns;    	% removed columns have to be considered
 % vector with the estimation of the change of parameters
+dx.x = zeros(numel(idx), 1);
 dx.x(idx)	= x_adj;        
-dx.x = dx.x';
 % Residuals/Verbesserungen
 dx.v         = v;          	
 % Cofactor Matrix of Parameters
@@ -71,14 +71,14 @@ dx.Qxx(idx,idx)	= Qxx;
 
 
 % not used:
-% dx.l         = l_adj;    	% vector of adjusted observations
-% sigma2_adj = v'*P_l*v / r;                    % Empirical Variance
-% Qvv = cholinv(P_l) - A*Qxx*A';                % Cofactor Matrix of Residuals
+% dx.l         = l_adj;                     % vector of adjusted observations
+% sigma2_adj = v'*P_l*v / r;                % Empirical Variance
+% Qvv = cholinv(P_l) - A*Qxx*A';            % Cofactor Matrix of Residuals
 % dx.Sxx(idx,idx)	= Qxx * sigma2_adj;     % Covariance Matrix of Parameters
-% dx.Qvv    = Qvv;                         % Cofactor Matrix of Residuals
+% dx.Qvv    = Qvv;                          % Cofactor Matrix of Residuals
 % dx.Svv    = dx.Qvv * sigma2_adj;          % Covariance Matrix of Residuals
-% dx.r      = r;                           % redundancy
-% dx.sigma2 = sigma2_adj;              	% empirical variance of parameters
+% dx.r      = r;                            % redundancy
+% dx.sigma2 = sigma2_adj;                   % empirical variance of parameters
 
 
 end

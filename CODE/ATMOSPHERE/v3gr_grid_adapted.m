@@ -201,7 +201,7 @@ if load_new == 1
             
             % check if the file is available or if it has to be downloaded first, then open it
             if ~exist([indir_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)],'file')
-                mkdir([indir_V3GR_grid '/' num2str(year(1))]);
+                [~, ~] = mkdir([indir_V3GR_grid '/' num2str(year(1))]);
                 websave([indir_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)], [url_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)]);
             end
             dat = fopen([indir_V3GR_grid '/' num2str(year(1)) '/' filename(1,:)]);
@@ -210,7 +210,7 @@ if load_new == 1
             
             % check if the file is available or if it has to be downloaded first, then open it
             if ~exist([indir_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)],'file')
-                mkdir([indir_V3GR_grid '/' num2str(year(i_file+1))]);
+                [~, ~] = mkdir([indir_V3GR_grid '/' num2str(year(i_file+1))]);
                 websave([indir_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)], [url_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)]);
             end
             dat = fopen([indir_V3GR_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)]);

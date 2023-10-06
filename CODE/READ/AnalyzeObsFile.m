@@ -11,6 +11,8 @@ function [] = AnalyzeObsFile(settings)
 % Revision:
 %   ...
 %
+% using distinguishable_colors.m (c) 2010-2011, Tim Holy
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -94,10 +96,13 @@ settings.INPUT.rawDataAndroid = false;
 obs = find_obs_col(obs, settings);
 % save and print information to obs and command window
 obs = SavePrintObsType(obs, settings);
+fprintf('\n');
 
 
 %% LOOP OVER OBSERVATION DATA
 for q = 1:n
+    old_gps_time = Epoch.gps_time;          % save to check for identical observation records
+    
     % get observations
     [Epoch] = EpochlyReset_Epoch(Epoch);    
     if bool_RINEX
@@ -106,10 +111,16 @@ for q = 1:n
         [Epoch] = RawSensor2Epoch(OBSDATA, newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column);
     end
     
+    % check for identical observation data records
+    if old_gps_time == Epoch.gps_time
+        fprintf(2, ['Duplicate epoch: ' Epoch.rinex_header '\n'])
+    end
+    % check if epoch data is usable
     if ~Epoch.usable
         storeData.gpstime(q,1) = Epoch.gps_time;
         continue
     end
+
     obs.glo_channel(isnan(obs.glo_channel)) = 0;
     % -> frequency of GLONASS satellites is not correct but otherwise
     % GLONASS is not analzed correctly
@@ -153,7 +164,7 @@ end
 delete(f)
 
 %% PLOTS
-rgb = colorcube(40);      % colors for plot, no GNSS has more than 40 satellites
+rgb = createDistinguishableColors(40);      % colors for plot, no GNSS has more than 40 satellites
 % GNSS to invastigate
 isGPS = settings.INPUT.use_GPS;          
 isGLO = settings.INPUT.use_GLO;
@@ -182,7 +193,7 @@ L3 = storeData.L3; L3(L3==0) = NaN;
 satellites.CL_1 = C1 - L1;
 satellites.CL_2 = C2 - L2;
 satellites.CL_3 = C3 - L3;
-signQualPlot(satellites, label_x_h, hours, isGPS, isGLO, isGAL, isBDS, settings);
+signQualPlot(satellites, label_x_h, hours, isGPS, isGLO, isGAL, isBDS, settings, rgb);
 
 
 % -+-+-+-+- Figure: Satellite Visibility Plot -+-+-+-+-

@@ -15,7 +15,7 @@ function [] = StationResultPlot(TABLE, PlotStruct)
 
 [unique_labels, ~, idx_label] = unique(TABLE(:,7), 'stable');
 n_labels = numel(unique_labels);
-coleurs = colorcube(n_labels);     % colors for each label
+coleurs = createDistinguishableColors(n_labels);        % colors for each label   
 % to store data for the station mean convergence graph
 G_conv_2D_mean = cell(1);   G_conv_3D_mean = cell(1);
 % to store data for the station median convergence graph
@@ -102,10 +102,11 @@ for j = 1:n_labels
             
             % update waitbar
             if ishandle(WBAR)
-                progress = i/n_unique;      % 1/100 [%]
-                mess_1 = sprintf('%s%02.2f%s', 'Station Graph: ', progress*100, '% are finished.');
-                mess_2 = ['Current station: ' curr_stat];
-                waitbar(progress, WBAR, {mess_1; mess_2})
+                progress2 = i/n_unique;      % 1/100 [%]
+                progress1 = ii/n_files;     % 1/100 [%]
+                mess_1 = sprintf('%s%02.2f%s', 'Station Graph: approaching ', progress1*100, '%.');
+                mess_2 = sprintf('%s%s%s%02.2f%s', 'Station ', curr_stat, ': ', progress2*100, '% finished');
+                waitbar(progress1, WBAR, {mess_1; mess_2})
             end
             % check if user pushed STOP button
             if STOP_CALC; if ishandle(WBAR); close(WBAR); end; return; end
@@ -297,22 +298,25 @@ if PlotStruct.graph
     title('Station 3D Accuracy Graph')
     
     % Plot the Station ZTD Graph
-    str = 'Station ZTD Accuracy, float solution';
-%     if PlotStruct.fixed ; str = 'Station Graph Accuracy, fixed solution'; end
-    fig_stat_ztd = figure('Name',str, 'NumberTitle','off');
-    subplot(2,1,1)
-    StationZTDGraph(P41, coleurs, G_ZTD_68, n, m, unique_labels)
-    title('Station ZTD 0.68 Quantile')
-    ylabel('68% Quantile [m]')
-    subplot(2,1,2)
-    StationZTDGraph(P42, coleurs, G_ZTD_95, n, m, unique_labels)
-    title('Station ZTD 0.95 Quantile')
-    ylabel('95% Quantile [m]')
+    bool_ztd_graph = any(~isnan(P41(:)));
+    if bool_ztd_graph
+        str = 'Station ZTD Accuracy, float solution';
+        %     if PlotStruct.fixed ; str = 'Station Graph Accuracy, fixed solution'; end
+        fig_stat_ztd = figure('Name',str, 'NumberTitle','off');
+        subplot(2,1,1)
+        StationZTDGraph(P41, coleurs, G_ZTD_68, n, m, unique_labels)
+        title('Station ZTD 0.68 Quantile')
+        ylabel('68% Quantile [m]')
+        subplot(2,1,2)
+        StationZTDGraph(P42, coleurs, G_ZTD_95, n, m, unique_labels)
+        title('Station ZTD 0.95 Quantile')
+        ylabel('95% Quantile [m]')
+    end
     
     % add customized datatip mean convergence
     dcm = datacursormode(fig_stat_conv_);
     datacursormode on
-    set(dcm, 'updatefcn', @customdatatip_StationGraph)    
+    set(dcm, 'updatefcn', @customdatatip_StationGraph)
     % add customized datatip median convergence
     dcm = datacursormode(fig_stat_conv);
     datacursormode on
@@ -322,9 +326,11 @@ if PlotStruct.graph
     datacursormode on
     set(dcm, 'updatefcn', @customdatatip_StationGraph)
     % add customized datatip ZTD
-    dcm = datacursormode(fig_stat_ztd);
-    datacursormode on
-    set(dcm, 'updatefcn', @customdatatip_StationGraph)
+    if bool_ztd_graph
+        dcm = datacursormode(fig_stat_ztd);
+        datacursormode on
+        set(dcm, 'updatefcn', @customdatatip_StationGraph)
+    end
     
 end
 
@@ -341,7 +347,7 @@ for i = 1:n-1
         plot(x, y, '-o', 'color', coleurs(i,:), 'MarkerFaceColor',coleurs(i,:));
     end
 end
-legend(unique_labels, 'Location','southeast')	% create legend with labels
+legend(unique_labels, 'Location','NorthWest')       % create legend with labels
 xticks(1:m)                     % write station names to x-axis
 xticklabels(GRAPH_conv(1,1:m))
 xtickangle(270)                 % rotate ticks
@@ -358,7 +364,7 @@ for i = 1:n-1
         plot(x, y, '-o', 'color', coleurs(i,:), 'MarkerFaceColor',coleurs(i,:));
     end
 end
-legend(unique_labels)           % create legend with labels
+legend(unique_labels, 'Location','NorthWest')   	% create legend with labels
 xticks(1:m)                     % write station names to x-axis
 xticklabels(GRAPH_acc(1,1:m))
 xtickangle(270)                 % rotate ticks
@@ -369,13 +375,13 @@ ylim([0 Inf])
 function [] = StationZTDGraph(P, coleurs, GRAPH_acc, n, m, unique_labels)
 hold on
 for i = 1:n-1
-    x = 1:m; y = P(i,:);                   % get plot data for current label
+    x = 1:m; y = P(i,:);                    % get plot data for current label
     x(isnan(y)) = []; y(isnan(y)) = [];     % remove NaN for continous line
     if ~isempty(x)
         plot(x, y, '-o', 'color', coleurs(i,:), 'MarkerFaceColor',coleurs(i,:));
     end
 end
-legend(unique_labels)           % create legend with labels
+legend(unique_labels, 'Location','NorthWest')      	% create legend with labels
 xticks(1:m)                     % write station names to x-axis
 xticklabels(GRAPH_acc(1,1:m))
 xtickangle(270)                 % rotate ticks

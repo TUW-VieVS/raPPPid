@@ -21,7 +21,7 @@ function [settings] = DownloadStreamArchive(settings, gpsweek, dow, yyyy, mm, do
 
 
 target = [Path.DATA, 'STREAM/', yyyy, '/', doy '/'];
-mkdir(target);
+[~, ~] = mkdir(target);
 
 switch settings.ORBCLK.CorrectionStream
     

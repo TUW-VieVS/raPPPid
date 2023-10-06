@@ -20,7 +20,7 @@ end
 
 % check string for valid beginning for conversion
 if funstring(1) ~= '@' || ~strcmp(funstring, '@(e)')
-    funstring = append('@(e)', funstring);
+    funstring = ['@(e)' funstring];
 end
 
 % convert string to function handle

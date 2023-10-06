@@ -119,8 +119,9 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(set
             A_iono = [A_iono; A_iono_3];
         end
     end
-    A_iono = kron(A_iono,ones(2,1));                % duplicate for phase observation
-    phase_rows = 2:2:size(A_iono,1);                % rows of phase observations
+    A_iono(Epoch.exclude(:), :) = 0;   	% remove iono estimation of excluded satellites
+    A_iono = kron(A_iono,ones(2,1));  	% duplicate for phase observation
+    phase_rows = 2:2:size(A_iono,1);   	% rows of phase observations
     A_iono(phase_rows,:) = -A_iono(phase_rows,:); 	% change sign for phase observations
     % Put Design-Matrix together
     A = [A, A_iono];

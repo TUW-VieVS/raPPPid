@@ -23,6 +23,9 @@ classdef DEF
         % default leap seconds
         LEAP_SEC = 18;
         
+        % maximal number of inner-epoch iterations
+        ITERATION_MAX_NUMBER = 15;
+        
         % threshold for norm of coordinates to stop inner-epoch iteration 
         ITERATION_THRESHOLD = 1e-3;     % [m]  
         
@@ -79,6 +82,9 @@ classdef DEF
         
         % default processing name
         proc_name = 'noname';
+        
+        % define resolution of gridwise VMF3 (1°x1° or 5°x5°)
+        VMF3_grid_resolution = 5;
         
     end
     

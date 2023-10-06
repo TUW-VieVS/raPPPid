@@ -1,11 +1,12 @@
 function xyz = ApproximatePositionFromSats(Epoch, input, settings)
 % This function calculates an approximate position from the visible
-% satellites. Therefore some kind of orbit data is needed. The region where
-% the observed satellites are visible is identified and the middle point of
-% this region is taken as approximate position.
+% satellites (without actual GNSS observations). Therefore some kind of 
+% orbit data is needed. The region where the observed satellites are 
+% visible is identified and the middle point ofthis region is taken as 
+% approximate position.
 % 
 % INPUT:
-%   Epoch       struct, epoch-specific data
+%   Epoch           struct, epoch-specific data
 %   input           struct, input data for processing
 %   settings        struct, settings for processing from GUI
 % OUTPUT:

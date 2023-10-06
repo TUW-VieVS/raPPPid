@@ -24,9 +24,9 @@ end
 
 
 % convert vectors to matrices where each convergence period is a row
-if eps_reset*no_resets == no_epochs && no_resets~=1
+if eps_reset*no_resets == no_epochs && no_resets~=1 && eps_reset == size(d.dT,2)
     % this does work only if all convergence periods have the same
-    % amount of epochs
+    % amount of epochs (previous and current processing(s))
     d.dT      = [  d.dT; reshape(storeData.dt_last_reset, eps_reset, no_resets)'];
     d.Time    = [d.Time; reshape(storeData.gpstime,       eps_reset, no_resets)'];
     d.N     = [ d.N; reshape(dN, eps_reset, no_resets)'];

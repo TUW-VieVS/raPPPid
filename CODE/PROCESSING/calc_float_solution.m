@@ -14,7 +14,7 @@ function [Epoch, Adjust, model] = calc_float_solution(input, obs, Adjust, Epoch,
 %	model     	model corrections for all visible satellites [struct]
 %
 % Revision:
-%   ...
+%   2023/09/07, MFG: bug (no adjustment before KalmanFilter); cleaning code
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -27,23 +27,23 @@ NO_PARAM = Adjust.NO_PARAM;				% number of estimated parameters
 model = [];                          	% Initialize struct model
 no_sats = numel(Epoch.sats);            % total number of satellites in current epoch
 it = 0; 	% number of current iteration
-it_thresh = DEF.ITERATION_THRESHOLD;  	% threshold for inner-epoch iteration
 
 % check if approximate position is available
 if ~Adjust.float && any(Adjust.param(1:3) == 0 | isnan(Adjust.param(1:3)) | any(Adjust.param(1:3) == 1))
     % calculate an approximate position (if not known in 1st epoch or 
     % somehow completely lost during processing) before Kalman Filtering
-    % xyz_approx = ApproximatePositionFromSats(Epoch, input, settings);   
+    % xyz_approx = ApproximatePositionFromSats(Epoch, input, settings);     % slow alternative  
     xyz_approx = ApproximatePosition(Epoch, input, obs, settings);
     Adjust.param(1:3) = xyz_approx;
     if any(Adjust.param_pred(1:3) == 0 | isnan(Adjust.param_pred(1:3)) | any(Adjust.param_pred(1:3) == 1))
-        % most likely no prediction was possible without an approximate position
+        % most likely no position prediction was possible without an 
+        % approximate position, so just take approximate position
         Adjust.param_pred(1:3) = xyz_approx;
     end
 end
 
 
-while it < 15                           % Start iteration (because of linearization)
+while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearization)
     it = it + 1;
 
     % --- model the observations of current epoch, IMPORTANT FUNCTION!
@@ -132,17 +132,6 @@ while it < 15                           % Start iteration (because of linearizat
     
     %% ------- Calculate Position ------------
     switch settings.ADJ.filter.type        
-        case 'Kalman Filter'
-            if ~Adjust.float && it == 1 &&  strcmpi(settings.PROC.method,'Code + Phase')
-                % perform a non normal LSQ-solution as starting point for
-                % the Kalman Filter
-                dx = adjustment(Adjust);
-%                 Adjust.param = Adjust.param + dx.x;
-%                 Adjust.param_pred = Adjust.param;
-                continue;       % start Kalman-Filter in next iteration
-            end
-            Adjust = KalmanFilter(Adjust, Epoch, settings, model);
-            break;
 
         case 'Kalman Filter Iterative'      % Kalman Filter with inner-epoch iteration
             if it == 1
@@ -150,16 +139,28 @@ while it < 15                           % Start iteration (because of linearizat
             end
             dx = KalmanFilterIterative(Adjust, x_pred);
             x_pred = x_pred - dx.x;
-            if norm(dx.x(1:3)) < it_thresh      % Norm of change in coordinates smaller than e-4 m
+            if norm(dx.x(1:3)) < DEF.ITERATION_THRESHOLD      % Norm of change in coordinates smaller than 1mm
                 Adjust = stop_iteration(Adjust, dx);
                 break;
             else        % inner-epoch iteration continues
                 Adjust.param = Adjust.param + dx.x;
             end
+
+        case 'Kalman Filter'
+            if ~Adjust.float && it == 1 &&  strcmpi(settings.PROC.method,'Code + Phase')
+                % perform a non normal LSQ-solution as starting point for
+                % the Kalman Filter
+                dx = adjustment(Adjust);
+                Adjust.param = Adjust.param + dx.x;
+                Adjust.param_pred = Adjust.param;
+                continue;       % start Kalman-Filter in next iteration
+            end
+            Adjust = KalmanFilter(Adjust, Epoch, settings, model);
+            break;              % no inner-epoch iteration
             
         case 'No Filter'      			% perform single-epoch Standard-LSQ-Adjustment
             dx = adjustment(Adjust);
-            if norm(dx.x(1:3)) < it_thresh      % Norm of change in coordinates smaller than e-4 m
+            if norm(dx.x(1:3)) < DEF.ITERATION_THRESHOLD      % Norm of change in coordinates smaller than e-3 m
                 Adjust = stop_iteration(Adjust, dx);
                 break;
             else        % inner-epoch iteration continues
@@ -172,7 +173,7 @@ end             % end of iteration of current epoch
 
 %% Handle results
 % check if solution converged in current epoch
-if ~strcmp(settings.ADJ.filter.type,'Kalman Filter') && norm(dx.x(1:3)) >= it_thresh
+if ~strcmp(settings.ADJ.filter.type,'Kalman Filter') && norm(dx.x(1:3)) >= DEF.ITERATION_THRESHOLD
     if bool_print
         fprintf('\tSolution did not converge in this epoch!!!                 \n')
     end
@@ -180,11 +181,11 @@ if ~strcmp(settings.ADJ.filter.type,'Kalman Filter') && norm(dx.x(1:3)) >= it_th
     Adjust.res = NaN(numel(Adjust.omc),1);
 end
 
-% Phase&Code-Processing AND at least one satellite is under cutoff, set 
+% Phase + Code - Processing AND at least one satellite is under cutoff, set 
 % ambiguities to zero (because under cutoff)
 if strcmpi(settings.PROC.method, 'Code + Phase')   &&   any(Epoch.exclude(:,1))         
     kk = 1:(num_freq*no_sats);
-    kk = kk(Epoch.exclude(:));               % index-numbers of satellites and their frequencies under cutoff
+    kk = kk(Epoch.exclude(:));              % index-numbers of satellites and their frequencies under cutoff
     idx_amb = kk+NO_PARAM;                  % indices where to reset
     Adjust.param(idx_amb) = 0;              % reset ambiguity
     Adjust.param_sigma(idx_amb,:) = 0;      % reset covariance columns

@@ -92,7 +92,8 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(set
             A_iono_3 = diag(dR_diono_code_f3);
             A_iono = [A_iono; A_iono_3];
         end
-    end    
+    end  
+    A_iono(Epoch.exclude(:), :) = 0;   	% remove iono estimation of excluded satellites
     % Put Design-Matrix together
     A = [A, A_iono];
     if strcmpi(settings.IONO.model,'Estimate with ... as constraint') && Adjust.constraint

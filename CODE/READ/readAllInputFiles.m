@@ -222,47 +222,18 @@ end
 
 %% Models - Troposphere
 
-if ~(strcmpi(settings.TROPO.zhd,'no')   &&   strcmpi(settings.TROPO.zwd,'no'))
-    
-    % read the V3GR file(s)
-    if strcmpi(settings.TROPO.zhd,'VMF3') || strcmpi(settings.TROPO.zwd,'VMF3') || ...
-            strcmpi(settings.TROPO.mfh,'VMF3') ||   strcmpi(settings.TROPO.mfw,'VMF3') || ...
-            strcmpi(settings.TROPO.Gh,'GRAD')  ||   strcmpi(settings.TROPO.Gw,'GRAD')
-        % only proceed if the year is >= 1980 and the date is at least 2 days behind the current date, otherwise use GPT3
-        current_time = clock;
-        current_jd = cal2jd_GT(current_time(1),current_time(2),current_time(3));
-        if obs.startdate(1) < 1980   ||   obs.startdate_jd+2 > current_jd
-            % GPT3 has to be used because VMF3 is not available yet
-            if obs.startdate(1) < 1980              % print info to command window
-                fprintf('%s%4.0f%s\n' , 'No VMF3 data available for the year ',obs.startdate(1),' => GPT3 used instead!');
-            elseif obs.startdate_jd+2 > current_jd
-                fprintf('%s\n' , 'VMF3 data is only available with 1 day latency => GPT3 used instead!');
-            end
-            if strcmpi(settings.TROPO.zhd,'VMF3') 	% overwrite settings
-                settings.TROPO.zhd = 'p (GPT3) + Saastamoinen';     end
-            if strcmpi(settings.TROPO.zwd,'VMF3')
-                settings.TROPO.zwd = 'e (GPT3) + Askne';            end
-            if strcmpi(settings.TROPO.mfh,'VMF3')
-                settings.TROPO.mfh = 'GPT3';                        end
-            if strcmpi(settings.TROPO.mfw,'VMF3')
-                settings.TROPO.mfw = 'GPT3';                        end
-            if strcmpi(settings.TROPO.Gh,'GRAD')
-                settings.TROPO.Gh = 'GPT3';                         end
-            if strcmpi(settings.TROPO.Gw,'GRAD')
-                settings.TROPO.Gw = 'GPT3';                         end
-            
-        else
-            % call the function which handles VMF3+GRAD
-            input = get_V3GR(obs, input, settings);
-        end
-        
-        % get and read the files for VMF1
-        if strcmpi(settings.TROPO.zhd,'VMF1') || strcmpi(settings.TROPO.zwd,'VMF1') || ...
-                strcmpi(settings.TROPO.mfh,'VMF1') ||   strcmpi(settings.TROPO.mfw,'VMF1')
-            input = get_VMF1(obs, input, settings);
-        end
-        
-    end
+% get and read the V3GR files (VMF3 or GRAD)
+if strcmpi(settings.TROPO.zhd,'VMF3') || strcmpi(settings.TROPO.zwd,'VMF3') || ...
+        strcmpi(settings.TROPO.mfh,'VMF3') ||   strcmpi(settings.TROPO.mfw,'VMF3') || ...
+        strcmpi(settings.TROPO.Gh,'GRAD')  ||   strcmpi(settings.TROPO.Gw,'GRAD')
+    input = get_V3GR(obs, input, settings);
+end
+
+
+% get and read the files for VMF1
+if strcmpi(settings.TROPO.zhd,'VMF1') || strcmpi(settings.TROPO.zwd,'VMF1') || ...
+        strcmpi(settings.TROPO.mfh,'VMF1') ||   strcmpi(settings.TROPO.mfw,'VMF1')
+    input = get_VMF1(obs, input, settings);
 end
 
 
@@ -270,7 +241,12 @@ end
 if strcmpi(settings.TROPO.zhd,'Tropo file') || strcmpi(settings.TROPO.zwd,'Tropo file')
     switch settings.TROPO.tropo_file
         case 'manually'
-            input.TROPO.tropoFile.data = readTropoFile(settings.TROPO.tropo_filepath, obs.stationname);
+            tropo_file = settings.TROPO.tropo_filepath;
+            if contains(settings.TROPO.tropo_filepath, '$')
+                [file_tropo, fpath_tropo] = ConvertStringDate(settings.TROPO.tropo_filepath, obs.startdate(1:3));
+                tropo_file = ['../DATA/TROPO/' fpath_tropo file_tropo];
+            end
+            input.TROPO.tropoFile.data = readTropoFile(tropo_file, obs.stationname);
             
         case 'IGS troposphere product'
             % download tropofile
@@ -289,10 +265,11 @@ if strcmpi(settings.TROPO.zhd,'Tropo file') || strcmpi(settings.TROPO.zwd,'Tropo
 end
 
 
-% read the GPT3 grid (this is done here in the end of the troposphere 
-% section, because perhaps GPT3 was defined as backup in the code above)
+% read the GPT3 grid 
 if strcmpi(settings.TROPO.zhd,'p (GPT3) + Saastamoinen')   ||   strcmpi(settings.TROPO.zwd,'e (GPT3) + Askne')   ||   strcmpi(settings.TROPO.zwd,'e (in situ) + Askne')   ||   strcmpi(settings.TROPO.mfh,'GPT3')   ||   strcmpi(settings.TROPO.mfw,'GPT3')   ||   strcmpi(settings.TROPO.zhd,'Tropo file')   ||   strcmpi(settings.TROPO.Gh,'GPT3')   ||   strcmpi(settings.TROPO.Gw,'GPT3')
-    input.TROPO.GPT3.cell_grid = gpt3_5_fast_readGrid;
+    load('gpt3_5.mat', 'gpt3_5');               % file located in \CODE\ATMOSPHERE
+    input.TROPO.GPT3.cell_grid = gpt3_5;        % avoids gpt3_5_fast_readGrid.m
+    % input.TROPO.GPT3.cell_grid = gpt3_5_fast_readGrid;
 end
 
 
@@ -541,19 +518,19 @@ if bool_print
     
     % Troposphere
     fprintf('%s\n', 'Troposphere:');
-    fprintf('  %s%s\n','zhd: ',settings.TROPO.zhd);
-    if strcmpi(settings.TROPO.zhd,'p (in situ) + Saastamoinen')
-        fprintf('    %s%7.2f%s\n','p: ',settings.TROPO.p,' hPa');
+    fprintf('  %s%s %s\n','zhd: ', settings.TROPO.zhd, detectGridSiteWise(settings.TROPO.zhd, input, settings.TROPO.vmf_version));
+    if strcmpi(settings.TROPO.zhd, 'p (in situ) + Saastamoinen')
+        fprintf('    %s%7.2f%s\n','p: ', settings.TROPO.p,' hPa');
     end
-    fprintf('  %s%s\n','zwd: ',settings.TROPO.zwd);
+    fprintf('  %s%s %s\n','zwd: ', settings.TROPO.zwd, detectGridSiteWise(settings.TROPO.zwd, input, settings.TROPO.vmf_version));
     if strcmpi(settings.TROPO.zwd,'e (in situ) + Askne')
-        fprintf('    %s%5.2f%s\n','q: ',settings.TROPO.q,' %');
-        fprintf('    %s%6.2f%s\n','T: ',settings.TROPO.T,' °C')
+        fprintf('    %s%5.2f%s\n','q: ', settings.TROPO.q,' %');
+        fprintf('    %s%6.2f%s\n','T: ', settings.TROPO.T,' °C')
     end
-    fprintf('  %s%s\n','mfh: ',settings.TROPO.mfh)
-    fprintf('  %s%s\n','mfw: ',settings.TROPO.mfw)
-    fprintf('  %s%s\n','Gn_h & Ge_h: ',settings.TROPO.Gh)
-    fprintf('  %s%s\n','Gn_w & Ge_w: ',settings.TROPO.Gw)
+    fprintf('  %s%s %s\n','mfh: ', settings.TROPO.mfh, detectGridSiteWise(settings.TROPO.mfh, input, settings.TROPO.vmf_version));
+    fprintf('  %s%s %s\n','mfw: ', settings.TROPO.mfw, detectGridSiteWise(settings.TROPO.mfw, input, settings.TROPO.vmf_version));
+    fprintf('  %s%s %s\n','Gn_h & Ge_h: ', settings.TROPO.Gh, detectGridSiteWise(settings.TROPO.Gh, input, settings.TROPO.vmf_version));
+    fprintf('  %s%s %s\n','Gn_w & Ge_w: ', settings.TROPO.Gw, detectGridSiteWise(settings.TROPO.Gw, input, settings.TROPO.vmf_version));
     fprintf('\n');
     
     
@@ -571,7 +548,6 @@ if bool_print
     
     % Biases
     fprintf('%s\n', 'Biases:');
-    fprintf('  %s\n','Code:');       % CODE
     switch settings.BIASES.code
         case 'off'
             fprintf('    off\n')
@@ -600,23 +576,31 @@ if bool_print
                 fprintf('%s%s\n','    P2C2: ', settings.BIASES.code_file{3});
             end
     end
-    fprintf('  %s\n', 'Phase:');     % PHASE
-    switch settings.BIASES.phase
-        case 'off'
-            fprintf('    No (additional) phase biases selected\n')
-        case 'Correction Stream'
-            fprintf('    Correction Stream\n')
-        otherwise
-            fprintf(['    ' settings.BIASES.phase ':   ' settings.BIASES.phase_file '\n'])
+    
+    % Phase Biases
+    if ~strcmp(settings.BIASES.phase, 'off')
+        fprintf('%s\n', 'Phase Biases:');
+        switch settings.BIASES.phase
+            case 'off'
+                fprintf('    No phase biases applied\n')
+            case 'Correction Stream'
+                fprintf('    Correction Stream\n')
+            otherwise
+                fprintf(['    ' settings.BIASES.phase ':   ' settings.BIASES.phase_file '\n'])
+        end
+        
     end
+    
     fprintf('\n');
-    
-    
     % Other corrections
     fprintf('%s\n','Other corrections:');
     fprintf('  Antex-File: %s\n', settings.OTHER.file_antex);
+    if settings.OTHER.antex_rec_manual
+        fprintf('  Receiver corrections from myAntex.atx\n');
+    end  
     fprintf('\n');
 end
+
 
 
 

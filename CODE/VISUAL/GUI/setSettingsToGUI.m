@@ -336,6 +336,7 @@ switch structure.TROPO.zwd
         error('Something is wrong here...');
 end
 
+% hydrostatic gradients
 switch structure.TROPO.mfw
     case 'VMF3'
         set(handles.radiobutton_models_troposphere_mfw_VMF3, 'Value', 1);
@@ -347,6 +348,7 @@ switch structure.TROPO.mfw
         error('Something is wrong here...');
 end
 
+% wet gradients
 switch structure.TROPO.Gw
     case 'GRAD'
         set(handles.radiobutton_models_troposphere_Gw_GRAD, 'Value', 1);
@@ -356,6 +358,14 @@ switch structure.TROPO.Gw
         set(handles.radiobutton_models_troposphere_Gw_no,   'Value', 1);
     otherwise
         error('Something is wrong here...');
+end
+
+% VMF version
+set(handles.popupmenu_vmf_type, 'Value', 1);        % operational is default
+try
+    string_all = get(handles.popupmenu_vmf_type,'String');
+    value = find(contains(string_all, num2str(structure.TROPO.vmf_version)));
+    set(handles.popupmenu_vmf_type, 'Value', value);
 end
 
 % Tropo file

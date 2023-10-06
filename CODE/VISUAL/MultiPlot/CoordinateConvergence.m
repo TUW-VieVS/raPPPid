@@ -18,7 +18,10 @@ function [] = CoordinateConvergence(dN, dE, dH, TIME, q68, q95, dT_all, PlotStru
 %   label         string, label of multi-plot
 % OUTPUT:
 %   []
-%
+% 
+% Revision:
+%   2023/09/28, MFWG: dehardcode limits of coordinate difference histogram
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -67,7 +70,7 @@ hold on
 plot(time',values', 'color',coleur, 'linewidth',1);     % vectorized plot is faster
 hline(thresh, 'r--');
 plot(dT_all, quant, 'k-', 'linewidth',1)             % plot median
-ylim([0 .5])
+% ylim([0 3*thresh])
 xlim([0 dt]);
 ylabel(y_string, 'FontWeight','bold')
 grid on;
@@ -80,10 +83,10 @@ end
 
 % Plot Histogram of Coordinate Differences
 ax = subplot(3,3, p+2);
-edges = [0:0.02:0.25 0.5];
+edges = [0:thresh/10:thresh Inf];
 histogram(values, edges, 'Normalization', 'probability', 'facecolor', coleur)
-xlim([0 .3])
-ylim([0 1])     % axis until 100%
+xlim([0, thresh+thresh/10])
+ylim([0, 1])     % axis until 100%
 vline(thresh, 'r--')     % vertical line for convergence threshold
 yticklabels(yticks*100)
 ylabel('[%]')

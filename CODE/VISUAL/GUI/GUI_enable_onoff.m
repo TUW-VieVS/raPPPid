@@ -343,11 +343,16 @@ if strcmpi(handles.uipanel_troposphere.Visible, 'on')
     set(handles.edit_temp,'Visible','off');
     set(handles.edit_feuchte,'Visible','off');
     set(handles.edit_druck,'Visible','off');
-
-    % Hydrostatic  
+    set(handles.text_vmf_version,'Visible','off');
+    set(handles.popupmenu_vmf_type,'Visible','off');
+    
+    % Hydrostatic
     switch handles.buttongroup_models_troposphere_zhd.SelectedObject.String
-        case {'VMF3', 'p(GPT3) + Saastamoinen', 'no'}
+        case {'p(GPT3) + Saastamoinen', 'no'}
             % nothing to do here
+        case {'VMF3', 'VMF1'}
+            set(handles.text_vmf_version,'Visible','on');
+            set(handles.popupmenu_vmf_type,'Visible','on');
         case 'Tropo file'
             set(handles.popupmenu_tropo_file,'Visible','on');
             if strcmp('manually', handles.popupmenu_tropo_file.String(handles.popupmenu_tropo_file.Value))
@@ -361,8 +366,11 @@ if strcmpi(handles.uipanel_troposphere.Visible, 'on')
     
     % Wet
     switch handles.buttongroup_models_troposphere_zwd.SelectedObject.String
-        case {'VMF3', 'e(GPT3) + Askne', 'no'}
+        case {'e(GPT3) + Askne', 'no'}
             % nothing to do here
+        case {'VMF3', 'VMF1'}
+            set(handles.text_vmf_version,'Visible','on');
+            set(handles.popupmenu_vmf_type,'Visible','on');
         case 'Tropo file'
             set(handles.popupmenu_tropo_file,'Visible','on');
             if strcmp('manually', handles.popupmenu_tropo_file.String(handles.popupmenu_tropo_file.Value))
@@ -375,6 +383,35 @@ if strcmpi(handles.uipanel_troposphere.Visible, 'on')
             set(handles.edit_temp,'Visible',   'on');
             set(handles.edit_feuchte,'Visible','on');
     end
+    
+    % hydrostatic mapping function
+    switch handles.buttongroup_models_troposphere_mfh.SelectedObject.String
+        case {'VMF3', 'VMF1'}
+            set(handles.text_vmf_version,'Visible','on');
+            set(handles.popupmenu_vmf_type,'Visible','on');
+    end
+    
+    % wet mapping function
+    switch handles.buttongroup_models_troposphere_mfw.SelectedObject.String
+        case {'VMF3', 'VMF1'}
+            set(handles.text_vmf_version,'Visible','on');
+            set(handles.popupmenu_vmf_type,'Visible','on');
+    end
+    
+    % hydrostatic gradient
+    switch handles.buttongroup_models_troposphere_Gh.SelectedObject.String
+        case {'GRAD'}
+            set(handles.text_vmf_version,'Visible','on');
+            set(handles.popupmenu_vmf_type,'Visible','on');
+    end
+    
+    % wet gradient
+    switch handles.buttongroup_models_troposphere_Gw.SelectedObject.String
+        case {'GRAD'}
+            set(handles.text_vmf_version,'Visible','on');
+            set(handles.popupmenu_vmf_type,'Visible','on');
+    end
+    
     
     
     % ||| could be removed?!?!
@@ -497,9 +534,11 @@ if strcmpi(handles.uipanel_biases.Visible, 'on')
     stream = handles.popupmenu_CorrectionStream.String(handles.popupmenu_CorrectionStream.Value);
     if ~strcmp(stream, 'off') && handles.radiobutton_brdc_corr.Value
         % enable correction stream selection 
+        set(handles.buttongroup_models_biases_phase,       'Visible', 'On');
         set(handles.radiobutton_models_biases_code_CorrectionStream,  'Enable', 'On');
         set(handles.radiobutton_models_biases_phase_CorrectionStream, 'Enable', 'On')
     else        % disable correction stream selection
+        set(handles.buttongroup_models_biases_phase,       'Visible', 'Off');
         set(handles.radiobutton_models_biases_code_CorrectionStream,  'Enable', 'Off');
         set(handles.radiobutton_models_biases_phase_CorrectionStream, 'Enable', 'Off')
     end    
@@ -657,7 +696,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
         set(handles.edit_filter_ambiguities_Q, 	           'Enable', 'On');
         set(handles.text_float_ambiguities_m, 	           'Enable', 'On');
         set(handles.popupmenu_filter_ambiguities_dynmodel, 'Enable', 'On');
-        set(handles.buttongroup_models_biases_phase,       'Visible', 'On');
+        % set(handles.buttongroup_models_biases_phase,       'Visible', 'On');
         set(handles.text81, 'Enable', 'On');
         set(handles.edit_Std_Phase, 'Enable', 'On');
     else
@@ -666,7 +705,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
         set(handles.edit_filter_ambiguities_Q, 	           'Enable', 'Off');
         set(handles.text_float_ambiguities_m, 	           'Enable', 'Off');
         set(handles.popupmenu_filter_ambiguities_dynmodel, 'Enable', 'Off');
-        set(handles.buttongroup_models_biases_phase,       'Visible', 'Off');
+        % set(handles.buttongroup_models_biases_phase,       'Visible', 'Off');
         set(handles.text81, 'Enable', 'Off');
         set(handles.edit_Std_Phase, 'Enable', 'Off');
     end
@@ -750,7 +789,7 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
         set(handles.edit_filter_ambiguities_Q, 	           'Enable', 'Off');
         set(handles.text_float_ambiguities_m, 	           'Enable', 'Off');
         set(handles.popupmenu_filter_ambiguities_dynmodel, 'Enable', 'Off');
-        set(handles.buttongroup_models_biases_phase,       'Visible', 'Off');
+        % set(handles.buttongroup_models_biases_phase,       'Visible', 'Off');
         set(handles.checkbox_AdjustPhase,                     'Visible', 'Off');
     elseif strcmpi(proc_meth,'code + phase')
         set(handles.text_float_ambiguities, 	           'Enable', 'On');
@@ -758,7 +797,7 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
         set(handles.edit_filter_ambiguities_Q, 	           'Enable', 'On');
         set(handles.text_float_ambiguities_m, 	           'Enable', 'On');
         set(handles.popupmenu_filter_ambiguities_dynmodel, 'Enable', 'On');
-        set(handles.buttongroup_models_biases_phase,       'Visible', 'On');
+        % set(handles.buttongroup_models_biases_phase,       'Visible', 'On');
         set(handles.checkbox_AdjustPhase,                     'Visible', 'On');
     end
     % activate smoothing window if needed

@@ -21,7 +21,7 @@ function [settings] = DownloadORBEX(settings, gpsweek, dow, yyyy, mm, doy)
 
 %% Preparations
 target = {[Path.DATA, 'ORBIT/', yyyy, '/', doy]};
-mkdir(target{1});
+[~, ~] = mkdir(target{1});
 URL_host = 'igs.ign.fr:21';            % default ftp-server
 
 

@@ -50,7 +50,7 @@ set(gca, 'Units', 'pixels', 'Position', [18 516 900 80])
 axis off
 
 % Set Copyright and Version in the lower right
-set(handles.text_version, 'String', ['Version 2.1 ', char(169), ' TUW 2023']);
+set(handles.text_version, 'String', ['Version 1.0 ', char(169), ' TUW 2023']);
 
 % load default filter settings for selected filter
 handles = LoadDefaultFilterSettings(handles);
@@ -1823,7 +1823,7 @@ if boolean
     if MultiPlotStruct.graph
         StationResultPlot(TABLE_use, MultiPlotStruct)
     end
-    if MultiPlotStruct.coord_conv || MultiPlotStruct.histo_conv || MultiPlotStruct.bar || MultiPlotStruct.box || MultiPlotStruct.pos_conv || MultiPlotStruct.ttff || MultiPlotStruct.pos_acc || MultiPlotStruct.quant_conv || MultiPlotStruct.tropo
+    if MultiPlotStruct.coord_conv || MultiPlotStruct.histo_conv || MultiPlotStruct.bar || MultiPlotStruct.box || MultiPlotStruct.pos_conv || MultiPlotStruct.ttff || MultiPlotStruct.convaccur || MultiPlotStruct.quant_conv || MultiPlotStruct.tropo
         MultiPlot(PATHS, XYZ_true, LABELS, MultiPlotStruct);
     end
     handles = un_check_multiplot_checkboxes(handles, 0);
@@ -1933,23 +1933,24 @@ handles = GUI_enable_onoff(handles);
 end
 
 function checkbox_histo_conv_Callback(hObject, eventdata, handles)
+    handles.edit_conv_min.Enable = 'off';
+    handles.text_conv_min.Enable = 'off'; 
 if handles.checkbox_histo_conv.Value || handles.checkbox_bar_conv.Value
     handles.edit_conv_min.Enable = 'on';
     handles.text_conv_min.Enable = 'on';
-else
-    handles.edit_conv_min.Enable = 'off';
-    handles.text_conv_min.Enable = 'off'; 
 end
 end
 
 function checkbox_bar_conv_Callback(hObject, eventdata, handles)
+    handles.edit_conv_min.Enable = 'off';
+    handles.text_conv_min.Enable = 'off'; 
 if handles.checkbox_histo_conv.Value || handles.checkbox_bar_conv.Value
     handles.edit_conv_min.Enable = 'on';
     handles.text_conv_min.Enable = 'on';
-else
-    handles.edit_conv_min.Enable = 'off';
-    handles.text_conv_min.Enable = 'off'; 
 end
+end
+
+function checkbox_convaccur_Callback(hObject, eventdata, handles)
 end
 
 
@@ -1966,12 +1967,8 @@ able_brdc_corr(handles,'off')
 % set(handles.radiobutton_models_biases_code_CorrectionStream,  'Enable', 'Off');
 % set(handles.radiobutton_models_biases_phase_CorrectionStream, 'Enable', 'Off');
 % print info
-if get(handles.radiobutton_models_biases_code_CorrectionStream,'Value') && get(handles.radiobutton_models_biases_phase_CorrectionStream,'Value')
-    msgbox('Code and Phase Biases are changed to the default value for precise products.', 'Setting of Biases changed', 'help')
-elseif get(handles.radiobutton_models_biases_code_CorrectionStream,'Value')   
-    msgbox('Code Biases are changed to the default value for precise products.', 'Setting of Code Biases changed', 'help')
-elseif get(handles.radiobutton_models_biases_phase_CorrectionStream,'Value')   
-    msgbox('Phase Biases are changed to the default value for precise products.', 'Setting of Phase Biases changed', 'help')
+if get(handles.radiobutton_models_biases_code_CorrectionStream,'Value')
+    msgbox('Biases are changed to the default value for precise products.', 'Setting of Code Biases changed', 'help')
 end
 
 % if Precise products are selected while Models - Code Biases is set to 
@@ -2001,15 +1998,6 @@ if ~strcmpi(string_all{value},'off')
     set(handles.radiobutton_models_biases_phase_CorrectionStream,'Value',1)
     msgbox('Code and Phase Biases corrections are changed to correction stream.', 'Settings of Biases changed', 'help')
 end
-
-% das folgende nur machen, wenn Correction stream ~= off:
-% if strcmpi(string_all{value},'off')
-%    set(handles.radiobutton_models_biases_code_CorrectionStream, 'Enable', 'Off');
-%    set(handles.radiobutton_models_biases_phase_CorrectionStream,'Enable', 'Off');
-% else
-%    set(handles.radiobutton_models_biases_code_CorrectionStream, 'Enable', 'On');
-%    set(handles.radiobutton_models_biases_phase_CorrectionStream,'Enable', 'On');
-%end
     
 end
 
@@ -2560,7 +2548,7 @@ function edit_tropo_file_Callback(hObject, eventdata, handles)
 value_tropo = get(hObject, 'String');
 if exist([handles.paths.tropo_1 value_tropo], 'file')
     handles.paths.tropo_2 = value_tropo;
-elseif ~exist(value_tropo, 'file')            % entered path does not exist
+elseif ~exist(value_tropo, 'file') && ~contains(value_tropo, '$')       % entered path does not exist
     errordlg('Invalid Filename! Change Filename.', 'File Error');
 else
     handles.paths.tropo_1 = [];
@@ -2999,7 +2987,6 @@ end
 
 % --- Executes when selected object is changed in buttongroup_models_biases_phase.
 function buttongroup_models_biases_phase_SelectionChangeFcn(hObject, eventdata, handles)
-% ||| Sobald wir wissen, wie manually bei phase funktioniert, hier noch die Funktion einbauen dass das zusätzliche aufgehende Feld unsichtbar bleibt solange es nicht ausgewählt wird (von Troposphere abschauen)
 end
 
 
@@ -4427,7 +4414,7 @@ function handles = un_check_multiplot_checkboxes(handles, value)
 % function to check or uncheck all multi-plot checkboxes
 set(handles.checkbox_pos_conv,          'Value', value);
 set(handles.checkbox_coord_conv,        'Value', value);
-set(handles.checkbox_pos_acc,           'Value', value);
+set(handles.checkbox_convaccur,         'Value', value);
 set(handles.checkbox_box_plot,          'Value', value);
 set(handles.checkbox_ttff_plot,         'Value', value);
 set(handles.checkbox_histo_conv,        'Value', value);

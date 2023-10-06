@@ -1,4 +1,4 @@
-function signQualPlot(satellites, label_xaxis, hours, isGPS, isGLO, isGAL, isBDS, settings)
+function signQualPlot(satellites, label_xaxis, hours, isGPS, isGLO, isGAL, isBDS, settings, rgb)
 % creates three different plots of the Signal Quality:
 % -) Code-minus-Phase-Plot: for each frequency the difference between code
 % and phase measurements in meters for all observed satellites
@@ -13,7 +13,8 @@ function signQualPlot(satellites, label_xaxis, hours, isGPS, isGLO, isGAL, isBDS
 %   hours           time from beginning of processing [h]
 % 	isGPS, isGLO, isGAL, isBDS
 %                   true if GNSS was processed and should be plotted
-%   settings        struct, proceesing settings from GUI     
+%   settings        struct, proceesing settings from GUI  
+%   rgb             n x 3, colors for plotting
 % OUTPUT
 %   []
 %
@@ -48,9 +49,7 @@ if isBDS
     obs_prns = [obs_prns, 300+(1:DEF.SATS_BDS)];
 end
 
-% colors
-hsv_color = hsv(33);               	% plot-colors
-hsv_color = flipud(hsv_color);      % to have darker colors in background (high prn number has dark color)
+n_col = size(rgb,1);            % number of colors
 
 
 %% Code minus Phase Plot
@@ -100,7 +99,7 @@ if contains(settings.PROC.method, 'Phase')
                         satdata(s1:s2) - polyval(coeff, hours(s1:s2));             
                 end
                 % Plot and save satellite prn
-                plot(hours, satdata, 'color', hsv_color(mod(s,33)+1,:), 'LineWidth', 1, 'LineStyle', '-')
+                plot(hours, satdata, 'color', rgb(mod(s,n_col)+1,:), 'LineWidth', 1, 'LineStyle', '-')
                 prns(end+1) = s;                
             end
         end
@@ -119,7 +118,7 @@ end
 
 %% Signal to Noise Ratio (C/N0) Plot
 sats = 399;
-fig_SNR = figure('Name', 'Signal Quality: SNR', 'NumberTitle','off');
+fig_SNR = figure('Name', 'Signal Quality: C/N0', 'NumberTitle','off');
 % add customized datatip
 dcm = datacursormode(fig_SNR);
 datacursormode on
@@ -141,7 +140,7 @@ for j = 1:n
     loop = intersect(1:sats, obs_prns);
     for s = loop
         if any(~isnan(SNR_j(:,s)))
-            plot(hours, SNR_j(:,s), 'color', hsv_color(mod(s,33)+1,:), 'LineWidth', 1, 'LineStyle', '-')
+            plot(hours, SNR_j(:,s), 'color', rgb(mod(s,n_col)+1,:), 'LineWidth', 1, 'LineStyle', '-')
             prns(end+1) = s;            
         end
     end
@@ -185,7 +184,7 @@ for j = 1:n
     loop = intersect(1:sats, obs_prns);
     for s = loop
         if any(~isnan(SNR_j(:,s)))
-            plot(Elev(:,s), SNR_j(:,s), 'color', hsv_color(mod(s,33)+1,:), 'LineWidth', 1, 'LineStyle', '-')
+            plot(Elev(:,s), SNR_j(:,s), 'color', rgb(mod(s,n_col)+1,:), 'LineWidth', 1, 'LineStyle', '-')
             prns(end+1) = s;            
         end
     end

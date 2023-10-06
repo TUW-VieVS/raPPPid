@@ -61,7 +61,7 @@ files = cell(no_days, no_stations);
 targets = cell(no_days, no_stations);
 
 % Prepare waitbar and print out of epochs to command window 
-WBAR = waitbar(0, 'Creating list do download data.', 'Name', 'Downloading EUREF Data');  
+WBAR = waitbar(0, 'Creating list to download data.', 'Name', 'Downloading EUREF Data');  
 
 % loop over stations and doys to create the needed variables for the download
 for d = 1:no_days
@@ -80,7 +80,7 @@ for d = 1:no_days
         targets{d,n} = target;
         
         % create target folder
-        mkdir(target);
+        [~, ~] = mkdir(target);
         
     end
 end

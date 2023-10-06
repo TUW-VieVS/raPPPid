@@ -14,7 +14,7 @@ function dX_GDV = calc_GDV(prn, el, f1, f2, f3, j, IONO_model, n)
 %   n           number of processed frequencies
 % 
 % OUTPUT:
-%	dX_GDV      Group Delay Variation correction, add to code observation
+%	dX_GDV      Group Delay Variation correction, add to code observation [m]
 %
 % Revision:
 %   ...

@@ -86,7 +86,7 @@ for i = 1:n
     end
     % download and extract
     target = [Path.DATA, 'COORDS/', yyyy_str, '/', doy_str];
-    mkdir(target)
+    [~, ~] = mkdir(target)
     file_status = ftp_download(URL_host, URL_folder, URL_file, target, false);
     % IGS IGN failed, try cddis
     if file_status == 0
@@ -102,8 +102,10 @@ for i = 1:n
     delete(curr_archive);
     if isfile([file_unzipped '.mat'])      % check if *.mat-file already exists
         load([file_unzipped '.mat'], 'STATIONS_all', 'XYZ_all');
-    else
+    elseif isfile(file_unzipped)
         [STATIONS_all, XYZ_all] = readSINEXcoordinates(file_unzipped);
+	else 
+		return
     end
     
     % check for which files the current date and coordinate system is valid

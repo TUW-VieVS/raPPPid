@@ -22,7 +22,7 @@ function FloatAmbPlot(hours, storeData, idx_gnss, no_frqs, label_x, gnss, resets
 
 % preparations
 sys = char2gnss(gnss);
-fig_amb = figure('Name', [sys ,' Ambiguities Plot'], 'NumberTitle','off');
+fig_amb = figure('Name', [sys ,' Float Ambiguities'], 'NumberTitle','off');
 no_sats = numel(idx_gnss);
 
 

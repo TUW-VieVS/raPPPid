@@ -23,8 +23,8 @@ function [settings] = DownloadOrbitClock(settings, gpsweek, dow, yyyy, mm, doy)
 targets = {...
     [Path.DATA, 'ORBIT/', yyyy, '/', doy]
     [Path.DATA, 'CLOCK/', yyyy, '/', doy]};
-mkdir(targets{1});
-mkdir(targets{2});
+[~, ~] = mkdir(targets{1});
+[~, ~] = mkdir(targets{2});
 URL_host = 'igs.ign.fr:21';                                 % default ftp-server
 URL_host_2 = 'https://cddis.nasa.gov'; URL_folders_2 = '';  files_2 = ''; % option 2: CDDIS
 download = true;    % boolean variable if products need still to be downloaded

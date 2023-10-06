@@ -114,7 +114,7 @@ secon_frq = isGPS_L5 | isGAL_E5a| isBDS_B2;     % not considered: isGLO_G2
 % variables with information of the Epoch
 n = numel(Epoch.sats);      % number of satellites
 Epoch.usable = true;
-Epoch.rinex_header = '';
+Epoch.rinex_header = createRinexHeader(Epoch.gps_week, Epoch.gps_time, Epoch.usable, n);
 Epoch.LLI_bit_rinex = zeros(n, 8);
 Epoch.ss_digit_rinex = zeros(n, 8);
 
@@ -194,6 +194,21 @@ end
 if ~isempty(use_column{4})      % Doppler
     Epoch_obs(bool, use_column{4}) = obs(bool, idx(4));
 end
+
+
+
+function rinex_header = createRinexHeader(gps_week, gps_time, usable, n_sats)
+% create RINEX observation record header (e.g., to simplify comparisons)
+[y, mn, day] = jd2cal_GT(gps2jd_GT(gps_week, gps_time));
+day_frac = mod(day,1);          % day
+h = day_frac*24;                % hour
+m = mod(h,1)*60;                % minute
+s = mod(day_frac*86400,60);     % second
+
+rinex_header = ['> ' sprintf('%4d ', y) sprintf('%02d ', mn) sprintf('%02d ', floor(day)) ...
+    sprintf('%02d ', floor(h)) sprintf('%02d ', floor(m)) sprintf('%02.7f  ', s)...
+    sprintf('%1d ', ~usable) sprintf('%2d ', n_sats)];
+
 
 
 

@@ -27,6 +27,7 @@ global STOP_CALC
 STOP_CALC = 0;
 
 if ~any(storeData.float)
+    fprintf('No coordinate estimation in all epochs.\n')
     return          % no float solution in any epoch
 end  
 
@@ -92,7 +93,7 @@ station = obs.stationname;
 [doy, yyyy] = jd2doy_GT(obs.startdate_jd(1));
 station_date = [station, ' ', sprintf('%4.0f',yyyy), '/', sprintf('%03.0f',doy)];
 
-rgb = colorcube(40);      % colors for plot, no GNSS has more than 40 satellites
+rgb = createDistinguishableColors(40);      % colors for plot, no GNSS has more than 40 satellites
 
 
 %% START PLOTTING FIGURES OF GENERAL RESULTS
@@ -270,7 +271,7 @@ if settings.PLOT.signal_qual
     satellites.CL_1 = full(storeData.C1) - full(storeData.L1);
     satellites.CL_2 = full(storeData.C2) - full(storeData.L2);
     satellites.CL_3 = full(storeData.C3) - full(storeData.L3);
-    signQualPlot(satellites, label_x_h, hours, isGPS, isGLO, isGAL, isBDS, settings);
+    signQualPlot(satellites, label_x_h, hours, isGPS, isGLO, isGAL, isBDS, settings, rgb);
 end
 if STOP_CALC; return; end
 
@@ -409,7 +410,7 @@ if STOP_CALC; return; end
 
 %     -+-+-+-+- Figures: Applied Biases Plot  -+-+-+-+-
 if settings.PLOT.appl_biases
-    plotAppliedBiases(storeData, isGPS, isGLO, isGAL, isBDS)
+    plotAppliedBiases(storeData, isGPS, isGLO, isGAL, isBDS, rgb)
 end
 if STOP_CALC; return; end
 

@@ -110,7 +110,7 @@ while i < length(lines)                             % loop over lines
         i = i+1;                                    % go to next line and then check if satellite or receiver antenna
         tline = lines{i};
         %% ------ SATELLITE-ANTENNA ------
-        if contains(tline, 'TYPE / SERIAL NO') && ~contains(tline,antenna_type)
+        if contains(tline, 'TYPE / SERIAL NO') && ~contains(tline, antenna_type)
             while 1                                     % loop over satellite-antenna
                 if contains(tline, 'TYPE / SERIAL NO')	% satellite
                     sys = tline(21);                    % system identifier, char
@@ -233,7 +233,7 @@ end
 if myantex
     
     % open file
-    fid = fopen('../DATA/ANTEX/MyAntex.atx');
+    fid = fopen(Path.myAntex);
     
     % check if file is valid and could be opened
     if fid==-1

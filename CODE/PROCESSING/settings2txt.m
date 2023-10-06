@@ -1,4 +1,4 @@
-function [] = settings2txt(settings, obs, rec_pco, rec_pcv, tStart)
+function [] = settings2txt(settings, obs, input, rec_pco, rec_pcv, tStart)
 
 % Function to write the processing settings from raPPPid (VieVS PPP) into a 
 % settings.txt-file to be able to check them easily. Function is called 
@@ -7,6 +7,7 @@ function [] = settings2txt(settings, obs, rec_pco, rec_pcv, tStart)
 % INPUT:  
 %   settings    struct, processing settings from GUI
 %   obs         struct, information about observations
+%   input       struct, contains input data
 %   rec_pco     string, missing receiver PCO corrections in ANTEX
 %   rec_pcv     string, missing receiver PCV corrections in ANTEX
 %   tStart      uint64, start time of processing from Matlab tic
@@ -125,7 +126,6 @@ fprintf(fileID,'\n');
 
 fprintf(fileID,'%s\n','Biases:');
 
-fprintf(fileID,'  %s\n','Code: ');
 switch settings.BIASES.code
     case 'CODE DCBs (P1P2, P1C1, P2C2)'
         fprintf(fileID,'    %s\n', settings.BIASES.code);
@@ -154,21 +154,24 @@ if settings.BIASES.estimate_rec_dcbs
     fprintf(fileID,'    %s\n','Receiver DCB Estimation is enabled');
 end
 
-
-fprintf(fileID,'  %s\n','Phase:');
-switch settings.BIASES.phase
-    case 'TUW (not implemented)'
-        fprintf(fileID,'%s%s\n','    TUW-WL-File: ', settings.BIASES.phase_file{1});
-        fprintf(fileID,'%s%s\n','    TUW-NL-File: ', settings.BIASES.phase_file{2});
-    case {'WHU phase/clock biases', 'SGG FCBs'}
-        fprintf(fileID,'    %s: %s\n',settings.BIASES.phase, settings.BIASES.phase_file);
-    case {'NRCAN (not implemented)', 'manually (not implemented)'}
-        fprintf(fileID,'    %s\n', settings.BIASES.phase);
-    case 'Correction Stream'
-        fprintf(fileID,'    %s\n','Phase biases from correction stream are applied');
-    case 'off'
-        fprintf(fileID,'    %s\n','no');
+% Phase Biases
+if ~strcmp(settings.BIASES.phase, 'off')
+    fprintf(fileID,'%s\n','Phase Biases:');
+    switch settings.BIASES.phase
+        case 'TUW (not implemented)'
+            fprintf(fileID,'%s%s\n','  TUW-WL-File: ', settings.BIASES.phase_file{1});
+            fprintf(fileID,'%s%s\n','  TUW-NL-File: ', settings.BIASES.phase_file{2});
+        case {'WHU phase/clock biases', 'SGG FCBs'}
+            fprintf(fileID,'  %s: %s\n',settings.BIASES.phase, settings.BIASES.phase_file);
+        case {'NRCAN (not implemented)', 'manually (not implemented)'}
+            fprintf(fileID,'  %s\n', settings.BIASES.phase);
+        case 'Correction Stream'
+            fprintf(fileID,'  %s\n','Phase biases from correction stream are applied');
+        case 'off'
+            fprintf(fileID,'  %s\n','no');
+    end
 end
+
 fprintf(fileID,'\n');
 
 
@@ -176,25 +179,29 @@ fprintf(fileID,'\n');
 %% Models - Troposphere
 
 fprintf(fileID,'%s\n', 'Troposphere:');
-fprintf(fileID,'  %s%s\n','zhd: ',settings.TROPO.zhd);
+fprintf(fileID,'  %s%s %s\n','zhd: ', settings.TROPO.zhd, detectGridSiteWise(settings.TROPO.zhd, input, settings.TROPO.vmf_version));
 if strcmpi(settings.TROPO.zhd,'p (in situ) + Saastamoinen')
-    fprintf(fileID,'    %s%7.2f%s\n','p: ',settings.TROPO.p,' hPa');
+    fprintf(fileID,'    %s%7.2f%s\n','p: ', settings.TROPO.p,' hPa');
 elseif strcmpi(settings.TROPO.zhd,'Tropo file') && strcmpi(settings.TROPO.tropo_file,'manually')
     fprintf(fileID,'    %s: %s\n', 'manually', settings.TROPO.tropo_filepath);
 end
-fprintf(fileID,'  %s%s\n','zwd: ',settings.TROPO.zwd);
+fprintf(fileID,'  %s%s %s\n','zwd: ', settings.TROPO.zwd, detectGridSiteWise(settings.TROPO.zwd, input, settings.TROPO.vmf_version));
 if strcmpi(settings.TROPO.zwd,'e (in situ) + Askne')
-    fprintf(fileID,'    %s%5.2f%s\n','q: ',settings.TROPO.q,' %');
-    fprintf(fileID,'    %s%6.2f%s\n','T: ',settings.TROPO.T,' °C');
+    fprintf(fileID,'    %s%5.2f%s\n','q: ', settings.TROPO.q,' %');
+    fprintf(fileID,'    %s%6.2f%s\n','T: ', settings.TROPO.T,' °C');
 elseif strcmpi(settings.TROPO.zwd,'Tropo file') && strcmpi(settings.TROPO.tropo_file,'manually')
     fprintf(fileID,'    %s: %s\n', 'manually', settings.TROPO.tropo_filepath);    
 end
-fprintf(fileID,'  %s%s\n','mfh: ',settings.TROPO.mfh);
-fprintf(fileID,'  %s%s\n','mfw: ',settings.TROPO.mfw);
-fprintf(fileID,'  %s%s\n','Gn_h & Ge_h: ',settings.TROPO.Gh);
-fprintf(fileID,'  %s%s\n','Gn_w & Ge_w: ',settings.TROPO.Gw);
+fprintf(fileID,'  %s%s %s\n','mfh: ', settings.TROPO.mfh, detectGridSiteWise(settings.TROPO.mfh, input, settings.TROPO.vmf_version));
+fprintf(fileID,'  %s%s %s\n','mfw: ', settings.TROPO.mfw, detectGridSiteWise(settings.TROPO.mfw, input, settings.TROPO.vmf_version));
+fprintf(fileID,'  %s%s %s\n','Gn_h & Ge_h: ', settings.TROPO.Gh, detectGridSiteWise(settings.TROPO.Gh, input, settings.TROPO.vmf_version));
+fprintf(fileID,'  %s%s %s\n','Gn_w & Ge_w: ', settings.TROPO.Gw, detectGridSiteWise(settings.TROPO.Gw, input, settings.TROPO.vmf_version));
 if settings.TROPO.estimate_ZWD
-    fprintf(fileID,'  %s%5.2f\n','ZWD is estimated from minute ', settings.TROPO.est_ZWD_from);
+    if settings.TROPO.est_ZWD_from == 0
+        fprintf(fileID,'  %s\n','ZWD is estimated');
+    else
+        fprintf(fileID,'  %s%5.2f\n','ZWD is estimated from minute ', settings.TROPO.est_ZWD_from);
+    end
 else
     fprintf(fileID,'  %s\n','ZWD is not estimated');
 end
@@ -238,13 +245,13 @@ if ~isempty(settings.OTHER.file_antex)
             fprintf(fileID,'  %s%s\n','Antex file: ', settings.OTHER.file_antex);
     end
     if settings.OTHER.antex_rec_manual
-        fprintf(fileID,'  %s\n','Manual receiver corrections from MyAntex.atx');
+        fprintf(fileID,'  %s\n','Own corrections from MyAntex.atx');
     end
-    if ~isempty(rec_pco)        % print missing receiver PCO corrrections
-        fprintf(fileID,'    %s%s\n','Missing receiver PCOs: ', rec_pco);
+    if ~isempty(rec_pco)        % print missing PCO corrrections
+        fprintf(fileID,'    %s%s\n','Missing PCOs: ', rec_pco);
     end
-    if ~isempty(rec_pcv)        % print missing receiver PCV corrrections
-        fprintf(fileID,'    %s%s\n','Missing receiver PCVs: ', rec_pcv);
+    if ~isempty(rec_pcv)        % print missing PCV corrrections
+        fprintf(fileID,'    %s%s\n','Missing PCVs: ', rec_pcv);
     end
 end
 if settings.OTHER.bool_rec_arp || settings.OTHER.bool_rec_pco || settings.OTHER.bool_sat_pco || ... % all other corrections
@@ -341,7 +348,7 @@ end
 % Filter and filter settings
 fprintf(fileID,'  %s\n',settings.ADJ.filter.type);
 if ~strcmp(settings.ADJ.filter.type,'No Filter')
-    fprintf(fileID,'    %s\n', 'Filter-Settings (initial standard deviation [m] | system noise standard deviation [m] | dynamic model):');
+    fprintf(fileID,'    %s\n', 'Filter-Settings (initial standard deviation [m] | system noise standard deviation [m/sqrt(h)] | dynamic model):');
     fprintf(fileID,'    %s%11.3f%s%11.3f%s%d\n','Coordinates:        ',sqrt(settings.ADJ.filter.var_coord),    ' | ',sqrt(settings.ADJ.filter.Q_coord),     ' | ',settings.ADJ.filter.dynmodel_coord);
     if settings.TROPO.estimate_ZWD
         fprintf(fileID,'    %s%11.3f%s%11.3f%s%d\n','Zenith Wet Delay:   ',sqrt(settings.ADJ.filter.var_zwd),      ' | ',sqrt(settings.ADJ.filter.Q_zwd),       ' | ', settings.ADJ.filter.dynmodel_zwd);

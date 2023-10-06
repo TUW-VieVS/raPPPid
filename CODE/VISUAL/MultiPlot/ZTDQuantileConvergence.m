@@ -19,14 +19,22 @@ function [] = ZTDQuantileConvergence(Q68, Q95, Q_dT, labels, PlotStruct, coleur)
 % *************************************************************************
 
 
+% check if anything to plot
+if all(isnan(horzcat(Q68{:, 6})))
+    return
+end
+
 n = numel(labels);                      % number of labels
+
+% create figure to plot
 fig_quant_conv = figure('Name', 'ZTD Quantile Convergence Plot', 'NumberTitle','off');
 splot_11 = subplot(2,1,1); 
 splot_11 = style_before(splot_11, '68% Quantile ZTD');
 splot_12 = subplot(2,1,2); 
 splot_12 = style_before(splot_12, '95% Quantile ZTD');
 
-for i = 1:n                 % loop over labels
+% loop over labels
+for i = 1:n                
     % get 68% quantile
     dZTD_68  = Q68{i, 6}*100;
     % get 95% quantile

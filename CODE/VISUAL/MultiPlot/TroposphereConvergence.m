@@ -17,6 +17,13 @@ function [] = TroposphereConvergence(dZTD, q68_ztd, q95_ztd, dT, dT_all, PlotStr
 % *************************************************************************
 
 
+% check if ZTD difference could be calculated
+if all(isnan(dZTD(:)))
+    fprintf(2, ['\n ZTD Convergence Plot failed for: ' label '\n'])
+    return
+end
+
+
 dZTD = 100*abs(dZTD);          	% plot [cm] and absolute values
 n_conv = size(dT, 1);           % number of convergence periods
 % convert [s] in [min]

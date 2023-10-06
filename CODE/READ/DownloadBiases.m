@@ -28,7 +28,7 @@ switch settings.BIASES.code
         % create folder and prepare the download
         % ||| alternative: ftp://ftp.gipp.org.cn/product/dcb/mgex/yyyy/
         target = {[Path.DATA, 'BIASES/', yyyy, '/', doy '/']};
-        mkdir(target{1});
+        [~, ~] = mkdir(target{1});
         URL_host = 'igs.ign.fr:21';
         URL_folder = {['/pub/igs/products/mgex/dcb/' yyyy '/']};
         file = {['CAS0MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz']};
@@ -51,7 +51,7 @@ switch settings.BIASES.code
 
     case 'CAS Multi-GNSS OSBs'       
         target = {[Path.DATA, 'BIASES/', yyyy, '/', doy '/']};
-        mkdir(target{1});
+        [~, ~] = mkdir(target{1});
         URL_host = 'ftp.gipp.org.cn:21';
         URL_folder = {['/product/dcb/mgex/' yyyy '/']};
         file = {['CAS0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
@@ -78,7 +78,7 @@ switch settings.BIASES.code
         end
         % create folder and prepare download
         target = {[Path.DATA, 'BIASES/', yyyy, '/']};
-        mkdir(target{1});
+        [~, ~] = mkdir(target{1});
         URL_host = 'igs.ign.fr:21';
         URL_folder = {['/pub/igs/products/mgex/dcb/' yyyy '/']};
         file = {['DLR0MGXFIN_' yyyy quart '0000_03L_01D_DCB.BSX.gz']};
@@ -95,7 +95,7 @@ switch settings.BIASES.code
     case 'CODE DCBs (P1P2, P1C1, P2C2)'           % "old" DCBs
         % create folder and prepare download
         targets = repmat({[Path.DATA, 'BIASES/', yyyy, '/']},3,1);
-        mkdir(targets{1});
+        [~, ~] = mkdir(targets{1});
         URL_host = 'ftp.aiub.unibe.ch:21';
         URL_folder = repmat({['/CODE/' yyyy '/']},3,1);
         files = {['P1P2' yyyy(3:4) mm '_ALL.DCB.Z'];...
@@ -116,7 +116,7 @@ switch settings.BIASES.code
     case 'WUM MGEX'
         % create folder and prepare download
         target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
-        mkdir(target{1});
+        [~, ~] = mkdir(target{1});
         URL_host = 'igs.gnsswhu.cn:21';
         URL_folder = {['/pub/whu/phasebias/' yyyy, '/bias/']};
         file = {['WUM0MGXRAP_' yyyy doy '0000_01D_01D_ABS.BIA.gz']};
@@ -138,7 +138,7 @@ switch settings.BIASES.code
     case 'CNES MGEX'
         % create folder and prepare download
         target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
-        mkdir(target{1});
+        [~, ~] = mkdir(target{1});
         URL_host = 'igs.ign.fr:21';
         URL_folder = {['/pub/igs/products/mgex/' gpsweek, '/']};
         file = {['GRG0MGXFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
@@ -154,7 +154,7 @@ switch settings.BIASES.code
     case 'GFZ MGEX'
         % create folder and prepare download
         target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
-        mkdir(target{1});
+        [~, ~] = mkdir(target{1});
         URL_host = 'igs.ign.fr:21';
         URL_folder = {['/pub/igs/products/mgex/' gpsweek, '/']};
         file = {['GFZ0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
@@ -179,7 +179,7 @@ switch settings.BIASES.code
     case 'CODE OSBs'
         % create folder and prepare download
         target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
-        mkdir(target{1});
+        [~, ~] = mkdir(target{1});
         URL_host = 'ftp.aiub.unibe.ch:21';
         switch settings.ORBCLK.prec_prod_type
             case 'Final'
@@ -211,7 +211,7 @@ switch settings.BIASES.code
     case 'CNES OSBs'
         % create folder and prepare download
         target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
-        mkdir(target{1});
+        [~, ~] = mkdir(target{1});
         URL_host = 'igs.ign.fr:21';
         URL_folder = {['/pub/igs/products/' gpsweek, '/']};
         file = {['GRG0OPSFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
@@ -228,7 +228,7 @@ switch settings.BIASES.code
     case 'CODE MGEX'
         % create folder and prepare download
         target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
-        mkdir(target{1});
+        [~, ~] = mkdir(target{1});
         URL_host = 'ftp.aiub.unibe.ch:21';
         URL_folder = {['/CODE_MGEX/CODE/' yyyy '/']};
         if str2double(gpsweek) >= 2238
@@ -249,7 +249,7 @@ switch settings.BIASES.code
     case 'CNES postprocessed'
         % create folder and prepare download
         target = [Path.DATA, 'BIASES/', yyyy, '/' doy '/'];
-        mkdir(target);
+        [~, ~] = mkdir(target);
         if str2double(yyyy) == 2019 && str2double(doy) >= 27
             file_bia = ['GFZ0MGXRAP_' yyyy doy '0000_01D_30S_ABS.BIA'];
         elseif str2double(yyyy) >= 2020

@@ -26,7 +26,7 @@ doy_ 	= sprintf('%03d',doy);
 
 % define variables for download
 target = [Path.DATA, 'TROPO/', yyyy_, '/', doy_];
-mkdir(target)
+[~, ~] = mkdir(target)
 if (yyyy > 2023) && (yyyy == 2023 && doy >= 48)
     % starting with 17 Feb 2023 long filenames are used (IGSMAIL-8313)
     % ||| not working

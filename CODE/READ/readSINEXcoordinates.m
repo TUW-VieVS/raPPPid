@@ -9,12 +9,15 @@ function [STATIONS_all, XYZ_all] = readSINEXcoordinates(FilePath)
 %   STATIONS_all    4-digit station identifiers
 %   XYZ_all         corresponding true XYZ coordinates
 % 
+% Revision:
+%   2023/08/29, MFG: improve handling of corrupt SINEX files, bug removed
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
 % ||| time-stamp of coordinates in SINEX file is ignored, the last
-% coordinates are taken
+% coordinates occuring are taken
 
 
 % open and read in file
@@ -54,18 +57,25 @@ COORDS = FILE(bool_sol);                % cut out part with XYZ coordinates
 n = length(STATIONS_all);
 XYZ_all = zeros(n,3);
 for i = 1:n         % loop over all stations to find XYZ coordinates
-    stat = STATIONS_file(i,:);       	% current 4-digit station
-    bool_xyz = contains(COORDS, stat);	% lines where station occurs
+    stat = STATIONS_file(i,:);          % current 4-digit station
+    stat_ = [' ' stat ' '];          	% add whitespaces to station name be on the safe side)
+    bool_xyz = contains(COORDS, stat_);	% lines where station occurs 
     if all(bool_xyz == 0)               % no true coordinates for current station
-        XYZ_all = [0, 0, 0];
         continue
     end
     
-    % get lines with coordinates of station
+    % get all lines with coordinates of current station
     lines_coords = COORDS(bool_xyz);
+    linelength = cellfun(@length, lines_coords);  	% length of each line
+    lines_coords = lines_coords(linelength == 80); 	% keep only lines with nominal line length of 80 chars (e.g., file corrupt)
+    
+    % extract x,y,z lines 
     x_line = cell2mat(lines_coords(contains(lines_coords, 'STAX')));
     y_line = cell2mat(lines_coords(contains(lines_coords, 'STAY')));
     z_line = cell2mat(lines_coords(contains(lines_coords, 'STAZ')));
+    if isempty(x_line) || isempty(y_line) || isempty(z_line)
+        continue        % not for all coordinates lines detected (e.g., file corrupt)
+    end
     
     % in case of multiple matches, take last and most (time-stamp is ignored!)
     x_line = x_line(end,:);
@@ -73,9 +83,17 @@ for i = 1:n         % loop over all stations to find XYZ coordinates
     z_line = z_line(end,:);
     
     % get and convert coordinates from string to double
-    XYZ_all(i,1) = str2double(x_line(47:69));
-    XYZ_all(i,2) = str2double(y_line(47:69));
-    XYZ_all(i,3) = str2double(z_line(47:69));
+    x = str2double(x_line(47:69));
+    y = str2double(y_line(47:69));
+    z = str2double(z_line(47:69));
+    if isnan(x) || isnan(y) || isnan(z) 
+        continue        % not all coordinates extracted (e.g., file corrupt)
+    end     
+    
+    % save extracted coordinates
+    XYZ_all(i,1) = x;
+    XYZ_all(i,2) = y;
+    XYZ_all(i,3) = z;
 end
 
 

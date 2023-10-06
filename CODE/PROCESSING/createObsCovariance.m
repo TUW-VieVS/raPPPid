@@ -13,7 +13,7 @@ function Adjust = createObsCovariance(Adjust, Epoch, settings, elev)
 % 	Epoch       struct, epoch-specific data
 %   settings 	settings from GUI
 % OUTPUT:
-%   Adjust      updated P matrix with correlation
+%   Adjust      updated with P and Q matrix (weight and covariance matrix)
 %
 % Revision:
 %   ...

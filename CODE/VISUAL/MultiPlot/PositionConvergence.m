@@ -44,6 +44,8 @@ subplot(2,1,1)
 hold on 
 if bool
     p_11 = plot(dT',d2D', 'color',coleur, 'linewidth',1);  	% plot vectorized
+else
+    p_11 = [];	
 end
 p_12 = hline(PlotStruct.thresh_2D, 'k--');      % convergence threshold
 p_13 = plot(dT_all, q68{4}, 'LineStyle', '-', 'Color', [.5 .5 .5], 'LineWidth',2);
@@ -65,6 +67,8 @@ subplot(2,1,2)
 hold on 
 if bool
     p_21 = plot(dT',d3D', 'color',coleur, 'linewidth',1);  	% plot vectorized
+else
+    p_21 = []; 	
 end
 p_22 = hline(PlotStruct.thresh_3D, 'k--');      % convergence threshold
 p_23 = plot(dT_all, q68{5},	'LineStyle', '-', 'Color', [.5 .5 .5], 'LineWidth',2);

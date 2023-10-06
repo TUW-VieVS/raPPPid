@@ -28,7 +28,7 @@ host = 3;
 
 switch host
     case 1
-        URL_host = 'igs.bkg.bund.de:21';
+        URL_host = 'igs-ftp.bkg.bund.de:21';
     case 2
         URL_host = 'https://cddis.nasa.gov';    % typically very complete
     case 3
@@ -74,7 +74,7 @@ files = cell(no_days, no_stations);
 targets = cell(no_days, no_stations);
 
 % Prepare waitbar and print out of epochs to command window 
-WBAR = waitbar(0, 'Creating list do download data.', 'Name', 'Downloading IGS Data');  
+WBAR = waitbar(0, 'Creating list to download data.', 'Name', 'Downloading IGS Data');  
 
 % loop over stations and doys to create the needed variables for the download
 for d = 1:no_days
@@ -100,7 +100,7 @@ for d = 1:no_days
         targets{d,n} = target;
         
         % create target folder
-        mkdir(target);
+        [~, ~] = mkdir(target);
         
     end
 end

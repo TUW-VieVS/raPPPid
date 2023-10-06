@@ -94,11 +94,20 @@ classdef parfor_wait < handle
 %             waitbar(Obj.NumMessage/Obj.TotalMessage, Obj.WaitbarHandle, [num2str(Obj.NumMessage/Obj.TotalMessage*100, '%.2f'), '%; ', num2str(UsedTime_now, '%.2f'), 's used and ', num2str(EstimatedTimeNeeded, '%.2f'), 's needed.']);
 %             Obj.UsedTime_1 = UsedTime_now;
             % adapted (MFG):
-            UsedTime_now = toc(Obj.StartTime);
-            percent = Obj.NumMessage/Obj.TotalMessage*100;
-            prediction = UsedTime_now/percent * 100 - UsedTime_now;    % [s]
-            mess_str1 = [sprintf('%.2f', percent), '% are finished within ' datestr(UsedTime_now/(24*60*60), 'HH:MM:SS')];
-            mess_str2 = ['Predicted remaining time: ' datestr(prediction/(24*60*60), 'HH:MM:SS')];
+            UsedTime_now = toc(Obj.StartTime);                  % [s], elapsed time 
+            percent = Obj.NumMessage/Obj.TotalMessage*100;      % [%], finished percent
+            prediction = UsedTime_now/percent * 100 - UsedTime_now;    % [s], prediction
+            % print elapsed time
+            d = floor(UsedTime_now/86400);
+            h = floor(mod(UsedTime_now,86400)/3600);
+            m = floor(mod(UsedTime_now,3600)/60);
+            mess_str1 = [sprintf('%.2f', percent), '% are finished within ' sprintf('%.0fd %.0fh %.0fm', d, h, m)];
+            % print prediction of remaining processing time
+            d = floor(prediction/86400);
+            h = floor(mod(prediction,86400)/3600);
+            m = floor(mod(prediction,3600)/60);
+            mess_str2 = ['Predicted remaining time: ' sprintf('%.0fd %.0fh %.0fm', d, h, m)];
+            % put together and update waitbar
             mess_str = {mess_str1; mess_str2};
             waitbar(Obj.NumMessage/Obj.TotalMessage, Obj.WaitbarHandle, mess_str);
             Obj.UsedTime_1 = UsedTime_now;

@@ -1,7 +1,7 @@
 classdef Path
 % Class for paths which are used in VieVS PPP. Any changes of paths
-% have to be done here (only). This file should be in the same folder as
-% vievs.m which is used for starting (the GUI of) VieVS PPP.
+% should to be done here (only). This file should be in the same folder as
+% raPPPid.m which is used for starting (the GUI of) VieVS PPP.
 %  
 %   Revision:
 %   ...
@@ -25,9 +25,11 @@ classdef Path
         % Path to folder of 7-zip.exe
         ZIP7 = '../CODE/7ZIP/7za.exe';
         
-        % Path of TUW ionosphere models
+        % Folder of TUW ionosphere models
         TUW_IONO = 'A:/Datapool/VieVS-IONO/IONEX/';
-
+        
+        % Path to myAntex.atx
+        myAntex = [Path.DATA 'ANTEX/myAntex.atx']
     end
     
     methods (Access = public)

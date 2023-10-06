@@ -17,6 +17,12 @@ function input = get_VMF1(obs, input, settings)
 
 product = 'VMF1';
 
+if strcmp(settings.TROPO.vmf_version, 'operational')
+    type = 'VMF1_OP';
+elseif strcmp(settings.TROPO.vmf_version, 'forecast')
+    type = 'VMF1_FC';
+end
+
 % get the 3 jd's: previous day, current day and subsequent day (a bit 
 % complicated because a julian day starts at *.5)
 VMF1_data_all = [];
@@ -33,20 +39,20 @@ for i_jd = 1:length(jd_all)
     doy_str = num2str(doy,'%03d');
        
     % define the paths for VMF1
-    dir_VMF1_sitewise = '../DATA/VMF1/sitewise/';
-    url_VMF1_sitewise = 'https://vmf.geo.tuwien.ac.at/trop_products/GNSS/VMF1/VMF1_OP/daily/';
-    dir_VMF1_gridwise = '../DATA/VMF1/gridwise/';
-    url_VMF1_gridwise = 'https://vmf.geo.tuwien.ac.at/trop_products/GRID/2.5x2/VMF1/VMF1_OP/';
-    
+    dir_VMF1_sitewise = ['../DATA/VMF1/sitewise/' type '/'];
+    url_VMF1_sitewise = ['https://vmf.geo.tuwien.ac.at/trop_products/GNSS/VMF1/' type '/daily/'];
+    dir_VMF1_gridwise = ['../DATA/VMF1/gridwise/' type '/'];
+    url_VMF1_gridwise = ['https://vmf.geo.tuwien.ac.at/trop_products/GRID/2.5x2/VMF1/' type '/'];
+                        
     % VMF1 file for this day
     file_VMF1 = [year_str doy_str '.vmf1_g'];
     
     % check if the VMF1 file is locally available 
     if ~exist([dir_VMF1_sitewise '/' year_str '/' file_VMF1],'file')   
         % if file does not exists, download it
-        mkdir([dir_VMF1_sitewise '/' year_str '/']);
+        [~, ~] = mkdir([dir_VMF1_sitewise '/' year_str '/']);
         try
-        websave([dir_VMF1_sitewise '/' year_str '/' file_VMF1], [url_VMF1_sitewise '/' year_str '/' file_VMF1]);
+            websave([dir_VMF1_sitewise '/' year_str '/' file_VMF1], [url_VMF1_sitewise '/' year_str '/' file_VMF1]);
         catch
             fprintf(2, ['Download failed: ' url_VMF1_sitewise '/' year_str '/' file_VMF1 '\n'])
             errordlg({'VMF1 is not available!', 'Change troposphere model to GPT3.'}, 'Error');
@@ -80,9 +86,6 @@ if any(ind)         % station is part of stationlist
     
     % use sitewise VMF1
     input.TROPO.VMF1.version = 'sitewise';
-    if ~settings.INPUT.bool_parfor      % print to command window
-        fprintf('  %s%s%s%s%s%s%s\n', product, ' station list contains ', upper(obs.stationname), ' => sitewise ', product, ' coefficients applied');
-    end
     % get data for this station
     for i_col = 1:length(VMF1_data)
         input.TROPO.VMF1.data{i_col} = VMF1_data{i_col}(ind);
@@ -92,9 +95,6 @@ else
     
     % use gridwise VMF1
     input.TROPO.VMF1.version = 'gridwise';
-    if ~settings.INPUT.bool_parfor      % print to command window
-        fprintf('  %s%s%s%s%s%s%s\n', product, ' station list does not contain ', upper(obs.stationname), ' => gridwise ', product, ' coefficients applied');
-    end
     
     % determine all necessary mjd's
     input.TROPO.VMF1.data{2} = unique(VMF1_data{2});
@@ -104,12 +104,12 @@ else
     approx_pos_WGS84 = cart2geo(settings.INPUT.pos_approx);     % approximate position
     
     for i_jd = 1:length(input.TROPO.VMF1.data{2})
-        dir_orography = '../DATA/VMF1/gridwise/';
+        dir_orography = '../CODE/ATMOSPHERE';
         input.TROPO.VMF1.data{1}{i_jd} = upper(obs.stationname);
         [...
             input.TROPO.VMF1.data{ 3}(i_jd,1), input.TROPO.VMF1.data{ 4}(i_jd,1), ...
             input.TROPO.VMF1.data{ 5}(i_jd,1), input.TROPO.VMF1.data{ 6}(i_jd,1), VMF1_grid_file ] = ...
-            vmf1_grid_adapted(dir_VMF1_gridwise, dir_orography, VMF1_grid_file, ...
+            vmf1_grid_adapted(dir_VMF1_gridwise, dir_orography, url_VMF1_gridwise, VMF1_grid_file, ...
             input.TROPO.VMF1.data{2}(i_jd), approx_pos_WGS84.lat, approx_pos_WGS84.lon, approx_pos_WGS84.h);
         
     end

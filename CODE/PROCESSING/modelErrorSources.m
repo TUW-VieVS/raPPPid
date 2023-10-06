@@ -561,7 +561,7 @@ for i_sat = 1:num_sat
         elseif strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
             dX_PCO_REC_ECEF_corr(1) = e1.*los_pco_r(j(1)) + e2.*los_pco_r(j(2)) + e3.*los_pco_r(j(3));
         else                                        % no IF-LC
-            dX_PCO_REC_ECEF_corr(j_proc) = los_pco_r(j);      % get values of processed frequencies
+            dX_PCO_REC_ECEF_corr(1:numel(j)) = los_pco_r(j);      % get values of processed frequencies
         end
     end
 
@@ -588,7 +588,7 @@ for i_sat = 1:num_sat
             case '3-Frequency-IF-LC'
                 dX_PCO_SAT_ECEF_corr(1) = e1.*los_pco_s(j(1)) + e2.*los_pco_s(j(2)) + e3.*los_pco_s(j(3));
             otherwise        % uncombined signals are processed
-                dX_PCO_SAT_ECEF_corr(j_proc) = los_pco_s(j);
+                dX_PCO_SAT_ECEF_corr(1:numel(j)) = los_pco_s(j);
         end
     end
 
@@ -612,7 +612,7 @@ for i_sat = 1:num_sat
         % simplified version, https://doi.org/10.1186/s43020-021-00049-9 or
         % https://doi.org/10.1007/s00190-022-01602-3
         % for correcting HMW observation in create_HMW_LC.m
-        los_APC = PCO_rec(3,j).*sind(elev) + offset_LL(3,j);
+        los_APC(1:numel(j)) = PCO_rec(3,j).*sind(elev) + offset_LL(3,j);
     end
     
     
@@ -625,41 +625,41 @@ for i_sat = 1:num_sat
     
     %% -+-+-+- Assign modelled values to struct 'model' -+-+-+-
     
-    model.rho(i_sat,frqs)  	  = rho;            % theoretical range, maybe recalculated in iteration of epoch
-    model.dT_sat(i_sat,frqs)  = dT_sat;         % Satellite clock correction
-    model.dT_rel(i_sat,frqs)  = dT_rel;     	% Relativistic clock correction
-    model.dT_sat_rel(i_sat,frqs) = dT_sat_rel;  % Satellite clock  + relativistic correction
+    model.rho(i_sat,frqs)  	  = rho;            % theoretical range, maybe recalculated in iteration of epoch [m]
+    model.dT_sat(i_sat,frqs)  = dT_sat;         % Satellite clock correction [s]
+    model.dT_rel(i_sat,frqs)  = dT_rel;     	% Relativistic clock correction [s]
+    model.dT_sat_rel(i_sat,frqs) = dT_sat_rel;  % Satellite clock  + relativistic correction [s]
     model.Ttr(i_sat,frqs)    = Ttr;             % Signal transmission time, [sow], gps-time
-    model.k(i_sat,frqs)      = k;               % Column of ephemerides
+    model.k(i_sat,frqs)      = k;               % Column of ephemerides []
     % Atmosphere
-    model.trop(i_sat,frqs) = trop;              % Troposphere delay for elevation
-    model.iono(i_sat,frqs) = iono(frqs);        % Ionosphere delay
-    model.mfw(i_sat,frqs)  = mfw;               % Wet tropo mapping function
-    model.zwd(i_sat,frqs)  = zwd;               % zenith wet delay (need for building a priori + estimated zwd later)
-    model.zhd(i_sat,frqs)  = zhd;               % modeled zenith hydrostativ delay
+    model.trop(i_sat,frqs) = trop;              % Troposphere delay for elevation [m]
+    model.iono(i_sat,frqs) = iono(frqs);        % Ionosphere delay [m]
+    model.mfw(i_sat,frqs)  = mfw;               % Wet tropo mapping function []
+    model.zwd(i_sat,frqs)  = zwd;               % zenith wet delay (need for building a priori + estimated zwd later) [m]
+    model.zhd(i_sat,frqs)  = zhd;               % modeled zenith hydrostativ delay []
     % Observation direction
     model.az(i_sat,frqs)   = az;                % Satellite azimuth [°]
     model.el(i_sat,frqs)   = elev;            	% Satellite elevation [°]
     % Windup
-    model.delta_windup(i_sat,frqs) = delta_windup;          % Phase windup effect in cycles
-    model.windup(i_sat,frqs)       = windupCorr(frqs);      % Phase windup effect, scaled to frequency
+    model.delta_windup(i_sat,frqs) = delta_windup;          % Phase windup effect [cycles]
+    model.windup(i_sat,frqs)       = windupCorr(frqs);      % Phase windup effect, scaled to frequency [m]
     % tides
-    model.dX_solid_tides_corr(i_sat,frqs) = dX_solid_tides_corr; 	% Solid tides range correction
-    model.dX_ocean_loading(i_sat,frqs)    = dX_ocean_loading;     	% Ocean loading range correction
+    model.dX_solid_tides_corr(i_sat,frqs) = dX_solid_tides_corr; 	% Solid tides range correction [m]
+    model.dX_ocean_loading(i_sat,frqs)    = dX_ocean_loading;     	% Ocean loading range correction [m]
     % group delay variation
-    model.dX_GDV(i_sat,frqs)  = dX_GDV(frqs);                           % Group delay variation correction
+    model.dX_GDV(i_sat,frqs)  = dX_GDV(frqs);                           % Group delay variation correction [m]
     % phase center offsets and variations
     model.los_APC(i_sat,j_proc) = los_APC;
-    model.dX_ARP_ECEF_corr(i_sat,frqs)= dX_ARP_ECEF_corr;               % Receiver antenna reference point correction in ECEF
-    model.dX_PCO_rec_corr(i_sat,frqs) = dX_PCO_REC_ECEF_corr(frqs);     % Receiver phase center offset correction in ECEF
-    model.dX_PCV_rec_corr(i_sat,frqs) = dX_PCV_rec(frqs);            	% Receiver phase center variation correction
-    model.dX_PCO_sat_corr(i_sat,frqs) = dX_PCO_SAT_ECEF_corr(frqs);     % Satellite antenna phase center offset in ECEF
-    model.dX_PCV_sat_corr(i_sat,frqs) = dX_PCV_sat(frqs);           	% Satellite phase center variation correction
+    model.dX_ARP_ECEF_corr(i_sat,frqs)= dX_ARP_ECEF_corr;               % Receiver antenna reference point correction in ECEF [m]
+    model.dX_PCO_rec_corr(i_sat,frqs) = dX_PCO_REC_ECEF_corr(frqs);     % Receiver phase center offset correction in ECEF [m]
+    model.dX_PCV_rec_corr(i_sat,frqs) = dX_PCV_rec(frqs);            	% Receiver phase center variation correction [m]
+    model.dX_PCO_sat_corr(i_sat,frqs) = dX_PCO_SAT_ECEF_corr(frqs);     % Satellite antenna phase center offset in ECEF [m]
+    model.dX_PCV_sat_corr(i_sat,frqs) = dX_PCV_sat(frqs);           	% Satellite phase center variation correction [m]
     % Sat position and velocity:
-    model.ECEF_X(:,i_sat) = X;          % Sat Position before correcting the earth rotation during runtime tau
-    model.ECEF_V(:,i_sat) = V;          % Sat Velocity before correcting the earth rotation during runtime tau
-    model.Rot_X(:,i_sat)  = X_rot;      % Sat Position after correcting the earth rotation during runtime tau
-    model.Rot_V(:,i_sat)  = V_rot;  	% Sat Velocity after correcting the earth rotation during runtime tau  
+    model.ECEF_X(:,i_sat) = X;          % Sat Position before correcting the earth rotation during runtime tau [m]
+    model.ECEF_V(:,i_sat) = V;          % Sat Velocity before correcting the earth rotation during runtime tau [m]
+    model.Rot_X(:,i_sat)  = X_rot;      % Sat Position after correcting the earth rotation during runtime tau [m]
+    model.Rot_V(:,i_sat)  = V_rot;  	% Sat Velocity after correcting the earth rotation during runtime tau [m]
     
     Epoch.exclude(i_sat,frqs) = exclude;   	% boolean, true = do not use satellite (e.g. cutoff angle)
     Epoch.sat_status(i_sat,:) = status;   

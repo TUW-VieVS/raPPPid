@@ -36,10 +36,13 @@ D_rec = a_rec - los0*dot2(los0,a_rec) + cross2(los0,b_rec);
 D_sat = a_sat - los0*dot2(los0,a_sat) - cross2(los0,b_sat);
 
 % Windup of this epoch in [rad]
-cosphi = dot2(D_sat,D_rec) / (norm(D_sat)*norm(D_rec));
-if cosphi > 1; cosphi = 1; end    	% occured in PALM1/021/2020, Epoch 2359, prn 221
-y = dot2(los0,cross2(D_sat,D_rec));
-dphi = sign(y)*acos(cosphi);
+cosphi = dot2(D_sat,D_rec) / (norm(D_sat)*norm(D_rec));     % [08]: (14), term of cos^-1
+if abs(cosphi) > 1
+    % occured 2x in my PPP life (e.g., PALM1/021/2020, Epoch 2359, prn 221)
+    cosphi = sign(cosphi); 
+end    	
+y = dot2(los0, cross2(D_sat, D_rec));       % [08]: (15)
+dphi = sign(y)*acos(cosphi);                % [08]: (14), 3rd part (1st and 2nd are added in the following)
 DPhi_prev = delta_windup_old*2*pi;
 N = round((DPhi_prev - dphi)/(2*pi));       % to avoid jumps
 if DPhi_prev == 0; N = 0; end

@@ -140,6 +140,11 @@ settings.TROPO.mfw = get(handles.buttongroup_models_troposphere_mfw.SelectedObje
 settings.TROPO.Gh  = get(handles.buttongroup_models_troposphere_Gh.SelectedObject, 'String');
 settings.TROPO.Gw  = get(handles.buttongroup_models_troposphere_Gw.SelectedObject, 'String');
 
+% VMF version
+value = get(handles.popupmenu_vmf_type, 'Value');
+string_all = get(handles.popupmenu_vmf_type, 'String');
+settings.TROPO.vmf_version  = string_all{value};
+
 % Tropo file
 value = get(handles.popupmenu_tropo_file, 'Value');
 string_all = get(handles.popupmenu_tropo_file, 'String');

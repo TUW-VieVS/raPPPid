@@ -21,7 +21,7 @@ brdc_file_path = '';
 
 % define target for download
 target_nav = {[Path.DATA, 'BROADCAST/', yyyy, '/', doy]};
-mkdir(target_nav{1});
+[~, ~] = mkdir(target_nav{1});
 
 % define FTP host and folder
 FTP_h_ign = 'igs.ign.fr:21';

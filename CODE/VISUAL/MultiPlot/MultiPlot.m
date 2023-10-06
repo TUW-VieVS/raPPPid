@@ -13,6 +13,7 @@ function [] = MultiPlot(PATHS, XYZ_true, LABELS, PlotStruct)
 % OUTPUT:
 %   []
 %
+% using distinguishable_colors.m (c) 2010-2011, Tim Holy
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -24,8 +25,7 @@ WBAR = waitbar(0, 'Creating Multi-Plot...', 'Name','Progress of creating Multi-P
 global STOP_CALC;   STOP_CALC = 0;
 unique_labels = unique(LABELS, 'stable');  	% existing labels, keep order
 n_unique = numel(unique_labels);          	% number of different labels
-coleur = colorcube(n_unique);
-coleur(all(coleur,2), :) = .90;             % avoid white color
+coleur = createDistinguishableColors(n_unique);
 PlotStruct.coleurs = coleur;                % colors for each label
 
 PlotStruct.solution = 'float';
@@ -40,7 +40,8 @@ TTFF = cell(1, n_unique);  TTCF = TTFF;   BOX = cell(1, n_unique);
 Q68 = cell(n_unique, 6);    % 0.68 quantile for North, East, Height, 2D, 3D, ZTD
 Q95 = cell(n_unique, 6);    % 0.95 quantile for North, East, Height, 2D, 3D, ZTD
 Q_dT = cell(n_unique,1);    % points in time all convergence periods have in common
-
+% initialize variable for ConvAccur Plot
+CA = cell(n_unique, 2);     % 2D convergence, 3D accuracy at the end, label
 
 % loop over different labels
 for i = 1:n_unique   
@@ -127,16 +128,19 @@ for i = 1:n_unique
     CreateCurrent(d.N, d.E, d.H, d.dT, d.ZTD, q68, q95, dT_all, PlotStruct, curr_label, conv_dN, conv_dE, conv_dH, conv_2D, i);
     
     % Preparations for plots for all labels
-    if PlotStruct.box                            % Box Plot
+    if PlotStruct.box            	% Box Plot
         BOX{i} = conv_2D;
     end
-    if PlotStruct.fixed                          % Time to First Fix Plot
+    if PlotStruct.fixed             % Time to First Fix Plot
         [TTFF, TTCF] = prepTTFF(TTFF, TTCF, d.FIXED,  PlotStruct.thresh_2D, d.dT, d.E, d.N, i);
     end
-    if PlotStruct.bar                            % Bar Plot
+    if PlotStruct.bar            	% Bar Plot
         BARS = prepConvergenceBars(conv_dN, conv_dE, conv_dH, conv_2D, BARS, i, bars_minutes);
     end
-
+    if PlotStruct.convaccur        	% Convergence/Accuracy Plot
+        CA = prepConvaccurPlot(CA, d, i, conv_2D, unique_labels);
+    end
+    
     % print perfomance and statistic of current label to command window
     calcPerformanceIndicators(d, conv_2D, TTCF{i}, dT_all, q68, q95, curr_label, PlotStruct)
     
@@ -144,7 +148,7 @@ end         % end of loop over different labels
 
 
 % Create Plots for all labels which were prepared before
-CreateAll(Q68, Q95, Q_dT, BOX, BARS, TTFF, TTCF, unique_labels, bars_minutes, PlotStruct);
+CreateAll(Q68, Q95, Q_dT, BOX, BARS, TTFF, TTCF, CA, unique_labels, bars_minutes, PlotStruct);
 
 
 % close waitbar
@@ -166,16 +170,14 @@ if PlotStruct.tropo
     TroposphereConvergence(dZTD, q68{6}, q95{6}, dT, dT_all, PlotStruct, label);
     plotZTDHisto(dZTD, PlotStruct, label, i)
 end
-% Position Accuracy
-if PlotStruct.pos_acc
-    PositionAccuracy(dN, dE, label, PlotStruct)
-end
 % Histogram of Convergence
 if PlotStruct.histo_conv
     ConvergenceHistogram(conv_dN, conv_dE, conv_dH, conv_2D, label, PlotStruct);
 end
+% % Position Accuracy (currently not included in GUI)
+% PositionAccuracy(dN, dE, label, PlotStruct)
 
-function CreateAll(Q68, Q95, Q_dT, BOX, BARS, TTFF, TTCF, unique_labels, bars_minutes, PlotStruct)
+function CreateAll(Q68, Q95, Q_dT, BOX, BARS, TTFF, TTCF, D, unique_labels, bars_minutes, PlotStruct)
 % Creates plots which contain all labels
 coleurs = PlotStruct.coleurs;   % colors for each label
 % Quantile Convergence
@@ -198,5 +200,22 @@ end
 if PlotStruct.tropo
     ZTDQuantileConvergence(Q68, Q95, Q_dT, unique_labels, PlotStruct, coleurs);
 end
+% Convergence/Accuracy Plot
+if PlotStruct.convaccur
+    ConvAccurPlot(D, coleurs);
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

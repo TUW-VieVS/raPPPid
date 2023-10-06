@@ -109,7 +109,7 @@ for i = 1:n
     % create full path of target folder
     target = [datafolder tfolder '/' subf_1 '/' subf_2];
     % copy file
-    mkdir(target);
+    [~, ~] = mkdir(target);
     [success, mess, messID] = copyfile(curr_path, target);
     % check if moving was successful
     if success

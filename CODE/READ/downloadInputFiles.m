@@ -128,7 +128,7 @@ end
 if strcmpi(settings.IONO.source,'CODE Spherical Harmonics')
     % create folder and prepare the download
     target = {[Path.DATA, 'IONO/', yyyy, '/', doy '/']};
-    mkdir(target{1});
+    [~, ~] = mkdir(target{1});
     URL_host = 'ftp.aiub.unibe.ch:21';
     URL_folder = {['/CODE/' yyyy '/']};
     if str2double(gpsweek) >= 2238
@@ -169,7 +169,7 @@ switch settings.BIASES.phase
             fprintf('\nTUW NL UPD: File does not exist!\n\n');
         end
         
-    case 'WHU phase/clock biases'
+    case 'WHU phase/clock biases'   % Oct 2023: seems not to be available anymore
         target{2} = [Path.DATA, 'CLOCK/', yyyy, '/' doy];
         URL_host = 'igs.gnsswhu.cn:21';
         URL_folder = {['/pub/whu/phasebias/' yyyy '/bias/']; };
@@ -199,7 +199,7 @@ switch settings.BIASES.phase
         settings.BIASES.phase_file = [target{1} '/' files{1}];
         settings.ORBCLK.file_clk   = [target{2} '/' files{2}];
         
-    case 'SGG FCBs'
+    case 'SGG FCBs'         % Oct 2023: FCBs are only until Oct 2020 available
         file_sgg = ['sgg' gpsweek dow];
         % MGEX products are preconditioned
         switch settings.ORBCLK.prec_prod        % choose file depending on orbit/clock product
@@ -219,7 +219,7 @@ switch settings.BIASES.phase
             otherwise
                 errordlg({'SGG FCBs need orbit/clock data from:', 'CNES or GFZ or CNES MGEX'}, 'ERROR');
         end        
-        mkdir(target{1})
+        [~, ~] = mkdir(target{1});
         if ~exist([target{1} '/' file_sgg], 'file')
             try
                 websave([target{1} '/' file_sgg] , ['https://raw.githubusercontent.com/FCB-SGG/FCB-FILES/master/FCB%20Files_GECJ/' gpsweek '/' file_sgg]);

@@ -21,7 +21,7 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 %   Eph_BDS         BeiDou navigation data
 %
 %   Revision:
-%       ...
+%       2023/09/22, MFWG: jump over broken epoch entries
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -131,7 +131,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
     if line(1) == 'G'
         % -+-+- line 0 -+-+-
         line = line(2:end);
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         prn  = lData(1);            % PRN number of sat
         year = lData(2);            % year
         if year < 1900
@@ -155,7 +155,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 1 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         IODE   = lData(1);          % Issue of Data (IOD)
         crs    = lData(2);          % [m]
         Delta_n= lData(3);      	% [rad/s]
@@ -163,7 +163,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 2 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         cuc   = lData(1);           % [rad]
         ecc   = lData(2);           % Eccentricity
         cus   = lData(3);           % [rad]
@@ -171,7 +171,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 3 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         toe = lData(1);             % time of ephemeris [sow]
         cic = lData(2);             % [rad]
         Omega0 = lData(3);          % [rad]
@@ -179,7 +179,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 4 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         i0       = lData(1);        % [rad]
         crc      = lData(2);        % [m]
         omega    = lData(3);        % [rad]
@@ -187,7 +187,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 5 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         idot = lData(1);            % [rad/s]
         codes = int64(lData(2));    % GPS: codes on L2 channel
         weekno = lData(3);          % GPS week
@@ -197,7 +197,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 6 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         accuracy = lData(1);        % sat in space accuracy [m]
         svhealth = int64(lData(2)); % GPS: bits 17-22 w 3 sf 1
         tgd = lData(3);             % GPS: time group delay [s]
@@ -205,7 +205,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 7 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         tom = lData(1);             % transmission time of message [sow]
         % save data
         
@@ -245,7 +245,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
     if line(1) == 'R'               % GLONASS-navigation message
         % -+-+- line 0 -+-+-
         line = line(2:end);
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         svprn  = lData(1);      	% PRN number of sat
         year = lData(2);            % year
         if year < 1900
@@ -276,7 +276,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 1 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         X       = lData(1);         % [km]
         X_vel	= lData(2);         % [km/s]
         X_acc   = lData(3);         % [km/s^2]
@@ -284,7 +284,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 2 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         Y       = lData(1);
         Y_vel   = lData(2);
         Y_acc   = lData(3);
@@ -292,7 +292,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 3 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         Z = lData(1);
         Z_vel = lData(2);
         Z_acc = lData(3);
@@ -326,7 +326,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
     if line(1) == 'E'
         % -+-+- line 0 -+-+-
         line = line(2:end);
-        lData = textscan(line,'%f');    lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         prn  = lData(1);            % PRN number of sat
         year = lData(2);            % year
         if year < 1900
@@ -350,7 +350,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 1 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         IODE   = lData(1);          % Issue of Data (IOD)
         crs    = lData(2);          % [m]
         Delta_n= lData(3);      	% [rad/s]
@@ -358,7 +358,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 2 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         cuc   = lData(1);           % [rad]
         ecc   = lData(2);           % Eccentricity
         cus   = lData(3);           % [rad]
@@ -366,7 +366,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 3 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         toe = lData(1);             % time of ephemeris [sow]
         cic = lData(2);             % [rad]
         Omega0 = lData(3);          % [rad]
@@ -374,7 +374,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 4 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         i0       = lData(1);        % [rad]
         crc      = lData(2);        % [m]
         omega    = lData(3);        % [rad]
@@ -382,7 +382,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 5 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         idot = lData(1);            % [rad/s]
         datasource=int64(lData(2));	% for GALILEO data sources (FLOAT->INT)
         % bit 0 set: I/NAV E1-B
@@ -396,7 +396,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 6 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         sisa = lData(1);         	% signal in space accuracy [m]
         svhealth = int64(lData(2));	% GALILEO:(FLOAT->INT)
         % bit 0:    E1-B DVS
@@ -410,7 +410,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 7 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         tom = lData(1);             % transmission time of message [sow]
         
         % save data
@@ -450,7 +450,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
     if line(1) == 'C'
         % -+-+- line 0 -+-+-
         line = line(2:end);
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         prn  = lData(1);            % PRN number of sat
         year = lData(2);            % year
         if year < 1900
@@ -474,7 +474,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 1 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         AODE   = lData(1);          % Age of Data
         crs    = lData(2);          % [m]
         Delta_n= lData(3);      	% [rad/s]
@@ -482,7 +482,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 2 -+-+-
         i = i+1;
         line  = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         cuc     = lData(1);           % [rad]
         ecc     = lData(2);           % Eccentricity
         cus     = lData(3);           % [rad]
@@ -490,7 +490,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 3 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         toe = lData(1) - 00;       	% time of ephemeris, ||| [s of ??? week]
         IOD = mod(toe/720,240);     % calculate IOD (IGS SSR v1.00, 7.1)
         cic = lData(2);             % [rad]
@@ -499,7 +499,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 4 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         i0       = lData(1);        % [rad]
         crc      = lData(2);        % [m]
         omega    = lData(3);        % [rad]
@@ -507,7 +507,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 5 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         if numel(lData) ~= 2
             idot = lData(1);            % [rad/s]
             spare = lData(2);           % empty
@@ -520,7 +520,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 6 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         SV_acc = lData(1);          % SV accuracy [m]
         SatH1 = lData(2);           % satellite health, 0 = good, 1 = not
         tgd1 = lData(3);            % time group delay B1/B3 [s]
@@ -528,7 +528,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         % -+-+- line 7 -+-+-
         i = i+1;
         line = NAV{i};
-        lData = textscan(line,'%f'); lData = lData{1};
+        lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         tom = lData(1) - 00;     	% transmission time of message ||| [s of ?? week]
         AODC = lData(2);            % Age of Data Clock
 %         spare = lData(3);           % empty
@@ -566,7 +566,9 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         Eph_BDS(29,i_bds) = tom;        % transmission time of message [sow]
         i_bds = i_bds + 1;
     end
-    i = i + 1;
+    
+    i = i + 1;          % increase line counter
+    
 end
 
 

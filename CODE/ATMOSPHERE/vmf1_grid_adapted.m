@@ -1,5 +1,5 @@
 function [ah, aw, zhd, zwd, VMF1_grid_file] = ...
-    vmf1_grid_adapted(indir_VMF1_grid, indir_orography, VMF1_grid_file, mjd, lat, lon, h_ell)
+    vmf1_grid_adapted(indir_VMF1_grid, indir_orography, url_VMF1_grid, VMF1_grid_file, mjd, lat, lon, h_ell)
 %
 % vmf1_grid_adapted.m
 % ATTENTION: This is an adapted version of vmf1_grid.m! It outputs ah and
@@ -32,6 +32,7 @@ function [ah, aw, zhd, zwd, VMF1_grid_file] = ...
 % INPUT:
 %         o indir_VMF1_grid ... input directory where the yearly subdivided VMF1 gridded files are stored
 %         o indir_orography ... input directory where the orography_ell file is stored
+%         o url_V3GR_grid ..... URL from where the gridded VMF1 files are downloaded
 %         o VMF1_grid_file: ... cell containing filenames, VMF1 data and the orography, which is always passed with the function, must be set to '[]' by the user in the initial run
 %         o mjd ............... modified Julian date
 %         o lat ............... ellipsoidal latitude in radians
@@ -192,12 +193,15 @@ if load_new == 1
         
         % read the files and collect the data
         if length(mjd_all)==1   % if the observation epoch coincides with an NWM epoch
-            path_file = [indir_VMF1_grid '/' num2str(year(1)) '/' filename(1,:)];
+            folder = [indir_VMF1_grid num2str(year(1))];
+            path_file = [folder '/' filename(1,:)];
         else
-            path_file = [indir_VMF1_grid '/' num2str(year(i_file+1)) '/' filename(i_file,:)];
+            folder = [indir_VMF1_grid num2str(year(i_file+1))];
+            path_file = [folder '/' filename(i_file,:)];
         end
         if ~isfile(path_file)        % download if not existing
-            url_file = ['https://vmf.geo.tuwien.ac.at/trop_products/GRID/2.5x2/VMF1/VMF1_OP/' num2str(2023) '/' filename(i_file,:)];
+            url_file = [url_VMF1_grid num2str(year) '/' filename(i_file,:)];
+            [~, ~] = mkdir(folder);
             websave(path_file, url_file);
         end
         

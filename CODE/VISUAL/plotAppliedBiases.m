@@ -1,4 +1,4 @@
-function [] = plotAppliedBiases(storeData, use_GPS, use_GLO, use_GAL, use_BDS)
+function [] = plotAppliedBiases(storeData, use_GPS, use_GLO, use_GAL, use_BDS, rgb)
 % Plots the applied Biases of all satellites and epochs
 % INPUT:
 %   storeData       data from all processed epochs
@@ -6,6 +6,7 @@ function [] = plotAppliedBiases(storeData, use_GPS, use_GLO, use_GAL, use_BDS)
 %   use_GLO         boolean
 %   use_GAL         boolean
 %   use_BDS         boolean
+%   rgb             n x 3, colors for plotting
 % OUTPUT:
 %   []
 %
@@ -17,12 +18,12 @@ function [] = plotAppliedBiases(storeData, use_GPS, use_GLO, use_GAL, use_BDS)
 fig_biases = figure('Name', 'Applied Satellite Biases Plot [m]', 'NumberTitle','off');
 
 % plot applied bias
-plotBiases(storeData.C1_bias, 1, 'C1 Biases', use_GPS, use_GLO, use_GAL, use_BDS)
-plotBiases(storeData.C2_bias, 3, 'C2 Biases', use_GPS, use_GLO, use_GAL, use_BDS)
-plotBiases(storeData.C3_bias, 5, 'C3 Biases', use_GPS, use_GLO, use_GAL, use_BDS)
-plotBiases(storeData.L1_bias, 2, 'L1 Biases', use_GPS, use_GLO, use_GAL, use_BDS)
-plotBiases(storeData.L2_bias, 4, 'L2 Biases', use_GPS, use_GLO, use_GAL, use_BDS)
-plotBiases(storeData.L3_bias, 6, 'L3 Biases', use_GPS, use_GLO, use_GAL, use_BDS)
+plotBiases(storeData.C1_bias, 1, 'C1 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
+plotBiases(storeData.C2_bias, 3, 'C2 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
+plotBiases(storeData.C3_bias, 5, 'C3 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
+plotBiases(storeData.L1_bias, 2, 'L1 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
+plotBiases(storeData.L2_bias, 4, 'L2 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
+plotBiases(storeData.L3_bias, 6, 'L3 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
 
 % add customized datatip
 dcm = datacursormode(fig_biases);
@@ -32,7 +33,7 @@ set(dcm, 'updatefcn', @vis_customdatatip_applBiases)
 end
 
 
-function [] = plotBiases(biases, n_plot, title_str, use_GPS, use_GLO, use_GAL, use_BDS)
+function [] = plotBiases(biases, n_plot, title_str, use_GPS, use_GLO, use_GAL, use_BDS, rgb)
 % function to plot code or phase biases from a specific frequency
 
 % replace zeros with NaN
@@ -51,7 +52,7 @@ hold on
 % GPS
 if use_GPS
     ax = gca;
-    ax.ColorOrder = colorcube(DEF.SATS_GPS);
+    ax.ColorOrder = rgb;
     gps_biases = biases(:,   1:DEF.SATS_GPS);
     plot(gps_biases, '--')
     % prepare plotting text to each bias
@@ -80,7 +81,7 @@ end
 % Glonass
 if use_GLO
     ax = gca;
-    ax.ColorOrder = colorcube(DEF.SATS_GLO);
+    ax.ColorOrder = rgb;
     glo_biases = biases(:, 101:(100+DEF.SATS_GLO));
     plot(glo_biases, '-.')
     % prepare plotting text to each bias
@@ -109,7 +110,7 @@ end
 % Galileo
 if use_GAL
     ax = gca;
-    ax.ColorOrder = colorcube(DEF.SATS_GAL);
+    ax.ColorOrder = rgb;
     gal_biases = biases(:, 201:(200+DEF.SATS_GAL));
     plot(gal_biases, ':')
     % prepare plotting text to each bias
@@ -138,7 +139,7 @@ end
 % BeiDou
 if use_BDS
     ax = gca;
-    ax.ColorOrder = colorcube(DEF.SATS_BDS);
+    ax.ColorOrder = rgb;
     bds_biases = biases(:, 301:(300+DEF.SATS_BDS));
     plot(bds_biases, ':')
     % prepare plotting text to each bias

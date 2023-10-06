@@ -148,7 +148,7 @@ function Biases = get_DCBs_CAS(yyyy, doy, obs)
 Biases = [];
 % create target and origin of file
 target = {[Path.DATA, 'BIASES/', yyyy, '/', doy '/']};
-mkdir(target{1});
+[~, ~] = mkdir(target{1});
 URL_host = 'igs.ign.fr:21';
 URL_folder = {['/pub/igs/products/mgex/dcb/' yyyy '/']};
 file = {['CAS0MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz']};

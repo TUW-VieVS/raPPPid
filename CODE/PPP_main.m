@@ -405,11 +405,11 @@ storeData.fixed_reset_epochs = Adjust.fixed_reset_epochs;
 
 
 % create results folder
-mkdir(settings.PROC.output_dir);
+[~, ~] = mkdir(settings.PROC.output_dir);
 
 % write settings from GUI into settings_summary.txt and settings.mat
 if settings.EXP.settings_summary
-    settings2txt(settings, obs, input.OTHER.PCO.rec_error, input.OTHER.PCV.rec_error, tStart);
+    settings2txt(settings, obs, input, input.OTHER.PCO.rec_error, input.OTHER.PCV.rec_error, tStart);
 end
 if settings.EXP.settings
     save(fullfile(settings.PROC.output_dir, 'settings.mat'),'settings')
