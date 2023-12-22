@@ -1,5 +1,6 @@
 function [] = vis_cs_Doppler(storeData, sys, tresh, n_proc)
-% Plots the Doppler-Cycle-Slip-Detection
+% Plots the cycle slip detection based on the Doppler shift observation
+% (check cycleSlip_Doppler.m) for all satellites.
 %
 % INPUT:
 %   storeData       struct, collected data from all processed epochs
@@ -8,6 +9,10 @@ function [] = vis_cs_Doppler(storeData, sys, tresh, n_proc)
 %   n_proc          number of processed frequencies
 % OUTPUT:
 %   []
+% 
+% Revision:
+%   2023/11/09, MFWG: adding QZSS
+% 
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -46,7 +51,6 @@ if n_proc >= 3
     cs_L3D3_diff = full(storeData.cs_L3D3_diff);
     plotit(mod(storeData.gpstime,86400), cs_L3D3_diff, tresh, vec, ticks, [' L3 - ' sys], sys, mod(reset_sow, 86400))
 end
-end
 
 
 % Plot-Function
@@ -55,19 +59,23 @@ function [] = plotit(x, dL1dL2, thresh, vec, ticks, txt, sys, resets)
 if sys == 'G'           % GPS
     loop1 = 1:16;
     loop2 = 17:32;
-    col = 'r';
+    col = DEF.COLOR_G;
 elseif sys == 'R'       % GLONASS
     loop1 = 101:116;
     loop2 = 117:132;
-    col = 'c';
+    col = DEF.COLOR_R;
 elseif sys == 'E'      	% Galileo
     loop1 = 201:216;
     loop2 = 217:232;
-    col = 'b';
+    col = DEF.COLOR_E;
 elseif sys == 'C'      	% BeiDou
     loop1 = 301:316;
     loop2 = 317:332;
-    col = 'm';
+    col = DEF.COLOR_C;
+elseif sys == 'C'      	% QZSS
+    loop1 = 401:407;
+    loop2 = [];         % not enough satellites for 2nd loop
+    col = DEF.COLOR_J;  
 end
     
 %% plot the satellites 01-G16
@@ -86,7 +94,7 @@ for i = loop1       % loop over satellites
         x_cs = x(cs_idx); y_cs = y(cs_idx);     % get cycle slip data
         prn = mod(i,100);           % satellite prn
         subplot(4, 4, prn)
-        plot(x, y, [col '.'])       % plot
+        plot(x, y, '.', 'Color', col)
         hold on
         plot(x_cs,  y_cs,  'ro')	% highlight cycle-slips
         hline(thresh, 'g--')        % plot threshold
@@ -108,6 +116,11 @@ for i = loop1       % loop over satellites
     end
 end
 set(findall(gcf,'type','text'),'fontSize',8)
+
+if isempty(loop2)
+    return
+end
+
 
 %% plot the satellites 17-G32
 fig2 = figure('Name', ['Cycle-Slip-Detection with Doppler', txt, '17-32'], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
@@ -125,7 +138,7 @@ for i = loop2
         x_cs = x(cs_idx); y_cs = y(cs_idx);     % get cycle slip data
         prn = mod(i,100);           % satellite prn
         subplot(4, 4, prn-16)
-        plot(x, y, [col '.'])       % plot
+        plot(x, y, '.', 'Color', col)
         hold on
         plot(x_cs,  y_cs,  'ro')	% highlight cycle-slips
         hline(thresh, 'g--')        % plot threshold
@@ -148,4 +161,4 @@ for i = loop2
 end
 set(findall(gcf,'type','text'),'fontSize',8)
 
-end             % end of plotit
+

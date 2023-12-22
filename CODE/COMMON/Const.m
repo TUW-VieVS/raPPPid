@@ -1,7 +1,7 @@
 % Class for all relevant geodetic constants in VieVS PPP.
 %  
 %   Revision:
-%   ...
+%   2023/11/03, MFWG: adding QZSS
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -33,9 +33,9 @@ classdef Const
         GPS_F5 = 115 * Const.F0;
         GPS_F  = [Const.GPS_F1 Const.GPS_F2 Const.GPS_F5 0];
         % Wavelength [m]
-        GPS_L1 = Const.C/Const.GPS_F1;
-        GPS_L2 = Const.C/Const.GPS_F2;
-        GPS_L5 = Const.C/Const.GPS_F5;
+        GPS_L1 = Const.C / Const.GPS_F1;
+        GPS_L2 = Const.C / Const.GPS_F2;
+        GPS_L5 = Const.C / Const.GPS_F5;
         GPS_L  = Const.C ./ Const.GPS_F;
         % Coefficients for Ionosphere Linear-Combination of precise products, []
         GPS_IF_k1 = Const.GPS_F1^2 / (Const.GPS_F1^2-Const.GPS_F2^2);   % 2.5457
@@ -65,33 +65,49 @@ classdef Const
         GAL_F6  = 125   * Const.F0;
         GAL_F   = [Const.GAL_F1 Const.GAL_F5a Const.GAL_F5b Const.GAL_F5 Const.GAL_F6 0];
         % wavelength, [m]
-        GAL_L1  = Const.C/Const.GAL_F1;
-        GAL_L5a = Const.C/Const.GAL_F5a;
-        GAL_L5b = Const.C/Const.GAL_F5b;
-        GAL_L5  = Const.C/Const.GAL_F5;
-        GAL_L6  = Const.C/Const.GAL_F6;
+        GAL_L1  = Const.C / Const.GAL_F1;
+        GAL_L5a = Const.C / Const.GAL_F5a;
+        GAL_L5b = Const.C / Const.GAL_F5b;
+        GAL_L5  = Const.C / Const.GAL_F5;
+        GAL_L6  = Const.C / Const.GAL_F6;
         GAL_L   = Const.C ./ Const.GAL_F;
         % Coefficients for Ionosphere Linear-Combination of precise products, []
         GAL_IF_k1 = Const.GAL_F1^2  / (Const.GAL_F1^2-Const.GAL_F5a^2);   % 2.2606
         GAL_IF_k2 = Const.GAL_F5a^2 / (Const.GAL_F1^2-Const.GAL_F5a^2);   % 1.2606
         
         
-        %% BEIDOU specific Parameters c.f. RINEX v3 specification
+        %% BDS specific Parameters c.f. RINEX v3 specification
         % frequency, [Hz]
         BDS_F1 = 1561.098 * 1e6;        % B1
         BDS_F2 = 1207.14  * 1e6;        % B2
         BDS_F3 = 1268.52  * 1e6;        % B3
         BDS_F  = [Const.BDS_F1 Const.BDS_F2 Const.BDS_F3 0];
         % wavelength, [m]
-        BDS_L1 = Const.C/Const.BDS_F1;
-        BDS_L2 = Const.C/Const.BDS_F2;
-        BDS_L3 = Const.C/Const.BDS_F3;
+        BDS_L1 = Const.C / Const.BDS_F1;
+        BDS_L2 = Const.C / Const.BDS_F2;
+        BDS_L3 = Const.C / Const.BDS_F3;
         BDS_L  = Const.C ./ Const.BDS_F;
         % Coefficients for Ionosphere Linear-Combination of precise products, []
         BDS_IF_k1 = Const.BDS_F1^2  / (Const.BDS_F1^2-Const.BDS_F2^2);   % 2.4872 (?)
         BDS_IF_k2 = Const.BDS_F2^2 /  (Const.BDS_F1^2-Const.BDS_F2^2);   % 1.4872 (?)
         % Difference from BeiDou to GPS time, GPST = BDST + BDST_GPST
         BDST_GPST = 14;                 % seconds
+        
+        
+        
+        %% QZSS specific Parameters c.f. RINEX v3 specification
+        % frequency, [Hz]
+        QZSS_F1 = 1575.42 * 1e6;        % L1
+        QZSS_F2 = 1227.60 * 1e6;        % L2
+        QZSS_F5 = 1176.45 * 1e6;        % L5
+        QZSS_F6 = 1278.75 * 1e6;        % L6
+        QZSS_F  = [Const.QZSS_F1 Const.QZSS_F2 Const.QZSS_F5 Const.QZSS_F6 0];
+        % wavelength, [m]
+        QZSS_L1 = Const.C / Const.QZSS_F1;
+        QZSS_L2 = Const.C / Const.QZSS_F2;
+        QZSS_L5 = Const.C / Const.QZSS_F5;
+        QZSS_L6 = Const.C / Const.QZSS_F6;
+        QZSS_L  = Const.C ./ Const.QZSS_F;
         
         
         %% Reference systems

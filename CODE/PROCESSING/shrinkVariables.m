@@ -177,12 +177,14 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q
         model_save.ZTD              = model_save.ZTD(eps,:);
         model_save.iono             = model_save.iono(eps,:);
         model_save.mfw              = model_save.mfw(eps,:);
+		model_save.mfh              = model_save.mfh(eps,:);
         model_save.zwd              = model_save.zwd(eps);
         model_save.zhd              = model_save.zhd(eps);
         model_save.delta_windup     = model_save.delta_windup(eps,:);
         model_save.windup           = model_save.windup(eps,:,:);
         model_save.solid_tides      = model_save.solid_tides(eps,:);
         model_save.ocean_loading    = model_save.ocean_loading(eps,:);
+		model_save.polar_tides      = model_save.polar_tides(eps,:);
         model_save.PCO_rec     		= model_save.PCO_rec(eps,:);
         model_save.PCV_rec     		= model_save.PCV_rec(eps,:);
         model_save.ARP_ECEF       	= model_save.ARP_ECEF(eps,:);

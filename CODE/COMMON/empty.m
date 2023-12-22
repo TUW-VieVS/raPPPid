@@ -1,4 +1,5 @@
 function [] = empty()
+% blablabla
 % 
 % INPUT:
 %   ...
@@ -8,6 +9,6 @@ function [] = empty()
 % Revision:
 %   ...
 %
-% This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
+% This function belongs to raPPPid, Copyright (c) 2023, M.F. Wareyka-Glaner
 % *************************************************************************
 

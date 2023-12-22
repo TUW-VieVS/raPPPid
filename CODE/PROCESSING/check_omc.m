@@ -18,9 +18,6 @@ function [Epoch, Adjust] = check_omc(Epoch, model, Adjust, settings, obs_intval)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-% ||| UC - ionosphere is estimated, new - very low - satellite and big
-% ionspheric delay resulting in big omc, problemo!!!
-
 
 % Get values from GUI which define thresholds
 thresh_c = settings.PROC.omc_code_thresh;       % [m]

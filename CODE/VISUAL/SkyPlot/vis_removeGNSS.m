@@ -1,5 +1,5 @@
 function [AZ, EL, SNR, C_res, P_res, I_res, MP] = ...
-    vis_removeGNSS(AZ, EL, SNR, C_res, P_res, I_res, MP, isGPS, isGLO, isGAL, isBDS)
+    vis_removeGNSS(AZ, EL, SNR, C_res, P_res, I_res, MP, isGPS, isGLO, isGAL, isBDS, isQZSS)
 % replace zeros with NaN
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -14,19 +14,25 @@ I_res(I_res==0) = NaN;
 MP(MP==0) = NaN;
 
 % shrink matrixes of unused GNSS
-if ~isBDS
-    idx_start = 300;
+if ~isQZSS
+    idx_start = 400;
     [AZ, EL, SNR, C_res, P_res, I_res, MP] = ...
         delete_all(AZ, EL, SNR, C_res, P_res, I_res, MP, idx_start);
     MP = delete(MP, idx_start);
-    if ~isGAL
-        idx_start = 200;
+    if ~isBDS
+        idx_start = 300;
         [AZ, EL, SNR, C_res, P_res, I_res, MP] = ...
             delete_all(AZ, EL, SNR, C_res, P_res, I_res, MP, idx_start);
-        if ~isGLO
-            idx_start = 100;
+        MP = delete(MP, idx_start);
+        if ~isGAL
+            idx_start = 200;
             [AZ, EL, SNR, C_res, P_res, I_res, MP] = ...
                 delete_all(AZ, EL, SNR, C_res, P_res, I_res, MP, idx_start);
+            if ~isGLO
+                idx_start = 100;
+                [AZ, EL, SNR, C_res, P_res, I_res, MP] = ...
+                    delete_all(AZ, EL, SNR, C_res, P_res, I_res, MP, idx_start);
+            end
         end
     end
 end
@@ -49,6 +55,11 @@ if ~isGAL
 end
 if ~isBDS
     idx_S = 301;    idx_E = 399;
+    [AZ, EL, SNR, C_res, P_res, I_res, MP] = ...
+        overwrite_all(AZ, EL, SNR, C_res, P_res, I_res, MP, idx_S, idx_E);
+end
+if ~isQZSS
+    idx_S = 401;    idx_E = 410;
     [AZ, EL, SNR, C_res, P_res, I_res, MP] = ...
         overwrite_all(AZ, EL, SNR, C_res, P_res, I_res, MP, idx_S, idx_E);
 end

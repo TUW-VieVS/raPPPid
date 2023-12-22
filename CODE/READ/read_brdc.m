@@ -18,8 +18,8 @@ function  [input] = read_brdc(settings, input, leap_sec, glo_channels)
 
 % ||| conversion BDS time into GPS time
 
-input.Eph_GPS = [];     input.Eph_GLO = [];     
-input.Eph_GAL = [];     input.Eph_BDS = [];     
+input.ORBCLK.Eph_GPS = [];     input.ORBCLK.Eph_GLO = [];     
+input.ORBCLK.Eph_GAL = [];     input.ORBCLK.Eph_BDS = [];     
 
 bool_print = ~settings.INPUT.bool_parfor;
 
@@ -84,7 +84,7 @@ if settings.INPUT.use_GPS && settings.ORBCLK.bool_brdc
 %             end
 %         end
 %     end
-    input.Eph_GPS = sortrows(Eph_GPS',[1,21])';
+    input.ORBCLK.Eph_GPS = sortrows(Eph_GPS',[1,21])';
 end
 
 % --- GLONASS
@@ -99,7 +99,7 @@ if settings.INPUT.use_GLO
 %             fprintf('Unhealthy satellite GLO%02d (Code %d) at %02dh%02d marked in broadcast ephemeris\n',temp_Eph(1,i),temp_Eph(3,i),hh,mm ); 
 %         end
 %     end
-    input.Eph_GLO = sortrows(Eph_GLO',[1,17,18])';
+    input.ORBCLK.Eph_GLO = sortrows(Eph_GLO',[1,17,18])';
 end
 
 % --- GALILEO
@@ -117,7 +117,7 @@ if settings.INPUT.use_GAL && settings.ORBCLK.bool_brdc
 %             end
 %         end
 %     end
-    input.Eph_GAL = sortrows(Eph_GAL',[1,21])';
+    input.ORBCLK.Eph_GAL = sortrows(Eph_GAL',[1,21])';
 end
 
 % --- BEIDOU
@@ -135,5 +135,5 @@ if settings.INPUT.use_BDS && settings.ORBCLK.bool_brdc
 %             end
 %         end
 %     end
-    input.Eph_BDS = sortrows(Eph_BDS',[1,21])';
+    input.ORBCLK.Eph_BDS = sortrows(Eph_BDS',[1,21])';
 end

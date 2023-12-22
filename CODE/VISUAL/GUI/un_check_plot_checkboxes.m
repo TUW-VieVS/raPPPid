@@ -30,7 +30,7 @@ set(handles.checkbox_plot_elev,       	 'Value', value);
 set(handles.checkbox_plot_sat_visibility,'Value', value); 
 set(handles.checkbox_plot_skyplot,    	 'Value', value);
 set(handles.checkbox_plot_DOP,         	 'Value', value);
-% set(handles.checkbox_plot_GI,         	 'Value', value);
+set(handles.checkbox_plot_mplc,       	 'Value', value);
 set(handles.checkbox_plot_float_amb, 	 'Value', value);           
 set(handles.checkbox_plot_fixed_amb,	 'Value', value);        
 set(handles.checkbox_plot_cov_info,   	 'Value', value);      

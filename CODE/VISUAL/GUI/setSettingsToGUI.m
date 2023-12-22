@@ -12,7 +12,7 @@ function [handles] = setSettingsToGUI(structure, handles, bool_settings)
 %   handles     	struct, handles of raPPPid GUI
 %  
 % Revision:
-%   ...
+%   2023/10/31, MFWG: adding QZSS and panel weighting
 %
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -77,7 +77,7 @@ if bool_settings        % do this only for the settings structure
         set(handles.edit_RT_to, 'String', structure.INPUT.realtime_ende_GUI);
     end
     
-    % checkboxes GPS, GLONASS, GALILEO
+    % checkboxes GPS, GLONASS, GALILEO, BEIDOU, QZSS
     set(handles.checkbox_GPS, 'Enable', structure.INPUT.able_GPS);
     set(handles.checkbox_GLO, 'Enable', structure.INPUT.able_GLO);
     set(handles.checkbox_GAL, 'Enable', structure.INPUT.able_GAL);
@@ -86,6 +86,13 @@ if bool_settings        % do this only for the settings structure
     set(handles.checkbox_GLO, 'Value', structure.INPUT.use_GLO);
     set(handles.checkbox_GAL, 'Value', structure.INPUT.use_GAL);
     set(handles.checkbox_BDS, 'Value', structure.INPUT.use_BDS);
+    try
+        set(handles.checkbox_QZSS, 'Enable', structure.INPUT.able_QZSS);
+        set(handles.checkbox_QZSS, 'Value', structure.INPUT.use_QZSS);
+    catch
+        set(handles.checkbox_QZSS, 'Enable', 'off');
+        set(handles.checkbox_QZSS, 'Value', 0);
+    end
     
     % set frequencies which should be processed
     if structure.INPUT.use_GPS      % GPS
@@ -120,17 +127,35 @@ if bool_settings        % do this only for the settings structure
     set(handles.popupmenu_bds_1, 'Value', structure.INPUT.bds_freq_idx(1));
     set(handles.popupmenu_bds_2, 'Value', structure.INPUT.bds_freq_idx(2));
     set(handles.popupmenu_bds_3, 'Value', structure.INPUT.bds_freq_idx(3));
-
+    try
+        if structure.INPUT.use_QZSS      % QZSS
+            set(handles.popupmenu_qzss_1, 'Enable', 'On');
+            set(handles.popupmenu_qzss_2, 'Enable', 'On');
+            set(handles.popupmenu_qzss_3, 'Enable', 'On');
+        end
+        set(handles.popupmenu_qzss_1, 'Value', structure.INPUT.qzss_freq_idx(1));
+        set(handles.popupmenu_qzss_2, 'Value', structure.INPUT.qzss_freq_idx(2));
+        set(handles.popupmenu_qzss_3, 'Value', structure.INPUT.qzss_freq_idx(3));
+    catch
+            set(handles.popupmenu_qzss_1, 'Enable', 'Off');
+            set(handles.popupmenu_qzss_2, 'Enable', 'Off');
+            set(handles.popupmenu_qzss_3, 'Enable', 'Off');
+    end
+    
     % Observation Ranking
     set(handles.text_rank, 'Enable', 'On');
     set(handles.edit_gps_rank, 'Enable', 'On');
     set(handles.edit_glo_rank, 'Enable', 'On');
     set(handles.edit_gal_rank, 'Enable', 'On');
     set(handles.edit_bds_rank, 'Enable', 'On');
+    set(handles.edit_qzss_rank, 'Enable', 'On');
     set(handles.edit_gps_rank, 'String', structure.INPUT.gps_ranking);
     set(handles.edit_glo_rank, 'String', structure.INPUT.glo_ranking);
     set(handles.edit_gal_rank, 'String', structure.INPUT.gal_ranking);
     set(handles.edit_bds_rank, 'String', structure.INPUT.bds_ranking);
+    try
+    set(handles.edit_qzss_rank, 'String', structure.INPUT.qzss_ranking);
+    end
     
     % subfolder for input data files
     try
@@ -598,6 +623,11 @@ catch
     set(handles.checkbox_ocean_loading,     'Value', 0); 
 end
 try
+    set(handles.checkbox_polar_tides,     'Value', structure.OTHER.polar_tides); 
+catch
+    set(handles.checkbox_polar_tides,     'Value', 0); 
+end
+try
     set(handles.checkbox_eclipse,           'Value', structure.OTHER.bool_eclipse ); 
 catch
     set(handles.checkbox_eclipse,           'Value', 1); 
@@ -715,14 +745,18 @@ end
 
 %% Estimation - Adjustment
 
-% Std Code and Phase and Ionosphere
-set(handles.edit_Std_CA_Code, 'String', sprintf('%.3f', sqrt(structure.ADJ.var_code))  );
-set(handles.edit_Std_Phase,   'String', sprintf('%.3f', sqrt(structure.ADJ.var_phase)) );
-set(handles.edit_Std_Iono,    'String', sprintf('%.3f', sqrt(structure.ADJ.var_iono))  );
 % Filter Type
 string_all = get(handles.popupmenu_filter,'String');
 value = find(strcmp(string_all,structure.ADJ.filter.type));
 set(handles.popupmenu_filter, 'Value', value);
+
+% Filter settings
+[handles] = setFilterSettingsToGUI(structure, handles);
+
+
+
+%% Estimation - Weighting
+
 % Observation Weighting
 set(handles.radiobutton_MPLC_Dependency,            'Value', structure.ADJ.weight_mplc );
 set(handles.radiobutton_Elevation_Dependency,       'Value', structure.ADJ.weight_elev );
@@ -732,23 +766,54 @@ end
 set(handles.radiobutton_Signal_Strength_Dependency, 'Value', structure.ADJ.weight_sign_str );
 try     % write C/N0 weighting function to text-field
     try
-    set(handles.edit_snr_weighting_function,  'String', structure.ADJ.snr_weight_fun);
+        set(handles.edit_snr_weighting_function,  'String', structure.ADJ.snr_weight_fun);
     end
     set(handles.edit_snr_weighting_function,  'String', strrep(func2str(structure.ADJ.snr_weight_fun), '@(snr)', ''));
 end
 try
     set(handles.radiobutton_No_Dependency,          'Value', structure.ADJ.weight_none );
 end
+
 % GNSS weighting
 try
     set(handles.edit_weight_GPS, 'String', sprintf('%.2f', structure.ADJ.fac_GPS));
     set(handles.edit_weight_GLO, 'String', sprintf('%.2f', structure.ADJ.fac_GLO));
     set(handles.edit_weight_GAL, 'String', sprintf('%.2f', structure.ADJ.fac_GAL));
     set(handles.edit_weight_BDS, 'String', sprintf('%.2f', structure.ADJ.fac_BDS));
+catch
+    set(handles.edit_weight_GPS, 'String', sprintf('%.2f', 1));
+    set(handles.edit_weight_GLO, 'String', sprintf('%.2f', 1));
+    set(handles.edit_weight_GAL, 'String', sprintf('%.2f', 1));
+    set(handles.edit_weight_BDS, 'String', sprintf('%.2f', 1));
+end
+try
+	set(handles.edit_weight_QZSS,'String', sprintf('%.2f', structure.ADJ.fac_QZSS)); 
+catch
+	set(handles.edit_weight_QZSS,'String', sprintf('%.2f', 1));
 end
 
-% Filter settings
-[handles] = setFilterSettingsToGUI(structure, handles);
+% Std Code and Phase and Ionosphere
+set(handles.edit_Std_CA_Code, 'String', sprintf('%.3f', sqrt(structure.ADJ.var_code))  );
+set(handles.edit_Std_Phase,   'String', sprintf('%.3f', sqrt(structure.ADJ.var_phase)) );
+set(handles.edit_Std_Iono,    'String', sprintf('%.3f', sqrt(structure.ADJ.var_iono))  );
+
+% frequency-specific standard-devations, boolean
+try
+    handles.checkbox_std_frqs.Value = structure.ADJ.bool_std_frqs;
+catch
+    handles.checkbox_std_frqs.Value = 0;
+end
+
+% frequency-specific standard-deviation of code and phase observations
+try
+    handles.uitable_code_std_frqs.Data = structure.ADJ.var_code_frq_GUI;
+    handles.uitable_phase_std_frqs.Data = structure.ADJ.var_phase_frq_GUI;
+catch
+    handles.uitable_code_std_frqs.Data(:,:) = {[]};
+    handles.uitable_phase_std_frqs.Data(:,:) = {[]};
+end
+
+
 
 
 
@@ -929,9 +994,9 @@ if bool_settings == 1   % do this only for the settings structure
 	set(handles.checkbox_plot_skyplot,          'Value', structure.PLOT.skyplot       );
     set(handles.checkbox_plot_residuals,        'Value', structure.PLOT.residuals     );
     set(handles.checkbox_plot_DOP,              'Value', structure.PLOT.DOP           );
-    % try
-    %    set(handles.checkbox_plot_GI,               'Value', structure.PLOT.GI            );
-    % end
+	try
+		set(handles.checkbox_plot_mplc,         'Value', structure.PLOT.MPLC          );
+	end
 	set(handles.checkbox_plot_iono,             'Value', structure.PLOT.iono          );
 	set(handles.checkbox_plot_cs,               'Value', structure.PLOT.cs            );
 	try

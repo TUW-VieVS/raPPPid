@@ -11,18 +11,19 @@ function Epoch = cycleSlip_TimeDifference(Epoch, use_column, settings)
 %   Epoch       updated with detected cycle slips
 %
 % Revision:
-%   ...
+%   2023/11/03, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
 % get raw phase-observations on 1st frequency for current epoch [m]
-L1_gps = Epoch.obs(Epoch.gps, use_column{1,1});
-L1_glo = Epoch.obs(Epoch.glo, use_column{2,1});
-L1_gal = Epoch.obs(Epoch.gal, use_column{3,1});
-L1_bds = Epoch.obs(Epoch.bds, use_column{4,1});
-L1  = [L1_gps; L1_glo; L1_gal; L1_bds]; 
+L1_gps  = Epoch.obs(Epoch.gps,  use_column{1,1});
+L1_glo  = Epoch.obs(Epoch.glo,  use_column{2,1});
+L1_gal  = Epoch.obs(Epoch.gal,  use_column{3,1});
+L1_bds  = Epoch.obs(Epoch.bds,  use_column{4,1});
+L1_qzss = Epoch.obs(Epoch.qzss, use_column{5,1});
+L1  = [L1_gps; L1_glo; L1_gal; L1_bds; L1_qzss]; 
 if ~settings.INPUT.rawDataAndroid
     % convert phase to [m] if necessary (e.g., RINEX file)
     lambda_1 = Const.C ./ Epoch.f1;     % wavelength [m]

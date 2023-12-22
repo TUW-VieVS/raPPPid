@@ -7,8 +7,7 @@ function [model, Epoch] = modelApproximately(settings, input, Epoch, param, obs,
 %   settings    	settings from GUI  [struct]
 %   input           input data (ephemerides, PCOs, etc.)   [struct]
 %   Epoch           epoch-specific data for current epoch  [struct]
-%   model           model corrections for all visible sats [struct]
-%   rx_pos          Receiver Position ECEF [3x1]
+%   param           (simplified) parameter vector [vector]
 %   obs             consisting observations and corresponding data   [struct]
 %   iteration       step of iteration
 % OUTPUT:
@@ -25,17 +24,20 @@ n_num_frq  = settings.INPUT.num_freqs;  % number of input frequencies (e.g. 2 fo
 num_freq = settings.INPUT.proc_freqs;   % number of processed frequencies
 frqs = 1:num_freq;              % 1 : # processed frequencies
 num_sat = Epoch.no_sats;        % number of satellites in current epoch
+
 % indices of processed frequencies
-idx_frqs_gps = settings.INPUT.gps_freq_idx(frqs);
-idx_frqs_glo = settings.INPUT.glo_freq_idx(frqs);
-idx_frqs_gal = settings.INPUT.gal_freq_idx(frqs);
-idx_frqs_bds = settings.INPUT.bds_freq_idx(frqs);
+idx_frqs_gps  = settings.INPUT.gps_freq_idx(frqs);
+idx_frqs_glo  = settings.INPUT.glo_freq_idx(frqs);
+idx_frqs_gal  = settings.INPUT.gal_freq_idx(frqs);
+idx_frqs_bds  = settings.INPUT.bds_freq_idx(frqs);
+idx_frqs_qzss = settings.INPUT.qzss_freq_idx(frqs);
 % remove frequencies set to OFF (if different number of frequencies is 
 % processed for different GNSS)
 idx_frqs_gps(idx_frqs_gps>DEF.freq_GPS(end)) = [];
 idx_frqs_glo(idx_frqs_glo>DEF.freq_GLO(end)) = [];
 idx_frqs_gal(idx_frqs_gal>DEF.freq_GAL(end)) = [];
 idx_frqs_bds(idx_frqs_bds>DEF.freq_BDS(end)) = [];
+idx_frqs_qzss(idx_frqs_qzss>DEF.freq_QZSS(end)) = [];
 
 
 % ----- Epoch-specific corrections -----
@@ -53,12 +55,13 @@ model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
 
 for i_sat = 1:num_sat                     
     % ----- Preparations -----
-    prn = Epoch.sats(i_sat);        % [1-99] GPS, [101-199] GLO, [201-250] GAL, [301-399] BDS
+    prn = Epoch.sats(i_sat);       % [1-99] GPS, [101-199] GLO, [201-250] GAL, [301-399] BDS, [401-410] QZSS
     sv = mod(prn,100);
-    isGLO = Epoch.glo(i_sat);      % is current satellite a glonass sat.?
-    isGPS = Epoch.gps(i_sat);      % is current satellite a gps sat.?
-    isGAL = Epoch.gal(i_sat);      % is current satellite a galileo sat.?
-    isBDS = Epoch.bds(i_sat);      % is current satellite a beidou sat.?
+    isGLO  = Epoch.glo(i_sat);     % is current satellite a glonass sat.?
+    isGPS  = Epoch.gps(i_sat);     % is current satellite a gps sat.?
+    isGAL  = Epoch.gal(i_sat);     % is current satellite a galileo sat.?
+    isBDS  = Epoch.bds(i_sat);     % is current satellite a beidou sat.?
+    isQZSS = Epoch.qzss(i_sat);    % is current satellite a beidou sat.?
     f1 = Epoch.f1(i_sat);   f2 = Epoch.f2(i_sat);   f3 = Epoch.f3(i_sat);
     if strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
         y2 = f1.^2 ./ f2.^2;            % coefficients of 3-Frequency-IF-LC
@@ -70,9 +73,7 @@ for i_sat = 1:num_sat
     dT_rel = 0;
     cutoff = false;                 % cutoff-angle
     status = Epoch.sat_status(i_sat,:);
-    dt_rx = (isGAL*param(4) + isGLO*param(5) + isGAL*param(6) + isBDS*param(7))/Const.C;     % receiver clock offset, [s?]
-    
-    
+    dt_rx = (isGAL*param(4) + isGLO*param(5) + isGAL*param(6) + isBDS*param(7) + isBDS*param(8))/Const.C;     % receiver clock offset, [s?]
     
     % ----- Clock and Orbit -----
     
@@ -93,7 +94,7 @@ for i_sat = 1:num_sat
     % --- Clock correction: with navigation data or precise clocks from .clk-file ---
     % Clock correction in seconds, accurate enough with approximate Ttr
     dT_sat = 0;      % just for simulated data when satellite clock is perfect
-    [dT_sat, cutoff] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, Epoch.corr2brdc_clk(:,prn));
+    [dT_sat, cutoff] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, isQZSS, k, settings, Epoch.corr2brdc_clk(:,prn));
     if isnan(dT_sat) || dT_sat == 0 || cutoff       % no clock correction
         if ~settings.INPUT.bool_parfor; fprintf('No precise clock data for satellite %d in SOW %0.3f              \n', prn, Ttr); end
         cutoff = true;                      % eliminate satellite
@@ -109,7 +110,7 @@ for i_sat = 1:num_sat
         Ttr = Epoch.gps_time - tau;                             % time of emission = time of obs. - runtime
         
         % --- Satellite-Orbit: precise ephemeris (.sp3-file) or broadcast navigation data (perhabs + correction stream) ---
-        [X, V, cutoff, status] = satelliteOrbit(prn, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, cutoff, status, Epoch.corr2brdc_orb(:,prn));
+        [X, V, cutoff, status] = satelliteOrbit(prn, Ttr, input, isGPS, isGLO, isGAL, isBDS, isQZSS, k, settings, cutoff, status, Epoch.corr2brdc_orb(:,prn));
         % --- correction of satellite ECEF position for earth rotation during runtime tau ---
         tau = tau - dt_rx;  % Correct tau for receiver clock error to avoid jumps in sat position
         omegatau = Const.WE*tau;     % [rad]
@@ -121,7 +122,7 @@ for i_sat = 1:num_sat
         
         % --- Relativistic correction ---
         dT_rel = -2/Const.C^2 * dot2(Rot_X, Rot_V);
-%         if isGLO && ~settings.ORBCLK.bool_sp3 && input.Eph_GLO(3,k) ~= 0  % ||| GLO
+%         if isGLO && ~settings.ORBCLK.bool_sp3 && input.ORBCLK.Eph_GLO(3,k) ~= 0  % ||| GLO
 %             dT_rel = 0; % for BRDC correction already applied in gamma
 %         end
     end % end of for step = 1:2 - Iteration to estimate relativistic effect and interpolate satellite position
@@ -276,9 +277,12 @@ for i_sat = 1:num_sat
         elseif isGAL
             offset_LL = input.OTHER.PCO.sat_GAL(input.OTHER.PCO.sat_GAL(:,1) == sv, 2:4, 1:5);
             idx_frqs = idx_frqs_gal;
-        elseif isBDS 
+        elseif isBDS
             offset_LL = input.OTHER.PCO.sat_BDS(input.OTHER.PCO.sat_BDS(:,1) == sv, 2:4, 1:5);
-            idx_frqs = idx_frqs_bds;            
+            idx_frqs = idx_frqs_bds;
+        elseif isQZSS
+            offset_LL = input.OTHER.PCO.sat_QZSS(input.OTHER.PCO.sat_QZSS(:,1) == sv, 2:4, 1:5);
+            idx_frqs = idx_frqs_qzss;
         end
         offset_LL = reshape(offset_LL,3,5,1);   % each column contains another frequency
         dX_PCO_SAT_ECEF = SatOr_ECEF*offset_LL;   	% transform offsets into ECEF site displacements

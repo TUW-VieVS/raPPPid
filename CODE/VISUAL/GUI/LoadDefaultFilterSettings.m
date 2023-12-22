@@ -21,11 +21,11 @@ handles.edit_Std_Phase.String = sprintf('%.3f', F.std_phase);
 handles.edit_Std_Iono.String = sprintf('%.3f', F.std_iono);
 
 % GNSS Weights
-handles.edit_weight_GPS.String = sprintf('%.0f', F.weight_GPS);
-handles.edit_weight_GLO.String = sprintf('%.0f', F.weight_GLO);
-handles.edit_weight_GAL.String = sprintf('%.0f', F.weight_GAL);
-handles.edit_weight_BDS.String = sprintf('%.0f', F.weight_BDS);
-
+handles.edit_weight_GPS.String = sprintf('%.2f', F.weight_GPS);
+handles.edit_weight_GLO.String = sprintf('%.2f', F.weight_GLO);
+handles.edit_weight_GAL.String = sprintf('%.2f', F.weight_GAL);
+handles.edit_weight_BDS.String = sprintf('%.2f', F.weight_BDS);
+handles.edit_weight_QZSS.String = sprintf('%.2f', F.weight_QZSS);
 
 if strcmp(filter_type, 'Kalman Filter Iterative')
     % coordinates
@@ -49,10 +49,14 @@ if strcmp(filter_type, 'Kalman Filter Iterative')
     handles.edit_filter_galileo_offset_sigma0.String = sprintf('%.0f', F.KFI_clk_std);
     handles.edit_filter_galileo_offset_Q.String = sprintf('%.0f', F.KFI_clk_noise);
     handles.popupmenu_filter_galileo_offset_dynmodel.Value = F.KFI_clk_model + 1;
-    % BeiDou
+    % - BeiDou
     handles.edit_filter_beidou_offset_sigma0.String = sprintf('%.0f', F.KFI_clk_std);
     handles.edit_filter_beidou_offset_Q.String = sprintf('%.0f', F.KFI_clk_noise);
     handles.popupmenu_filter_beidou_offset_dynmodel.Value = F.KFI_clk_model + 1;
+    % - QZSS
+    handles.edit_filter_qzss_offset_sigma0.String = sprintf('%.0f', F.KFI_clk_std);
+    handles.edit_filter_qzss_offset_Q.String = sprintf('%.0f', F.KFI_clk_noise);
+    handles.popupmenu_filter_qzss_offset_dynmodel.Value = F.KFI_clk_model + 1;	
     % receiver DCBs
     handles.edit_filter_dcbs_sigma0.String = num2str(F.KFI_dcb_std);
     handles.edit_filter_dcbs_Q.String = num2str(F.KFI_dcb_noise);
@@ -92,10 +96,14 @@ elseif strcmp(filter_type, 'Kalman Filter')
     handles.edit_filter_galileo_offset_sigma0.String = sprintf('%.0f', F.K_clk_offset_std);
     handles.edit_filter_galileo_offset_Q.String = sprintf('%.0f', F.K_clk_offset_noise);
     handles.popupmenu_filter_galileo_offset_dynmodel.Value = F.K_clk_offset_model + 1;
-    % BeiDou
+    % - BeiDou
     handles.edit_filter_beidou_offset_sigma0.String = sprintf('%.0f', F.K_clk_offset_std);
     handles.edit_filter_beidou_offset_Q.String = sprintf('%.0f', F.K_clk_offset_noise);
     handles.popupmenu_filter_beidou_offset_dynmodel.Value = F.K_clk_offset_model + 1;
+    % - QZSS
+    handles.edit_filter_qzss_offset_sigma0.String = sprintf('%.0f', F.K_clk_offset_std);
+    handles.edit_filter_qzss_offset_Q.String = sprintf('%.0f', F.K_clk_offset_noise);
+    handles.popupmenu_filter_qzss_offset_dynmodel.Value = F.K_clk_offset_model + 1;
     
     % receiver DCBs
     handles.edit_filter_dcbs_sigma0.String = num2str(F.K_dcb_std);

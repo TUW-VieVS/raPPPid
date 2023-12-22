@@ -13,7 +13,9 @@ function plotResiduals(storeData, settings, epochs, reset_h, hours, label_x, sat
 % OUTPUT:
 %   []
 %
-%
+% Revision:
+%   2023/12/21, MFWG: adding QZSS to plots
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -65,8 +67,8 @@ idx = 1:size(obs_bool,2);
 obs_prns = idx(sum(obs_bool(:,idx),1) > 0);	% prns of observed satellites
 
 % initialize
-Res_phase_GPS = []; Res_phase_GLO = []; Res_phase_GAL = []; Res_phase_BDS = [];
-gps_prns = []; glo_prns = []; gal_prns = []; bds_prns = [];
+Res_phase_GPS = []; Res_phase_GLO = []; Res_phase_GAL = []; Res_phase_BDS = []; Res_phase_QZSS = [];
+gps_prns = []; glo_prns = []; gal_prns = []; bds_prns = []; qzss_prns = [];
 
 % get elevation
 elev = full(satellites.elev);       % elevation for all satellites and epochs
@@ -154,15 +156,26 @@ if settings.INPUT.use_BDS
     vis_plotResiduals(epochs, reset_h, hours, label_x, Res_code_BDS, Res_phase_BDS, bds_prns-300, txtcell, elev(:,301:399), cutoff, rgb);
 end
 
-
+% QZSS
+if settings.INPUT.use_QZSS
+    Res_code_QZSS = code_residuals(:, 401:410, :);
+    if strcmpi(settings.PROC.method,'Code + Phase')
+        Res_phase_QZSS = phase_residuals(:, 401:410, :);
+    end
+    qzss_prns = obs_prns(obs_prns>400 & obs_prns<500);
+    % Plot
+    txtcell = {'QZSS', 'J', solution_string};
+    vis_plotResiduals(epochs, reset_h, hours, label_x, Res_code_QZSS, Res_phase_QZSS, qzss_prns-400, txtcell, elev(:,401:410), cutoff, rgb);
+end
 
 %% create histogram of residuals
-if settings.INPUT.use_GPS || settings.INPUT.use_GLO || settings.INPUT.use_GAL || settings.INPUT.use_BDS
-%     % create histogram for residuals in specific elevation
+if settings.INPUT.use_GPS || settings.INPUT.use_GLO || settings.INPUT.use_GAL || settings.INPUT.use_BDS || settings.INPUT.use_QZSS
+%     % create histogram for residuals in specific elevation (e.g., only
+%     over 60° elevation)
 %     code_residuals(elev < 60) = NaN;
 %     phase_residuals(elev < 60) = NaN;
     vis_plotResidualsHistogram(code_residuals, phase_residuals, solution_string, ...
-        gps_prns, glo_prns, gal_prns, bds_prns, strcmpi(settings.PROC.method,'Code + Phase'))
+        gps_prns, glo_prns, gal_prns, bds_prns, qzss_prns, strcmpi(settings.PROC.method,'Code + Phase'))
 end
 
 

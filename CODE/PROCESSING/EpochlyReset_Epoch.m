@@ -62,10 +62,11 @@ Epoch.L1_bias = [];
 Epoch.L2_bias = [];
 Epoch.L3_bias = [];
 % boolean vectors for each GNSS
-Epoch.gps = [];
-Epoch.glo = [];
-Epoch.gal = [];
-Epoch.bds = [];
+Epoch.gps  = [];
+Epoch.glo  = [];
+Epoch.gal  = [];
+Epoch.bds  = [];
+Epoch.qzss = [];
 Epoch.other_systems = [];
 % other
 Epoch.sats = [];
@@ -87,10 +88,10 @@ Epoch.cs_found = [];
 Epoch.cs_dL1dL2 = [];
 Epoch.cs_dL1dL3 = [];
 Epoch.cs_dL2dL3 = [];
-Epoch.cs_pred_SF = NaN(399,1);
+Epoch.cs_pred_SF = NaN(410,1);
 % satellite status
 Epoch.sat_status = [];
 % multipath detection
-Epoch.mp_C_diff = NaN(3,399);
+Epoch.mp_C_diff = NaN(3,410);
 
 

@@ -16,13 +16,13 @@ function Epoch = apply_biases(Epoch, obs, settings)
 %% Preparations
 sow = Epoch.gps_time;           % time of current epoch in [sow]
 week = Epoch.gps_week;          % gps-week of current epoch
-bool_sats = false(1,399);       % create logical vector
+bool_sats = false(1,410);       % create logical vector
 bool_sats(Epoch.sats) = true;  	% elements == prns are true
 
 
 
 %% determine coefficients for the biases
-k_vec_1 = zeros(1,399);     k_vec_2 = zeros(1,399);
+k_vec_1 = zeros(1,410);     k_vec_2 = zeros(1,410);
 % ||| check this condition for e.g. TUG Products and IF-LC
 % convert observations to IF-LC of precise products
 if settings.ORBCLK.bool_precise && ...

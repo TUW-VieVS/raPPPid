@@ -20,6 +20,9 @@ function [Epoch, Adjust] = ...
 % *************************************************************************
 
 
+% ||| not working, QZSS is not considered
+
+
 q = Epoch.q;                            % epoch number of processing
 q0 = Adjust.fixed_reset_epochs(end);    % epoch number of last reset
 start_epoch_fixing = settings.AMBFIX.start_fixing(end,:);   % current start epochs for WL, NL - Fixing

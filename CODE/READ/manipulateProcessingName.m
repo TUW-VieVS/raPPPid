@@ -26,6 +26,7 @@ if settings.INPUT.use_GPS; gnss_str = [gnss_str 'G']; end
 if settings.INPUT.use_GLO; gnss_str = [gnss_str 'R']; end
 if settings.INPUT.use_GAL; gnss_str = [gnss_str 'E']; end
 if settings.INPUT.use_BDS; gnss_str = [gnss_str 'C']; end
+if settings.INPUT.use_QZSS;gnss_str = [gnss_str 'J']; end
 gnss_str_ = [gnss_str '-'];
 if ~isempty(settings.PROC.name) && ~contains(settings.PROC.name, '$gnss')
     if  ~contains('GREC', settings.PROC.name(1))    % GNSS chars are not existing, add them

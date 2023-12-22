@@ -10,7 +10,7 @@ function [rheader] = analyzeAndroidRawData_GUI(sensorlog_path, rheader)
 %	rheader         struct, essential information for processing
 %
 % Revision:
-%   ...
+%   2023/11/08, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -33,10 +33,11 @@ interval = 1;
 time_system = 'GPS';
 pos_approx = [0; 0; 0];
 % default naming of frequency
-ind_gps_freq = [];
-ind_glo_freq = [];
-ind_gal_freq = [];
-ind_bds_freq = [];
+ind_gps_freq  = [];
+ind_glo_freq  = [];
+ind_gal_freq  = [];
+ind_bds_freq  = [];
+ind_qzss_freq = [];
 
 
 
@@ -44,10 +45,13 @@ ind_bds_freq = [];
 fid = fopen(sensorlog_path,'rt');     	% open observation-file
 
 allGNSS = false; i = 0; formatSpec = '';
-bool_GPS = false; bool_GLO = false; bool_GAL = false; bool_BDS = false;
-obstypes_gps = ''; obstypes_glo = ''; obstypes_gal = ''; obstypes_bds = '';
-isGPS_L1 = false; isGPS_L5 = false;  isGLO_G1 = false; 
-isGAL_E1 = false; isGAL_E5a = false; isBDS_B1 = false; isBDS_B2 = false;
+bool_GPS = false; bool_GLO = false; bool_GAL = false; bool_BDS = false; bool_QZSS = false;
+obstypes_gps = ''; obstypes_glo = ''; obstypes_gal = ''; obstypes_bds = ''; obstypes_qzss = '';
+isGPS_L1  = false;      isGPS_L5  = false;  
+isGLO_G1  = false; 
+isGAL_E1  = false;      isGAL_E5a = false; 
+isBDS_B1  = false;      isBDS_B2a = false;
+isQZSS_L1 = false;      isQZSS_L5 = false;
 
 while true
     
@@ -62,14 +66,17 @@ while true
         receiver_type = line(idx+7:end);
     end
     
-    if contains(line,'# Raw')         	% variables in raw data line
+    if contains(line, '# Raw GNSS measurements format:')        % GPSTest (?)
+        line = fgetl(fid);              % skip this line
+    end
+    
+    if contains(line,'# Raw') || contains(line,'#   Raw')       % variables in raw data line
         header_raw_string = strrep(line,' ','');
         header_raw_string = strrep(header_raw_string,'#','');
         vars_Raw = split(header_raw_string, ',');   % cell, contains fields with variables
         formatSpec = createRawFormat(vars_Raw);
         continue        % important!
     end
-    
     
     if contains(line,'Raw,') && ~isempty(formatSpec)
         
@@ -117,17 +124,23 @@ while true
        elseif idx_gnss == 5                 % BeiDou
            bool_BDS = true;
            obstypes_bds = [obstypes_bds CodeType{1}];
-           isBDS_B1 = isBDS_B1 || (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3));
-           isBDS_B2 = isBDS_B2 || (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2/1e3));
+           isBDS_B1  = isBDS_B1  || (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3));
+           isBDS_B2a = isBDS_B2a || (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2/1e3));
+       elseif idx_gnss == 4                 % QZSS
+           bool_QZSS = true;
+           obstypes_qzss = [obstypes_qzss CodeType{1}];
+           isQZSS_L1 = isQZSS_L1 || (round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F1/1e3));
+           isQZSS_L5 = isQZSS_L5 || (round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F5/1e3));
        end       
        
        i = i + 1;
     end
     
     
-    if i > 200 || (isGPS_L1 && isGPS_L5 && isGLO_G1 && isGAL_E1 && isGAL_E5a && isBDS_B1 && isBDS_B2)
+    if i > 200 || (isGPS_L1 && isGPS_L5 && isGLO_G1 && isGAL_E1 && isGAL_E5a && isBDS_B1 && isBDS_B2a)
         % stop analyzing if all GNSS have been detected or 200 lines of
-        % data have been analzed
+        % data have been analyzed
+        % QZSS is ignored in this check
         break
     end
     
@@ -136,20 +149,23 @@ end
 fclose(fid);        % close file
 
 % remove multiple occurences
-obstypes_gps = unique(obstypes_gps);
-obstypes_glo = unique(obstypes_glo);
-obstypes_gal = unique(obstypes_gal);
-obstypes_bds = unique(obstypes_bds);
+obstypes_gps  = unique(obstypes_gps);
+obstypes_glo  = unique(obstypes_glo);
+obstypes_gal  = unique(obstypes_gal);
+obstypes_bds  = unique(obstypes_bds);
+obstypes_qzss = unique(obstypes_qzss);
 % default ranking of observation types
-gps_ranking = DEF.RANKING_GPS;
-glo_ranking = DEF.RANKING_GLO;
-gal_ranking = DEF.RANKING_GAL;
-bds_ranking = DEF.RANKING_BDS;
+gps_ranking  = DEF.RANKING_GPS;
+glo_ranking  = DEF.RANKING_GLO;
+gal_ranking  = DEF.RANKING_GAL;
+bds_ranking  = DEF.RANKING_BDS;
+qzss_ranking = DEF.RANKING_QZSS;
 % keep only observation types observed and in ranking
-gps_ranking = intersect(gps_ranking, obstypes_gps);
-glo_ranking = intersect(glo_ranking, obstypes_glo);
-gal_ranking = intersect(gal_ranking, obstypes_gal);
-bds_ranking = intersect(bds_ranking, obstypes_bds);
+gps_ranking  = intersect(gps_ranking, obstypes_gps);
+glo_ranking  = intersect(glo_ranking, obstypes_glo);
+gal_ranking  = intersect(gal_ranking, obstypes_gal);
+bds_ranking  = intersect(bds_ranking, obstypes_bds);
+qzss_ranking = intersect(qzss_ranking, obstypes_qzss);
 
 % determine indices of observed GNSS frequencies
 if bool_GPS
@@ -172,10 +188,17 @@ if bool_GAL
     end
 end
 if bool_BDS
-    if isBDS_B1 && isBDS_B2
+    if isBDS_B1 && isBDS_B2a
         ind_bds_freq = [1 2];
     elseif isBDS_B1
         ind_bds_freq = 1;
+    end
+end
+if bool_QZSS
+    if isQZSS_L1 && isQZSS_L5
+        ind_qzss_freq = [1 3];
+    elseif isQZSS_L1
+        ind_qzss_freq = 1;
     end
 end
 
@@ -187,14 +210,16 @@ rheader.interval = interval;
 rheader.first_obs = startdate;
 rheader.last_obs = last_obs;
 rheader.time_system = time_system;
-rheader.gps_ranking = gps_ranking;
-rheader.glo_ranking = glo_ranking;
-rheader.gal_ranking = gal_ranking;
-rheader.bds_ranking = bds_ranking;
-rheader.ind_gps_freq = ind_gps_freq;
-rheader.ind_glo_freq = ind_glo_freq;
-rheader.ind_gal_freq = ind_gal_freq;
-rheader.ind_bds_freq = ind_bds_freq;
+rheader.gps_ranking  = gps_ranking;
+rheader.glo_ranking  = glo_ranking;
+rheader.gal_ranking  = gal_ranking;
+rheader.bds_ranking  = bds_ranking;
+rheader.qzss_ranking = qzss_ranking;
+rheader.ind_gps_freq  = ind_gps_freq;
+rheader.ind_glo_freq  = ind_glo_freq;
+rheader.ind_gal_freq  = ind_gal_freq;
+rheader.ind_bds_freq  = ind_bds_freq;
+rheader.ind_qzss_freq = ind_qzss_freq;
 rheader.station = station;
 rheader.station_long = station_long;
 rheader.antenna = antenna_type;

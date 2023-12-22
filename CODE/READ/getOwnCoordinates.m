@@ -13,6 +13,9 @@ function XYZ = getOwnCoordinates(stations, dates, XYZ)
 % OUTPUT:
 %   XYZ             [vector], coordinates for each station
 %
+% Revision:
+%   2023/11/15, MFWG: adding comment lines to Coords.txt
+%
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -30,7 +33,7 @@ xyz_found = ~(any(XYZ == 0,2) | any(isnan(XYZ),2));
 
 % load file with own coordinates into MATLAB
 fid = fopen([Path.DATA 'COORDS/Coords.txt']);
-DATA = textscan(fid,'%s %f %f %f %f');
+DATA = textscan(fid,'%s %f %f %f %f', 'CommentStyle','%');
 fclose(fid);
 STAT = DATA{:,1};
 MJD = DATA{:,2};

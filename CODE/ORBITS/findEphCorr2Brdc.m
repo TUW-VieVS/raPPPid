@@ -71,7 +71,7 @@ for i = 1:numel(Epoch.sats)
     
     % get data depending on GNSS
     if Epoch.gps(i) && settings.INPUT.use_GPS
-        Eph_gnss = input.Eph_GPS;  	% read-in broadcast ephemerides from navigation file, matrix
+        Eph_gnss = input.ORBCLK.Eph_GPS;  	% read-in broadcast ephemerides from navigation file, matrix
         r_toc = 21;             % row of time-stamp
         r_iode = 24;            % row of issue of data
         r_health = 23;          % row of health
@@ -83,7 +83,7 @@ for i = 1:numel(Epoch.sats)
         end
         
     elseif Epoch.glo(i) && settings.INPUT.use_GLO
-        Eph_gnss = input.Eph_GLO; 
+        Eph_gnss = input.ORBCLK.Eph_GLO; 
         r_toc = 18; r_iode = 19; r_health = 14; r_tom = r_toc;  % ||| no tom entry?!
         if corr2brdc
             corr = input.ORBCLK.corr2brdc_GLO;
@@ -92,7 +92,7 @@ for i = 1:numel(Epoch.sats)
         end
         
     elseif Epoch.gal(i) && settings.INPUT.use_GAL
-        Eph_gnss = input.Eph_GAL; 
+        Eph_gnss = input.ORBCLK.Eph_GAL; 
         r_toc = 21; r_iode = 24; r_health = 23; r_tom = 29;
         if corr2brdc
             corr = input.ORBCLK.corr2brdc_GAL;
@@ -101,7 +101,7 @@ for i = 1:numel(Epoch.sats)
         end
         
     elseif Epoch.bds(i) && settings.INPUT.use_BDS
-        Eph_gnss = input.Eph_BDS; 
+        Eph_gnss = input.ORBCLK.Eph_BDS; 
         r_toc = 21; r_iode = 22; r_health = 23; r_tom = 29;
         if corr2brdc
             corr = input.ORBCLK.corr2brdc_BDS;

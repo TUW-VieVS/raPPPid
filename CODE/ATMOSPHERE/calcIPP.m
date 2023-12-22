@@ -1,17 +1,17 @@
-function [phi_IPP, lam_IPP] = calcIPP(phi_rx, lam_rx, Az, El, H)
+function [lat_IPP, lon_IPP] = calcIPP(lat_rx, lon_rx, Az, El, H)
 % function to calculate the ionospheric pierce point (IPP) according to
 % http://www.rtklib.com/prog/manual_2.4.2.pdf (page 151f) or [11]
 % 
 % 
 % INPUT: 
-%   phi_rx    geographic latitude of the receiver [rad]
-%   lam_rx    geographic longitude of the receiver [rad]
+%   lat_rx    geographic latitude of the receiver [rad]
+%   lon_rx    geographic longitude of the receiver [rad]
 %   Az        Azimuth of line receiver-satellite [rad]
 %   El        Elevation of line receiver-satellite [rad]
 %   H         height of ionospheric single layer [m]
 % OUTPUT:
-%   phi_IPP   latitude of pierce point [rad]
-%   lam_IPP   longitude of pierce point [rad]
+%   lat_IPP   latitude of pierce point [rad]
+%   lon_IPP   longitude of pierce point [rad]
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -27,17 +27,17 @@ alpha = z-zi;                                   % (E.5.16)
 
 % compute geocentric latitude of rx from geographic latitude
 % ||| check!!! does not make a big difference (?)
-phi_rx = atan((1-Const.WGS84_E_SQUARE)*tan(phi_rx));    
+lat_geoc = atan((1-Const.WGS84_E_SQUARE)*tan(lat_rx));    
 
 
 % compute latitude of ionospheric pierce point, (E.5.17)
-phi_IPP = asin(cos(alpha)*sin(phi_rx) + sin(alpha)*cos(phi_rx)*cos(Az));
+lat_IPP = asin(cos(alpha)*sin(lat_geoc) + sin(alpha)*cos(lat_geoc)*cos(Az));
 
 % compute longitude of ionospheric pierce point
-if      (phi_rx >  70*pi/180 &&  tan(alpha)*cos(Az)>tan(pi/2-phi_rx)) || ...
-        (phi_rx < -70*pi/180 && -tan(alpha)*cos(Az)>tan(pi/2+phi_rx))
-    lam_IPP = lam_rx + pi - asin(sin(alpha)*sin(Az)/cos(phi_IPP));  % (E.5.18a)
+if      (lat_geoc >  70*pi/180 &&  tan(alpha)*cos(Az)>tan(pi/2-lat_geoc)) || ...
+        (lat_geoc < -70*pi/180 && -tan(alpha)*cos(Az)>tan(pi/2+lat_geoc))
+    lon_IPP = lon_rx + pi - asin(sin(alpha)*sin(Az)/cos(lat_IPP));  % (E.5.18a)
 else
-    lam_IPP = lam_rx + asin(sin(alpha)*sin(Az)/cos(phi_IPP));       % (E.5.18b)
+    lon_IPP = lon_rx + asin(sin(alpha)*sin(Az)/cos(lat_IPP));       % (E.5.18b)
 end
 

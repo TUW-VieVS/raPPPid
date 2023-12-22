@@ -3,14 +3,14 @@ function [] = calcPerformanceIndicators(d, conv, TTCF, TIME_all, q68, q95, label
 % the multi plot table.
 %
 % INPUT:
-%	d               ...
-%   conv            ...
-%   TTCF            ...
-%   TIME_all        ...
-%   q68             ...
-%   q95             ...
-%   label           ...
-%   PlotStruct      ...
+%	d               struct, time, position and ZTD difference of all convergence periods
+%   conv            vector, 2D convergence time [minutes]
+%   TTCF            time to correct fix [minutes]
+%   TIME_all        vector, time stamps contained in all convergence periods 
+%   q68             cell, 0.68 quantile of dN, dE, dH, 2D, 3D for current label
+%   q95             cell, 0.95 quantile of dN, dE, dH, 2D, 3D for current label
+%   label           char array, name of current label
+%   PlotStruct      struct, settings for Multi Plots
 % OUTPUT:
 %	(to the command window)
 %
@@ -81,6 +81,9 @@ median_3D_n  = median(d3D_n(:), 'omitnan') * 100;       % [cm]
 % average 3D position error after n minutes
 average_3D_n = mean(d3D_n(:), 'omitnan') * 100;         % [cm]
 
+% standard deviation 3D position error after n minutes
+stdev_3D_n = std(d3D_n(:), 'omitnan') * 100;            % [cm]
+
 % average 2D position error after n minutes
 average_2D_n = mean(d2D_n(:), 'omitnan') * 100;         % [cm]
 
@@ -150,6 +153,14 @@ fprintf('Median  3D position error of all epochs:       ')
 fprintf('%06.3f', median_3D)
 fprintf(' [cm]\n')
 
+% fprintf(['Median  2D position error after ' n_str ' minutes: '])
+% fprintf('%06.3f', median_2D_n)
+% fprintf(' [cm]\n')
+
+fprintf(['Average 2D position error after ' n_str ' minutes: '])
+fprintf('%06.3f', average_2D_n)
+fprintf(' [cm]\n')
+
 % fprintf(['Median  3D position error after ' n_str ' minutes: '])
 % fprintf('%06.3f', median_3D_n)
 % fprintf(' [cm]\n')
@@ -158,13 +169,10 @@ fprintf(['Average 3D position error after ' n_str ' minutes: '])
 fprintf('%06.3f', average_3D_n)
 fprintf(' [cm]\n')
 
-% fprintf(['Median  2D position error after ' n_str ' minutes: '])
-% fprintf('%06.3f', median_2D_n)
-% fprintf(' [cm]\n')
-
-fprintf(['Average 2D position error after ' n_str ' minutes: '])
-fprintf('%06.3f', average_2D_n)
+fprintf(['Stdev of 3D position errors after ' n_str ' minutes: '])
+fprintf('%06.3f', stdev_3D_n)
 fprintf(' [cm]\n')
+
 
 fprintf('\n')  
 

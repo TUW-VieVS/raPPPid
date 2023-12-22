@@ -320,12 +320,14 @@ if settings.EXP.model_save
     model_save.Ttr(q,prns)   = model.Ttr(:,1);          % Signal transmission time
     model_save.k(q,prns)	 = model.k(:,1);            % Column of ephemerides
     model_save.trop(q,prns)  = model.trop(:,1);         % Troposphere delay for elevation
-    model_save.mfw(q,prns)   = model.mfw(:,1);          % Wet tropo mapping function
+    model_save.mfh(q,prns)   = model.mfh(:,1);          % Hydrostatic tropo mapping function
+	model_save.mfw(q,prns)   = model.mfw(:,1);          % Wet tropo mapping function
     model_save.zwd(q)   	 = model.zwd(1);          	% Zenith wet delay
     model_save.zhd(q)   	 = model.zhd(1);          	% Zenith hydrostatic delay
     model_save.delta_windup(q,prns)  = model.delta_windup(:,1); % Phase windup effect in cycles
     model_save.solid_tides(q,prns) 	 = model.dX_solid_tides_corr(:,1);	% Solid tides range correction
     model_save.ocean_loading(q,prns) = model.dX_ocean_loading(:,1);		% Ocean loading range correction
+	model_save.polar_tides(q,prns)    = model.dX_polar_tides(:,1);		% Polar motion range correction
     % Sat Position before correcting the earth rotation during runtime tau
     model_save.ECEF_X(q,prns,1)	= model.ECEF_X(1,:);
     model_save.ECEF_X(q,prns,2)	= model.ECEF_X(2,:);

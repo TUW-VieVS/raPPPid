@@ -42,7 +42,7 @@ switch coordsyst
         % ||| consider older dates
     otherwise
         file_atx = 'igs20.atx';
-        errordlg('DownloadANTEX struggled: igs20.atx is used.', 'Error')
+        msgbox({'DownloadANTEX struggled to determine', 'the correct ANTEX file: igs20.atx is used.'}, 'Attention')
 end
 
 % path to antex file

@@ -24,6 +24,16 @@ function [Epoch] = RawSensor2Epoch(RAW, epochheader, q, raw_variables, Epoch, se
 
 % ||| third-frequency is ignored because no triple-frequency smartphones exist
 
+% Bits of raw state:
+% 0: Code Lock                      1: Bit Sync     
+% 2: Subframe Sync                  3: Time Of Week Decoded State     
+% 4: Millisecond Ambiguity          5: Symbol Sync 
+% 6: GLONASS String Sync            7: GLONASS Time Of Day Decoded      
+% 8: BEIDOU D2 Bit Sync             9: BEIDOU D2 Subframe Sync       
+% 10: Galileo E1BC Code Lock       	11: Galileo E1C 2^nd^ Code Lock
+% 12: Galileo E1B Page Sync         13: SBAS Sync
+% 14: Time Of Week Known            15: GLONASS Time Of Day Known
+
 % get data of first satellite in first epoch
 row_1 = epochheader(settings.PROC.epochs(1)) + 1;
 RAW_1 = RAW(row_1,:);
@@ -38,7 +48,7 @@ RAW_epoch = RAW(range,:);                               % data of current epoch
 
 % generate raPPPid satellite numbering
 % ConstellationType:
-% 1 = GPS, 2 = SBAS, 3 = GLO, 4 = QZSS, 5 = BDS, 6 = GAL
+% 0 = UNKNOWN, 1 = GPS, 2 = SBAS, 3 = GLO, 4 = QZSS, 5 = BDS, 6 = GAL, 7 = IRNSS
 sats = gnssRaw.Svid + ...       	% satellite number
     (gnssRaw.ConstellationType == 3) * 100 + ...    % GLONASS
     (gnssRaw.ConstellationType == 5) * 300 + ...    % BeiDou
@@ -119,11 +129,12 @@ Epoch.LLI_bit_rinex = zeros(n, 8);
 Epoch.ss_digit_rinex = zeros(n, 8);
 
 % boolean vectors for each GNSS
-Epoch.gps = Epoch.sats < 100;
-Epoch.glo = Epoch.sats > 100 & Epoch.sats < 200;
-Epoch.gal = Epoch.sats > 200 & Epoch.sats < 300;
-Epoch.bds = Epoch.sats > 300;
-Epoch.other_systems = ~Epoch.gps & ~Epoch.glo & ~Epoch.gal & ~Epoch.bds;
+Epoch.gps  = Epoch.sats < 100;
+Epoch.glo  = Epoch.sats > 100 & Epoch.sats < 200;
+Epoch.gal  = Epoch.sats > 200 & Epoch.sats < 300;
+Epoch.bds  = Epoch.sats > 300 & Epoch.sats < 400;
+Epoch.qzss = Epoch.sats > 400;
+Epoch.other_systems = ~Epoch.gps & ~Epoch.glo & ~Epoch.gal & ~Epoch.bds & ~Epoch.qzss;
 
 % rearrange obs to Epoch.obs to make it consistent with obs.use_column and
 % keep only processed frequencies

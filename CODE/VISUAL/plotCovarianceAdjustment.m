@@ -8,8 +8,8 @@ function plotCovarianceAdjustment(storeData, satellites, settings, q)
 %   q               epoch to plot
 %   using hline.m or vline.m (c) 2001, Brandon Kuczenski
 %  
-%   Revision:
-%   ...
+% Revision:
+%   2023/11/09, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -20,10 +20,11 @@ function plotCovarianceAdjustment(storeData, satellites, settings, q)
 frqs = settings.INPUT.proc_freqs;
 
 % get processed and plotted GNSS
-isGPS = settings.INPUT.use_GPS;
-isGLO = settings.INPUT.use_GLO;
-isGAL = settings.INPUT.use_GAL;
-isBDS = settings.INPUT.use_BDS;
+isGPS  = settings.INPUT.use_GPS;
+isGLO  = settings.INPUT.use_GLO;
+isGAL  = settings.INPUT.use_GAL;
+isBDS  = settings.INPUT.use_BDS;
+isQZSS = settings.INPUT.use_QZSS;
 
 % get some variables
 covar = storeData.param_sigma{q};       % get (Co)-Variance Matrix from adjustment for current epoch
@@ -42,12 +43,16 @@ end
 if ~isBDS
     bool_sats(301:399) = 0;
 end
+if ~isQZSS
+    bool_sats(401:410) = 0;
+end
 noSats = sum(bool_sats);                % number of satellites
-noSatsGPS = sum(bool_sats(001:000+DEF.SATS_GPS));         % number of GPS satellites
-noSatsGLO = sum(bool_sats(101:100+DEF.SATS_GLO));         % number of Glonass satellites
-noSatsGAL = sum(bool_sats(201:200+DEF.SATS_GAL));         % number of Galileo satellites
-noSatsBDS = sum(bool_sats(301:size(bool_sats,2)));        % number of BeiDou satellites
-prns = 1:399;              
+noSatsGPS = sum(bool_sats(001:000+DEF.SATS_GPS));    	% number of GPS satellites
+noSatsGLO = sum(bool_sats(101:100+DEF.SATS_GLO));     	% number of Glonass satellites
+noSatsGAL = sum(bool_sats(201:200+DEF.SATS_GAL));   	% number of Galileo satellites
+noSatsBDS = sum(bool_sats(301:300+DEF.SATS_BDS));    	% number of BeiDou satellites
+noSatsQZSS= sum(bool_sats(401:410));                   	% number of QZSS satellites
+prns = 1:410;              
 prns = prns(bool_sats);                 % prn numbers of observed satellites in current epocj
 
 
@@ -82,6 +87,9 @@ ticks{13} = 'dcb_{23}^{GAL}';
 ticks{14} = 'dt_{BDS}';
 ticks{15} = 'dcb_{12}^{BDS}';
 ticks{16} = 'dcb_{23}^{BDS}';
+ticks{17} = 'dt_{QZSS}';
+ticks{18} = 'dcb_{12}^{QZSS}';
+ticks{19} = 'dcb_{23}^{QZSS}';
 for j = 1:frqs      % loop to create ticks for ambiguities
     idx_sats = (noSats*(j-1) + NO_PARAM+1) : (NO_PARAM + j*noSats);
     N_str = ['_{N', sprintf('%01.0f',j), '}'];
@@ -102,6 +110,10 @@ if settings.AMBFIX.bool_AMBFIX
         refSatGAL_idx = find(storeData.refSatGAL(q) == prns, 1);
         ticks{1,NO_PARAM+refSatGAL_idx} = strcat('|', ticks{1,NO_PARAM+refSatGAL_idx}, '|');
     end
+    if storeData.refSatBDS(q) ~= 0
+        refSatBDS_idx = find(storeData.refSatBDS(q) == prns, 1);
+        ticks{1,NO_PARAM+refSatBDS_idx} = strcat('|', ticks{1,NO_PARAM+refSatBDS_idx}, '|');
+    end    
 end
 
 % remove unnecessary columns/rows/ticks
@@ -125,6 +137,11 @@ if ~isBDS
     idx_remove = [idx_remove, 14, 15, 16];
 elseif ~settings.BIASES.estimate_rec_dcbs
     idx_remove = [idx_remove, 15, 16];
+end
+if ~isQZSS
+    idx_remove = [idx_remove, 17, 18, 19];
+elseif ~settings.BIASES.estimate_rec_dcbs
+    idx_remove = [idx_remove, 18, 19];
 end
 ticks(idx_remove) = [];         % remove ticks
 no_ticks = no_ticks - numel(idx_remove);
@@ -152,7 +169,7 @@ set(gca, 'TickLength',[0 0])
 
 % Some Styling
 ylabel(['Epoch: ',num2str(q), ', sow: ',num2str(storeData.gpstime(q))])
-xlabel([num2str(noSatsGPS) ' GPS-Satellites, ' num2str(noSatsGLO) ' Glonass-Satellites, ' num2str(noSatsGAL) ' Galileo-Satellites, '  num2str(noSatsBDS) ' BeiDou-Satellites' ])
+xlabel([num2str(noSatsGPS) ' GPS, ' num2str(noSatsGLO) ' GLONASS, ' num2str(noSatsGAL) ' Galileo, '  num2str(noSatsBDS) ' BeiDou, '   num2str(noSatsQZSS) ' QZSS' ])
 % plot line between parameters and ambiguities
 xy_line = NO_PARAM + 0.5;
 hline(xy_line, 'k--')
@@ -171,6 +188,9 @@ for j = 1:frqs+1
     xy_line = xy_line + noSatsBDS;
     hline(xy_line, 'g--')
     vline(xy_line, 'g--')
+    xy_line = xy_line + noSatsQZSS;
+    hline(xy_line, 'g--')
+    vline(xy_line, 'g--')    
     % plot line between frequencies
     hline(xy_line, 'k--')
     vline(xy_line, 'k--')

@@ -9,10 +9,17 @@ function settings = BatchProcessingPreparation(settings, ROW)
 %	settings    struct, updated for current row of batch processing
 %
 % Revision:
-%   ...
+%   2023/11/15, MFWG: considering QZSS (not implemented for batch processing)
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
+
+
+% QZSS is not implemented for batch processing: hardcode some settings because 
+settings.INPUT.use_QZSS = false;
+settings.INPUT.qzss_freq = {'OFF'; 'OFF'; 'OFF'};
+settings.INPUT.qzss_freq_idx = [5; 5; 5];
+settings.INPUT.qzss_ranking = DEF.RANKING_QZSS;
 
 
 % check which GNSS are enabled

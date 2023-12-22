@@ -17,7 +17,7 @@ function input = readAntex(input, settings, jd_start, antenna_type)
 %   input           struct, updated with information from ANTEX file
 %
 % Revision:
-%   ...
+%   2023/11/03, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -29,6 +29,7 @@ GPS_on = settings.INPUT.use_GPS;                % boolean, true if GNSS is enabl
 GLO_on = settings.INPUT.use_GLO;
 GAL_on = settings.INPUT.use_GAL;
 BDS_on = settings.INPUT.use_BDS;
+QZSS_on = settings.INPUT.use_QZSS;
 bool_print = ~settings.INPUT.bool_parfor;       % boolean, true if output is printed to command window
 
 
@@ -41,6 +42,7 @@ PCO_GPS = zeros(DEF.SATS_GPS,5,5); 	% L1 - L2  - L5 - empty - empty
 PCO_GLO = zeros(DEF.SATS_GLO,5,5); 	% G1 - G2  - G3  - empty - empty
 PCO_GAL = zeros(DEF.SATS_GAL,5,5);	% E1 - E5a - E5b - E5    - E6
 PCO_BDS = zeros(DEF.SATS_BDS,5,5);	% B1 - B2  - B3  - empty - empty
+PCO_QZSS= zeros(DEF.SATS_QZSS,5,5);	% L1 - L2  - L5  - L6    - empty
 
 % Phase Center Offsets receiver [m]:
 % Each column belongs to one frequency. The rows are the PCO in North, East
@@ -49,6 +51,7 @@ PCO_rec_GPS = zeros(3,5);           % L1 - L2  - L5  - empty - empty
 PCO_rec_GLO = zeros(3,5);           % G1 - G2  - G3  - empty - empty
 PCO_rec_GAL = zeros(3,5);           % E1 - E5a - E5b - E5    - E6
 PCO_rec_BDS = zeros(3,5);           % B1 - B2  - B3  - empty - empty
+PCO_rec_QZSS= zeros(3,5);           % L1 - L2  - L5  - L6    - empty
 
 % Phase Center Variations satellites [m]:
 % each row corresponds to one frequency and the columns belong to the
@@ -57,6 +60,7 @@ PCV_GPS = cell(5, DEF.SATS_GPS); 	% L1 - L2  - L5  - empty - empty
 PCV_GLO = cell(5, DEF.SATS_GLO);   	% G1 - G2  - G3  - empty - empty
 PCV_GAL = cell(5, DEF.SATS_GAL); 	% E1 - E5a - E5b - E5    - E6
 PCV_BDS = cell(5, DEF.SATS_BDS);	% B1 - B2  - B3  - empty - empty
+PCV_QZSS= cell(5, DEF.SATS_QZSS);	% L1 - L2  - L5  - L6    - empty
 
 % Phase Center Variations receiver [m]:
 % -) each dimension will lateron correspond to one frequency e.g. the PCVs
@@ -70,6 +74,7 @@ PCV_rec_GPS = [];   	% L1 - L2  - L5  - empty - empty
 PCV_rec_GLO = [];      	% G1 - G2  - G3  - empty - empty
 PCV_rec_GAL = [];     	% E1 - E5a - E5b - E5    - E6
 PCV_rec_BDS = [];      	% B1 - B2  - B3  - empty - empty
+PCV_rec_QZSS= [];      	% L1 - L2  - L5  - L6    - empty
 
 % open file
 fid = fopen(file);
@@ -159,7 +164,12 @@ while i < length(lines)                             % loop over lines
                                     PCO_BDS(prn,:,nr) = [prn; offset(1); offset(2); offset(3); nr];
                                     [PCV_BDS, i] = read_save_PCV_sat(lines, i, PCV_BDS, zen, nr, prn);
                                 end
-                            otherwise        % e.g. 'J' = QZSS
+                            case 'J'
+                                if QZSS_on
+                                    PCO_QZSS(prn,:,nr) = [prn; offset(1); offset(2); offset(3); nr];
+                                    [PCV_QZSS, i] = read_save_PCV_sat(lines, i, PCV_QZSS, zen, nr, prn);
+                                end
+                            otherwise
                                 % nothing to do here
                         end
                     end
@@ -213,6 +223,11 @@ while i < length(lines)                             % loop over lines
                             if BDS_on
                                 PCO_rec_BDS(:,nr) = sscanf(tline,'%f',3)/1000;  % Receiver Phase center offsets [m]
                                 [PCV_rec_BDS, i] = read_save_PCV_rec(lines, i, PCV_rec_BDS, zen, nr);
+                            end
+                        case 'J'        % QZSS
+                            if QZSS_on
+                                PCO_rec_QZSS(:,nr) = sscanf(tline,'%f',3)/1000;  % Receiver Phase center offsets [m]
+                                [PCV_rec_QZSS, i] = read_save_PCV_rec(lines, i, PCV_rec_QZSS, zen, nr);
                             end
                     end
                 end
@@ -289,6 +304,11 @@ if myantex
                                 PCO_rec_BDS(:,nr) = sscanf(tline,'%f',3)/1000;  % Receiver Phase center offsets [m]
                                 [PCV_rec_BDS, ii] = read_save_PCV_rec(lines, ii, PCV_rec_BDS, zen, nr);
                             end
+                        case 'J'        % QZSS
+                            if QZSS_on
+                                PCO_rec_QZSS(:,nr) = sscanf(tline,'%f',3)/1000;  % Receiver Phase center offsets [m]
+                                [PCV_rec_QZSS, ii] = read_save_PCV_rec(lines, ii, PCV_rec_QZSS, zen, nr);
+                            end
                     end
                 end
                 if contains(tline, 'END OF ANTENNA')
@@ -320,6 +340,10 @@ if BDS_on
     input.OTHER.PCO.sat_BDS = PCO_BDS;
     input.OTHER.PCO.rec_BDS = PCO_rec_BDS;
 end
+if QZSS_on
+    input.OTHER.PCO.sat_QZSS = PCO_QZSS;
+    input.OTHER.PCO.rec_QZSS = PCO_rec_QZSS;
+end
 
 % save Phase Center Variations
 input.OTHER.PCV.sat_GPS = PCV_GPS;
@@ -336,6 +360,11 @@ if BDS_on
     input.OTHER.PCV.sat_BDS = PCV_BDS;
     input.OTHER.PCV.rec_BDS = PCV_rec_BDS;
 end
+if QZSS_on
+    input.OTHER.PCV.sat_QZSS = PCV_QZSS;
+    input.OTHER.PCV.rec_QZSS = PCV_rec_QZSS;
+end
+
 
 end
 
@@ -397,7 +426,20 @@ switch string
     case 'C07'
         frequ_str = 'B03';
         nr = 3;
-        % --- everything else (e.g., QZSS) ---
+        % --- QZSS ---
+    case 'J01'
+        frequ_str = 'J01';
+        nr = 1;
+    case 'J02'
+        frequ_str = 'J02';
+        nr = 2;
+    case 'J05'
+        frequ_str = 'J05';
+        nr = 3;
+    case 'J06'
+        frequ_str = 'J05';
+        nr = 4;
+        % --- everything else ---
     otherwise
         frequ_str = [];
         nr = [];

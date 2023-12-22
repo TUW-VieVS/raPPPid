@@ -44,7 +44,7 @@ if print
 end
 
 
-n_plot = settings.INPUT.use_GPS+settings.INPUT.use_GLO+settings.INPUT.use_GAL+settings.INPUT.use_BDS;
+n_plot = settings.INPUT.use_GPS+settings.INPUT.use_GLO+settings.INPUT.use_GAL+settings.INPUT.use_BDS+settings.INPUT.use_QZSS;
 i_plot = 1;
 % plot enabled GNSS
 if settings.INPUT.use_GPS
@@ -73,10 +73,18 @@ if settings.INPUT.use_GAL
 end
 if settings.INPUT.use_BDS
     if print; fprintf('BeiDou:  '); end
-    obs_prns_C = obs_prns(obs_prns > 300);
+    obs_prns_C = obs_prns(obs_prns > 300 & obs_prns < 400);
     prns_string_C = sprintfc('%02.0f', obs_prns_C);        % satellite prns for legend
     plot_code_difference(n_plot, x, DIFF, obs_prns_C, prns_string_C, label_x, thresh, ms, i_plot, print)
     title('BeiDou')
+    i_plot = i_plot + 1;
+end
+if settings.INPUT.use_QZSS
+    if print; fprintf('QZSS:     '); end
+    obs_prns_J = obs_prns(obs_prns > 400 & obs_prns < 500);
+    prns_string_J = sprintfc('%02.0f', obs_prns_J);        % satellite prns for legend
+    plot_code_difference(n_plot, x, DIFF, obs_prns_J, prns_string_J, label_x, thresh, ms, i_plot, print)
+    title('QZSS')
 end
 
 % reset to default colors
@@ -86,8 +94,6 @@ set(groot,'defaultAxesColorOrder',coleurs_default)
 dcm = datacursormode(fig_mp);
 datacursormode on
 set(dcm, 'updatefcn', @vis_customdatatip_code_difference)
-
-end
 
 
 
@@ -113,7 +119,6 @@ output_txt{1} = ['PRN: ' sat    ];           % name of clicked line e.g. satelli
 output_txt{2} = ['Epoch: '  sprintf('%.0f', epoch)];
 output_txt{3} = ['Value: ' sprintf('%.3f', val) 'm'];    % epoch
 
-end
 
 
 
@@ -143,4 +148,3 @@ legend on
 hleg = legend(prns_string_gnss);
 title(hleg, 'PRN')          % title for legend
 xlim([1 x(end)])
-end

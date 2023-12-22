@@ -34,7 +34,7 @@ set(handles.checkbox_plot_elev,       	'Enable', onoff);
 set(handles.checkbox_plot_sat_visibility,'Enable', onoff); 
 set(handles.checkbox_plot_skyplot,    	'Enable', onoff);
 set(handles.checkbox_plot_DOP,         	'Enable', onoff);
-% set(handles.checkbox_plot_GI,         	'Enable', onoff);
+set(handles.checkbox_plot_mplc,        	'Enable', onoff);
 set(handles.checkbox_plot_float_amb, 	'Enable', onoff);           
 set(handles.checkbox_plot_fixed_amb,	'Enable', onoff);        
 set(handles.checkbox_plot_cov_info,   	'Enable', onoff);      

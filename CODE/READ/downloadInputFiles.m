@@ -23,7 +23,7 @@ function settings = downloadInputFiles(settings, obs_startdate, glo_channels)
 % ||| if download failed, try another ftp server
 
 % IGS data centers [https://kb.igs.org/hc/en-us/articles/115003935351-Access-to-Products]:
-% CDDIS:  ftp://cddis.gsfc.nasa.gov/gnss/products/
+% CDDIS:  https://urs.earthdata.nasa.gov/
 % IGN:    ftp://igs.ign.fr/pub/igs/products/
 % ESA:    ftp://gssc.esa.int/gnss/products/
 %   ...
@@ -58,9 +58,12 @@ mm      = sprintf('%02d',mm);
 
 
 
-%% --- orbits and clocks
+%% --- orbits (sp3), clocks (clk), ORBEX, ERP
 if settings.ORBCLK.bool_sp3 && settings.ORBCLK.bool_clk && ~strcmp(settings.ORBCLK.prec_prod, 'manually')
     settings = DownloadOrbitClock(settings, gpsweek, dow, yyyy, mm, doy);
+    if settings.OTHER.polar_tides
+        settings = DownloadERP(settings, gpsweek, dow, yyyy, mm, doy);
+    end
     if settings.ORBCLK.bool_obx
         settings = DownloadORBEX(settings, gpsweek, dow, yyyy, mm, doy);
     end
@@ -239,7 +242,6 @@ switch settings.BIASES.phase
     otherwise
         errordlg('Download of phase biases failed.', 'Error');
 end
-
 
 
 %% --- Antex file

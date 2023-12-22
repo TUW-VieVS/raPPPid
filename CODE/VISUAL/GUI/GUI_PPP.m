@@ -50,7 +50,7 @@ set(gca, 'Units', 'pixels', 'Position', [18 516 900 80])
 axis off
 
 % Set Copyright and Version in the lower right
-set(handles.text_version, 'String', ['Version 1.0 ', char(169), ' TUW 2023']);
+set(handles.text_version, 'String', ['Version 2.3 ', char(169), ' TUW 2023']);
 
 % load default filter settings for selected filter
 handles = LoadDefaultFilterSettings(handles);
@@ -202,14 +202,20 @@ end
     
         function menu_file_settingsFiles_loadSettings_Callback(hObject, eventdata, handles)
         [FileName, PathName] = uigetfile('*.mat', 'Select a settings file (*.mat) to load', Path.RESULTS);
-        PathName = relativepath(PathName);   % convert absolute path to relative path
+        PathName = relativepath(PathName);	% convert absolute path to relative path
         if FileName
             load([PathName, FileName], 'settings');
-            [handles] = setSettingsToGUI(settings, handles, true);
-            handles = GUI_enable_onoff(handles);
             
-            % write message box for information for user
-            msgbox('Settings file successfully loaded.', 'Load settings file', 'help')
+            if exist('settings','var')
+                [handles] = setSettingsToGUI(settings, handles, true);
+                handles = GUI_enable_onoff(handles);
+                % write message box for information for user
+                msgbox('Settings file successfully loaded.', 'Load settings file', 'help')
+                
+            else                            % loading settings failed
+                errordlg({'Loading settings failed!', 'Make sure that your *.mat file contains the variable settings.'}, 'ERROR');
+            end
+            
         end
         guidata(hObject, handles);
         end
@@ -301,6 +307,13 @@ end
     handles = GUI_enable_onoff(handles);    % update the visible items
     guidata(hObject, handles);
     end
+    
+    function menu_weighting_Callback(hObject, eventdata, handles)
+    setAllPanelsToInvisible(handles)
+    set(handles.uipanel_weighting, 'Visible', 'On');
+    handles = GUI_enable_onoff(handles);    % update the visible items
+    guidata(hObject, handles);
+    end    
 
 
 function menu_run_Callback(hObject, eventdata, handles)
@@ -352,6 +365,7 @@ set(handles.uipanel_biases,            'Visible',  'Off');   % Biases
 set(handles.uipanel_otherCorrections,  'Visible',  'Off');   % Other Corrections
 set(handles.uipanel_ambiguityFixing,   'Visible',  'Off');   % Ambiguity fixing
 set(handles.uipanel_adjustment,        'Visible',  'Off');   % Adjustment
+set(handles.uipanel_weighting,         'Visible',  'Off');   % Observation weighting
 set(handles.uipanel_processingOptions, 'Visible',  'Off');   % Processing options
 set(handles.uipanel_export,            'Visible',  'Off');   % Export options
 set(handles.uipanel_single_plot,       'Visible',  'Off');   % Single-Plots
@@ -431,6 +445,7 @@ gps_freq = repmat({'Off'},3,1);   % initialize with 'Off', because it can happen
 glo_freq = repmat({'Off'},3,1);
 gal_freq = repmat({'Off'},3,1);
 bds_freq = repmat({'Off'},3,1);
+qzss_freq= repmat({'Off'},3,1);
 if all(rheader.ind_gps_freq ~= 0)
     gps_freq(1:length(rheader.ind_gps_freq)) = DEF.freq_GPS_names(rheader.ind_gps_freq);
 end
@@ -443,17 +458,22 @@ end
 if all(rheader.ind_bds_freq ~= 0)
     bds_freq(1:length(rheader.ind_bds_freq)) = DEF.freq_BDS_names(rheader.ind_bds_freq);
 end
+if all(rheader.ind_qzss_freq ~= 0)
+    qzss_freq(1:length(rheader.ind_qzss_freq)) = DEF.freq_QZSS_names(rheader.ind_qzss_freq);
+end
 
 % print messagebox
 gps_freq_temp = sprintf('%s - ', gps_freq{:});
 glo_freq_temp = sprintf('%s - ', glo_freq{:});
 gal_freq_temp = sprintf('%s - ', gal_freq{:});
 bds_freq_temp = sprintf('%s - ', bds_freq{:});
+qzss_freq_temp = sprintf('%s - ', qzss_freq{:});
 msgbox({...
     ['GPS Frequencies: ', gps_freq_temp(1:end-3)], ...
     ['Glonass Frequencies: ', glo_freq_temp(1:end-3)], ...
     ['Galileo Frequencies: ', gal_freq_temp(1:end-3)], ...
-    ['BeiDou Frequencies: ', bds_freq_temp(1:end-3)]}, ...
+    ['BeiDou Frequencies: ', bds_freq_temp(1:end-3)], ...
+    ['QZSS Frequencies: ', qzss_freq_temp(1:end-3)]}, ...
     'Frequencies', 'help')   % (1:end-3) in order to cut the needless ' - ' at the end of the string
 
 % change popupmenues of processed frequencies
@@ -469,6 +489,9 @@ set(handles.popupmenu_gal_3, 'Value', find(strcmpi(DEF.freq_GAL_names,gal_freq{3
 set(handles.popupmenu_bds_1, 'Value', find(strcmpi(DEF.freq_BDS_names,bds_freq{1})));
 set(handles.popupmenu_bds_2, 'Value', find(strcmpi(DEF.freq_BDS_names,bds_freq{2})));
 set(handles.popupmenu_bds_3, 'Value', find(strcmpi(DEF.freq_BDS_names,bds_freq{3})));
+set(handles.popupmenu_qzss_1, 'Value', find(strcmpi(DEF.freq_QZSS_names,qzss_freq{1})));
+set(handles.popupmenu_qzss_2, 'Value', find(strcmpi(DEF.freq_QZSS_names,qzss_freq{2})));
+set(handles.popupmenu_qzss_3, 'Value', find(strcmpi(DEF.freq_QZSS_names,qzss_freq{3})));
 
 % convert from date of first RINEX observation into path of raPPPid folder structure
 dd = rheader.first_obs(3);
@@ -525,13 +548,16 @@ if floor(rheader.version_full) >= 3
     set(handles.edit_glo_rank, 'String', rheader.glo_ranking);
     set(handles.edit_gal_rank, 'String', rheader.gal_ranking);
     set(handles.edit_bds_rank, 'String', rheader.bds_ranking);
+    set(handles.edit_qzss_rank, 'String', rheader.qzss_ranking);
     set(handles.checkbox_GAL, 'Value', 1);
     set(handles.checkbox_BDS, 'Value', 1);
+    set(handles.checkbox_QZSS, 'Value', 0);     % because QZSS is not a global system
     onoff = 'On';
 elseif floor(rheader.version_full) == 2
     able_version(handles, 'Off')
     set(handles.checkbox_GAL, 'Value', 0);
     set(handles.checkbox_BDS, 'Value', 0);
+    set(handles.checkbox_QZSS, 'Value', 0);
     onoff = 'Off';
     set(handles.popupmenu_gps_3, 'Value', 4);
 elseif rheader.version_full == 0        % raw Android sensor data
@@ -540,8 +566,10 @@ elseif rheader.version_full == 0        % raw Android sensor data
     set(handles.edit_glo_rank, 'String', rheader.glo_ranking);
     set(handles.edit_gal_rank, 'String', rheader.gal_ranking);
     set(handles.edit_bds_rank, 'String', rheader.bds_ranking);
+    set(handles.edit_qzss_rank, 'String', rheader.qzss_ranking);
     set(handles.checkbox_GAL, 'Value', 1);
     set(handles.checkbox_BDS, 'Value', 1);
+    set(handles.checkbox_QZSS, 'Value', 1);
     onoff = 'On';
 end
 % handle Galileo
@@ -564,6 +592,16 @@ set(handles.edit_filter_beidou_offset_sigma0,         'Enable', onoff);
 set(handles.text_bds_time_offset,                     'Enable', onoff);
 set(handles.text_bds_time_offset_m,                   'Enable', onoff);
 set(handles.popupmenu_filter_beidou_offset_dynmodel,  'Enable', onoff);
+% handle QZSS
+set(handles.edit_qzss_rank,                           'Enable', onoff);
+set(handles.popupmenu_qzss_1,                         'Enable', onoff);
+set(handles.popupmenu_qzss_2,                         'Enable', onoff);
+set(handles.popupmenu_qzss_3,                         'Enable', onoff);
+set(handles.edit_filter_qzss_offset_Q,                'Enable', onoff);
+set(handles.edit_filter_qzss_offset_sigma0,           'Enable', onoff);
+set(handles.text_qzss_time_offset,                    'Enable', onoff);
+set(handles.text_qzss_time_offset_m,                  'Enable', onoff);
+set(handles.popupmenu_filter_qzss_offset_dynmodel,    'Enable', onoff);
 
 if isempty(get(handles.edit_obs,'String'))   % enable/disable download button
     set(handles.pushbutton_download,'Enable','off');
@@ -851,6 +889,73 @@ else                                    % BeiDou processing disabled
     set(handles.text_bds_time_offset,                     'Enable', 'Off');
     set(handles.text_bds_time_offset_m,                   'Enable', 'Off');
     set(handles.popupmenu_filter_beidou_offset_dynmodel, 'Enable', 'Off');
+    
+end
+
+end
+
+
+% QZSS Checkbox
+function checkbox_QZSS_Callback(hObject, eventdata, handles)
+
+if get(handles.checkbox_QZSS, 'Value')	% QZSS processing enabled
+    
+    % Analyze header of RINEX file and change GUI according to it
+    FileName = handles.edit_obs.String;
+    PathName = getFolderPath([Path.DATA '/OBS/'], handles.paths.obs_1, handles.paths.rinex_date);
+    if isempty(FileName) || ~isfile([PathName,FileName]);   return;     end
+    rheader = anheader_GUI([PathName,FileName]);
+    rheader = analyzeAndroidRawData_GUI([PathName,FileName], rheader);
+    
+    qzss_freq = repmat({'Off'},3,1);   % initialize with 'Off', because it can happen that there are less than 3 frequencies contained and these shall then be 'Off'
+    if all(rheader.ind_qzss_freq ~= 0)
+        qzss_freq(1:length(rheader.ind_qzss_freq)) = DEF.freq_QZSS_names(rheader.ind_qzss_freq);
+    end
+    
+    % change popupmenues of processed frequencies
+    set(handles.popupmenu_qzss_1, 'Value', find(strcmpi(DEF.freq_QZSS_names,qzss_freq{1})));
+    set(handles.popupmenu_qzss_2, 'Value', find(strcmpi(DEF.freq_QZSS_names,qzss_freq{2})));
+    set(handles.popupmenu_qzss_3, 'Value', find(strcmpi(DEF.freq_QZSS_names,qzss_freq{3})));
+    
+    % Enable/Disable stuff on GUI depending on observation file
+    % ||| check for Doppler observation and en/disable CS detection with Doppler
+    if floor(rheader.version_full) >= 3
+        set(handles.text_proc_freq,  'Enable', 'On');
+        set(handles.text_rank,       'Enable', 'On');
+        set(handles.edit_qzss_rank,   'Enable', 'On');
+        set(handles.popupmenu_qzss_1, 'Enable', 'On');
+        set(handles.popupmenu_qzss_2, 'Enable', 'On');
+        set(handles.popupmenu_qzss_3, 'Enable', 'On');
+        set(handles.edit_qzss_rank, 'String', rheader.qzss_ranking);
+    elseif floor(rheader.version_full) == 2
+        able_version(handles, 'Off')
+        set(handles.checkbox_QZSS, 'Value', 0);
+    elseif floor(rheader.version_full) == 0         % Android raw sensor data
+        set(handles.text_proc_freq,  'Enable', 'On');
+        set(handles.text_rank,       'Enable', 'On');
+        set(handles.edit_qzss_rank,   'Enable', 'On');
+        set(handles.popupmenu_qzss_1, 'Enable', 'On');
+        set(handles.popupmenu_qzss_2, 'Enable', 'On');
+        set(handles.popupmenu_qzss_3, 'Enable', 'On');
+    end
+    
+    set(handles.edit_filter_qzss_offset_Q,             'Enable', 'On');
+    set(handles.edit_filter_qzss_offset_sigma0,        'Enable', 'On');
+    set(handles.text_qzss_time_offset,                     'Enable', 'On');
+    set(handles.text_qzss_time_offset_m,                   'Enable', 'On');
+    set(handles.popupmenu_filter_qzss_offset_dynmodel, 'Enable', 'On');
+    
+else                                    % QZSS processing disabled
+    
+    set(handles.popupmenu_qzss_1,                          'Enable', 'Off');
+    set(handles.popupmenu_qzss_2,                          'Enable', 'Off');
+    set(handles.popupmenu_qzss_3,                          'Enable', 'Off');
+    set(handles.edit_qzss_rank,                            'Enable', 'Off');
+    set(handles.edit_filter_qzss_offset_Q,             'Enable', 'Off');
+    set(handles.edit_filter_qzss_offset_sigma0,        'Enable', 'Off');
+    set(handles.text_qzss_time_offset,                     'Enable', 'Off');
+    set(handles.text_qzss_time_offset_m,                   'Enable', 'Off');
+    set(handles.popupmenu_filter_qzss_offset_dynmodel, 'Enable', 'Off');
     
 end
 
@@ -1604,8 +1709,12 @@ while true      % loop to add multiple files
     PathName = relativepath(PathName);      	% convert absolute path to relative path
     
     % search all data4plot.mat and add it to table
-    AllFiles = dir([PathName '/**/data4plot.mat']);     % get all data4plot.files in folder and subfolders
-    n = length(AllFiles);
+    AllFiles1 = dir([PathName '/**/data4plot.mat']);        % get all data4plot.mat-files in folder and subfolders
+    AllFiles2 = dir([PathName '/**/results_float.txt']);  	% get all result_float.txt-files
+    AllFiles = struct2table([AllFiles1; AllFiles2]);        % merge together and convert to table
+    [all_folders, ~, ~] = unique(AllFiles(:,2),'stable');   % keep unique folders    
+    
+    n = numel(all_folders);
     
     if n < 1; continue; end         % nothing found
     
@@ -1621,21 +1730,33 @@ while true      % loop to add multiple files
     i_fail = [];
     for i = 1:n         % loop over all detected data4plot.mat-files to load date and stationname
         % load in current file
-        path_folder = AllFiles(i).folder;
+        path_folder = all_folders{i,1}; path_folder = path_folder{1};        
         path_data4plot = [path_folder '/data4plot.mat'];
-        try
-            load(path_data4plot, 'obs', 'settings')
-        catch       % loading failed
-            errordlg({'Loading failed (corrupt file):', relativepath(path_data4plot)}, 'Error')
-            i_fail = [i_fail, i];
-            continue
+        path_results_txt = [path_folder '/results_float.txt'];
+        path_settings_txt = [path_folder '/settings_summary.txt'];
+        if isfile(path_data4plot)
+            try
+                load(path_data4plot, 'obs', 'settings')
+            catch       % loading failed
+                errordlg({'Loading failed (corrupt file):', relativepath(path_data4plot)}, 'Error')
+                i_fail = [i_fail, i];
+                continue
+            end
+        else            % data4plot.mat is not existing -> try settings.txt
+            obs.coordsyst = ''; settings.PROC.name = '';
+            if isfile(path_results_txt) && isfile(path_settings_txt)
+                obs = recover_obs(path_settings_txt);
+                % ||| processing name and coordinate system are not detected
+            else
+                obs.stationname = ''; obs.startdate = '';
+            end
         end
         stations{i} = obs.stationname;
         startdates(i,1:3) = obs.startdate(1:3);
         if ~isfield(obs, 'coordsyst'); obs.coordsyst = ''; end      % old processings
         coordsyst{i} = obs.coordsyst;
         % create content for table
-        path_column{i} = relativepath(path_folder);
+        path_column{i} = strrep(relativepath(path_folder), '\', '/'); 
         row_label{i} = sprintf('label%02.0f',row_idx);
         if ~isempty(settings.PROC.name)
             row_label{i} = settings.PROC.name;
@@ -3055,6 +3176,10 @@ end
 function checkbox_ocean_loading_Callback(hObject, eventdata, handles)
 end
 
+% Polar motion correction
+function checkbox_polar_tides_Callback(hObject, eventdata, handles)
+end
+
 % Phase wind-up correction
 function checkbox_wind_up_Callback(hObject, eventdata, handles)
 end
@@ -3220,35 +3345,6 @@ end
 
 %% Estimation - Adjustment
 
-
-% STD code observations
-function edit_Std_CA_Code_Callback(hObject, eventdata, handles)
-end
-function edit_Std_CA_Code_CreateFcn(hObject, eventdata, handles)
-if ispc && isequal(get(hObject, 'BackgroundColor'), get(0, 'defaultUicontrolBackgroundColor'))
-    set(hObject, 'BackgroundColor', 'white');
-end
-end
-
-
-% STD phase observation
-function edit_Std_Phase_Callback(hObject, eventdata, handles) %#ok<*INUSD>
-end
-function edit_Std_Phase_CreateFcn(hObject, eventdata, handles)
-if ispc && isequal(get(hObject, 'BackgroundColor'), get(0, 'defaultUicontrolBackgroundColor'))
-    set(hObject, 'BackgroundColor', 'white');
-end
-end
-
-% STD iono observation
-function edit_Std_Iono_Callback(hObject, eventdata, handles) %#ok<*INUSD>
-end
-function edit_Std_Iono_CreateFcn(hObject, eventdata, handles)
-if ispc && isequal(get(hObject, 'BackgroundColor'), get(0, 'defaultUicontrolBackgroundColor'))
-    set(hObject, 'BackgroundColor', 'white');
-end
-end
-
 % Filter popupmenu (No Filter / Kalman Filter Iterative / Kalman Filter)
 function popupmenu_filter_Callback(hObject, eventdata, handles)
 handles = GUI_enable_onoff(handles);
@@ -3297,14 +3393,6 @@ if filename
     % write message box
     msgbox('Filter settings successfully saved.', 'Save settings file', 'help');
 end
-end
-
-% Weighting scheme for observations
-function radiobutton_MPLC_Dependency_Callback(hObject, eventdata, handles)
-end
-function radiobutton_Elevation_Dependency_Callback(hObject, eventdata, handles)
-end
-function radiobutton_Signal_Strength_Dependency_Callback(hObject, eventdata, handles)
 end
 
 % Coordinates
@@ -3402,7 +3490,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 end
 
-
+% estimate receiver DCBs
 function checkbox_estimate_rec_dcbs_Callback(hObject, eventdata, handles)
 value = 'Off';
 if get(handles.checkbox_estimate_rec_dcbs, 'Value')
@@ -3512,6 +3600,56 @@ end
 
 
 
+%% Estimation - Adjustment
+
+% Weighting scheme for observations
+function radiobutton_MPLC_Dependency_Callback(hObject, eventdata, handles)
+end
+function radiobutton_Elevation_Dependency_Callback(hObject, eventdata, handles)
+end
+function radiobutton_Signal_Strength_Dependency_Callback(hObject, eventdata, handles)
+end
+
+% STD code observations
+function edit_Std_CA_Code_Callback(hObject, eventdata, handles)
+end
+function edit_Std_CA_Code_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject, 'BackgroundColor'), get(0, 'defaultUicontrolBackgroundColor'))
+    set(hObject, 'BackgroundColor', 'white');
+end
+end
+
+% STD phase observation
+function edit_Std_Phase_Callback(hObject, eventdata, handles) %#ok<*INUSD>
+end
+function edit_Std_Phase_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject, 'BackgroundColor'), get(0, 'defaultUicontrolBackgroundColor'))
+    set(hObject, 'BackgroundColor', 'white');
+end
+end
+
+% STD iono observation
+function edit_Std_Iono_Callback(hObject, eventdata, handles) %#ok<*INUSD>
+end
+function edit_Std_Iono_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject, 'BackgroundColor'), get(0, 'defaultUicontrolBackgroundColor'))
+    set(hObject, 'BackgroundColor', 'white');
+end
+end
+
+% Table with frequency-specific STDs for code/phase observations
+function uitable_std_frqs_CellEditCallback(hObject, eventdata, handles)
+pos = eventdata.Indices;        % position of changed cell
+row = pos(1);   col = pos(2);   % row and column of changed cell
+if isnan(eventdata.NewData) || ...      % values was deleted
+        eventdata.NewData <= 0          % stupid values was entered
+    % set empty
+    eventdata.Source.Data{row,col} = [];
+end
+end
+
+
+
 %% Run - Processing options
 
 
@@ -3596,13 +3734,13 @@ n = length(prn);
 % check for wrong input
 if ~isempty(prn) 
     wrong_input = false;
-    if isnumeric(prn) && (prn < 1 || prn > 399)
+    if isnumeric(prn) && (prn < 1 || prn > DEF.SATS)
         wrong_input = true; 
     elseif ischar(prn) 
         if n > 3 || n <= 1
             wrong_input = true;
         end
-        if str2double(prn) > 399 || str2double(prn) < 1
+        if str2double(prn) > DEF.SATS || str2double(prn) < 1
             wrong_input = true;
         end
     end
@@ -3906,6 +4044,48 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 end
 
+% Processed frequencies - QZSS
+function popupmenu_qzss_1_Callback(hObject, eventdata, handles)
+off_value = max(DEF.freq_QZSS) + 1;
+[handles.popupmenu_qzss_1, handles.popupmenu_qzss_2, handles.popupmenu_qzss_3] = ...
+    manipulate_proc_freq(handles.popupmenu_qzss_1, handles.popupmenu_qzss_2, handles.popupmenu_qzss_3, off_value);
+guidata(hObject, handles);
+end
+function popupmenu_qzss_2_Callback(hObject, eventdata, handles)
+off_value = max(DEF.freq_QZSS) + 1;
+[handles.popupmenu_qzss_2, handles.popupmenu_qzss_1, handles.popupmenu_qzss_3] = ...
+    manipulate_proc_freq(handles.popupmenu_qzss_2, handles.popupmenu_qzss_1, handles.popupmenu_qzss_3, off_value);
+guidata(hObject, handles);
+end
+function popupmenu_qzss_3_Callback(hObject, eventdata, handles)
+off_value = max(DEF.freq_QZSS) + 1;
+[handles.popupmenu_qzss_3, handles.popupmenu_qzss_1, handles.popupmenu_qzss_2] = ...
+    manipulate_proc_freq(handles.popupmenu_qzss_3, handles.popupmenu_qzss_1, handles.popupmenu_qzss_2, off_value);
+guidata(hObject, handles);
+end
+function popupmenu_qzss_1_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+end
+function popupmenu_qzss_2_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+end
+function popupmenu_qzss_3_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+end
+function edit_qzss_rank_Callback(hObject, eventdata, handles)
+end
+function edit_qzss_rank_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+end
+
 
 
 
@@ -4065,29 +4245,33 @@ if ~handles.checkbox_singlemultiplot.Value
     
     % the following code is useful as it prevents to load in the data from
     % data4plot.mat each time a plot is opened
-    if isfield(handles, 'settings')
-        % there is already some plot data in handles
-        if strcmp(handles.settings.PROC.output_dir, settings.PROC.output_dir)
-            % the handles-plot-data is the right one
-            settings = handles.settings;
-            obs = handles.obs;
-            satellites = handles.satellites;
-            storeData = handles.storeData;
-        else
-            % the handles-plot-data is not the right one
-            load(path_data4plot, 'obs', 'satellites', 'storeData');
-            handles.settings = settings;
-            handles.obs = obs;
-            handles.satellites = satellites;
-            handles.storeData = storeData;
-        end
+    if isfield(handles, 'settings') && strcmp(handles.settings.PROC.output_dir, settings.PROC.output_dir)
+        % there is already some plot data in handles and it is the right 
+        % one -> just take the existing variables of handles
+        settings = handles.settings;
+        obs = handles.obs;
+        satellites = handles.satellites;
+        storeData = handles.storeData;
     else
-        % no plot data yet saved in handles
+        % the plot-data of handles is not the right one or no plot data yet 
+        % saved in handles -> load data from data4plot.mat
         load(path_data4plot, 'obs', 'satellites', 'storeData');
         handles.settings = settings;
-        handles.obs = obs;
-        handles.satellites = satellites;
-        handles.storeData = storeData;
+        if exist('obs', 'var')
+            handles.obs = obs;
+        else        % obs was not exported to data4plot.mat -> recover from settings_summary.txt
+            obs = recover_obs(strrep(path_data4plot, 'data4plot.mat', ''));
+        end
+        if exist('storeData', 'var')
+            handles.storeData = storeData;
+        else        % storeData was not exported to data4plot.mat -> recover from results_float/_fixed.txt
+            storeData = recover_storeData(strrep(path_data4plot, 'data4plot.mat', ''));
+        end
+        if exist('satellites', 'var')
+            handles.satellites = satellites;
+        else        % satellies was not exported to data4plot.mat
+            satellites = [];        % ||| nothing to recover
+        end
     end
     
 else
@@ -4122,10 +4306,15 @@ settings.PLOT = getPlotSettingsFromGUI(handles);
 [~, settings.PLOT] = checkPlotSelection(settings.PLOT, handles);
 
 % check GNSS wich should be plotted and overwrite in settings
-settings.INPUT.use_GPS = settings.INPUT.use_GPS & handles.checkbox_plot_gps.Value;
-settings.INPUT.use_GLO = settings.INPUT.use_GLO & handles.checkbox_plot_glo.Value;
-settings.INPUT.use_GAL = settings.INPUT.use_GAL & handles.checkbox_plot_gal.Value;
-settings.INPUT.use_BDS = settings.INPUT.use_BDS & handles.checkbox_plot_bds.Value;
+settings.INPUT.use_GPS = handles.checkbox_plot_gps.Value & settings.INPUT.use_GPS;
+settings.INPUT.use_GLO = handles.checkbox_plot_glo.Value & settings.INPUT.use_GLO;
+settings.INPUT.use_GAL = handles.checkbox_plot_gal.Value & settings.INPUT.use_GAL;
+settings.INPUT.use_BDS = handles.checkbox_plot_bds.Value & settings.INPUT.use_BDS;
+try
+    settings.INPUT.use_QZSS = handles.checkbox_plot_qzss.Value & settings.INPUT.use_QZSS;
+catch
+    settings.INPUT.use_QZSS = 0;
+end
 
 % uncheck all plots
 un_check_plot_checkboxes(handles, 0);           
@@ -4197,11 +4386,12 @@ if handles.checkbox_batch_proc.Value
     
     fprintf('Starting Download for Batch Processing Table....\n')
     WBAR = waitbar(0, 'Download Data, please wait...', 'Name', 'Downloading...');
-    for i = 1:n
+    for i = 1:n             % loop over rows of batch processing table
         path_obs_file = [TABLE{i,1} TABLE{i,2}];
         rheader = anheader_GUI(path_obs_file);
         % download the input files which are currently selected in GUI
         settings.INPUT.bool_parfor = true;      % to avoid unecessary output to command window
+        settings = BatchProcessingPreparation(settings, TABLE(i,:));	% manipulate settings for current row
         [~] = downloadInputFiles(settings, rheader.first_obs, false);
         % Update Waitbar
         if mod(i,3) == 0 && ishandle(WBAR)
@@ -4392,7 +4582,7 @@ PLOT.corr          = get(handles.checkbox_plot_corr,          'Value');
 PLOT.skyplot       = get(handles.checkbox_plot_skyplot,       'Value');
 PLOT.residuals     = get(handles.checkbox_plot_residuals,     'Value');
 PLOT.DOP           = get(handles.checkbox_plot_DOP,           'Value');
-% PLOT.GI            = get(handles.checkbox_plot_GI,            'Value');
+PLOT.MPLC          = get(handles.checkbox_plot_mplc,          'Value');
 PLOT.iono          = get(handles.checkbox_plot_iono,          'Value');
 PLOT.cs            = get(handles.checkbox_plot_cs,            'Value');
 PLOT.mp            = get(handles.checkbox_plot_mp,            'Value');

@@ -86,13 +86,18 @@ if settings.ORBCLK.bool_sp3
         [fname, fpath] = ConvertStringDate(path_sp3, obs.startdate(1:3));
         path_sp3 = ['../DATA/ORBIT' fpath fname];
     end
-    [input.ORBCLK.preciseEph_GPS, input.ORBCLK.preciseEph_GLO, input.ORBCLK.preciseEph_GAL, input.ORBCLK.preciseEph_BDS] = ...
-        read_precise_eph(path_sp3);
+    [sp3_GPS, sp3_GLO, sp3_GAL, sp3_BDS, sp3_QZSS] = read_precise_eph(path_sp3);
+    input.ORBCLK.preciseEph_GPS = sp3_GPS;
+    input.ORBCLK.preciseEph_GLO = sp3_GLO;
+    input.ORBCLK.preciseEph_GAL = sp3_GAL;
+    input.ORBCLK.preciseEph_BDS = sp3_BDS;
+    input.ORBCLK.preciseEph_QZSS = sp3_QZSS;
     obs.coordsyst = GetCoordSystemFromSP3(path_sp3);
     if settings.INPUT.use_GPS && isempty(input.ORBCLK.preciseEph_GPS); errordlg('No precise orbits for GPS in sp3-file!', 'Error'); end
     if settings.INPUT.use_GLO && isempty(input.ORBCLK.preciseEph_GLO); errordlg('No precise orbits for Glonass in sp3-file!', 'Error'); end
     if settings.INPUT.use_GAL && isempty(input.ORBCLK.preciseEph_GAL); errordlg('No precise orbits for Galileo in sp3-file!', 'Error'); end
     if settings.INPUT.use_BDS && isempty(input.ORBCLK.preciseEph_BDS); errordlg('No precise orbits for BeiDou in sp3-file!', 'Error'); end
+    if settings.INPUT.use_QZSS&& isempty(input.ORBCLK.preciseEph_QZSS);errordlg('No precise orbits for QZSS in sp3-file!', 'Error'); end
 end
 
 % Read precise clock file
@@ -106,20 +111,26 @@ if settings.ORBCLK.bool_clk
     if strcmp(clk_file(end-3:end), '.mat'); clk_file_mat = clk_file;
     else;                                   clk_file_mat = [clk_file, '.mat'];    end
     try                 % load .mat-file, if available
-        load(clk_file_mat, 'preClk_GPS', 'preClk_GLO', 'preClk_GAL', 'preClk_BDS');
+        load(clk_file_mat, 'preClk_GPS', 'preClk_GLO', 'preClk_GAL', 'preClk_BDS', 'preClk_QZSS');
         % produce an error if one variable could not be loaded to start new
         % read-in of the precise clock file
-        preClk_GPS; preClk_GLO; preClk_GAL; preClk_BDS;
+        preClk_GPS; preClk_GLO; preClk_GAL; preClk_BDS; 
+        if settings.INPUT.use_QZSS; preClk_QZSS; end
     catch             	% read in original file and save as .mat-file
-        [preClk_GPS, preClk_GLO, preClk_GAL, preClk_BDS] = read_precise_clocks(clk_file);
+        if ~isfile(clk_file)
+            delete(clk_file_mat);
+            errordlg('No clock file: Please restart processing!', 'Error');
+        end
+        [preClk_GPS, preClk_GLO, preClk_GAL, preClk_BDS, preClk_QZSS] = read_precise_clocks(clk_file);
         % save as .mat-file for next processing (faster loading)
-        save(clk_file_mat, 'preClk_GPS', 'preClk_GLO', 'preClk_GAL', 'preClk_BDS')
+        save(clk_file_mat, 'preClk_GPS', 'preClk_GLO', 'preClk_GAL', 'preClk_BDS', 'preClk_QZSS')
         delete(clk_file);               % delete clk file to save disk space
     end
     input.ORBCLK.preciseClk_GPS = preClk_GPS;
     input.ORBCLK.preciseClk_GLO = preClk_GLO;
     input.ORBCLK.preciseClk_GAL = preClk_GAL;
     input.ORBCLK.preciseClk_BDS = preClk_BDS;
+    input.ORBCLK.preciseClk_QZSS = preClk_QZSS;
 elseif settings.ORBCLK.bool_sp3         % no precise clock file but a precise orbit (sp3 file)   
     % save the clock information from sp3 as it would be from precise clock file
     input = preciseOrbit2Clock(input, settings);
@@ -128,6 +139,11 @@ end
 % if CNES and integer recovery clock: exclude unfixed satellites
 if settings.AMBFIX.bool_AMBFIX && strcmp(settings.ORBCLK.prec_prod, 'CNES') && strcmp(settings.BIASES.phase, 'off')
     settings = excludeUnfixedSats(obs, settings);
+end
+
+% Read ERP file
+if settings.OTHER.polar_tides && ~isempty(settings.ORBCLK.file_erp)
+    input.ORBCLK.ERP = read_erp(settings.ORBCLK.file_erp);
 end
 
 % Read ORBEX file
@@ -157,7 +173,7 @@ if (settings.ORBCLK.bool_brdc || glo_channels) && ~settings.INPUT.bool_realtime
         % find out channels of Glonass satellites and save them in input.glo_channel
         obs.glo_channel = NaN(99,1);
         for i = 1:DEF.SATS_GLO        % loop over Glonass satellites
-            channel_sat = input.Eph_GLO(15,input.Eph_GLO(1,:)==i);    % channels of ephemeris of current satellite
+            channel_sat = input.ORBCLK.Eph_GLO(15,input.ORBCLK.Eph_GLO(1,:)==i);    % channels of ephemeris of current satellite
             if ~isempty(channel_sat)
                 obs.glo_channel(i,1) = channel_sat(1);    % save channel of 1st ephemeris data
             end
@@ -222,17 +238,21 @@ end
 
 %% Models - Troposphere
 
+% check if mapping functions are needed
+bool_mfh = ~strcmpi(settings.TROPO.zhd,'no');
+bool_mfw = ~strcmpi(settings.TROPO.zwd,'no');
+
 % get and read the V3GR files (VMF3 or GRAD)
 if strcmpi(settings.TROPO.zhd,'VMF3') || strcmpi(settings.TROPO.zwd,'VMF3') || ...
-        strcmpi(settings.TROPO.mfh,'VMF3') ||   strcmpi(settings.TROPO.mfw,'VMF3') || ...
-        strcmpi(settings.TROPO.Gh,'GRAD')  ||   strcmpi(settings.TROPO.Gw,'GRAD')
+        (bool_mfh && strcmpi(settings.TROPO.mfh,'VMF3') ) || (bool_mfw && strcmpi(settings.TROPO.mfw,'VMF3')) || ...
+        strcmpi(settings.TROPO.Gh,'GRAD') || strcmpi(settings.TROPO.Gw,'GRAD')
     input = get_V3GR(obs, input, settings);
 end
 
 
 % get and read the files for VMF1
 if strcmpi(settings.TROPO.zhd,'VMF1') || strcmpi(settings.TROPO.zwd,'VMF1') || ...
-        strcmpi(settings.TROPO.mfh,'VMF1') ||   strcmpi(settings.TROPO.mfw,'VMF1')
+        (bool_mfh && strcmpi(settings.TROPO.mfh,'VMF1')) || (bool_mfw && strcmpi(settings.TROPO.mfw,'VMF1'))
     input = get_VMF1(obs, input, settings);
 end
 
@@ -266,7 +286,9 @@ end
 
 
 % read the GPT3 grid 
-if strcmpi(settings.TROPO.zhd,'p (GPT3) + Saastamoinen')   ||   strcmpi(settings.TROPO.zwd,'e (GPT3) + Askne')   ||   strcmpi(settings.TROPO.zwd,'e (in situ) + Askne')   ||   strcmpi(settings.TROPO.mfh,'GPT3')   ||   strcmpi(settings.TROPO.mfw,'GPT3')   ||   strcmpi(settings.TROPO.zhd,'Tropo file')   ||   strcmpi(settings.TROPO.Gh,'GPT3')   ||   strcmpi(settings.TROPO.Gw,'GPT3')
+if strcmpi(settings.TROPO.zhd,'p (GPT3) + Saastamoinen') || strcmpi(settings.TROPO.zwd,'e (GPT3) + Askne') || strcmpi(settings.TROPO.zwd,'e (in situ) + Askne') || ...
+        (bool_mfh && strcmpi(settings.TROPO.mfh,'GPT3')) || (bool_mfw && strcmpi(settings.TROPO.mfw,'GPT3')) || ...
+        strcmpi(settings.TROPO.zhd,'Tropo file') || strcmpi(settings.TROPO.Gh,'GPT3') || strcmpi(settings.TROPO.Gw,'GPT3')
     load('gpt3_5.mat', 'gpt3_5');               % file located in \CODE\ATMOSPHERE
     input.TROPO.GPT3.cell_grid = gpt3_5;        % avoids gpt3_5_fast_readGrid.m
     % input.TROPO.GPT3.cell_grid = gpt3_5_fast_readGrid;
@@ -372,7 +394,7 @@ if bool_sinex || bool_manually_sinex || bool_CNES_archive_biases
     end
     input = save_SinexBias(input, Biases);
     % find correct biases depending processed observation type
-    [obs] = assign_sinex_biases(obs, input, settings);
+    [obs] = assign_sinex_biases(obs, input.BIASES.sinex, settings);
     % check if APC model is applied for WL fixing
     if ~isempty(Biases.Header.APC_MODEL) || strcmp(Biases.Header.SAT_ANT_PCC_APPLIED, 'YES')
         settings.AMBFIX.APC_MODEL = true;
@@ -424,7 +446,7 @@ switch settings.BIASES.phase
         end
         input = save_SinexBias(input, Biases);
         % find correct biases depending processed observation type
-        [obs] = assign_sinex_biases(obs, input, settings);
+        [obs] = assign_sinex_biases(obs, input.BIASES.sinex, settings);
         
     case 'SGG FCBs'
         % reset potential other phase biases (e.g. CODE) which were already read-in
@@ -527,8 +549,12 @@ if bool_print
         fprintf('    %s%5.2f%s\n','q: ', settings.TROPO.q,' %');
         fprintf('    %s%6.2f%s\n','T: ', settings.TROPO.T,' °C')
     end
-    fprintf('  %s%s %s\n','mfh: ', settings.TROPO.mfh, detectGridSiteWise(settings.TROPO.mfh, input, settings.TROPO.vmf_version));
-    fprintf('  %s%s %s\n','mfw: ', settings.TROPO.mfw, detectGridSiteWise(settings.TROPO.mfw, input, settings.TROPO.vmf_version));
+    if bool_mfh
+        fprintf('  %s%s %s\n','mfh: ', settings.TROPO.mfh, detectGridSiteWise(settings.TROPO.mfh, input, settings.TROPO.vmf_version));
+    end
+    if bool_mfw
+        fprintf('  %s%s %s\n','mfw: ', settings.TROPO.mfw, detectGridSiteWise(settings.TROPO.mfw, input, settings.TROPO.vmf_version));
+    end
     fprintf('  %s%s %s\n','Gn_h & Ge_h: ', settings.TROPO.Gh, detectGridSiteWise(settings.TROPO.Gh, input, settings.TROPO.vmf_version));
     fprintf('  %s%s %s\n','Gn_w & Ge_w: ', settings.TROPO.Gw, detectGridSiteWise(settings.TROPO.Gw, input, settings.TROPO.vmf_version));
     fprintf('\n');

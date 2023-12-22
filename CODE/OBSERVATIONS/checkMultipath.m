@@ -10,11 +10,9 @@ function [Epoch] = checkMultipath(Epoch, settings, use_column, obs_int, last_res
 %   last_reset  [sow], time of last reset of PPP solution
 % OUTPUT:
 %   Epoch       struct, .exclude updated
-% OUTPUT:
-%	...
 %
 % Revision:
-%   ...
+%   2023/11/03, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -38,11 +36,15 @@ c3_gal = use_column{3, 6};
 c1_bds = use_column{4, 4};      % column of C1-observations in observation-matrix (Epoch.obs)
 c2_bds = use_column{4, 5};      % ...
 c3_bds = use_column{4, 6};
+% get columns of observations for QZSS
+c1_qzss = use_column{5, 4};      % ...
+c2_qzss = use_column{5, 5};      
+c3_qzss = use_column{5, 6};
 
 % extract code observation of current epoch
-[C1_now] = getCodeObs(Epoch, c1_gps, c1_glo, c1_gal, c1_bds);
-[C2_now] = getCodeObs(Epoch, c2_gps, c2_glo, c2_gal, c2_bds);
-[C3_now] = getCodeObs(Epoch, c3_gps, c3_glo, c3_gal, c3_bds);
+[C1_now] = getCodeObs(Epoch, c1_gps, c1_glo, c1_gal, c1_bds, c1_qzss);
+[C2_now] = getCodeObs(Epoch, c2_gps, c2_glo, c2_gal, c2_bds, c2_qzss);
+[C3_now] = getCodeObs(Epoch, c3_gps, c3_glo, c3_gal, c3_bds, c3_qzss);
 
 
 %% detect multipath
@@ -55,14 +57,15 @@ if settings.INPUT.num_freqs >= 3
 end
 
 
-function [C] = getCodeObs(Epoch, col_G, col_R, col_E, col_C) 
+function [C] = getCodeObs(Epoch, col_G, col_R, col_E, col_C, col_J) 
 % Get raw code observations from RINEX file, respectively observation
 % matrix, for each GNSS and put then together
 C = NaN(numel(Epoch.sats),1);
-if ~isempty(col_G); C(Epoch.gps) = Epoch.obs(Epoch.gps, col_G); end
-if ~isempty(col_R); C(Epoch.glo) = Epoch.obs(Epoch.glo, col_R); end
-if ~isempty(col_E); C(Epoch.gal) = Epoch.obs(Epoch.gal, col_E); end
-if ~isempty(col_C); C(Epoch.bds) = Epoch.obs(Epoch.bds, col_C); end
+if ~isempty(col_G); C(Epoch.gps)  = Epoch.obs(Epoch.gps,  col_G); end
+if ~isempty(col_R); C(Epoch.glo)  = Epoch.obs(Epoch.glo,  col_R); end
+if ~isempty(col_E); C(Epoch.gal)  = Epoch.obs(Epoch.gal,  col_E); end
+if ~isempty(col_C); C(Epoch.bds)  = Epoch.obs(Epoch.bds,  col_C); end
+if ~isempty(col_J); C(Epoch.qzss) = Epoch.obs(Epoch.qzss, col_j); end
 
 
 
@@ -97,10 +100,11 @@ mp_cooldown = q_diff(Epoch.sats)*obs_int < mp_cooldown;
 % check if code time difference is above specified threshold. Thereby, subtract 
 % median (e.g., smartphone data) for each GNSS (e.g., different clock drifts)
 C_diff_n_ = C_diff_n;       % to keep dimension
-C_diff_n_(Epoch.gps) = abs(C_diff_n(Epoch.gps) - median(C_diff_n(Epoch.gps), 'omitnan'));   
-C_diff_n_(Epoch.glo) = abs(C_diff_n(Epoch.glo) - median(C_diff_n(Epoch.glo), 'omitnan'));  
-C_diff_n_(Epoch.gal) = abs(C_diff_n(Epoch.gal) - median(C_diff_n(Epoch.gal), 'omitnan'));  
-C_diff_n_(Epoch.bds) = abs(C_diff_n(Epoch.bds) - median(C_diff_n(Epoch.bds), 'omitnan')); 
+C_diff_n_(Epoch.gps)  = abs(C_diff_n(Epoch.gps)  - median(C_diff_n(Epoch.gps),  'omitnan'));   
+C_diff_n_(Epoch.glo)  = abs(C_diff_n(Epoch.glo)  - median(C_diff_n(Epoch.glo),  'omitnan'));  
+C_diff_n_(Epoch.gal)  = abs(C_diff_n(Epoch.gal)  - median(C_diff_n(Epoch.gal),  'omitnan'));  
+C_diff_n_(Epoch.bds)  = abs(C_diff_n(Epoch.bds)  - median(C_diff_n(Epoch.bds),  'omitnan')); 
+C_diff_n_(Epoch.qzss) = abs(C_diff_n(Epoch.qzss) - median(C_diff_n(Epoch.qzss), 'omitnan')); 
 
 % check which code differences are above threshold and consider cooldown
 above_thresh = C_diff_n_ > mp_thresh;

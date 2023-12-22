@@ -71,6 +71,9 @@ if strcmp(settings.PROC.method, 'Code + Phase') && settings.INPUT.num_freqs >= 2
     a1 = a - 1;
     Epoch.mp1 = Epoch.C1 - (1 + 2./a1).*Epoch.L1 + (  2./a1    ).*Epoch.L2;
     Epoch.mp2 = Epoch.C2 - (  2*a./a1).*Epoch.L1 + (2*a./a1 - 1).*Epoch.L2;
+    % same formulas (just rearranged):
+%     Epoch.mp1 = Epoch.C1 - Epoch.L1 - 2 .* f2.^2 ./ (f1.^2-f2.^2) .* (Epoch.L1 - Epoch.L2);
+%     Epoch.mp2 = Epoch.C2 - Epoch.L2 - 2 .* f1.^2 ./ (f2.^2-f1.^2) .* (Epoch.L2 - Epoch.L1);
     storeData.mp1(q,sats) = Epoch.mp1;
     storeData.mp2(q,sats) = Epoch.mp2;
     if settings.ADJ.weight_mplc && q > 5 % change condition for reset!!!

@@ -1,5 +1,5 @@
 function [X, V, exclude, status] = ...
-    satelliteOrbit(prn, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, exclude, status, corr_orb)
+    satelliteOrbit(prn, Ttr, input, isGPS, isGLO, isGAL, isBDS, isQZSS, k, settings, exclude, status, corr_orb)
 % Calculate (precise) satellite position.
 % 
 % INPUT:
@@ -10,6 +10,7 @@ function [X, V, exclude, status] = ...
 %   isGLO       boolean, Glonass-satellite
 %   isGAL       boolean, Galileo-satellite
 %   isBDS       boolean, BeiDou-satellite
+%   isQZSS      boolean, QZSS-satellite
 % 	k           column of ephemerides according to time and sv
 %   settings	struct with settings from GUI
 %   exclude     true, if satellite has to be excluded
@@ -33,32 +34,36 @@ if isGPS
         preciseEph = input.ORBCLK.preciseEph_GPS;
     end
     if settings.ORBCLK.bool_brdc
-        Eph_brdc = input.Eph_GPS;
+        Eph_brdc = input.ORBCLK.Eph_GPS;
     end
-    
 elseif isGLO
     if settings.ORBCLK.bool_sp3
         preciseEph = input.ORBCLK.preciseEph_GLO;
     end
     if settings.ORBCLK.bool_brdc
-        Eph_brdc = input.Eph_GLO;
+        Eph_brdc = input.ORBCLK.Eph_GLO;
     end
-    
 elseif isGAL
     if settings.ORBCLK.bool_sp3
         preciseEph = input.ORBCLK.preciseEph_GAL;
     end
     if settings.ORBCLK.bool_brdc
-        Eph_brdc = input.Eph_GAL;
+        Eph_brdc = input.ORBCLK.Eph_GAL;
     end
-    
 elseif isBDS
     if settings.ORBCLK.bool_sp3
         preciseEph = input.ORBCLK.preciseEph_BDS;
     end
     if settings.ORBCLK.bool_brdc
-        Eph_brdc = input.Eph_BDS;
+        Eph_brdc = input.ORBCLK.Eph_BDS;
     end 
+elseif isQZSS
+    if settings.ORBCLK.bool_sp3
+        preciseEph = input.ORBCLK.preciseEph_QZSS;
+    end
+%     if settings.ORBCLK.bool_brdc
+        % Eph_brdc = input.ORBCLK.Eph_QZSS;        % ||| not implemented
+%     end     
 end
 
 
@@ -75,7 +80,7 @@ else        % calculate satellite position from navigation message
         [X,V] = SatPos_brdc(Ttr_, Eph_brdc(:,k), isGPS, isBDS);
         % ||| convert from BDCS to WGS84
     elseif isGLO
-        [X,V] = SatPos_brdc_GLO(Ttr, prn, input.Eph_GLO);
+        [X,V] = SatPos_brdc_GLO(Ttr, prn, input.ORBCLK.Eph_GLO);
         [X] = PZ90toWGS84(X);   % very small influence
         [V] = PZ90toWGS84(V);
     end

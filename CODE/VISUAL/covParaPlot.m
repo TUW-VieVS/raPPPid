@@ -1,4 +1,4 @@
-function covParaPlot(hours, std_param, label_xAxis, estimate_dcbs, isGPS, isGLO, isGAL, isBDS)
+function covParaPlot(hours, std_param, label_xAxis, estimate_dcbs, isGPS, isGLO, isGAL, isBDS, isQZSS)
 % creates covariance plot of estimated parameters
 %
 % INPUT:
@@ -6,10 +6,13 @@ function covParaPlot(hours, std_param, label_xAxis, estimate_dcbs, isGPS, isGLO,
 %   std_param       standard deviation for all parameters and epochs
 %   label_xAxis     label for the x-Axis
 %   estimate_dcbs   boolean, true if receiver DCBs were estimated
-%   isGPS, isGLO, isGAL, isBDS 
+%   isGPS, isGLO, isGAL, isBDS, isQZSS
 %                   true if GNSS is plotted
 % OUTPUT:
 %   []
+% 
+% Revision:
+%   2023/06/11, MFWG: adding QZSS
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -60,17 +63,24 @@ if NO_PARAM ~= 4
         leg_txt_clk{i} = 'dt_{rec}^{G}'; i=i+1;
     end
     if any(~isnan(GLO_rec_clk)) && isGLO
-        plot(hours, GLO_rec_clk, 'b-');
+        plot(hours, GLO_rec_clk, 'c-');
         leg_txt_clk{i} = 'dt_{rec}^{R}'; i=i+1;
     end
     if any(~isnan(GAL_rec_clk)) && isGAL
-        plot(hours, GAL_rec_clk, 'c-');
+        plot(hours, GAL_rec_clk, 'b-');
         leg_txt_clk{i} = 'dt_{rec}^{E}'; i=i+1;
     end
     if any(~isnan(BDS_rec_clk)) && isBDS
         plot(hours, BDS_rec_clk, 'm-');
         leg_txt_clk{i} = 'dt_{rec}^{C}';
     end
+    if isQZSS
+        QZSS_rec_clk = std_param(17,:);
+        if any(~isnan(QZSS_rec_clk))
+            plot(hours, QZSS_rec_clk, 'g-');
+            leg_txt_clk{i} = 'dt_{rec}^{J}';
+        end
+    end    
     % style
     hleg = legend(leg_txt_clk);
     title(hleg, 'Parameter [m]');
@@ -109,18 +119,18 @@ if estimate_dcbs
         end
     end
     if any(~isnan(GLO_dcb_1)) && isGLO
-        plot(hours, GLO_dcb_1*m2ns, 'b-');
+        plot(hours, GLO_dcb_1*m2ns, 'c-');
         leg_txt_dcb{j} = 'DCB_{1}^{R}'; j=j+1;
         if any(~isnan(GLO_dcb_2))
-            plot(hours, GLO_dcb_2*m2ns, 'b--');
+            plot(hours, GLO_dcb_2*m2ns, 'c--');
             leg_txt_dcb{j} = 'DCB_{2}^{R}'; j=j+1;
         end
     end
     if any(~isnan(GAL_dcb_1)) && isGAL
-        plot(hours, GAL_dcb_1*m2ns, 'c-');
+        plot(hours, GAL_dcb_1*m2ns, 'b-');
         leg_txt_dcb{j} = 'DCB_{1}^{E}'; j=j+1;
         if any(~isnan(GAL_dcb_2))
-            plot(hours, GAL_dcb_2*m2ns, 'c--');
+            plot(hours, GAL_dcb_2*m2ns, 'b--');
             leg_txt_dcb{j} = 'DCB_{2}^{E}'; j=j+1;
         end
     end
@@ -132,6 +142,18 @@ if estimate_dcbs
             leg_txt_dcb{j} = 'DCB_{2}^{C}';
         end
     end
+    if isQZSS
+        QZSS_dcb_1 = std_param(15,:);
+        QZSS_dcb_2 = std_param(16,:);
+        if any(~isnan(QZSS_dcb_1))
+            plot(hours, QZSS_dcb_1*m2ns, 'g-');
+            leg_txt_dcb{j} = 'DCB_{1}^{J}'; j=j+1;
+            if any(~isnan(QZSS_dcb_2))
+                plot(hours, QZSS_dcb_2*m2ns, 'g--');
+                leg_txt_dcb{j} = 'DCB_{2}^{J}';
+            end
+        end
+    end    
     % style
     hleg = legend(leg_txt_dcb);
     title(hleg, 'Parameter [ns]');

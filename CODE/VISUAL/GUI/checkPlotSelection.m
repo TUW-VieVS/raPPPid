@@ -14,7 +14,7 @@ boolean = ...
     PLOT.skyplot || PLOT.residuals || ...
     PLOT.DOP || PLOT.iono || ...
     PLOT.cs || PLOT.mp || PLOT.appl_biases || ...
-    PLOT.signal_qual || PLOT.res_sats || ...
+    PLOT.signal_qual || PLOT.MPLC || PLOT.res_sats || ...
     PLOT.stream_corr;
 
 if ~boolean
@@ -38,7 +38,7 @@ if ~boolean
         PLOT.skyplot       = handles.paths.last_plot.skyplot;
         PLOT.residuals     = handles.paths.last_plot.residuals;
         PLOT.DOP           = handles.paths.last_plot.DOP;
-%        PLOT.GI            = handles.paths.last_plot.GI;
+        PLOT.MPLC          = handles.paths.last_plot.MPLC;
         PLOT.iono          = handles.paths.last_plot.iono;
         PLOT.cs            = handles.paths.last_plot.cs;
         PLOT.mp            = handles.paths.last_plot.mp;
@@ -54,7 +54,8 @@ end
 % check if a GNSS is selected
 
 noGNSS = ~handles.checkbox_plot_gps.Value && ~handles.checkbox_plot_glo.Value ...
-    && ~handles.checkbox_plot_gal.Value && ~handles.checkbox_plot_bds.Value;
+    && ~handles.checkbox_plot_gal.Value && ~handles.checkbox_plot_bds.Value ...
+	&& ~handles.checkbox_plot_qzss.Value;
 if noGNSS
     boolean = false;
     msgbox('Please select a GNSS to plot.', 'No GNSS selected.', 'help')

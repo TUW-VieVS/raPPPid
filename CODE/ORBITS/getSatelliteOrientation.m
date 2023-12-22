@@ -19,9 +19,6 @@ orientation = NaN(3);
 
 % unit vector from satellite to sun
 sat2sun_0 = (sunECEF - satECEF)/norm(sunECEF - satECEF,'fro');
-sat2sun__0 = (sunECEF - satECEF)/norm(sunECEF - satECEF);
-
-diff = sat2sun_0 - sat2sun__0;
 
 % calculate axes
 z_axis = -satECEF/norm(satECEF,'fro'); 

@@ -1,5 +1,8 @@
 function [] = vis_cs_DF(storeData, sys, tresh, Elev)
-% Plots the Single-Frequency-Cycle-Slip-Detection
+% Plots the Dual Frequency cycle slip detection which uses the phase
+% observations' difference of the current and last epochs (check 
+% cycleSlip_dL.m) for all satellites.
+% 
 % INPUT:
 %   storeData       struct, collected data from all processed epochs
 %   sys             1-digit-char which represents GNSS (G=GPS, R=Glonass, E=Galileo)
@@ -8,7 +11,10 @@ function [] = vis_cs_DF(storeData, sys, tresh, Elev)
 % OUTPUT:
 %   []
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
-%
+% 
+% Revision:
+%   2023/11/09, MFWG: adding QZSS
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -41,8 +47,7 @@ end
 if isfield(storeData, 'cs_dL1dL3') && ~isempty(storeData.cs_dL2dL3)
     plotit(storeData.gpstime, storeData.cs_dL2dL3, tresh, vec, ticks,  [' dL2-dL3 ' sys], Elev, mod(reset_sow,86400))
 end   
-    
-end
+
 
 
 function [] = plotit(x, dL1dL2, tresh, vec, ticks, sys, Elev, resets)
@@ -50,19 +55,23 @@ function [] = plotit(x, dL1dL2, tresh, vec, ticks, sys, Elev, resets)
 if sys(end) == 'G'       	% GPS
     loop1 = 1:16;
     loop2 = 17:32;
-    col = 'r';
+    col = DEF.COLOR_G;
 elseif sys(end) == 'R'  	% GLONASS
     loop1 = 101:116;
     loop2 = 117:132;
-    col = 'c';    
+    col = DEF.COLOR_R;  
 elseif sys(end) == 'E'      % Galileo
     loop1 = 201:216;
     loop2 = 217:232;
-    col = 'b';    
+    col = DEF.COLOR_E; 
 elseif sys(end) == 'C'      % BeiDou
     loop1 = 301:316;
     loop2 = 317:332;
-    col = 'm';
+    col = DEF.COLOR_C;
+elseif sys(end) == 'J'    	% QZSS
+    loop1 = 401:407;
+    loop2 = [];             % not enough satellites for second plot window
+    col = DEF.COLOR_J;    
 end
     
 % plot the satellites G01-G16
@@ -82,7 +91,7 @@ for i = loop1
         data(el == 0) = NaN;            % exclude satellites which are not observed
         cs_idx = abs(data) > tresh;   	% indices where cycle-slip is detected
         subplot(4, 4, prn)
-        plot(x, data, [col '.'])        % plot dL1-dL2
+        plot(x, data, '.', 'Color', col)	% plot dL1-dL2
         hold on
         x_cs = x(cs_idx);
         y_cs = data(cs_idx);
@@ -108,6 +117,10 @@ for i = loop1
 end
 set(findall(gcf,'type','text'),'fontSize',8)
 
+if isempty(loop2)
+    return
+end
+
 % plot the satellites G17-G32
 fig2 = figure('Name', ['Cycle-Slip-Detection', sys, '17-32'], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
 % add customized datatip
@@ -125,7 +138,7 @@ for i = loop2
         data(el == 0) = NaN;            % exclude satellites which are not observed
         cs_idx = abs(data) > tresh;   	% indices where cycle-slip is detected
         subplot(4, 4, prn-16)
-        plot(x, data, [col '.'])        % plot dL1-dL2
+        plot(x, data, '.', 'Color', col)	% plot dL1-dL2
         hold on
         x_cs = x(cs_idx);
         y_cs = data(cs_idx);
@@ -150,5 +163,3 @@ for i = loop2
     end
 end
 set(findall(gcf,'type','text'),'fontSize',8)
-
-end             % end of plotit

@@ -28,6 +28,7 @@ function [obs] = anheader(settings)
 % 
 %   Revision:
 %       MFG, 12 Aug 2020: changed input to settings
+%       MFWG, 3 Nov 2023: adding QZSS
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -51,9 +52,9 @@ if ~contains(line,'RINEX VERSION / TYPE')
 end
 
 % initialize       
-obs_types_gps = [];     obs_types_glo = [];     obs_types_gal = [];     obs_types_bds = [];
-obs_types_gps_3 = [];   obs_types_glo_3 = [];   obs_types_gal_3 = []; 	obs_types_bds_3 = [];
-ranking_gps = [];       ranking_glo = [];     	ranking_gal = [];       ranking_bds = [];
+obs_types_gps = [];     obs_types_glo = [];     obs_types_gal = [];     obs_types_bds = [];     obs_types_qzss = [];
+obs_types_gps_3 = [];   obs_types_glo_3 = [];   obs_types_gal_3 = []; 	obs_types_bds_3 = [];   obs_types_qzss_3 = [];
+ranking_gps = [];       ranking_glo = [];     	ranking_gal = [];       ranking_bds = [];       ranking_qzss = [];
 receiver_type = ''; antenna_type = ''; ant_delta = zeros(3,1);
 startdate = [];         enddate = [];
 shift = [];     shiftlines = {};    i_shift = 1;
@@ -152,8 +153,8 @@ while 1
     % Types of observations in RINEX 3.xx
     if version >= 3 && contains(line, 'SYS / # / OBS TYPES')
         system = line(1);   % get system identifier
-        if system~='G' && system~='R' && system~='E' && system~='C' 
-            continue        % continue for other system than GPS or GLONASS or GALILEO
+        if system~='G' && system~='R' && system~='E' && system~='C' && system~='J' 
+            continue        % continue for other system than GPS, GLONASS, Galileo, BeiDou, QZSS
         end
         NoObs = sscanf(line(5:6), '%f');         % number of observations
         obs_types = [];     ranking = [];
@@ -174,22 +175,26 @@ while 1
             ranking   = [ranking,    rank];
         end
         switch system
-            case 'G'
+            case 'G'        % GPS
                 obs_types_gps = obs_types;
                 obs_types_gps_3 = obs_types_3;
                 ranking_gps = ranking;
-            case 'R'
+            case 'R'        % GLONASS
                 obs_types_glo = obs_types;
                 obs_types_glo_3 = obs_types_3;
                 ranking_glo = ranking;
-            case 'E'
+            case 'E'        % Galileo
                 obs_types_gal = obs_types;
                 obs_types_gal_3 = obs_types_3;
                 ranking_gal = ranking;
-            case 'C'
+            case 'C'        % BeiDou
                 obs_types_bds = obs_types;
                 obs_types_bds_3 = obs_types_3;
                 ranking_bds = ranking;
+            case 'J'        % QZSS
+                obs_types_qzss = obs_types;
+                obs_types_qzss_3 = obs_types_3;
+                ranking_qzss = ranking;
         end
     end
     
@@ -285,6 +290,9 @@ if ~isempty(shiftlines)
             case 'C'
                 col = strfind(obs_types_bds_3, type3);
                 index = 4;
+            case 'J'
+                col = strfind(obs_types_bds_3, type3);
+                index = 5;                
             otherwise
                 continue
         end
@@ -311,21 +319,25 @@ obs.types_gps = obs_types_gps;
 obs.types_glo = obs_types_glo;
 obs.types_gal = obs_types_gal;
 obs.types_bds = obs_types_bds;
+obs.types_qzss = obs_types_qzss;
 % types of observations in 3-digit-form for gps/glonass/galileo/beidou
 obs.types_gps_3 = obs_types_gps_3;
 obs.types_glo_3 = obs_types_glo_3;
 obs.types_gal_3 = obs_types_gal_3;
 obs.types_bds_3 = obs_types_bds_3;
+obs.types_qzss_3 = obs_types_qzss_3;
 % ranking of observations for gps/glonass/galileo /beidou
 obs.ranking_gps = ranking_gps;
 obs.ranking_glo = ranking_glo;
 obs.ranking_gal = ranking_gal;
 obs.ranking_bds = ranking_bds;
+obs.ranking_qzss = ranking_qzss;
 % Number of observation types for gps/glonass/galileo/beidou
 obs.no_obs_types(1) = length(obs_types_gps)/2; 
 obs.no_obs_types(2) = length(obs_types_glo)/2;
 obs.no_obs_types(3) = length(obs_types_gal)/2;
 obs.no_obs_types(4) = length(obs_types_bds)/2;
+obs.no_obs_types(5) = length(obs_types_qzss)/2;
 
 % save observation relevant data
 obs.phase_shift   = shift;

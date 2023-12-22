@@ -1,4 +1,4 @@
-function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, corr_clk)
+function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, isQZSS, k, settings, corr_clk)
 % Calculate (precise satellite) clock.
 % 
 % INPUT:
@@ -9,6 +9,7 @@ function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL,
 %   isGLO       boolean, Glonass-satellite
 %   isGAL       boolean, Galileo-satellite
 %   isBDS       boolean, BeiDou-satellite
+%   isQZSS      boolean, BeiDou-satellite
 % 	k           column of ephemerides according to time and sv
 %   settings 	struct with settings from GUI
 %   corr_clk    clock correction to broadcast message
@@ -29,7 +30,7 @@ function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL,
 noclock = false;
 if isGPS
     if settings.ORBCLK.bool_brdc
-        Eph = input.Eph_GPS;
+        Eph = input.ORBCLK.Eph_GPS;
         toe  = Eph(18,k);   % time of ephemeris, [seconds of week]
         toc  = Eph(21,k);   % time of clock, [seconds of week]
     end
@@ -38,7 +39,7 @@ if isGPS
     end
 elseif isGLO   
     if settings.ORBCLK.bool_brdc
-        Eph = input.Eph_GLO;
+        Eph = input.ORBCLK.Eph_GLO;
         toe = Eph(18,k);    % epoch of ephemerides converted into GPS sow
     end
     if settings.ORBCLK.bool_clk
@@ -46,7 +47,7 @@ elseif isGLO
     end
 elseif isGAL  
     if settings.ORBCLK.bool_brdc
-        Eph = input.Eph_GAL;
+        Eph = input.ORBCLK.Eph_GAL;
         toe = Eph(18,k);
         toc = Eph(21,k);
     end
@@ -55,12 +56,19 @@ elseif isGAL
     end
 elseif isBDS
     if settings.ORBCLK.bool_brdc
-        Eph = input.Eph_BDS;
+        Eph = input.ORBCLK.Eph_BDS;
         toe = Eph(18,k);
         toc = Eph(21,k);
     end
     if settings.ORBCLK.bool_clk
         preciseClk = input.ORBCLK.preciseClk_BDS;
+    end
+elseif isQZSS
+    if settings.ORBCLK.bool_brdc
+        % ||| not implemented
+    end
+    if settings.ORBCLK.bool_clk
+        preciseClk = input.ORBCLK.preciseClk_QZSS;
     end
 end
 

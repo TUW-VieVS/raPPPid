@@ -81,7 +81,13 @@ if settings.INPUT.use_BDS
     fprintf(fileID,'  Strength: %s, %s, %s\n', obs.BDS.S1,obs.BDS.S2,obs.BDS.S3);
     fprintf(fileID,'  Doppler:  %s, %s, %s\n', obs.BDS.D1,obs.BDS.D2,obs.BDS.D3);
 end
-
+if settings.INPUT.use_QZSS
+    fprintf(fileID,'%s\n','Selected QZSS Signals:');    
+    fprintf(fileID,'  Code:     %s, %s, %s\n', obs.QZSS.C1,obs.QZSS.C2,obs.QZSS.C3);
+    fprintf(fileID,'  Phase:    %s, %s, %s\n', obs.QZSS.L1,obs.QZSS.L2,obs.QZSS.L3);
+    fprintf(fileID,'  Strength: %s, %s, %s\n', obs.QZSS.S1,obs.QZSS.S2,obs.QZSS.S3);
+    fprintf(fileID,'  Doppler:  %s, %s, %s\n', obs.QZSS.D1,obs.QZSS.D2,obs.QZSS.D3);
+end
 
 
 %% Models - Orbit/Clock data
@@ -225,10 +231,6 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmpi
             fprintf(fileID,'    %s%s\n','TEC-Interpolation: ',settings.IONO.interpol);
         end
     end
-    if strcmpi(settings.IONO.model,'Estimate with ... as constraint')
-        fprintf(fileID,'    Constraint until minute: %.2f\n', settings.IONO.constraint_until);
-        fprintf(fileID,'    Decrease stdev [m] to: %.2f\n', sqrt(settings.IONO.var_iono_decr));
-    end
 end
 fprintf(fileID,'\n');
 
@@ -271,22 +273,34 @@ if settings.OTHER.bool_rec_arp || settings.OTHER.bool_rec_pco || settings.OTHER.
     end
     if settings.OTHER.bool_sat_pcv
         fprintf(fileID,'    %s\n','o Satellite Phase Center Variations');
-    end    
-    if settings.OTHER.bool_solid_tides
-        fprintf(fileID,'    %s\n','o Solid Tides Correction');
     end
     if settings.OTHER.bool_wind_up
         fprintf(fileID,'    %s\n','o Phase Wind-Up Correction');
     end
-    if settings.OTHER.bool_GDV
-        fprintf(fileID,'    %s\n','o Group Delay Variation Correction');
-    end    
-    if settings.OTHER.ocean_loading
-        fprintf(fileID,'    %s\n','o Ocean Loading');
-    end
     if settings.OTHER.bool_eclipse && ~settings.ORBCLK.bool_obx
         fprintf(fileID,'    %s\n','o Eclipse condition is on');
-    end    
+    end
+    if settings.OTHER.bool_GDV
+        fprintf(fileID,'    %s\n','o Group Delay Variation Correction');
+    end
+    if settings.OTHER.bool_solid_tides
+        fprintf(fileID,'    %s\n','o Solid Tides Correction');
+    end
+    if settings.OTHER.ocean_loading
+        if ~isempty(input.OTHER.OcLoad)
+            fprintf(fileID,'    %s\n','o Ocean Loading');
+        else
+            fprintf(fileID,'    %s\n','o Ocean Loading (not applied, lacking coefficients');
+        end
+    end
+    if settings.OTHER.polar_tides
+        if ~isempty(input.ORBCLK.ERP)
+            fprintf(fileID,'    %s\n','o Polar Tides');
+        else
+            fprintf(fileID,'    %s\n','o Polar Tides (not applied, lacking *.erp-file)');
+        end
+    end
+   
 else
     fprintf(fileID,'  %s\n','No Other Corrections');
 end
@@ -319,7 +333,7 @@ fprintf(fileID,'\n');
 
 
 
-%% Estimation - Adjustment
+%% Estimation - Adjustment and Weighting
 
 fprintf(fileID,'%s\n','Adjustment:');
 % Observation weighting scheme
@@ -337,13 +351,54 @@ elseif settings.ADJ.weight_sign_str
 elseif settings.ADJ.weight_none
     fprintf(fileID,'%s\n','None');
 end
-fprintf(fileID,'  %s %4.2f %s %4.2f %s %4.2f %s %4.2f\n','GNSS weights (GREC):', ...
-    settings.ADJ.fac_GPS, ':', settings.ADJ.fac_GLO, ':', settings.ADJ.fac_GAL, ':', settings.ADJ.fac_BDS);
-% Standard deviation of observations
+fprintf(fileID,'  %s %4.2f %s %4.2f %s %4.2f %s %4.2f%s %4.2f\n','GNSS weights (GRECJ):', ...
+    settings.ADJ.fac_GPS, ':', settings.ADJ.fac_GLO, ':', settings.ADJ.fac_GAL, ':', settings.ADJ.fac_BDS, ':', settings.ADJ.fac_QZSS);
+% Standard deviations of code and phase observations
 fprintf(fileID,'  %s\n','Standard deviation of observations [m]:');
 fprintf(fileID, '%s%6.3f\n%s%6.3f\n', '    code   = ',sqrt(settings.ADJ.var_code),'    phase  = ',sqrt(settings.ADJ.var_phase));
-if strcmpi(settings.IONO.model,'Estimate with ... as constraint') 
+if settings.ADJ.bool_std_frqs       % Frequency-specific standard devations
+    fprintf(fileID, '  %s\n', 'Code, additional frequency-specific standard-deviations:');
+    if settings.INPUT.use_GPS
+        fprintf(fileID, '%s%6.3f, %6.3f, %6.3f\n', '    GPS: ', settings.ADJ.var_code_frq_GUI{1,1}, settings.ADJ.var_code_frq_GUI{1,2}, settings.ADJ.var_code_frq_GUI{1,3});
+    end
+    if settings.INPUT.use_GLO
+        fprintf(fileID, '%s%6.3f, %6.3f, %6.3f\n', '    GLO: ', settings.ADJ.var_code_frq_GUI{2,1}, settings.ADJ.var_code_frq_GUI{2,2}, settings.ADJ.var_code_frq_GUI{2,3});
+    end
+    if settings.INPUT.use_GAL
+        fprintf(fileID, '%s%6.3f, %6.3f, %6.3f\n', '    GAL: ', settings.ADJ.var_code_frq_GUI{3,1}, settings.ADJ.var_code_frq_GUI{3,2}, settings.ADJ.var_code_frq_GUI{3,3});
+    end
+    if settings.INPUT.use_BDS
+        fprintf(fileID, '%s%6.3f, %6.3f, %6.3f\n', '    BDS: ', settings.ADJ.var_code_frq_GUI{4,1}, settings.ADJ.var_code_frq_GUI{4,2}, settings.ADJ.var_code_frq_GUI{4,3});
+    end
+    if settings.INPUT.use_QZSS
+        fprintf(fileID, '%s%6.3f, %6.3f, %6.3f\n', '    QZSS:', settings.ADJ.var_code_frq_GUI{5,1}, settings.ADJ.var_code_frq_GUI{5,2}, settings.ADJ.var_code_frq_GUI{5,3});
+    end
+    fprintf(fileID, '  %s\n', 'Phase, additional frequency-specific standard-deviations:');
+    if settings.INPUT.use_GPS
+        fprintf(fileID, '%s%6.3f, %6.3f, %6.3f\n', '    GPS: ', settings.ADJ.var_phase_frq_GUI{1,1}, settings.ADJ.var_phase_frq_GUI{1,2}, settings.ADJ.var_phase_frq_GUI{1,3});
+    end
+    if settings.INPUT.use_GLO
+        fprintf(fileID, '%s%6.3f, %6.3f, %6.3f\n', '    GLO: ', settings.ADJ.var_phase_frq_GUI{2,1}, settings.ADJ.var_phase_frq_GUI{2,2}, settings.ADJ.var_phase_frq_GUI{2,3});
+    end
+    if settings.INPUT.use_GAL
+        fprintf(fileID, '%s%6.3f, %6.3f, %6.3f\n', '    GAL: ', settings.ADJ.var_phase_frq_GUI{3,1}, settings.ADJ.var_phase_frq_GUI{3,2}, settings.ADJ.var_phase_frq_GUI{3,3});
+    end
+    if settings.INPUT.use_BDS
+        fprintf(fileID, '%s%6.3f, %6.3f, %6.3f\n', '    BDS: ', settings.ADJ.var_phase_frq_GUI{4,1}, settings.ADJ.var_phase_frq_GUI{4,2}, settings.ADJ.var_phase_frq_GUI{4,3});
+    end
+    if settings.INPUT.use_QZSS
+        fprintf(fileID, '%s%6.3f, %6.3f, %6.3f\n', '    QZSS:', settings.ADJ.var_phase_frq_GUI{5,1}, settings.ADJ.var_phase_frq_GUI{5,2}, settings.ADJ.var_phase_frq_GUI{5,3});
+    end    
+
+else
+    fprintf(fileID, '  %s\n', 'No frequency-specifics');
+end
+% Standard deviation of ionospheric pseudo-observations
+if strcmpi(settings.IONO.model,'Estimate with ... as constraint')
     fprintf(fileID, '%s%6.3f\n', '    ionosphere  = ',sqrt(settings.ADJ.var_iono));
+    fprintf(fileID,'      Constraint until minute: %.2f\n', settings.IONO.constraint_until);
+    fprintf(fileID,'      Decrease stdev [m] to: %.2f\n', sqrt(settings.IONO.var_iono_decr));
+    
 end
 % Filter and filter settings
 fprintf(fileID,'  %s\n',settings.ADJ.filter.type);
@@ -365,6 +420,9 @@ if ~strcmp(settings.ADJ.filter.type,'No Filter')
     if settings.INPUT.use_BDS
         fprintf(fileID,'    %s%11.3f%s%11.3f%s%d\n','Receiver Clock BDS: ',sqrt(settings.ADJ.filter.var_rclk_bds), ' | ',sqrt(settings.ADJ.filter.Q_rclk_bds),  ' | ',settings.ADJ.filter.dynmodel_rclk_bds);
     end
+    if settings.INPUT.use_QZSS
+        fprintf(fileID,'    %s%11.3f%s%11.3f%s%d\n','Receiver Clock QZSS:',sqrt(settings.ADJ.filter.var_rclk_qzss), ' | ',sqrt(settings.ADJ.filter.Q_rclk_qzss),  ' | ',settings.ADJ.filter.dynmodel_rclk_qzss);
+    end    
     if settings.BIASES.estimate_rec_dcbs
         fprintf(fileID,'    %s%11.3f%s%11.3f%s%d\n','Receiver DCBs:      ',sqrt(settings.ADJ.filter.var_DCB),      ' | ',sqrt(settings.ADJ.filter.Q_DCB),       ' | ', settings.ADJ.filter.dynmodel_DCB);
     end
@@ -438,6 +496,10 @@ end
 if settings.INPUT.use_BDS
     fprintf(fileID,'  %s%s%s%s%s%s\n','BeiDou-Frequencies: ',settings.INPUT.bds_freq{1},', ',settings.INPUT.bds_freq{2},', ',settings.INPUT.bds_freq{3});
     fprintf(fileID,'  %s%s\n','BeiDou-Ranking: ', settings.INPUT.bds_ranking);
+end
+if settings.INPUT.use_QZSS
+    fprintf(fileID,'  %s%s%s%s%s%s\n','QZSS-Frequencies: ',settings.INPUT.qzss_freq{1},', ',settings.INPUT.qzss_freq{2},', ',settings.INPUT.qzss_freq{3});
+    fprintf(fileID,'  %s%s\n','BeiDou-Ranking: ', settings.INPUT.qzss_ranking);
 end
 
 % adjust phase to code
@@ -527,7 +589,8 @@ fprintf(fileID,'\n');
 
 
 %% Station information
-fprintf(fileID,'General Information:\n');  
+fprintf(fileID,'General Information:\n');
+fprintf(fileID,'  Long station name: %s\n', obs.station_long);
 fprintf(fileID,'  Station name: %s\n', obs.stationname);
 fprintf(fileID,'  Observation interval: %02.2f seconds\n', obs.interval);
 fprintf(fileID,'  Antenna:  %s\n', obs.antenna_type);

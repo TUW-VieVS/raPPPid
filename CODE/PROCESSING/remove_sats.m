@@ -21,4 +21,5 @@ Epoch.gps(remove) = [];
 Epoch.glo(remove) = [];
 Epoch.gal(remove) = [];
 Epoch.bds(remove) = [];
+Epoch.qzss(remove) = [];
 Epoch.other_systems(remove) = [];

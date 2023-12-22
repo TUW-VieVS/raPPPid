@@ -5,7 +5,7 @@ function storeData = recover_storeData(folderstring)
 % INPUT:
 %	folderstring        string, path to results folder of processing
 % OUTPUT:
-%	storeData           struct, contains recoverable fields
+%	storeData           struct, contains recovered fields (e.g., position)
 %
 % Revision:
 %   ...
@@ -14,10 +14,50 @@ function storeData = recover_storeData(folderstring)
 % *************************************************************************
 
 % ||| only the following data is read out from the textfiles:
-%       coordinates,
+%     coordinates, troposphere (estimation)
 
+% initialize
 storeData = struct;
 storeData.float_reset_epochs = 1;
+storeData.gpstime = [];
+storeData.dt_last_reset = [];
+storeData.NO_PARAM = [];
+storeData.obs_interval = [];
+storeData.float = [];
+storeData.param = []; storeData.param_sigma = []; storeData.param_var = [];
+storeData.exclude = [];
+storeData.PDOP = []; storeData.HDOP = []; storeData.VDOP = [];
+storeData.zhd = []; storeData.zwd = [];
+storeData.N_1 = []; storeData.N_var_1 = []; storeData.residuals_code_1 = [];
+storeData.N_2 = []; storeData.N_var_2 = []; storeData.residuals_code_2 = [];
+storeData.N_3 = []; storeData.N_var_3 = []; storeData.residuals_code_3 = [];
+storeData.fixed = []; storeData.ttff = [];
+storeData.refSatGPS = []; storeData.refSatGAL = []; storeData.refSatBDS = [];
+storeData.xyz_fix = []; storeData.param_var_fix = [];
+storeData.HMW_12 = []; storeData.HMW_23 = []; storeData.HMW_13 = [];
+storeData.residuals_code_fix_1 = []; storeData.residuals_phase_fix_1 = [];
+storeData.residuals_code_fix_2 = []; storeData.residuals_phase_fix_2 = [];
+storeData.residuals_code_fix_3 = []; storeData.residuals_phase_fix_3 = [];
+storeData.N_WL_12 = []; storeData.N_NL_12 = [];
+storeData.N_WL_23 = []; storeData.N_NL_23 = [];
+storeData.N1_fixed = []; storeData.N2_fixed = []; storeData.N3_fixed = [];
+storeData.iono_fixed = []; storeData.iono_corr = []; storeData.iono_mf = []; storeData.iono_vtec = [];
+storeData.cs_pred_SF = []; storeData.cs_L1C1 = [];
+storeData.cs_dL1dL2 = []; storeData.cs_dL1dL3 = []; storeData.cs_dL2dL3 = [];
+storeData.cs_L1D1_diff	= []; storeData.cs_L2D2_diff = []; storeData.cs_L3D3_diff = [];
+storeData.cs_L1_diff = [];
+storeData.mp_C1_diff_n = []; storeData.mp_C2_diff_n = []; storeData.mp_C3_diff_n = [];
+storeData.constraint = []; storeData.iono_est = [];
+storeData.C1 = []; storeData.C2 = []; storeData.C3 = [];
+storeData.L1 = []; storeData.L2 = []; storeData.L3 = [];
+storeData.C1_bias = []; storeData.C2_bias = []; storeData.C3_bias = [];
+storeData.L1_bias = []; storeData.L2_bias = []; storeData.L3_bias = [];
+storeData.mp1 = []; storeData.mp2 = []; storeData.MP_c = []; storeData.MP_p = [];
+
+
+
+
+
 
 %% read out results of float solution from textfile
 floatpath = [folderstring '/results_float.txt'];
@@ -34,7 +74,7 @@ if isfile(floatpath)
         % reset epochs
         if contains(line, '# Reset of float solution in the following epochs:')
             resets = line(51:end);
-            storeData.float_reset_epochs = str2num(resets);     % only str2num works
+            storeData.float_reset_epochs = str2num(resets);     %#ok<ST2NM>, only str2num works
         end
         
         % end of header
@@ -53,21 +93,52 @@ if isfile(floatpath)
     % --- extract data
     % create indizes
     n = numel(D);
-    idx_t = 3:33:n;                 % GPS time
-    idx_x = 4:33:n;                 % estimated xyz coordinates
+    % ...
+    idx_t = 3:33:n;                 % GPS time [s]
+    idx_x = 4:33:n;                 % float xyz coordinates [m]
     idx_y = 5:33:n;
     idx_z = 6:33:n;
-    idx_utm_x = 13:33:n;
+    % ...
+    idx_geo_lat = 10:33:n;          % latitude [°]
+    idx_geo_lon = 11:33:n;          % longitude [°]
+    idx_geo_h = 12:33:n;            % ellipsoidal height of float position
+    idx_utm_x = 13:33:n;            % float position in UTM
     idx_utm_y = 14:33:n;
-    idx_geo_h = 12:33:n;
+    idx_gps_reclk = 15:33:n;        % GPS receiver clock error [m]
+    idx_glo_reclk = 16:33:n;        % GLONASS receiver clock error/offset [m]
+    idx_gal_reclk = 17:33:n;        % Galileo receiver clock error/offset [m]
+    idx_bds_reclk = 18:33:n;        % BeiDou receiver clock error/offset [m]    
+    % ...
+    idx_dzwd = 23:33:n;             % estimated residual zenith wet delay [m]
+    idx_zwd = 24:33:n;            	% zenith wet delay (a priori + estimation) [m]
+    idx_zhd = 25:33:n;             	% zenith hydrostatic delay (modeled) [m]
+    idx_G_dcb1 = 26:33:n;           % GPS DCB between processed f1 and f2 [m]
+    idx_G_dcb2 = 27:33:n;           % GPS DCB between processed f1 and f3 [m]
+    idx_R_dcb1 = 28:33:n;           % ...
+    idx_R_dcb2 = 29:33:n; 
+    idx_E_dcb1 = 30:33:n;         
+    idx_E_dcb2 = 31:33:n;         
+    idx_C_dcb1 = 32:33:n;         
+    idx_C_dcb2 = 33:33:n; 
+    
     % ||| continue at some point
     
     % save GPS time
     storeData.gpstime = D(idx_t);
-    % save estimated xyz coordinates
-    storeData.param = [D(idx_x), D(idx_y), D(idx_z)];
-    % save estimated UTM coordinates
+    % save float xyz coordinates and estimated residual zwd
+    storeData.param = [D(idx_x), D(idx_y), D(idx_z), D(idx_dzwd), ...
+        D(idx_gps_reclk), D(idx_G_dcb1), D(idx_G_dcb2), ...
+        D(idx_glo_reclk), D(idx_R_dcb1), D(idx_R_dcb2), ...
+        D(idx_gal_reclk), D(idx_E_dcb1), D(idx_E_dcb2), ...
+        D(idx_bds_reclk), D(idx_C_dcb1), D(idx_C_dcb2)];
+    % save float UTM coordinates
     storeData.posFloat_utm = [D(idx_utm_x), D(idx_utm_y), D(idx_geo_h)];
+    % save modeled zhd
+    storeData.zhd = D(idx_zhd);
+    
+    % rebuild and save modeled zwd
+    storeData.zwd = D(idx_zwd) - D(idx_dzwd);
+    
     % recalculate time to last reset
     time_resets = storeData.gpstime(storeData.float_reset_epochs);
     dt_ = storeData.gpstime;
@@ -76,6 +147,19 @@ if isfile(floatpath)
         dt_(dt_ >= time_resets(i)) = dt_(dt_ >= time_resets(i)) - time_resets(i);
     end
     storeData.dt_last_reset = dt_;
+    
+    % create storeData.float (epochs with valid float solution)
+    storeData.float = all(~isnan(storeData.param(:,1:3)), 2) & all(storeData.param(:,1:3) ~= 0, 2);
+    
+    
+    % create storeData.obs_interval
+    storeData.obs_interval = mode(diff(storeData.gpstime));
+    
+    
+    % 
+    storeData.posFloat_geo = [D(idx_geo_lat), D(idx_geo_lon), D(idx_geo_h)];
+    
+    
 end
 
 
@@ -96,7 +180,7 @@ if isfile(fixedpath)
         % reset epochs
         if contains(line, '# Reset of fixed solution in the following epochs:')
             resets = line(51:end);
-            storeData.fixed_reset_epochs = str2num(resets);     % only str2num works
+            storeData.fixed_reset_epochs = str2num(resets);     %#ok<ST2NM>, only str2num works
         end
         
         % end of header
@@ -115,21 +199,33 @@ if isfile(fixedpath)
     % --- extract data
     % create indizes
     n = numel(D);
-    idx_t = 3:14:n;                 % GPS time
-    idx_x = 4:14:n;                 % estimated xyz coordinates
+    % ...
+    idx_t = 3:14:n;                 % GPS time (already saved) [s]
+    idx_x = 4:14:n;                 % fixed xyz coordinates [m]
     idx_y = 5:14:n;
     idx_z = 6:14:n;
-    idx_utm_x = 13:14:n;
+    % ...
+    idx_geo_lat = 10:14:n;          % latitude [°]
+    idx_geo_lon = 11:14:n;          % longitude [°]
+    idx_geo_h = 12:14:n;            % ellipsoidal height [m]
+    idx_utm_x = 13:14:n;            % fixed position in UTM [m]
     idx_utm_y = 14:14:n;
-    idx_geo_h = 12:14:n;
     % ||| continue at some point
     
     % save estimated xyz coordinates
     storeData.xyz_fix = [D(idx_x), D(idx_y), D(idx_z)];
     % save estimated UTM coordinates
     storeData.posFixed_utm = [D(idx_utm_x), D(idx_utm_y), D(idx_geo_h)];
-    % create storeData.fixed
-    storeData.fixed = all(~isnan(storeData.param), 2) & all(storeData.param ~= 0, 2);
+    % create storeData.fixed (epochs with valid fixed solution)
+    storeData.fixed = all(~isnan(storeData.xyz_fix), 2) & all(storeData.xyz_fix ~= 0, 2);
+    
+    
+    
+    
+    % ||| implement at some point
+    storeData.posFixed_geo = [];
+    
+    
 end
 
 

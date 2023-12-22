@@ -19,7 +19,8 @@ function [BIAS] = read_SinexBias(BIAS, path, glo_channels)
 % constraint: header is not read at all
 %
 %   Revision:
-% 
+%   2023/06/11, MFWG: adding QZSS 
+%
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -90,7 +91,14 @@ if isempty(BIAS) 	% initialize empty variable with needed fields
         BIAS.OSB.(bds_field) = [];
         BIAS.ISB.(bds_field) = [];
     end
+    for i = 1:DEF.SATS_QZSS      % initialization of QZSS satellites
+        bds_field = ['J', sprintf('%02d', i)];
+        BIAS.DSB.(bds_field) = [];
+        BIAS.OSB.(bds_field) = [];
+        BIAS.ISB.(bds_field) = [];
+    end
 end
+
 
 %% Open file
 
@@ -165,7 +173,7 @@ while i < no_lines          % loop over data lines
         continue       
     end
     
-    if (prn(1) == 'G' || prn(1) == 'R' || prn(1) == 'E' || prn(1) == 'C')     % only GPS, GLONASS, Galileo, and BeiDou are handled
+    if contains('GRECJ', prn(1))    % only GPS, GLONASS, Galileo, BeiDou, and QZSS are handled
         if isempty(station)
             % -) satellite entries:
             if ~isfield(BIAS.(bias_type), prn)      % check satellite-field
@@ -307,7 +315,13 @@ if strcmp(unit, 'cyc')
             wavelengths = Const.BDS_L;
             idx_frq = strcmp(obs_1(1:2), frqs);
             lambda = wavelengths(idx_frq);
-            
+
+        case 'J'
+            frqs = {'L1'; 'L2'; 'L5'; 'L6'};
+            wavelengths = Const.QZSS_L;
+            idx_frq = strcmp(obs_1(1:2), frqs);
+            lambda = wavelengths(idx_frq);
+
     end
     
     value = value * lambda / Const.C * 10^9;    % from [cycles] to [ns]

@@ -50,15 +50,17 @@ fprintf('\nAntenna: %s',  obs.antenna_type);
 % print observation types (e.g., indicated in RINEX header)
 fprintf('\n\nObservation types (RINEX notation)\n')
 if obs.rinex_version == 3 || obs.rinex_version == 0
-    fprintf('GPS: '); print_obs_types(obs.types_gps_3, 3);
-    fprintf('GLO: '); print_obs_types(obs.types_glo_3, 3);
-    fprintf('GAL: '); print_obs_types(obs.types_gal_3, 3);
-    fprintf('BDS: '); print_obs_types(obs.types_bds_3, 3);
+    fprintf('GPS: '); print_obs_types(obs.types_gps_3,  3);
+    fprintf('GLO: '); print_obs_types(obs.types_glo_3,  3);
+    fprintf('GAL: '); print_obs_types(obs.types_gal_3,  3);
+    fprintf('BDS: '); print_obs_types(obs.types_bds_3,  3);
+    fprintf('QZSS:'); print_obs_types(obs.types_qzss_3, 3);
 else
-    fprintf('GPS: '); print_obs_types(obs.types_gps, 2);
-    fprintf('GLO: '); print_obs_types(obs.types_glo, 2);
-    fprintf('GAL: '); print_obs_types(obs.types_gal, 2);
-    fprintf('BDS: '); print_obs_types(obs.types_bds, 2);
+    fprintf('GPS: '); print_obs_types(obs.types_gps,  2);
+    fprintf('GLO: '); print_obs_types(obs.types_glo,  2);
+    fprintf('GAL: '); print_obs_types(obs.types_gal,  2);
+    fprintf('BDS: '); print_obs_types(obs.types_bds,  2);
+    fprintf('QZSS:'); print_obs_types(obs.types_qzss, 2);
 end
 
 % Start-date in different time-formats
@@ -74,15 +76,18 @@ fprintf('  %s | %d/%d | %d/%03d\n', t, obs.startGPSWeek, floor(obs.startSow/8640
 
 
 fprintf('\n%s%.0f', 'Total number of epochs: ', n);                     % number of epochs
-fprintf('\n%s%.0f\n', 'Observation interval [s]: ', obs.interval);      % observation interval
+fprintf('\n%s%.0f', 'Observation interval [s]: ', obs.interval);      % observation interval
+fprintf('\n%s%.2f\n', 'Approximate length [hours]: ', n*obs.interval/3600);    % length of RINEX file in hours
+
 % hardcode some settings
 settings.PROC.timeFrame(2) = 1; settings.PROC.timeFrame(2) = n;
 settings.PROC.epochs(1) = 1; settings.PROC.epochs(2) = n;
 settings.INPUT.num_freqs = max([ ... 
-    settings.INPUT.use_GPS*numel(settings.INPUT.gps_freq(~strcmpi(settings.INPUT.gps_freq,'OFF'))), ...
-    settings.INPUT.use_GLO*numel(settings.INPUT.glo_freq(~strcmpi(settings.INPUT.glo_freq,'OFF'))), ...
-    settings.INPUT.use_GAL*numel(settings.INPUT.gal_freq(~strcmpi(settings.INPUT.gal_freq,'OFF'))), ...
-    settings.INPUT.use_BDS*numel(settings.INPUT.bds_freq(~strcmpi(settings.INPUT.bds_freq,'OFF')))      ]);
+    settings.INPUT.use_GPS *numel(settings.INPUT.gps_freq (~strcmpi(settings.INPUT.gps_freq, 'OFF'))), ...
+    settings.INPUT.use_GLO *numel(settings.INPUT.glo_freq (~strcmpi(settings.INPUT.glo_freq, 'OFF'))), ...
+    settings.INPUT.use_GAL *numel(settings.INPUT.gal_freq (~strcmpi(settings.INPUT.gal_freq, 'OFF'))), ...
+    settings.INPUT.use_BDS *numel(settings.INPUT.bds_freq (~strcmpi(settings.INPUT.bds_freq, 'OFF'))), ...
+    settings.INPUT.use_QZSS*numel(settings.INPUT.qzss_freq(~strcmpi(settings.INPUT.qzss_freq,'OFF')))]);
 settings.INPUT.proc_freqs = settings.INPUT.num_freqs;
 settings.PROC.method = 'Code + Phase + Doppler';
 settings.IONO.model = 'off';
@@ -166,10 +171,11 @@ delete(f)
 %% PLOTS
 rgb = createDistinguishableColors(40);      % colors for plot, no GNSS has more than 40 satellites
 % GNSS to invastigate
-isGPS = settings.INPUT.use_GPS;          
-isGLO = settings.INPUT.use_GLO;
-isGAL = settings.INPUT.use_GAL;
-isBDS = settings.INPUT.use_BDS;
+isGPS  = settings.INPUT.use_GPS;          
+isGLO  = settings.INPUT.use_GLO;
+isGAL  = settings.INPUT.use_GAL;
+isBDS  = settings.INPUT.use_BDS;
+isQZSS = settings.INPUT.use_QZSS;
 % create some time variables
 epochs = 1:numel(storeData.gpstime);       % vector, 1:#epochs
 sow = storeData.gpstime;        % time of epochs in seconds of week
@@ -193,11 +199,11 @@ L3 = storeData.L3; L3(L3==0) = NaN;
 satellites.CL_1 = C1 - L1;
 satellites.CL_2 = C2 - L2;
 satellites.CL_3 = C3 - L3;
-signQualPlot(satellites, label_x_h, hours, isGPS, isGLO, isGAL, isBDS, settings, rgb);
+signQualPlot(satellites, label_x_h, hours, isGPS, isGLO, isGAL, isBDS, isQZSS, settings, rgb);
 
 
 % -+-+-+-+- Figure: Satellite Visibility Plot -+-+-+-+-
-vis_plotSatConstellation(hours, epochs, label_x_h, satellites, storeData.exclude, isGPS, isGLO, isGAL, isBDS)
+vis_plotSatConstellation(hours, epochs, label_x_h, satellites, storeData.exclude, isGPS, isGLO, isGAL, isBDS, isQZSS)
 
 
 if obs.interval < 5     % this plots make only sense for high-rate observation data
@@ -206,7 +212,7 @@ if obs.interval < 5     % this plots make only sense for high-rate observation d
     
     % -+-+-+-+- Figure: Code Difference  -+-+-+-+-
     degree_C = settings.OTHER.mp_degree;
-    mp_C1_diff_n = NaN(n,399); mp_C2_diff_n = NaN(n,399); mp_C3_diff_n = NaN(n,399);   	
+    mp_C1_diff_n = NaN(n,410); mp_C2_diff_n = NaN(n,410); mp_C3_diff_n = NaN(n,410);   	
     mp_C1_diff_n(degree_C+1:end,:) = diff(C1, degree_C,1); % code difference (C1) of last n epochs
     PlotObsDiff(epochs, mp_C1_diff_n, label_x_epc, rgb, 'C1 difference' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std);
     mp_C2_diff_n(degree_C+1:end,:) = diff(C2, degree_C,1);
@@ -216,7 +222,7 @@ if obs.interval < 5     % this plots make only sense for high-rate observation d
     
     % -+-+-+-+- Figure: Phase Difference  -+-+-+-+-
     degree_L = settings.OTHER.CS.TD_degree;	
-    cs_L1_diff = NaN(n,399); cs_L2_diff = NaN(n,399); cs_L3_diff = NaN(n,399); 
+    cs_L1_diff = NaN(n,410); cs_L2_diff = NaN(n,410); cs_L3_diff = NaN(n,410); 
     cs_L1_diff(degree_L+1:end,:) = diff(L1, degree_L,1); % phase (L1) difference of last n epochs
     PlotObsDiff(epochs, cs_L1_diff, label_x_epc, rgb, 'L1 difference' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std);
     cs_L2_diff(degree_L+1:end,:) = diff(L2, degree_L,1);
@@ -228,19 +234,19 @@ if obs.interval < 5     % this plots make only sense for high-rate observation d
     degree_D = 3;
     if isfield(satellites, 'D1')
         D1 = satellites.D1; D1(D1==0) = NaN;
-        D1_diff = NaN(n,399);
+        D1_diff = NaN(n,410);
         D1_diff(degree_D+1:end,:) = diff(D1, degree_D,1);  	% Doppler (D1) difference of last n epochs
         PlotObsDiff(epochs, D1_diff, label_x_epc, rgb, 'D1 difference' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std);
     end
     if isfield(satellites, 'D2')
         D2 = satellites.D2; D2(D2==0) = NaN;
-        D2_diff = NaN(n,399);
+        D2_diff = NaN(n,410);
         D2_diff(degree_D+1:end,:) = diff(D2, degree_D,1);
         PlotObsDiff(epochs, D2_diff, label_x_epc, rgb, 'D2 difference' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std);
     end
     if isfield(satellites, 'D3')
         D3 = satellites.D3; D3(D3==0) = NaN;
-        D3_diff = NaN(n,399);
+        D3_diff = NaN(n,410);
         D3_diff(degree_D+1:end,:) = diff(D3, degree_D,1);
         PlotObsDiff(epochs, D3_diff, label_x_epc, rgb, 'D3 difference' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std);
     end

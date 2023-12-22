@@ -11,9 +11,10 @@ function [Epoch] = get_obs(Epoch, obs, settings)
 % 	Epoch:      updated, with .C1, .L2, .S3, ...
 %
 %   Revision:
-%   23 Jan 2020, MFG: changing satellite exclusion depending on PPP model
-%   06 Oct 2020, MFG: deleting removing of satellites without phase obs.
-%
+%   23 Jan 2020, MFG:  changing satellite exclusion depending on PPP model
+%   06 Oct 2020, MFG:  deleting removing of satellites without phase obs.
+%   06 Nov 2023, MFWG: adding QZSS
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -21,10 +22,11 @@ function [Epoch] = get_obs(Epoch, obs, settings)
 % get some variables
 num_freq = settings.INPUT.proc_freqs;
 % indices of processed frequencies
-idx_frqs_gps = settings.INPUT.gps_freq_idx;
-idx_frqs_glo = settings.INPUT.glo_freq_idx;
-idx_frqs_gal = settings.INPUT.gal_freq_idx;
-idx_frqs_bds = settings.INPUT.bds_freq_idx;
+idx_frqs_gps  = settings.INPUT.gps_freq_idx;
+idx_frqs_glo  = settings.INPUT.glo_freq_idx;
+idx_frqs_gal  = settings.INPUT.gal_freq_idx;
+idx_frqs_bds  = settings.INPUT.bds_freq_idx;
+idx_frqs_qzss = settings.INPUT.qzss_freq_idx;
 % initialize
 Epoch.L1 = []; Epoch.L2 = []; Epoch.L3 = [];
 Epoch.C1 = []; Epoch.C2 = []; Epoch.C3 = []; 
@@ -135,6 +137,7 @@ if settings.INPUT.use_GLO
     Epoch.glo(remove_sat) = [];
     Epoch.gal(remove_sat) = [];
     Epoch.bds(remove_sat) = [];
+    Epoch.qzss(remove_sat) = [];
     Epoch.other_systems(remove_sat) = [];
         
     % Get observations from observation matrix 
@@ -233,6 +236,21 @@ end
 
 
 
+%% QZSS
+if settings.INPUT.use_QZSS
+    % get columns of the observations, at the moment the column with the
+    % lowest ranking is taken and for each satellite this observation type
+    L1 = obs.use_column{5, 1}; L2 = obs.use_column{5, 2}; L3 = obs.use_column{5, 3};
+    C1 = obs.use_column{5, 4}; C2 = obs.use_column{5, 5}; C3 = obs.use_column{5, 6};
+    S1 = obs.use_column{5, 7}; S2 = obs.use_column{5, 8}; S3 = obs.use_column{5, 9};
+    D1 = obs.use_column{5,10}; D2 = obs.use_column{5,11}; D3 = obs.use_column{5,12};
+    % perform check and get observations
+    lambda_C = Const.QZSS_L(idx_frqs_qzss);
+    [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, bool_m, ...
+    Epoch.qzss, lambda_C, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, num_freq);
+end
+
+
 
 %% ------------------ AUXILIARY FUNCTIONS ------------------
 function [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, convert_cy2m, ...
@@ -294,10 +312,11 @@ Epoch.sats = sats;
 % remove entries from Epoch
 Epoch.LLI_bit_rinex(remove_sat,:) = [];
 Epoch.ss_digit_rinex(remove_sat,:) = [];
-Epoch.gps(remove_sat) = [];
-Epoch.glo(remove_sat) = [];
-Epoch.gal(remove_sat) = [];
-Epoch.bds(remove_sat) = [];
+Epoch.gps(remove_sat)  = [];
+Epoch.glo(remove_sat)  = [];
+Epoch.gal(remove_sat)  = [];
+Epoch.bds(remove_sat)  = [];
+Epoch.qzss(remove_sat) = [];
 Epoch.other_systems(remove_sat) = [];
 
 % get new observations

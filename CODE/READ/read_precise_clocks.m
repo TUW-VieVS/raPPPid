@@ -1,4 +1,4 @@
-function [GPS, GLO, GAL, BDS] = read_precise_clocks(file_clk, bool_check)
+function [GPS, GLO, GAL, BDS, QZSS] = read_precise_clocks(file_clk, bool_check)
 % Read precise clock corrections from .clk file for multiple GNSS
 % This function is part of raPPPid (VieVS PPP)
 %
@@ -6,13 +6,13 @@ function [GPS, GLO, GAL, BDS] = read_precise_clocks(file_clk, bool_check)
 % 	file_clk        string with file path
 %   bool_check      [optional] boolean, disable specific data checks
 % OUTPUT
-% 	GPS/GLO/GAL/BDS:          
+% 	GPS/GLO/GAL/BDS/QZSS:          
 % 	... .t:         time of every epoch in sec of week (#epochs x 1)
 % 	... .dT:        (#epochs x #sats) clock corrections [s]
 % 	... .sigma_dT:  (#epochs x #sats) sigma of clock corrections [s]
 %  
 %   Revision:
-%   ...
+%   2023/11/03, MFWG: adding QZSS
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -22,10 +22,7 @@ fid = fopen(file_clk);          % open precise clock file
 
 % Initialization
 if nargin == 1;     bool_check = true;     end
-GPS = [];
-GLO = [];
-GAL = [];
-BDS = [];
+GPS = [];   GLO = [];   GAL = [];   BDS = [];   QZSS = [];
 
 
 %% Loop over header
@@ -85,7 +82,7 @@ while ischar(tline)                 % loop over rows/lines of file
     if isempty(clkbiasvar); clkbiasvar = 0; end     % to avoid errors lateron
     
     % record of GNSS satellite:
-    if gnss_char == 'G' || gnss_char == 'R' || gnss_char == 'E' || gnss_char == 'C'
+    if contains('GRECJ', gnss_char)
         % find out time (always GPS time)
         jd = cal2jd_GT(year, month, day + hour/24 + min/1440 + sec/86400);
         [~,sow,~] = jd2gps_GT(jd);
@@ -101,7 +98,7 @@ while ischar(tline)                 % loop over rows/lines of file
         switch gnss_char
             case 'G'        % for GPS satellites
                 GPS.t(epoch,1) = t;
-                GPS.dT(epoch,prn) = clkbias;              % Clock bias [s]
+                GPS.dT(epoch,prn) = clkbias;                % Clock bias [s]
                 GPS.sigma_dT(epoch, prn) = clkbiasvar;   	% Clock bias sigma [s]
             case 'R'        % for GLONASS satellites
                 GLO.t(epoch,1) = t;
@@ -114,7 +111,11 @@ while ischar(tline)                 % loop over rows/lines of file
             case 'C'        % for BEIDOU satellites
                 BDS.t(epoch,1) = t;
                 BDS.dT(epoch,prn) = clkbias;
-                BDS.sigma_dT(epoch, prn) = clkbiasvar;                
+                BDS.sigma_dT(epoch, prn) = clkbiasvar;           
+            case 'J'        % for QZSS satellites
+                QZSS.t(epoch,1) = t;
+                QZSS.dT(epoch,prn) = clkbias;
+                QZSS.sigma_dT(epoch, prn) = clkbiasvar;          
         end
     end
     
@@ -130,6 +131,7 @@ GPS = checkPrecClk(GPS, DEF.SATS_GPS, bool_check);
 GLO = checkPrecClk(GLO, DEF.SATS_GLO, bool_check);
 GAL = checkPrecClk(GAL, DEF.SATS_GAL, bool_check);
 BDS = checkPrecClk(BDS, DEF.SATS_BDS, bool_check);
+QZSS = checkPrecClk(QZSS, DEF.SATS_QZSS, bool_check);
 
 
 

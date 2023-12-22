@@ -118,13 +118,13 @@ if resetnow
     
     % reset initialization of ambiguities (otherwise the reset would not be
     % a total restart of the processing)
-    init_ambiguities = NaN(3, 399);
+    init_ambiguities = NaN(3, 410);
     
     % reset broadcast column
-    Epoch.BRDCcolumn = NaN(399,1);
+    Epoch.BRDCcolumn = NaN(410,1);
     
     % corrections from real-time correction stream
-    Epoch.corr2brdc_orb = zeros(8,399);		% timestamp, radial, along, outof, v_radial, v_along, v_outof, IOD
-    Epoch.corr2brdc_clk = zeros(5,399);		% timestamp, a0, a1, a2, IOD
+    Epoch.corr2brdc_orb = zeros(8,410);		% timestamp, radial, along, outof, v_radial, v_along, v_outof, IOD
+    Epoch.corr2brdc_clk = zeros(5,410);		% timestamp, a0, a1, a2, IOD
     
 end

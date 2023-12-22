@@ -316,10 +316,14 @@ if PLOT.DOP
     l_sto{end+1} = 'PDOP';
     l_sto{end+1} = 'HDOP';
 end
-% if PLOT.GI
-%    l_sat{end+1} = 'az';
-%    l_sat{end+1} = 'elev';
-% end
+if PLOT.MPLC
+    l_sto{end+1} = 'mp1';
+    l_sto{end+1} = 'mp2';
+    l_sat{end+1} = 'SNR_1';
+    l_sat{end+1} = 'SNR_2';
+    l_sat{end+1} = 'obs';
+    l_sat{end+1} = 'elev';
+end
 if PLOT.iono
     l_sto{end+1} = 'iono_corr';
     l_sto{end+1} = 'iono_est';
@@ -412,18 +416,28 @@ function [multi] = insertData(multi, single, field, idx)
 if ~isfield(single, field)
     return
 end
+% get fields of structs
 old = multi.(field);
 new = single.(field);
-[n, m] = size(old);
-if n > m    % more rows than columns, epochs are rows most likely
+% determine sizes
+[n_old, m_old] = size(old);
+[n_new, m_new] = size(new);
+% make sure that the amount of columns is identical
+if m_new ~= m_old
+    m_max = max([m_new m_old]);     % determine maximum number of columns
+    old(:,m_old+1:m_max) = 0;       % add additional columns if necessary
+    new(:,m_new+1:m_max) = 0;
+end
+% put data together into the struct multi
+if n_old > m_old    % more rows than columns, epochs are rows most likely
     A = old(1:idx-1, :);
     B = new;
-    C = old(idx:n,   :);
+    C = old(idx:n_old,   :);
     M = [A; B; C];
 else    	% epochs = columns
     A = old(:, 1:idx-1);
     B = new;
-    C = old(:, idx:m  );
+    C = old(:, idx:m_old  );
     M = [A, B, C];
 end
 multi.(field) = M;

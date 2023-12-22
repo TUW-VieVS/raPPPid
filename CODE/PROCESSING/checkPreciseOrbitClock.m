@@ -10,6 +10,8 @@ function [settings] = checkPreciseOrbitClock(settings, input)
 %   settings        settings.PROC.exclude_sats updated with satellites to
 %                   exclude
 % 
+% Revision:
+%   2023/06/11, MFWG: adding QZSS
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -75,6 +77,21 @@ if settings.INPUT.use_BDS
     prns_bds = prns_bds(idx);
     settings.PROC.exclude_sats = [settings.PROC.exclude_sats; 300+prns_bds'];
     if bool_print; printInfo(prns_bds, 'BeiDou'); end
+end
+
+% QZSS
+if settings.INPUT.use_QZSS
+    idx_x = all(input.ORBCLK.preciseEph_QZSS.X == 0, 1);
+    idx_y = all(input.ORBCLK.preciseEph_QZSS.Y == 0, 1);
+    idx_z = all(input.ORBCLK.preciseEph_QZSS.Z == 0, 1);
+    idx_dT = all(input.ORBCLK.preciseClk_QZSS.dT == 0, 1);
+    idx_orb = checkLength(idx_x | idx_y | idx_z, DEF.SATS_QZSS);            
+    idx_dT = checkLength(idx_dT, DEF.SATS_QZSS);   
+    idx = idx_orb | idx_dT;                     % indices of satellites which should be excluded
+    prns_qzss = 1:DEF.SATS_QZSS;
+    prns_qzss = prns_qzss(idx);
+    settings.PROC.exclude_sats = [settings.PROC.exclude_sats; 400+prns_qzss'];
+    if bool_print; printInfo(prns_qzss, 'QZSS'); end
 end
 
 if bool_print; fprintf('\n'); end

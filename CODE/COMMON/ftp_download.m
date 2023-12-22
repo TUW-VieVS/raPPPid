@@ -17,6 +17,8 @@ function [file_status] = ftp_download(host, folder, file, target, bool_print)
 %                   1....successfully downloaded
 %                   2....already existing, but zipped
 %                   3....already existing and unzipped
+%                   NOTE:   distinction between 2 and 3 works only for 
+%                           archives as input
 %  
 % Revision:
 %   ...
@@ -32,7 +34,7 @@ file_status = 0;
 [~, name_file, ~] = fileparts(['A:/', file ]);
 
 % check if file already in target folder (check for the normal file name, the zipped file name and the .mat file name
-if exist([target, '/', file], 'file')
+if exist([target, '/', file], 'file')    ||   exist([target, '/', file '.mat'], 'file')
     file_status = 2;   
     return;   % if file is already existing, then do nothing
 elseif exist([target, '/', name_file], 'file')    ||   exist([target, '/', name_file '.mat'], 'file')

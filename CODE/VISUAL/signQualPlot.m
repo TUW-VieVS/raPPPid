@@ -1,4 +1,4 @@
-function signQualPlot(satellites, label_xaxis, hours, isGPS, isGLO, isGAL, isBDS, settings, rgb)
+function signQualPlot(satellites, label_xaxis, hours, isGPS, isGLO, isGAL, isBDS, isQZSS, settings, rgb)
 % creates three different plots of the Signal Quality:
 % -) Code-minus-Phase-Plot: for each frequency the difference between code
 % and phase measurements in meters for all observed satellites
@@ -11,7 +11,7 @@ function signQualPlot(satellites, label_xaxis, hours, isGPS, isGLO, isGAL, isBDS
 %   satellites      struct, containing satellite-specific data from processing        
 %   label_xaxis     label for x-axis of plots
 %   hours           time from beginning of processing [h]
-% 	isGPS, isGLO, isGAL, isBDS
+% 	isGPS, isGLO, isGAL, isBDS, isQZSS
 %                   true if GNSS was processed and should be plotted
 %   settings        struct, proceesing settings from GUI  
 %   rgb             n x 3, colors for plotting
@@ -48,6 +48,9 @@ end
 if isBDS
     obs_prns = [obs_prns, 300+(1:DEF.SATS_BDS)];
 end
+if isQZSS
+    obs_prns = [obs_prns, 400+(1:DEF.SATS_QZSS)];
+end
 
 n_col = size(rgb,1);            % number of colors
 
@@ -55,7 +58,7 @@ n_col = size(rgb,1);            % number of colors
 %% Code minus Phase Plot
 if contains(settings.PROC.method, 'Phase')
     % Preparations
-    sats = 399;
+    sats = DEF.SATS;
     fig_CminusL = figure('name','Signal Quality: code minus phase', 'NumberTitle','off');
     % add customized datatip
     dcm = datacursormode(fig_CminusL);
@@ -104,7 +107,7 @@ if contains(settings.PROC.method, 'Phase')
             end
         end
         prns = prns';       % create letters for legend:
-        lettr = char( (prns<100)*71 + (prns<200&prns>100)*82 + (prns<300&prns>200)*69 + (prns<400&prns>300)*67 );
+        lettr = char( (prns<100)*71 + (prns<200&prns>100)*82 + (prns<300&prns>200)*69 + (prns<400&prns>300)*67 + (prns<500&prns>400)*74);
         content = strcat(lettr, num2str(mod(prns,100), '%02.0f'));                     % letters and prn-number
         hLeg = legend(cellstr(content),'location','EastOutside');       % create legend
         if j == 2
@@ -117,7 +120,7 @@ end
 
 
 %% Signal to Noise Ratio (C/N0) Plot
-sats = 399;
+sats = DEF.SATS;
 fig_SNR = figure('Name', 'Signal Quality: C/N0', 'NumberTitle','off');
 % add customized datatip
 dcm = datacursormode(fig_SNR);
@@ -148,7 +151,7 @@ for j = 1:n
     ymax = max(SNR_j(:));   if isnan(ymax);   ymax = Inf;   end
     axis([0 max(hours) 0 ymax+1])     % axes-limits
     prns = prns';       % create letters for legend:
-    lettr = char( (prns<100)*71 + (prns<200&prns>100)*82 + (prns<300&prns>200)*69 + (prns<400&prns>300)*67 );
+    lettr = char( (prns<100)*71 + (prns<200&prns>100)*82 + (prns<300&prns>200)*69 + (prns<400&prns>300)*67 + (prns<500&prns>400)*74 );
     content = strcat(lettr, num2str(mod(prns,100), '%02.0f'));                     % letters and prn-number
     hLeg = legend(cellstr(content),'location','EastOutside');       % create legend
     if j == 2
@@ -160,7 +163,7 @@ end
 
 
 %% C/N0-over-Elevation-Plot
-sats = 399;
+sats = DEF.SATS;
 Elev = full(satellites.elev);	% [epochs x sats x frequencies], elevation of satellites
 if ~any(Elev(:)~=0); return; end
 fig_SNR_elev = figure('Name', 'SNR over Elevation', 'NumberTitle','off');
@@ -194,7 +197,7 @@ for j = 1:n
     vline(cutoff, 'k--')            % add cutoff angle as vertical line
     hline(snr_thresh(j), 'k--')        % add cutoff angle as vertical line
     prns = prns';       % create letters for legend:
-    lettr = char( (prns<100)*71 + (prns<200&prns>100)*82 + (prns<300&prns>200)*69 + (prns<400&prns>300)*67 );
+    lettr = char( (prns<100)*71 + (prns<200&prns>100)*82 + (prns<300&prns>200)*69 + (prns<400&prns>300)*67 + (prns<500&prns>400)*74 );
     content = strcat(lettr, num2str(mod(prns,100), '%02.0f'));                     % letters and prn-number
     hLeg = legend(cellstr(content),'location','EastOutside');       % create legend
     if j == 2

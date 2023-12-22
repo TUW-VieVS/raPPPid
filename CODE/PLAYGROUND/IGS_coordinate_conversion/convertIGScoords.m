@@ -22,7 +22,7 @@ URL_host = 'igs.ensg.ign.fr:21';
 URL_folder = ['/pub/igs/products/', gpsweek_str, '/'];
 URL_file = ['igs' yyyy_str(3:4), 'P', gpsweek_str, dow_str, '.ssc.Z'];
 target = pwd;
-[~, ~] = mkdir(target)
+[~, ~] = mkdir(target);
 file_status = ftp_download(URL_host, URL_folder, URL_file, target, true);
 if file_status == 0
     errordlg('Download of IGS coordinates failed', 'Error')

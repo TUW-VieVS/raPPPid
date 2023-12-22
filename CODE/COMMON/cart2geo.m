@@ -5,8 +5,8 @@ function x = cart2geo(XYZ)
 % 	XYZ:            vector, cartesian X,Y,Z-coordinate [m] (WGS84) 
 % OUTPUT:
 % 	x:              struct with ellipsoidal coordinates
-%       x.lat:          phi, latitude [rad]
-%       x.lon:       	lambda, longitude [rad]
+%       x.lat:          latitude, phi [rad]
+%       x.lon:       	longitude, lambda [rad]
 %       x.h:        	ellipsoidal height [m]
 %
 % Revision

@@ -53,25 +53,29 @@ for i = 1:n_unique
     xyz_true = XYZ_true(bool_label, :);         % cell, true coordinates of current label
     
     % initialize variables in struct d for current label
-    d.dT = []; d.Time = []; d.FIXED = []; d.N = []; d.E = []; d.H = []; d.ZTD = [];   
+    d.dT = []; d.Time = []; d.FIXED = []; d.N = []; d.E = []; d.H = []; d.ZTD = [];
     
     % loop over files of current label
-    for ii = 1:n_label      
+    for ii = 1:n_label
         storeData = []; obs = [];  	% reset variables from last iteration
+        
         % load variables of current processing
-        try         
-            fpath = GetFullPath([paths{ii} 'data4plot.mat']);
-            load(fpath, 'storeData', 'obs');    %  variables not used: 'satellites', 'settings', 'model_save'
-            if ~exist('storeData', 'var') || isempty(storeData)
-                storeData = recover_storeData(paths{ii});
-            end
+        try
+            fpath_data4plot = GetFullPath([paths{ii} 'data4plot.mat']);
+            load(fpath_data4plot, 'storeData', 'obs');      %  variables not used: 'satellites', 'settings', 'model_save'
         catch
-            errordlg({['Loading File #' sprintf('%d',ii) ' of label ' ], [curr_label ' failed!']}, 'Error')
-            continue
+            try
+                storeData = recover_storeData(paths{ii});   % e.g., no data4plot.mat file
+                obs = recover_obs(paths{ii});
+            catch
+                errordlg({['Loading File #' sprintf('%d',ii) ' of label ' ], [curr_label ' failed!']}, 'Error')
+                continue
+            end
         end
+
         % get position data
         [pos_3D, pos_UTM] = getPositionData(storeData, obs, curr_label, PlotStruct);
-        % get true position 
+        % get true position
         [pos_3D_true, pos_geo_true, North_true, East_true] = ...
             getTruePosition(xyz_true(ii,:), pos_3D);
         % calculate coordinate differences for whole processing
@@ -202,7 +206,7 @@ if PlotStruct.tropo
 end
 % Convergence/Accuracy Plot
 if PlotStruct.convaccur
-    ConvAccurPlot(D, coleurs);
+    ConvAccurPlot(D, coleurs, PlotStruct.solution);
 end
 
 

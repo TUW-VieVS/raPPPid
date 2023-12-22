@@ -1,5 +1,7 @@
 function [] = vis_cs_SF(storeData, CS_settings, sys)
-% Plots the Single-Frequency-Cycle-Slip-Detection
+% Plots the Single-Frequency Cycle Slip Detection which is based on the
+% difference of the phase and code observation of the last n epochs (check
+% cycleSlip_CLdiff.m) for each satellite.
 %
 % INPUT:
 %   storeData       struct, collected data from all processed epochs
@@ -7,6 +9,9 @@ function [] = vis_cs_SF(storeData, CS_settings, sys)
 %   CS_settings     settings for Cycle-Slip-Detection from GUI
 % OUTPUT:
 %   []
+% 
+% Revision:
+%   2023/11/09, MFWG: adding QZSS
 % 
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
 %
@@ -38,7 +43,6 @@ ticks = sow2hhmm(vec);
 % Plot the Detection of Cycle-Slips with Single-Frequency-Data
 plotit(mod(storeData.gpstime,86400), full(storeData.cs_pred_SF), full(storeData.cs_L1C1), CS_settings.l1c1_threshold, sys, vec, ticks, mod(reset_sow,86400), CS_settings.l1c1_window)
 
-end
 
 
 function [] = plotit(x, pred, L1C1, thresh, sys, vec, ticks, resets, window)
@@ -46,19 +50,23 @@ function [] = plotit(x, pred, L1C1, thresh, sys, vec, ticks, resets, window)
 if sys == 'G'           % GPS
     loop1 = 1:16;
     loop2 = 17:32;
-    col = 'r';
+    col = DEF.COLOR_G;
 elseif sys == 'R'       % GLONASS
     loop1 = 101:116;
     loop2 = 117:132;
-    col = 'c';
+    col = DEF.COLOR_R;
 elseif sys == 'E'      	% Galileo
     loop1 = 201:216;
     loop2 = 217:232;
-    col = 'b';
+    col = DEF.COLOR_E;
 elseif sys == 'C'      	% BeiDou
     loop1 = 301:316;
     loop2 = 317:332;
-    col = 'm';
+    col = DEF.COLOR_C;
+elseif sys == 'J'      	% QZSS
+    loop1 = 401:407;
+    loop2 = [];         % not enough satellites for second plot window
+    col = DEF.COLOR_J;
 end
     
 %% plot the satellites G01-G16
@@ -76,7 +84,7 @@ for i = loop1
         prn = mod(i,100);
         subplot(4, 4, prn)
         y = L1C1(:,i)-pred_i;       % plot difference = L1-C1 minus prediction
-        plot(x, y, [col '.'])                
+        plot(x, y, '.', 'Color', col)
         hold on
         plot(x, y+thresh, 'g-')     % plot difference plus threshold
         plot(x, y-thresh, 'g-') 	% plot difference minus threshold
@@ -92,6 +100,11 @@ for i = loop1
     end
 end
 set(findall(gcf,'type','text'),'fontSize',8)
+
+if isempty(loop2)
+    return
+end
+
 
 %% plot the satellites G17-G32
 fig2 = figure('Name', ['Cycle-Slip-Detection Single-Frequency ', sys, '17-32'], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
@@ -108,7 +121,7 @@ for i = loop2
         prn = mod(i,100);
         subplot(4, 4, prn-16)
         y = L1C1(:,i)-pred_i;       % plot difference = L1-C1 minus prediction
-        plot(x, y, [col '.'])               
+        plot(x, y, '.', 'Color', col)
         hold on
         plot(x, y+thresh, 'g-')     % plot difference plus threshold
         plot(x, y-thresh, 'g-') 	% plot difference minus threshold
@@ -124,5 +137,3 @@ for i = loop2
     end
 end
 set(findall(gcf,'type','text'),'fontSize',8)
-
-end             % end of plotit

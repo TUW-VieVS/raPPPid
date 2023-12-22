@@ -1,5 +1,5 @@
 function vis_plotReceiverClock(hours, strXAxis, param, resets_h, ...
-    isGPS, isGLO, isGAL, isBDS, clk_file, station, startdate)
+    isGPS, isGLO, isGAL, isBDS, isQZSS, clk_file, station, startdate)
 % Plots estimated receiver clock correction or receiver clock offset to GPS
 % time
 %
@@ -8,13 +8,17 @@ function vis_plotReceiverClock(hours, strXAxis, param, resets_h, ...
 %   strXAxis    label for x-axis
 %   param       estimated parameters of all processed epochs
 %   reset_h     vector, time of resets in hours
-% 	isGPS, isGLO, isGAL, isBDS
+% 	isGPS, isGLO, isGAL, isBDS, isQZSS
 %               true if this GNSS was processed and should be plotted
 %   clk_file    string, path to precise clock file
 %   station     string, 4-digit station identifier
 %   startdate   [year month day]
 % OUTPUT:
 %   []
+% 
+% Revision:
+%   2023/11/08, MFWG: adding QZSS
+% 
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -22,10 +26,11 @@ function vis_plotReceiverClock(hours, strXAxis, param, resets_h, ...
 
 
 % extract estimated receiver clock offset for each GNSS [m]
-rec_clk_GPS = param( 5,:) / Const.C * 1e9;  % convert from [m] to [ns]
-rec_clk_GLO = param( 8,:) / Const.C * 1e9;
-rec_clk_GAL = param(11,:) / Const.C * 1e9;
-rec_clk_BDS = param(14,:) / Const.C * 1e9;
+rec_clk_GPS  = param( 5,:) / Const.C * 1e9;  % convert from [m] to [ns]
+rec_clk_GLO  = param( 8,:) / Const.C * 1e9;  % convert from [m] to [ns]
+rec_clk_GAL  = param(11,:) / Const.C * 1e9;  % convert from [m] to [ns]
+rec_clk_BDS  = param(14,:) / Const.C * 1e9;  % convert from [m] to [ns]
+
 
 % preparations for plotting
 strTitlePlot1 = 'Estimated Receiver Clock Correction';
@@ -34,7 +39,7 @@ strTitlePlot3 = '';
 strTitlePlot4 = '';
 strYAxis = 'dt [ns]';
 fig_clk = figure('Name','Clock Plot', 'NumberTitle','off');
-n = isGPS + isGLO + isGAL + isBDS;
+n = isGPS + isGLO + isGAL + isBDS + isQZSS;
 i = 1;
 
 % try to get receiver clock estimation for station from precise clock file
@@ -66,6 +71,11 @@ end
 % plot Beidou
 if isBDS
     plot_clk(i, n, resets_h, strTitlePlot4, hours, strXAxis, rec_clk_BDS, ['BDS ',strYAxis], 'm-')
+end
+% plot QZSS
+if isQZSS
+    rec_clk_QZSS = param(17,:) / Const.C * 1e9;  % convert from [m] to [ns]
+    plot_clk(i, n, resets_h, strTitlePlot4, hours, strXAxis, rec_clk_QZSS, ['QZSS ',strYAxis], 'm-')
 end
 
 % add customized datatip

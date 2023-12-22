@@ -11,7 +11,7 @@ function [Epoch] = cycleSlip(Epoch, settings, use_column)
 %   Epoch       update of .cs_found and added some Cycle-Slip calculations
 %  
 % Revision:
-%   ...
+%   2023/06/11, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************

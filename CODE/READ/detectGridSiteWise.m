@@ -1,7 +1,7 @@
 function gridesitewise = detectGridSiteWise(tropo_setup, input, version)
 % This function detects for a specific troposphere settings if the
 % site-wise or grid-wise VMF is used.
-% 
+%
 % INPUT:
 %   tropo_setup         string, from settings.TROPO.zhd/.zwd/.mfh/.mfw/.Gh/.Gw
 %   input               struct, contains all input data
@@ -21,10 +21,18 @@ function gridesitewise = detectGridSiteWise(tropo_setup, input, version)
 switch tropo_setup
     
     case {'VMF3', 'GRAD'}
-        gridesitewise = ['(' input.TROPO.V3GR.version ', ' version ')'];
+        try
+            gridesitewise = ['(' input.TROPO.V3GR.version ', ' version ')'];
+        catch
+            gridesitewise = '';
+        end
         
     case 'VMF1'
-        gridesitewise = ['(' input.TROPO.VMF1.version ', ' version ')'];
+        try
+            gridesitewise = ['(' input.TROPO.VMF1.version ', ' version ')'];
+        catch
+            gridesitewise = '';
+        end
         
     otherwise
         gridesitewise = '';

@@ -59,39 +59,52 @@ for i = 1:n
     
     % prepare and download (if file is not existing e.g. as *.mat)
     URL_host = 'igs.ign.fr:21';
+    URL_host2 = 'gssc.esa.int:21';
+	
     % check which coordinate system
     sys = coordsyst{i};
     if isempty(sys)         % raPPPid could not detect the coordinate system
         sys = questdlg('Please choose the coordinate system.', ...
             'Menu', 'IGS14', 'IGS20', 'No idea', 'No idea');
+        % replace empty coordinates for stations with identical date
+        bool = cellfun(@isempty, coordsyst)' & yyyy == dates(:,1) & mm == dates(:,2) & dd == dates(:,3);
+        coordsyst(bool) = {sys};
     end
-    % to IGS coordinate estimation depending on the coordinate system
+    % select IGS coordinate estimation depending on the coordinate system
+    URL_folder   = ['/pub/igs/products/' gpsweek_str '/'];
+    URL_folder2  = ['/gnss/products/' gpsweek_str '/'];
+    cddis_folder = ['/archive/gnss/products/' gpsweek_str];
     switch sys
         case {'IGS14', 'IGb14', ''}
-            URL_folder = ['/pub/igs/products/', gpsweek_str, '/'];
-            URL_file = ['igs' yyyy_str(3:4), 'P', gpsweek_str, dow_str, '.ssc.Z'];
-            cddis_folder = ['/archive/gnss/products/' gpsweek_str];
+																  
+            URL_file = ['igs' yyyy_str(3:4) 'P' gpsweek_str dow_str '.ssc.Z'];
+            
         case 'IGS20'
-            URL_folder = ['/pub/igs/products/', gpsweek_str, '/'];
+																  
             URL_file = ['IGS0OPSSNX_' yyyy_str doy_str '0000_01D_01D_CRD.SNX.gz'];
             cddis_folder = ['/archive/gnss/products/' gpsweek_str];
         case 'IGSR3'
-            URL_folder = ['/pub/igs/products/repro3/', gpsweek_str, '/'];
-            URL_file = ['IGS0R03SNX_' yyyy_str, doy_str, '0000_01D_01D_CRD.SNX.gz'];
-            cddis_folder = ['/archive/gnss/products/repro3/' gpsweek_str];
+																		 
+            URL_file = ['IGS0R03SNX_' yyyy_str doy_str '0000_01D_01D_CRD.SNX.gz'];
+            URL_folder  = ['/pub/igs/products/repro3/' gpsweek_str '/'];
+            URL_folder2 = '';
         otherwise       % use ITRF2020 coordinates
-            URL_folder = ['/pub/igs/products/', gpsweek_str, '/'];
+																  
             URL_file = ['IGS0OPSSNX_' yyyy_str doy_str '0000_01D_01D_CRD.SNX.gz'];
-            cddis_folder = ['/archive/gnss/products/' gpsweek_str];
+																   
     end
     % download and extract
-    target = [Path.DATA, 'COORDS/', yyyy_str, '/', doy_str];
-    [~, ~] = mkdir(target)
+    target = [Path.DATA 'COORDS/' yyyy_str '/' doy_str];
+    [~, ~] = mkdir(target);
     file_status = ftp_download(URL_host, URL_folder, URL_file, target, false);
-    % IGS IGN failed, try cddis
+    % IGS IGN failed, try gssc.esa
     if file_status == 0
-        file_status = get_cddis_data('https://cddis.nasa.gov', {cddis_folder}, {URL_file}, {target}, true);
-        if ~file_status; return; end
+        file_status = ftp_download(URL_host2, URL_folder2, URL_file, target, false);
+        % also gssc.esa failed, try cddis
+        if file_status == 0
+            file_status = get_cddis_data('https://cddis.nasa.gov', {cddis_folder}, {URL_file}, {target}, true);
+            if ~file_status; return; end
+        end
     end
 
     % unzip and delete file

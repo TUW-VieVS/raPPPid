@@ -54,16 +54,16 @@ end
 % input.IONO.klob_coeff, input.nequ_coeff, input.BDGIM_coeff
 
 if settings.INPUT.use_GPS && ~isempty(Eph_GPS)
-    input.Eph_GPS = EphAppendSortUnique(input.Eph_GPS, Eph_GPS, [1,21]);
+    input.ORBCLK.Eph_GPS = EphAppendSortUnique(input.ORBCLK.Eph_GPS, Eph_GPS, [1,21]);
 end
 if settings.INPUT.use_GLO && ~isempty(Eph_GLO)
-    input.Eph_GLO = EphAppendSortUnique(input.Eph_GLO, Eph_GLO,[1,17,18]);
+    input.ORBCLK.Eph_GLO = EphAppendSortUnique(input.ORBCLK.Eph_GLO, Eph_GLO,[1,17,18]);
 end
 if settings.INPUT.use_GAL && ~isempty(Eph_GAL)
-    input.Eph_GAL = EphAppendSortUnique(input.Eph_GAL, Eph_GAL,[1,21]);
+    input.ORBCLK.Eph_GAL = EphAppendSortUnique(input.ORBCLK.Eph_GAL, Eph_GAL,[1,21]);
 end
 if settings.INPUT.use_BDS && ~isempty(Eph_BDS)
-    input.Eph_BDS = EphAppendSortUnique(input.Eph_BDS, Eph_BDS,[1,21]);
+    input.ORBCLK.Eph_BDS = EphAppendSortUnique(input.ORBCLK.Eph_BDS, Eph_BDS,[1,21]);
 end
 
 

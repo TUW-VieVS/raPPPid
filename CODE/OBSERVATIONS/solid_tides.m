@@ -1,6 +1,10 @@
 function dx = solid_tides(recECEF, lat, lon, sunECEF, moonECEF, mjd)
 % Formulae according to IERS CONVENTIONS 2010 chapter 7 - 
-% first and second degree tidal corrections
+% first and second degree tidal corrections, check also:
+% A GUIDE TO USING INTERNATIONAL GNSS SERVICE (IGS) PRODUCTS, Jan Kouba
+% 
+% For an implemenation considering terms of higher order check the functions
+% mathews.m and matthew.m of VieVS VLBI (https://github.com/TUW-VieVS/VLBI)
 % 
 % INPUT:
 %   recECEF     receiver ECEF coordinates [m]

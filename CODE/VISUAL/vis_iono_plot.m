@@ -14,6 +14,9 @@ function [] = vis_iono_plot(settings, storeData, xaxis_label, hours, resets, boo
 % OUTPUT:
 %   []
 %
+% Revision:
+%   2023/12/21, MFWG: adding QZSS to plots
+% 
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -32,23 +35,26 @@ set(groot,'defaultAxesColorOrder',rgb)
 no_rows = bool_corr + bool_est + (bool_est&&bool_corr);
 
 % true if GNSS was processed and should be plotted
-isGPS = settings.INPUT.use_GPS;
-isGLO = settings.INPUT.use_GLO;
-isGAL = settings.INPUT.use_GAL;
-isBDS = settings.INPUT.use_BDS;
-noGNSS = isGPS + isGLO + isGAL + isBDS;
+isGPS  = settings.INPUT.use_GPS;
+isGLO  = settings.INPUT.use_GLO;
+isGAL  = settings.INPUT.use_GAL;
+isBDS  = settings.INPUT.use_BDS;
+isQZSS = settings.INPUT.use_QZSS;
+noGNSS = isGPS + isGLO + isGAL + isBDS + isQZSS;
 
 % satellite indices for each GNSS
-idx_gps = 001:000+DEF.SATS_GPS;
-idx_glo = 101:100+DEF.SATS_GLO;
-idx_gal = 201:200+DEF.SATS_GAL;
-idx_bds = 301:size(bool_obs,2);
+idx_gps  =   1:    DEF.SATS_GPS;
+idx_glo  = 101:100+DEF.SATS_GLO;
+idx_gal  = 201:200+DEF.SATS_GAL;
+idx_bds  = 301:300+DEF.SATS_BDS;
+idx_qzss = 401:400+DEF.SATS_QZSS;
 
 % boolean matrix for each GNSS, true if satellite in this epoch was observed
-gps_obs = bool_obs(:,idx_gps);
-glo_obs = bool_obs(:,idx_glo);
-gal_obs = bool_obs(:,idx_gal);
-bds_obs = bool_obs(:,idx_bds);
+gps_obs  = bool_obs(:,idx_gps);
+glo_obs  = bool_obs(:,idx_glo);
+gal_obs  = bool_obs(:,idx_gal);
+bds_obs  = bool_obs(:,idx_bds);
+qzss_obs = bool_obs(:,idx_qzss);
 
 fig_iono = figure('Name','Ionospheric Range Correction','NumberTitle','off');
 i_plot = 1;
@@ -81,6 +87,11 @@ if bool_corr
         subplot(no_rows, noGNSS, i_plot);       i_plot=i_plot+1;
         plotIonoModelled(iono_corr_C, hours, resets, bds_obs, 'BeiDou', xaxis_label)
     end
+    if isQZSS
+        iono_corr_J = iono_corr(:,idx_qzss);
+        subplot(no_rows, noGNSS, i_plot);       i_plot=i_plot+1;
+        plotIonoModelled(iono_corr_J, hours, resets, qzss_obs, 'QZSS', xaxis_label)
+    end    
 end
 
 
@@ -113,6 +124,11 @@ if bool_est
         subplot(no_rows, noGNSS, i_plot);       i_plot=i_plot+1;
         plotIonoEstimated(iono_est_C, hours, resets, bds_obs, 'BeiDou', xaxis_label, sol_str)
     end
+    if isQZSS
+        iono_est_J = iono_est(:,idx_qzss);
+        subplot(no_rows, noGNSS, i_plot);       i_plot=i_plot+1;
+        plotIonoEstimated(iono_est_J, hours, resets, qzss_obs, 'QZSS', xaxis_label, sol_str)
+    end    
 end
 
 
@@ -154,7 +170,13 @@ if bool_corr && bool_est
         subplot(no_rows, noGNSS, i_plot);
         plotIonoDiff(iono_diff, hours, resets, bds_obs, 'BeiDou', xaxis_label)
     end
-    
+    if isQZSS
+        iono_est_J = iono_est(:,idx_qzss);
+        iono_corr_J = iono_corr(:,idx_qzss);
+        iono_diff = iono_est_J - iono_corr_J;
+        subplot(no_rows, noGNSS, i_plot);
+        plotIonoDiff(iono_diff, hours, resets, qzss_obs, 'QZSS', xaxis_label)
+    end
 end
 
 

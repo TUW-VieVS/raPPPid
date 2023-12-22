@@ -11,31 +11,36 @@ derivation = 0;
 
 
 %% ENABLE PLOTS:
-modelled_code       =   true;           % 01
-modelled_phase      =   true;           % 02
-theoretic_range     =   true;           % 03
-cutoff_plot         =   true;           % 04
-sat_pos             =   true;       	% 05+06+07
-sat_vel             =   true;       	% 08+09+10
-code_IFLC_plot       = 	true;           % 11
-phase_IFLC_plot      = 	true;           % 12
-satellite_clock     =   true;           % 13
-relativistic_clock  =   true;           % 14
-signal_runtime      =   true;           % 17
-brdc_ephemeris      =   true;           % 18
-signal_emission     =   true;           % 19
-tropo_plot          =   true;          % 20
-ZTD_plot            =   true;          % 21
-iono_plot           =   true;          % 22
-wmf_plot            =   true;          % 23
-windup              =   true;          % 24
-solid_tides         =   true;          % 25
-rec_PCO             =   true;          % 26
-rec_ARP             =   true;          % 27
-sat_PCO             =   true;          % 28
-sat_orbs_3d         = 	false;          % 29
-code_obs_plot       =   true;          % 30
-phase_obs_plot      =   true;          % 31
+modelled_code       =   false; 
+modelled_phase      =   false; 
+theoretic_range     =   false; 
+cutoff_plot         =   false; 
+sat_pos             =   false; 
+sat_vel             =   false; 
+code_IFLC_plot       = 	false; 
+phase_IFLC_plot      = 	false; 
+satellite_clock     =   false; 
+relativistic_clock  =   false; 
+signal_runtime      =   false; 
+brdc_ephemeris      =   false; 
+signal_emission     =   false; 
+tropo_plot          =   false; 
+ZTD_plot            =   false; 
+ZHD_plot            =   false; 
+ZWD_plot            =   false; 
+iono_plot           =   false; 
+wmf_plot            =   false; 
+hmf_plot            =   false; 
+windup              =   false; 
+solid_tides         =   false; 
+ocean_loading       =   false;
+polar_tides         =   true;
+rec_PCOPCV          =   true; 
+rec_ARP             =   false; 
+sat_PCOPCV          =   false; 
+sat_orbs_3d         = 	false;
+code_obs_plot       =   false; 
+phase_obs_plot      =   false; 
 
 
 %% PLOTS
@@ -130,6 +135,16 @@ if ZTD_plot
     simplePlot(model_save.ZTD, hsv_color, 'Troposphere Total Zenith Delay', derivation)
 end
 
+% hydrostatic zenith delay
+if ZHD_plot
+    simplePlot(model_save.zhd, hsv_color, 'Hydrostatic Zenith Delay', derivation)
+end
+
+% wet zenith delay
+if ZWD_plot
+    simplePlot(model_save.zwd, hsv_color, 'Wet Zenith Delay', derivation)
+end
+
 % ionospheric range correction
 if iono_plot
     simplePlot(model_save.iono, hsv_color, 'Ionospheric Range Correction', derivation)
@@ -138,6 +153,11 @@ end
 % troposphere wet mapping function
 if wmf_plot
     simplePlot(model_save.mfw, hsv_color, 'Wet Troposphere Mapping Function', derivation)
+end
+
+% troposphere hydrostatic mapping function
+if wmf_plot
+    simplePlot(model_save.mfh, hsv_color, 'Hydrostatic Troposphere Mapping Function', derivation)
 end
 
 % windup correction
@@ -150,8 +170,18 @@ if solid_tides
     simplePlot(model_save.solid_tides, hsv_color, 'Solid Tides Correction', derivation)
 end
 
+% ocean loading correction
+if ocean_loading
+    simplePlot(model_save.ocean_loading, hsv_color, 'Ocean Loading Correction', derivation)
+end
+
+% polar motion correction
+if polar_tides
+    simplePlot(model_save.polar_tides, hsv_color, 'Polar Motion Correction', derivation)
+end
+
 % receiver phase center offset + variation
-if rec_PCO
+if rec_PCOPCV
     simplePlot(model_save.PCO_rec, hsv_color, 'Receiver Phase Center Offset', derivation)
     simplePlot(model_save.PCV_rec, hsv_color, 'Receiver Phase Center Variation', derivation)
 end
@@ -162,7 +192,7 @@ if rec_ARP
 end
 
 % satellite phase center offset + variation
-if sat_PCO
+if sat_PCOPCV
     simplePlot(model_save.PCO_sat, hsv_color, 'Satellite Phase Center Offset', derivation)
     simplePlot(model_save.PCV_sat, hsv_color, 'Satellite Phase Center Varation', derivation)
 end
@@ -231,8 +261,8 @@ end
 %% AUXILIARY FUNCTIONS
 
 function [] = simplePlot(data, lescolours, title_string, derivation)
-data = full(data);
-if all(data(:) == 0)            
+data = zero2nan(data);
+if all(data(:) == 0) || all(isnan(data(:)))            
     return                      % nothing to plot
 end
 n = size(lescolours,1) + 1;     % for colors of satellites

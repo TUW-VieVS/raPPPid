@@ -15,6 +15,10 @@ switch char
         gnss_string = 'Galileo';
     case 'C'
         gnss_string = 'BeiDou';
+    case 'J'
+        gnss_string = 'QZSS';       
+    case 'I'
+        gnss_string = 'NavIC';       
     otherwise 
         gnss_string = '';
 end

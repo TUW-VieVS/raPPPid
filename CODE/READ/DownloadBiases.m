@@ -10,7 +10,7 @@ function [settings] = DownloadBiases(settings, gpsweek, dow, yyyy, mm, doy)
 %   mm              string, 2-digit, month
 %   doy             string, 3-digit, day of year
 % OUTPUT:
-%	settings        updated
+%	settings        updated with settings.BIASES.code_file
 %
 % Revision:
 %   ...
@@ -26,26 +26,31 @@ bool_archive = true;        % true if archive is downloaded
 switch settings.BIASES.code
     case 'CAS Multi-GNSS DCBs'      % ||| implement weekly and daily
         % create folder and prepare the download
-        % ||| alternative: ftp://ftp.gipp.org.cn/product/dcb/mgex/yyyy/
         target = {[Path.DATA, 'BIASES/', yyyy, '/', doy '/']};
         [~, ~] = mkdir(target{1});
         URL_host = 'igs.ign.fr:21';
         URL_folder = {['/pub/igs/products/mgex/dcb/' yyyy '/']};
-        file = {['CAS0MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz']};
-        % download, unzip, save file-path
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        file0 = {['CAS0MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz']};
+        file1 = {['CAS1MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz']};
+        % download, try different ftp servers
+        file_status = ftp_download(URL_host, URL_folder{1}, file0{1}, target{1}, true); file = file0;
+        if file_status == 0
+            URL_host = 'ftp.gipp.org.cn:21';
+            URL_folder = {['/product/dcb/mgex/' yyyy '/']};
+            file_status = ftp_download(URL_host, URL_folder{1}, file0{1}, target{1}, true); file = file0;
+        end
+        if file_status == 0
+            URL_host = 'ftp.gipp.org.cn:21';
+            URL_folder = {['/product/dcb/mgex/' yyyy '/']};
+            file_status = ftp_download(URL_host, URL_folder{1}, file1{1}, target{1}, true); file = file1;
+        end
+        % unzip if download was successful
         if file_status == 1   ||   file_status == 2
             unzip_and_delete(file, target);
         elseif file_status == 0
-            URL_host = 'ftp.gipp.org.cn:21';
-            URL_folder = {['/product/dcb/mgex/' yyyy '/']};
-            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
-            if file_status == 1   ||   file_status == 2
-                unzip_and_delete(file, target);
-            elseif file_status == 0
-                errordlg('No CAS Multi-GNSS DCBs found on server. Please specify different source!', 'Error');
-            end
+            errordlg('No CAS Multi-GNSS DCBs found on server. Please specify different source!', 'Error');
         end
+        % save file-path
         [~,file,~] = fileparts(file{1});   % remove the zip file extension
         settings.BIASES.code_file = [target{1} '/' file];
 
@@ -155,19 +160,14 @@ switch settings.BIASES.code
         % create folder and prepare download
         target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
         [~, ~] = mkdir(target{1});
-        URL_host = 'igs.ign.fr:21';
-        URL_folder = {['/pub/igs/products/mgex/' gpsweek, '/']};
-        file = {['GFZ0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
-        if file_status == 0
-            URL_host_2 = 'ftp.gfz-potsdam.de:21';
-            if str2double(gpsweek) > 2245
-                URL_folder_2 = {['/pub/GNSS/products/mgex/' gpsweek '_IGS20' '/']};
-            else
-                URL_folder_2 = {['/pub/GNSS/products/mgex/' gpsweek '/']};
-            end
-            file_status = ftp_download(URL_host_2, URL_folder_2{1}, file{1}, target{1}, true);
+        URL_host = 'ftp.gfz-potsdam.de:21';
+        if str2double(gpsweek) > 2245
+            URL_folder = {['/pub/GNSS/products/mgex/' gpsweek '_IGS20' '/']};
+        else
+            URL_folder = {['/pub/GNSS/products/mgex/' gpsweek '/']};
         end
+        file = {['GBM0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
         if file_status == 1   ||   file_status == 2
             unzip_and_delete(file(1), target(1));
         elseif file_status == 0

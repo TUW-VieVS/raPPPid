@@ -43,9 +43,14 @@ filtersetts.ADJ.filter.Q_rclk_gal = str2double( get(handles.edit_filter_galileo_
 filtersetts.ADJ.filter.dynmodel_rclk_gal = get(handles.popupmenu_filter_galileo_offset_dynmodel, 'Value')-1;
 
 % Receiver Clock Error (BeiDou)
-filtersetts.ADJ.filter.var_rclk_bds = str2double( get(handles.edit_filter_beidou_offset_sigma0, 'String') )^2;    % a-priori-variance of GAL receiver clock
-filtersetts.ADJ.filter.Q_rclk_bds = str2double( get(handles.edit_filter_beidou_offset_Q, 'String') )^2;          % system noise of GAL receiver clock
+filtersetts.ADJ.filter.var_rclk_bds = str2double( get(handles.edit_filter_beidou_offset_sigma0, 'String') )^2;    % a-priori-variance of BDS receiver clock
+filtersetts.ADJ.filter.Q_rclk_bds = str2double( get(handles.edit_filter_beidou_offset_Q, 'String') )^2;          % system noise of BDS receiver clock
 filtersetts.ADJ.filter.dynmodel_rclk_bds = get(handles.popupmenu_filter_beidou_offset_dynmodel, 'Value')-1;
+
+% Receiver Clock Error (QZSS)
+filtersetts.ADJ.filter.var_rclk_qzss = str2double( get(handles.edit_filter_qzss_offset_sigma0, 'String') )^2;    % a-priori-variance of QZSS receiver clock
+filtersetts.ADJ.filter.Q_rclk_qzss = str2double( get(handles.edit_filter_qzss_offset_Q, 'String') )^2;          % system noise of QZSS receiver clock
+filtersetts.ADJ.filter.dynmodel_rclk_qzss = get(handles.popupmenu_filter_qzss_offset_dynmodel, 'Value')-1;
 
 % Receiver Differential Code Biases
 filtersetts.BIASES.estimate_rec_dcbs = get(handles.checkbox_estimate_rec_dcbs, 'Value');      % en/disable estimation of receiver DCBs

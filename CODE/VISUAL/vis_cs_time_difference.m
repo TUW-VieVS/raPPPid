@@ -1,5 +1,6 @@
 function [] = vis_cs_time_difference(storeData, sys, degree, thresh)
-% Plots the Single-Frequency-Cycle-Slip-Detection
+% Plots the cycle slip detection based on the time difference (check 
+% cycleSlip_TimeDifference.m).
 %
 % INPUT:
 %   storeData       struct, collected data from all processed epochs
@@ -8,6 +9,9 @@ function [] = vis_cs_time_difference(storeData, sys, degree, thresh)
 %   thresh          threshold for detecting cycle slip [m]
 % OUTPUT:
 %   []
+% 
+% Revision:
+%   2023/11/09, MFWG: adding QZSS
 % 
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
 %
@@ -39,27 +43,31 @@ ticks = sow2hhmm(vec);
 % Plot the Detection of Cycle-Slips with Single-Frequency-Data
 plotit(mod(storeData.gpstime,86400), full(storeData.cs_L1_diff), thresh, sys, vec, ticks, mod(reset_sow,86400), degree)
 
-end
 
 
 function [] = plotit(x, L1_diff, thresh, sys, vec, ticks, resets, degree)
 if sys == 'G'           % GPS
-    loop1 = 1:16;
+    loop1 =  1:16;
     loop2 = 17:32;
-    col = 'r';
+    col = DEF.COLOR_G;
 elseif sys == 'R'       % GLONASS
     loop1 = 101:116;
     loop2 = 117:132;
-    col = 'c';
+    col = DEF.COLOR_R;
 elseif sys == 'E'      	% Galileo
     loop1 = 201:216;
     loop2 = 217:232;
-    col = 'b';
+    col = DEF.COLOR_E;
 elseif sys == 'C'      	% BeiDou
     loop1 = 301:316;
     loop2 = 317:332;
-    col = 'm';
+    col = DEF.COLOR_C;
+elseif sys == 'J'      	% QZSS
+    loop1 = 401:407;
+    loop2 = [];
+    col = DEF.COLOR_J;    
 end
+
     
 %% plot the satellites G01-G16
 fig1 = figure('Name', ['Cycle-Slip Detection Time-Difference ', sys, '01-16'], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
@@ -76,7 +84,7 @@ for i = loop1           % loop over satellites
         subplot(4, 4, prn)
         y = L1_diff(:,i);           % L1 difference
         y(y==0) = NaN;
-        plot(x, y, [col '.'])       % plot L1 difference
+        plot(x, y, '.', 'Color', col)
         hold on 
         hline(thresh, 'g-')         % plot positive threshold
         hline(-thresh, 'g-')        % plot negative threshold
@@ -100,6 +108,11 @@ for i = loop1           % loop over satellites
     end
 end
 set(findall(gcf,'type','text'),'fontSize',8)
+
+if isempty(loop2)
+    return
+end
+
 
 %% plot the satellites G17-G32
 fig2 = figure('Name', ['Cycle-Slip-Detection Time Difference ', sys, '17-32'], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
@@ -115,7 +128,7 @@ for i = loop2           % loop over satellites
         prn = mod(i,100);
         subplot(4, 4, prn-16)
         y(y==0) = NaN;
-        plot(x, y, [col '.'])       % plot L1 difference
+        plot(x, y, '.', 'Color', col)
         hold on 
         hline(thresh, 'g-')         % plot positive threshold
         hline(-thresh, 'g-')        % plot negative threshold
@@ -140,4 +153,3 @@ for i = loop2           % loop over satellites
 end
 set(findall(gcf,'type','text'),'fontSize',8)
 
-end             % end of plotit

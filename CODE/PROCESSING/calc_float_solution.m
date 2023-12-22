@@ -55,22 +55,26 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
     end
     
     % --- receiver clock error (or time offsets) and DCBs
-    model.dt_rx_clock(Epoch.gps, :) = Adjust.param( 5);
-    model.dt_rx_clock(Epoch.glo, :) = Adjust.param( 5) + Adjust.param( 8);
-    model.dt_rx_clock(Epoch.gal, :) = Adjust.param( 5) + Adjust.param(11);
-    model.dt_rx_clock(Epoch.bds, :) = Adjust.param( 5) + Adjust.param(14);
+    model.dt_rx_clock(Epoch.gps,  :) = Adjust.param( 5);
+    model.dt_rx_clock(Epoch.glo,  :) = Adjust.param( 5) + Adjust.param( 8);
+    model.dt_rx_clock(Epoch.gal,  :) = Adjust.param( 5) + Adjust.param(11);
+    model.dt_rx_clock(Epoch.bds,  :) = Adjust.param( 5) + Adjust.param(14);
+	model.dt_rx_clock(Epoch.bds,  :) = Adjust.param( 5) + Adjust.param(14);
+	model.dt_rx_clock(Epoch.qzss, :) = Adjust.param( 5) + Adjust.param(17);
     if settings.BIASES.estimate_rec_dcbs
         if num_freq > 1
-            model.dcbs(Epoch.gps, 2) = Adjust.param( 6);
-            model.dcbs(Epoch.glo, 2) = Adjust.param( 9);
-            model.dcbs(Epoch.gal, 2) = Adjust.param(12);
-            model.dcbs(Epoch.bds, 2) = Adjust.param(15);
+            model.dcbs(Epoch.gps,  2) = Adjust.param( 6);
+            model.dcbs(Epoch.glo,  2) = Adjust.param( 9);
+            model.dcbs(Epoch.gal,  2) = Adjust.param(12);
+            model.dcbs(Epoch.bds,  2) = Adjust.param(15);
+			model.dcbs(Epoch.qzss, 2) = Adjust.param(18);
         end
         if num_freq > 2
-            model.dcbs(Epoch.gps, 3) = Adjust.param( 7);
-            model.dcbs(Epoch.glo, 3) = Adjust.param(10);
-            model.dcbs(Epoch.gal, 3) = Adjust.param(13);
-            model.dcbs(Epoch.bds, 3) = Adjust.param(16);
+            model.dcbs(Epoch.gps,  3) = Adjust.param( 7);
+            model.dcbs(Epoch.glo,  3) = Adjust.param(10);
+            model.dcbs(Epoch.gal,  3) = Adjust.param(13);
+            model.dcbs(Epoch.bds,  3) = Adjust.param(16);
+			model.dcbs(Epoch.qzss, 3) = Adjust.param(19);
         end
     end
     
@@ -118,10 +122,10 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
     
     % --- check if too many satellites have been excluded because of e.g. 
     % elevation cutoff, check_omc, missing broadcast corrections...
-    n_gps = sum(Epoch.gps & ~Epoch.exclude);    n_glo = sum(Epoch.glo & ~Epoch.exclude);
-    n_gal = sum(Epoch.gal & ~Epoch.exclude);    n_bds = sum(Epoch.bds & ~Epoch.exclude);
-    bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, ...
-        n_gps, n_glo, n_gal, n_bds, settings.INPUT.use_GNSS);
+    n_gps = sum(Epoch.gps & ~Epoch.exclude);   n_glo = sum(Epoch.glo & ~Epoch.exclude);
+    n_gal = sum(Epoch.gal & ~Epoch.exclude);   n_bds = sum(Epoch.bds & ~Epoch.exclude);   n_qzss = sum(Epoch.qzss & ~Epoch.exclude);
+    bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, settings.INPUT.use_QZSS, ...
+        n_gps, n_glo, n_gal, n_bds, n_qzss, settings.INPUT.use_GNSS);
     if ~bool_enough_sats && ~settings.INPUT.bool_parfor
         fprintf(2, 'Not enough satellites for adjustment (Epoch %d)           \n', Epoch.q)
         Adjust.res = zeros(2*no_sats*settings.INPUT.proc_freqs,1);
@@ -181,8 +185,8 @@ if ~strcmp(settings.ADJ.filter.type,'Kalman Filter') && norm(dx.x(1:3)) >= DEF.I
     Adjust.res = NaN(numel(Adjust.omc),1);
 end
 
-% Phase + Code - Processing AND at least one satellite is under cutoff, set 
-% ambiguities to zero (because under cutoff)
+% Code + Phase - Processing AND at least one satellite is excluded:
+% -> set ambiguities to zero
 if strcmpi(settings.PROC.method, 'Code + Phase')   &&   any(Epoch.exclude(:,1))         
     kk = 1:(num_freq*no_sats);
     kk = kk(Epoch.exclude(:));              % index-numbers of satellites and their frequencies under cutoff
@@ -190,13 +194,13 @@ if strcmpi(settings.PROC.method, 'Code + Phase')   &&   any(Epoch.exclude(:,1))
     Adjust.param(idx_amb) = 0;              % reset ambiguity
     Adjust.param_sigma(idx_amb,:) = 0;      % reset covariance columns
     Adjust.param_sigma(:,idx_amb) = 0;      % reset covariance rows
-    for i=1:length(idx_amb)               	% reset variance
+    for i = 1:length(idx_amb)             	% reset variance
         Adjust.param_sigma( idx_amb(i), idx_amb(i) ) = settings.ADJ.filter.var_amb;
     end
 end
 
-% If ionosphere delay is estimated AND at least one satellite is under
-% cutoff, set estimated ionospheric delay to zero (because under cutoff)
+% Ionospheric delay is estimated AND at least one satellite is excluded:
+% -> set estimated ionospheric delay to zero
 if any(Epoch.exclude(:,1)) && (strcmpi(settings.IONO.model, 'Estimate with ... as constraint') || strcmpi(settings.IONO.model, 'Estimate'))      
     kk = 1:100;
     kk = kk(Epoch.exclude(:,1));	% index-numbers of satellites and their frequencies under cutoff
@@ -207,20 +211,20 @@ if any(Epoch.exclude(:,1)) && (strcmpi(settings.IONO.model, 'Estimate with ... a
     Adjust.param(idx_iono) = 0;                 % reset estimated ionospheric delay
     Adjust.param_sigma(idx_iono,:) = 0;         % reset covariance columns
     Adjust.param_sigma(:,idx_iono) = 0;         % reset covariance rows
-    for i=1:length(idx_iono)                    % reset variance
+    for i = 1:length(idx_iono)                  % reset variance
         Adjust.param_sigma( idx_iono(i), idx_iono(i) ) = settings.ADJ.filter.var_iono;
     end
 end
 
 % If a cycle slip is found reset the float ambiguities
 if contains(settings.PROC.method, '+ Phase') && any(Epoch.cs_found(:))
-    kkk = 1:399;
-    kkk = kkk(Epoch.cs_found(:));       % index-numbers of satellites and their frequencies under cutoff
-    idx_cs = kkk+NO_PARAM;              % indices where to reset
+    kkkk = 1:410;
+    kkkk = kkkk(Epoch.cs_found(:));     % index-numbers of satellites and their frequencies under cutoff
+    idx_cs = kkkk+NO_PARAM;             % indices where to reset
     Adjust.param(idx_cs) = 0;       	% reset ambiguity
     Adjust.param_sigma(idx_cs,:) = 0; 	% reset covariance columns
     Adjust.param_sigma(:,idx_cs) = 0;  	% reset covariance rows
-    for i=1:length(idx_cs)           	% reset variance
+    for i = 1:length(idx_cs)           	% reset variance
         Adjust.param_sigma( idx_cs(i), idx_cs(i) ) = settings.ADJ.filter.var_amb;
     end
 end

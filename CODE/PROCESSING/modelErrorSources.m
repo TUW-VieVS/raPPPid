@@ -31,16 +31,20 @@ n_proc_frq = settings.INPUT.proc_freqs; % number of processed frequencies (e.g. 
 n_num_frq  = settings.INPUT.num_freqs;  % number of input frequencies (e.g. 2 for IF-LC)
 frqs = 1:n_proc_frq;                    % 1 : # processed frequencies
 j_proc = 1:n_num_frq;                   % 1 : # input frequencies
-idx_frqs_gps = settings.INPUT.gps_freq_idx(j_proc);
-idx_frqs_glo = settings.INPUT.glo_freq_idx(j_proc);
-idx_frqs_gal = settings.INPUT.gal_freq_idx(j_proc);
-idx_frqs_bds = settings.INPUT.bds_freq_idx(j_proc);
+
+% indices of processed frequencies
+idx_frqs_gps  = settings.INPUT.gps_freq_idx(j_proc);
+idx_frqs_glo  = settings.INPUT.glo_freq_idx(j_proc);
+idx_frqs_gal  = settings.INPUT.gal_freq_idx(j_proc);
+idx_frqs_bds  = settings.INPUT.bds_freq_idx(j_proc);
+idx_frqs_qzss = settings.INPUT.qzss_freq_idx(j_proc);
 % remove frequencies set to OFF (if different number of frequencies is 
 % processed for different GNSS)
 idx_frqs_gps(idx_frqs_gps>DEF.freq_GPS(end)) = [];
 idx_frqs_glo(idx_frqs_glo>DEF.freq_GLO(end)) = [];
 idx_frqs_gal(idx_frqs_gal>DEF.freq_GAL(end)) = [];
 idx_frqs_bds(idx_frqs_bds>DEF.freq_BDS(end)) = [];
+idx_frqs_qzss(idx_frqs_qzss>DEF.freq_QZSS(end)) = [];
 
 
 %% Epoch-specific corrections
@@ -49,17 +53,29 @@ idx_frqs_bds(idx_frqs_bds>DEF.freq_BDS(end)) = [];
 
 if isempty(model)
     model = init_struct_model(num_sat, n_proc_frq, n_num_frq);  	% Init struct model
+    
     % --- Calculate hour and approximate sun and moon position for epoch ---
     h = mod(Epoch.gps_time,86400)/3600;
     model.sunECEF  = sunPositionECEF (obs.startdate(1), obs.startdate(2), obs.startdate(3), h);
     model.moonECEF = moonPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h);
-    % --- Calculate epoch-dependent tide corrections (only approximate position needed) ---
-    if settings.OTHER.bool_solid_tides
+    
+    % --- Calculate epoch-dependent station displacements (only approximate position needed) ---
+    if settings.OTHER.bool_solid_tides                                  % Solid Earth tides
         model.solid_tides_ECEF = solid_tides(pos_XYZ, pos_WGS84.lat, pos_WGS84.lon, model.sunECEF*1000, model.moonECEF, Epoch.mjd);
     end
-    if settings.OTHER.ocean_loading && ~isempty(input.OTHER.OcLoad)
+    if settings.OTHER.ocean_loading && ~isempty(input.OTHER.OcLoad)     % Ocean loading
         model.ocean_loading_ECEF = ocean_loading(Epoch.gps_time, pos_XYZ, input.OTHER.OcLoad, 19+obs.leap_sec, obs.startGPSWeek);
     end
+    if settings.OTHER.polar_tides && ~isempty(input.ORBCLK.ERP)         % Rotational deformation due to polar motion (pole tide)
+        if size(input.ORBCLK.ERP(:,1),1) > 1
+            xp = interp1(input.ORBCLK.ERP(:,1), input.ORBCLK.ERP(:,2), Epoch.mjd, 'linear');
+            yp = interp1(input.ORBCLK.ERP(:,1), input.ORBCLK.ERP(:,3), Epoch.mjd, 'linear');
+        else
+            xp = input.ORBCLK.ERP(:,2); yp = input.ORBCLK.ERP(:,3);
+        end
+        [model.polar_tides_ECEF, ~] = ctpole(Epoch.mjd, pos_XYZ, xp, yp);
+    end
+    
     % --- Rotation Matrix from Local Level to ECEF ---
     model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
 end
@@ -108,12 +124,13 @@ end
 
 for i_sat = 1:num_sat                     
     %% Preparations
-    prn = Epoch.sats(i_sat);       % [1-99] GPS, [101-199] GLO, [201-250] GAL, [301-399] BDS
+    prn = Epoch.sats(i_sat);        % [1-99] GPS, [101-199] GLO, [201-250] GAL, [301-399] BDS, [401-410] QZSS
     sv = mod(prn,100);
-    isGLO = Epoch.glo(i_sat);      % is current satellite a glonass sat.?
-    isGPS = Epoch.gps(i_sat);      % is current satellite a gps sat.?
-    isGAL = Epoch.gal(i_sat);      % is current satellite a galileo sat.?
-    isBDS = Epoch.bds(i_sat);      % is current satellite a beidou sat.?
+    isGLO  = Epoch.glo(i_sat);   	% is current satellite a glonass sat.?
+    isGPS  = Epoch.gps(i_sat);      % is current satellite a gps sat.?
+    isGAL  = Epoch.gal(i_sat);      % is current satellite a galileo sat.?
+    isBDS  = Epoch.bds(i_sat);      % is current satellite a beidou sat.?
+    isQZSS = Epoch.qzss(i_sat);     % is current satellite a QZSS sat.?
     f1 = Epoch.f1(i_sat);   f2 = Epoch.f2(i_sat);   f3 = Epoch.f3(i_sat);
     if strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
         y2 = f1.^2 ./ f2.^2;            % coefficients of 3-Frequency-IF-LC
@@ -127,7 +144,7 @@ for i_sat = 1:num_sat
     % get cutoff (could be already set!) and satellite status
     exclude = Epoch.exclude(i_sat);	status = Epoch.sat_status(i_sat,:);
     % receiver clock error [s]
-	dt_rx = (param(5) + isGLO*param(8) + isGAL*param(11) + isBDS*param(14))/Const.C;      
+	dt_rx = (param(5) + isGLO*param(8) + isGAL*param(11) + isBDS*param(14) + isQZSS*param(17))/Const.C;      
     
     %% get input data and frequency indices depending on GNSS of satellite
     if isGPS
@@ -146,7 +163,6 @@ for i_sat = 1:num_sat
         % PCO satellite
         offset_LL = input.OTHER.PCO.sat_GLO(sv, 2:4, 1:5);
         offset_LL = reshape(offset_LL,3,5,1);
-        
     elseif isGAL
         j = idx_frqs_gal;
         PCO_rec = input.OTHER.PCO.rec_GAL;
@@ -155,7 +171,6 @@ for i_sat = 1:num_sat
         % PCO satellite
         offset_LL = input.OTHER.PCO.sat_GAL(sv, 2:4, 1:5);
         offset_LL = reshape(offset_LL,3,5,1);
-        
     elseif isBDS
         j = idx_frqs_bds;
         PCO_rec = input.OTHER.PCO.rec_BDS;
@@ -163,6 +178,14 @@ for i_sat = 1:num_sat
         PCV_sat = input.OTHER.PCV.sat_BDS(:,sv);
         % PCO satellite
         offset_LL = input.OTHER.PCO.sat_BDS(sv, 2:4, 1:5);
+        offset_LL = reshape(offset_LL,3,5,1);
+    elseif isQZSS
+        j = idx_frqs_qzss;
+        PCO_rec = input.OTHER.PCO.rec_QZSS;
+        PCV_rec = input.OTHER.PCV.rec_QZSS;
+        PCV_sat = input.OTHER.PCV.sat_QZSS(:,sv);
+        % PCO satellite
+        offset_LL = input.OTHER.PCO.sat_QZSS(sv, 2:4, 1:5);
         offset_LL = reshape(offset_LL,3,5,1);
     end       
         
@@ -191,7 +214,7 @@ for i_sat = 1:num_sat
     % --- Clock correction: with navigation data or precise clocks from .clk-file ---
     % Clock correction in seconds, accurate enough with approximate Ttr
     dT_sat = 0;      % just for simulated data when satellite clock is perfect
-    [dT_sat, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, Epoch.corr2brdc_clk(:,prn));
+    [dT_sat, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, isQZSS, k, settings, Epoch.corr2brdc_clk(:,prn));
     if isnan(dT_sat) || dT_sat == 0 || noclock       % no clock correction
         % if ~settings.INPUT.bool_parfor; fprintf('No precise clock data for satellite %d in SOW %0.3f              \n', prn, Ttr); end
         exclude = true;                      % eliminate satellite
@@ -207,7 +230,7 @@ for i_sat = 1:num_sat
         Ttr = Epoch.gps_time - tau;   	% time of emission = time of obs. - runtime
         
         % --- Satellite-Orbit: precise ephemeris (.sp3-file) or broadcast navigation data (perhaps + correction stream) ---
-        [X, V, exclude, status] = satelliteOrbit(prn, Ttr, input, isGPS, isGLO, isGAL, isBDS, k, settings, exclude, status, Epoch.corr2brdc_orb(:,prn));
+        [X, V, exclude, status] = satelliteOrbit(prn, Ttr, input, isGPS, isGLO, isGAL, isBDS, isQZSS, k, settings, exclude, status, Epoch.corr2brdc_orb(:,prn));
         
         % --- correction of satellite ECEF position for earth rotation during runtime tau ---
         tau = tau - dt_rx;  % Correct tau for receiver clock error to avoid jumps in sat position
@@ -220,7 +243,7 @@ for i_sat = 1:num_sat
         
         % --- Relativistic correction ---
         dT_rel = -2/Const.C^2 * dot2(X_rot, V_rot);     % [s], ICD GPS, 20.3.3.3.3.1
-        if isGLO && settings.ORBCLK.bool_brdc %&& input.Eph_GLO(3,k) ~= 0  % ||| GLO
+        if isGLO && settings.ORBCLK.bool_brdc %&& input.ORBCLK.Eph_GLO(3,k) ~= 0  % ||| GLO
             dT_rel = 0;     % already applied in satelliteClock.m
         end
     end % end of for step = 1:2 - Iteration to estimate relativistic effect and interpolate satellite position
@@ -232,9 +255,10 @@ for i_sat = 1:num_sat
     % --- Azimuth, Elevation, zenith distance, cutoff-angle ---
     [az, elev] = topocent(pos_XYZ, X_rot-pos_XYZ); 	% calculate azimuth and elevation [°]
     if elev < settings.PROC.elev_mask            	% elevation is under cut-off-angle
-        exclude = true;                            	% eliminate satellite
-        status(:) = 2;
-    end   
+        exclude = true;         % eliminate satellite
+        status(:) = 2;          % set satellite status
+        Epoch.tracked(prn) = 1; % reset number of tracked epochs
+    end
     
     
     % ||| geodetic2aer.m could be used instead (vectoriell)
@@ -247,7 +271,8 @@ for i_sat = 1:num_sat
     % --- Satellite Orientation ---
     if ~settings.ORBCLK.bool_obx || ~isfield(input.ORBCLK, 'OBX')
         SatOr_ECEF = getSatelliteOrientation(X_rot, model.sunECEF*1000);    % satellite orientation in ECEF
-        
+                            % ||| this simple yaw-steering model, might not
+                            % be true for all satellites (e.g., QZSS)
     else    % attitude data from ORBEX file
         dt = abs(Ttr - input.ORBCLK.OBX.ATT.sow);
         if min(dt) < 16     % nearest attitude information is closer than 16 seconds
@@ -498,7 +523,27 @@ for i_sat = 1:num_sat
     
     
     
-    %% Tide Displacement and eclipsing satellites
+    %% Station displacements
+    % For each displacement the caused range correction is calculated
+    % as a projection onto the line of sight (dot product)
+    
+    % --- Solid Earth Tides  ---
+    dX_solid_tides_corr = 0;
+    if settings.OTHER.bool_solid_tides
+        dX_solid_tides_corr = dot2(los0, model.solid_tides_ECEF);	
+    end
+    
+    % --- Ocean Loading ---
+    dX_ocean_loading = 0;
+    if settings.OTHER.ocean_loading
+        dX_ocean_loading = dot2(los0, model.ocean_loading_ECEF); 	
+    end    
+    
+    % --- Rotational deformation due to polar motion (pole tide) ---
+    dX_polar_tides= 0;
+    if settings.OTHER.polar_tides         % [17]: p733
+        dX_polar_tides= dot2(los0, model.polar_tides_ECEF); 
+    end   
     
     % --- Correction for earth rotation ---
     % [09]: p61 if you calculate signal-travel-time with (5.134) the the 
@@ -506,20 +551,8 @@ for i_sat = 1:num_sat
     % distance is used but this should make no difference and therefore the
     % correction is obsolete
     
-    % --- Solid Tides: Calculate range correction for displacement ---
-    dX_solid_tides_corr = 0;
-    if settings.OTHER.bool_solid_tides
-        dX_solid_tides_corr = dot2(los0, model.solid_tides_ECEF);	% project onto line of sight
-    end
-    
-    % --- Ocean Loading: Calculate range correction for displacement ---
-    dX_ocean_loading = 0;
-    if settings.OTHER.ocean_loading
-        dX_ocean_loading = dot2(los0, model.ocean_loading_ECEF); 	% project onto line of sight
-    end    
-   
-    
-    % --- Eclipsing Satellites ---
+
+    %% Eclipsing Satellites
     % Check if satellite is in the shadow of the Earth:
     % https://gssc.esa.int/navipedia/index.php/Satellite_Eclipses
     if settings.OTHER.bool_eclipse && ~settings.ORBCLK.bool_obx
@@ -635,6 +668,7 @@ for i_sat = 1:num_sat
     model.trop(i_sat,frqs) = trop;              % Troposphere delay for elevation [m]
     model.iono(i_sat,frqs) = iono(frqs);        % Ionosphere delay [m]
     model.mfw(i_sat,frqs)  = mfw;               % Wet tropo mapping function []
+    model.mfh(i_sat,frqs)  = mfh;               % Hydrostatic tropo mapping function []
     model.zwd(i_sat,frqs)  = zwd;               % zenith wet delay (need for building a priori + estimated zwd later) [m]
     model.zhd(i_sat,frqs)  = zhd;               % modeled zenith hydrostativ delay []
     % Observation direction
@@ -643,9 +677,10 @@ for i_sat = 1:num_sat
     % Windup
     model.delta_windup(i_sat,frqs) = delta_windup;          % Phase windup effect [cycles]
     model.windup(i_sat,frqs)       = windupCorr(frqs);      % Phase windup effect, scaled to frequency [m]
-    % tides
+    % station displacements
     model.dX_solid_tides_corr(i_sat,frqs) = dX_solid_tides_corr; 	% Solid tides range correction [m]
     model.dX_ocean_loading(i_sat,frqs)    = dX_ocean_loading;     	% Ocean loading range correction [m]
+    model.dX_polar_tides(i_sat,frqs)       = dX_polar_tides;        	% Polar motion range correction [m]
     % group delay variation
     model.dX_GDV(i_sat,frqs)  = dX_GDV(frqs);                           % Group delay variation correction [m]
     % phase center offsets and variations

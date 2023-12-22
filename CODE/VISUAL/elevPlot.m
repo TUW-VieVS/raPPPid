@@ -9,6 +9,9 @@ function elevPlot(el, cutoff, settings, label_x, hours)
 % OUTPUT:
 %   []
 %
+% Revision:
+%   2023/12/21, MFWG: adding QZSS to plots
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -16,15 +19,17 @@ elev_mask = settings.PROC.elev_mask;
 el = full(el);
 
 % true if GNSS was processed and should be plotted
-isGPS = settings.INPUT.use_GPS;
-isGLO = settings.INPUT.use_GLO;
-isGAL = settings.INPUT.use_GAL;
-isBDS = settings.INPUT.use_BDS;
-noGNSS = isGPS + isGLO + isGAL + isBDS;
+isGPS  = settings.INPUT.use_GPS;
+isGLO  = settings.INPUT.use_GLO;
+isGAL  = settings.INPUT.use_GAL;
+isBDS  = settings.INPUT.use_BDS;
+isQZSS = settings.INPUT.use_QZSS;
+noGNSS = isGPS + isGLO + isGAL + isBDS + isQZSS;
 idx_G = 1:DEF.SATS_GPS;
 idx_R = 100 + (1:DEF.SATS_GLO);
 idx_E = 200 + (1:DEF.SATS_GAL);
 idx_C = 300 + (1:DEF.SATS_BDS);
+idx_J = 400 + (1:DEF.SATS_QZSS);
 % determine array of subplots
 no_rows = noGNSS;
 no_cols = 1;
@@ -68,7 +73,10 @@ if isBDS
     subplot(no_rows, no_cols, i_plot)
     plotElev(el(:,idx_C)', elev_mask, DEF.SATS_BDS, 'BeiDou', label_x, hours)
 end
-
+if isQZSS
+    subplot(no_rows, no_cols, i_plot)
+    plotElev(el(:,idx_J)', elev_mask, DEF.SATS_QZSS, 'QZSS', label_x, hours)
+end
 end
 
 
@@ -90,8 +98,10 @@ len1 = elev_mask*10;
 len2 = len-len1;
 cbar1 = gray(len1*2);
 cbar2 = jet(len2);
-cm = [cbar1(end-1:-1:len1, :); cbar2];
-colormap(cm)
+if ~isempty(cbar1) && ~isempty(cbar2)
+    cm = [cbar1(end-1:-1:len1, :); cbar2];
+    colormap(cm)
+end
 caxis([0,90])
 ylim([1, no_prn+1])
 yticks(1.5:no_prn+0.5)

@@ -52,7 +52,7 @@ x_pred(zero_columns) = [];
 n = numel(omc);         % number of observations
 m = sum(sum(A)~=0);   	% number of parameters = number of rows in Design-Matrix
 r = n - m;              % Redundancy
-Qxx = cholinv(A'*P_l*A + P_x);              % Updated Cofactor Matrix of Parameters, 
+Qxx = cholinv(A'*P_l*A + P_x);              % Updated Cofactor Matrix of Parameters 
 x_adj = Qxx * (P_x*x_pred + A'*P_l*omc);	% Updated Parameters, [01]: (7.113) with P_x = Q_x^-1 and P_l = Q_l^-1:
 l_adj = A * x_adj;                          % Adjusted Observations
 v = l_adj - omc;                            % Residual vector

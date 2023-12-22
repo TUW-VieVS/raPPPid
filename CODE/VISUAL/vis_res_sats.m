@@ -7,7 +7,10 @@ function [] = vis_res_sats(storeData, sys, num_freq, phase_on, fixed_on)
 %   num_freq        number of processed frequencies
 %   phase_on        boolean, true when phase was processed
 %   fixed_on        boolean, true if fixed solution is plotted
-%
+% 
+% Revision:
+%   2023/11/09, MFWG: adding QZSS
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -26,6 +29,9 @@ switch sys
     case 'C'            % BeiDou
     loop1 = 301:316;
     loop2 = 317:332;
+    case 'J'            % QZSS
+    loop1 = 401:407;
+    loop2 = [];    
 end
 
 

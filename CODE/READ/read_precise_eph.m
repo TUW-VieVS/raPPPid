@@ -1,5 +1,5 @@
-function [GPS, GLO, GAL, BDS] = read_precise_eph(filename, bool_check)
-% Reads precise ephemerides for GPS, GLO, GAL and BDS from sp3 file
+function [GPS, GLO, GAL, BDS, QZSS] = read_precise_eph(filename, bool_check)
+% Reads precise ephemerides for GPS, GLO, GAL, BDS and QZSS from sp3 file
 % This function is part of raPPPid (VieVS PPP)
 % 
 % INPUT:
@@ -14,17 +14,18 @@ function [GPS, GLO, GAL, BDS] = read_precise_eph(filename, bool_check)
 %       GPS.y:          y coordinate of sat. orbit [m]
 %       GPS.z:          z coordinate of sat. orbit [m]
 %       GPS.dt:         clock correction [s]
-%       GLO, GAL and BDS are of the same structure as GPS
+% 
+%       GLO, GAL, BDS, and QZSS: structs, same structure as GPS
 %  
 %   Revision:
-%   ...
+%   2023/11/03, MFWG: adding QZSS
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 % Initialization
 if nargin == 1;     bool_check = true;     end
-GPS = [];   GLO = [];   GAL = [];   BDS = [];
+GPS = [];   GLO = [];   GAL = [];   BDS = [];   QZSS = [];
 
 % open and read sp3-file
 fid = fopen(filename);          % open file
@@ -55,8 +56,8 @@ while i <= no_lines         % loop till end of file
     
     tline = lines{i};   i = i + 1;
     while tline(1) ~= '*' && tline(1) ~= 'E'            % loop over data entry
-        % - jump over QZSS
-        if tline(2) == 'J'
+        % - jump over other GNSS
+        if ~contains('GRECJ', tline(2))
             tline = lines{i};   i = i + 1;
             continue
         end
@@ -84,6 +85,8 @@ while i <= no_lines         % loop till end of file
                 GAL = save_position(GAL, idx, prn, sow, X, Y, Z, dT);
             elseif gnss == 'C'
                 BDS = save_position(BDS, idx, prn, sow, X, Y, Z, dT);
+            elseif gnss == 'J'
+                QZSS = save_position(QZSS, idx, prn, sow, X, Y, Z, dT);                
             end
         elseif type == 'V'      % Velocity data
             if gnss == 'G'
@@ -94,6 +97,8 @@ while i <= no_lines         % loop till end of file
                 GAL = save_velocity(GAL, idx, prn, sow, X, Y, Z, dT);
             elseif gnss == 'C'
                 BDS = save_velocity(BDS, idx, prn, sow, X, Y, Z, dT);
+            elseif gnss == 'J'
+                QZSS = save_velocity(QZSS, idx, prn, sow, X, Y, Z, dT);
             end
         end
         
@@ -108,6 +113,7 @@ GPS = checkPrecEph(GPS, DEF.SATS_GPS, bool_check);
 GLO = checkPrecEph(GLO, DEF.SATS_GLO, bool_check);
 GAL = checkPrecEph(GAL, DEF.SATS_GAL, bool_check);
 BDS = checkPrecEph(BDS, DEF.SATS_BDS, bool_check);
+QZSS = checkPrecEph(QZSS, DEF.SATS_QZSS, bool_check);
 
 
 

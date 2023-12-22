@@ -17,7 +17,7 @@ function [x,y,z] = ell2xyz_GT(lat,lon,h,a,e2)
 % All rights reserved.
 % Email: mike@craymer.com
 
-if nargin ~= 3 & nargin ~= 5
+if nargin ~= 3 && nargin ~= 5
   warning('Incorrect number of input arguments');
   return
 end
@@ -26,6 +26,7 @@ if nargin == 3
 end
 
 v=a./sqrt(1-e2*sin(lat).*sin(lat));
+
 x=(v+h).*cos(lat).*cos(lon);
 y=(v+h).*cos(lat).*sin(lon);
 z=(v.*(1-e2)+h).*sin(lat);

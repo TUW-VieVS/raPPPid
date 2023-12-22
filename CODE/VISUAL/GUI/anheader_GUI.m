@@ -27,7 +27,7 @@ function rheader = anheader_GUI(file)
 %       receiver        string, receiver of RINEX file
 %
 % Revision:
-%   ...
+%   2023/10/31, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -56,11 +56,13 @@ gps_ranking = DEF.RANKING_GPS;
 glo_ranking = DEF.RANKING_GLO;
 gal_ranking = DEF.RANKING_GAL;
 bds_ranking = DEF.RANKING_BDS;
+qzss_ranking = DEF.RANKING_QZSS;
 % default naming of frequency
 ind_gps_freq = [0 0 0];
 ind_glo_freq = [0 0 0];
 ind_gal_freq = [0 0 0];
 ind_bds_freq = [0 0 0];
+ind_qzss_freq = [0 0 0];
 
 % detect RINEX version
 version_full = line(6:9);
@@ -71,8 +73,8 @@ if ~contains(upper(line), 'OBSERVATION')   	% check if this RINEX File contains 
     ind_gps_freq = [];
     ind_gal_freq = [];
     rheader = save2struct(pos_approx, version_full, interval, first_obs, last_obs, ...
-        time_system, gps_ranking, glo_ranking, gal_ranking, bds_ranking, ...
-        ind_gps_freq, ind_glo_freq, ind_gal_freq, ind_bds_freq, station, station_long, ...
+        time_system, gps_ranking, glo_ranking, gal_ranking, bds_ranking, qzss_ranking, ...
+        ind_gps_freq, ind_glo_freq, ind_gal_freq, ind_bds_freq, ind_qzss_freq, station, station_long, ...
         antenna_type, receiver_type);
     return
 end
@@ -134,8 +136,8 @@ while 1
     % get observed frequencies (RINEX 3 onwards)
     if floor(version_full) >= 3 && contains(line, 'SYS / # / OBS TYPES')
         gnss = line(1);   % get system identifier
-        if gnss~='G' && gnss~='R' && gnss~='E' && gnss~='C'
-            continue        % continue for other system than GPS, GLONASS, GALILEO or BEIDOU
+        if gnss~='G' && gnss~='R' && gnss~='E' && gnss~='C' && gnss~='J'
+            continue        % continue for other system than GPS, GLONASS, GALILEO, BEIDOU, or QZSS
         end
         NoObs = sscanf(line(5:6), '%f');         % number of observations
         obs_types = [];     ranking = [];
@@ -168,11 +170,15 @@ while 1
             freq = strrep(freq, '1', '2');      % RINEX v3 specification says C1x = C2x, C1x should be treated as C2x
             ind_bds_freq = check_freq(freq);
             ind_bds_freq = (ind_bds_freq ~= 0) .* [0 1 0 0 0 3 2 0];
+        elseif gnss == 'J'
+            qzss_ranking = check_obs_types(qzss_ranking, types);
+            ind_qzss_freq = check_freq(freq);
+            ind_qzss_freq = (ind_qzss_freq ~= 0) .* [1 2 0 0 3 4 0 0];
         end
     end
     
     % get observed frequencies RINEX 2
-    if floor(version_full)==2 && contains(line,'# / TYPES OF OBSERV')
+    if floor(version_full) == 2   &&   contains(line,'# / TYPES OF OBSERV')
         % read first line and no. of obs. types
         if length(line) > 60
             line = line(1:60);
@@ -235,17 +241,19 @@ ind_gps_freq = ind_gps_freq(ind_gps_freq~=0);
 ind_glo_freq = ind_glo_freq(ind_glo_freq~=0);
 ind_gal_freq = ind_gal_freq(ind_gal_freq~=0);
 ind_bds_freq = ind_bds_freq(ind_bds_freq~=0);
+ind_qzss_freq = ind_qzss_freq(ind_qzss_freq~=0);
 % sort ascending
 ind_gps_freq = sort(ind_gps_freq);
 ind_glo_freq = sort(ind_glo_freq);
 ind_gal_freq = sort(ind_gal_freq);
 ind_bds_freq = sort(ind_bds_freq);
+ind_qzss_freq = sort(ind_qzss_freq);
 
 
 %% Save into struct
 rheader = save2struct(pos_approx, version_full, interval, first_obs, last_obs, ...
-    time_system, gps_ranking, glo_ranking, gal_ranking, bds_ranking, ...
-    ind_gps_freq, ind_glo_freq, ind_gal_freq, ind_bds_freq, station, station_long, ...
+    time_system, gps_ranking, glo_ranking, gal_ranking, bds_ranking, qzss_ranking, ...
+    ind_gps_freq, ind_glo_freq, ind_gal_freq, ind_bds_freq, ind_qzss_freq, station, station_long, ...
     antenna_type, receiver_type);
 end % end of anheader_GUI.m
 
@@ -255,8 +263,8 @@ end % end of anheader_GUI.m
 
 %% AUXILIARY FUNCTION
 function rheader = save2struct(pos_approx, version_full, interval, first_obs, last_obs, ...
-    time_system, gps_ranking, glo_ranking, gal_ranking, bds_ranking, ...
-    ind_gps_freq, ind_glo_freq, ind_gal_freq, ind_bds_freq, station, station_long, ...
+    time_system, gps_ranking, glo_ranking, gal_ranking, bds_ranking, qzss_ranking, ...
+    ind_gps_freq, ind_glo_freq, ind_gal_freq, ind_bds_freq, ind_qzss_freq, station, station_long, ...
     antenna_type, receiver_type)
 rheader.pos_approx = pos_approx;
 rheader.version_full = version_full;
@@ -268,10 +276,12 @@ rheader.gps_ranking = gps_ranking;
 rheader.glo_ranking = glo_ranking;
 rheader.gal_ranking = gal_ranking;
 rheader.bds_ranking = bds_ranking;
+rheader.qzss_ranking = qzss_ranking;
 rheader.ind_gps_freq = ind_gps_freq;
 rheader.ind_glo_freq = ind_glo_freq;
 rheader.ind_gal_freq = ind_gal_freq;
 rheader.ind_bds_freq = ind_bds_freq;
+rheader.ind_qzss_freq = ind_qzss_freq;
 rheader.station = station;
 rheader.station_long = station_long;
 rheader.antenna = antenna_type;

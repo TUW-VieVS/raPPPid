@@ -14,7 +14,7 @@ function valid_settings = checkProcessingSettings(settings, prebatch_check)
 %   valid_settings  boolean, false if processing can not be started
 % 
 % Revision:
-%   ...
+%   ongoing
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -23,25 +23,28 @@ function valid_settings = checkProcessingSettings(settings, prebatch_check)
 %% Preparations
 valid_settings = true;          % set to true in assumption of valid settings
 
-% boolean if GPS or Galileo is enabled
-GPS_on = settings.INPUT.use_GPS;
-GLO_on = settings.INPUT.use_GLO;
-GAL_on = settings.INPUT.use_GAL;
-BDS_on = settings.INPUT.use_BDS;
+% boolean if GPS or GLONASs or ... is enabled
+GPS_on  = settings.INPUT.use_GPS;
+GLO_on  = settings.INPUT.use_GLO;
+GAL_on  = settings.INPUT.use_GAL;
+BDS_on  = settings.INPUT.use_BDS;
+QZSS_on = settings.INPUT.use_QZSS;
 
 % number of processed frequencies for GPS and Galileo
 no_freq_gps = GPS_on * length(settings.INPUT.gps_freq(~strcmpi(settings.INPUT.gps_freq,'OFF')));
 no_freq_glo = GLO_on * length(settings.INPUT.glo_freq(~strcmpi(settings.INPUT.glo_freq,'OFF')));
 no_freq_gal = GAL_on * length(settings.INPUT.gal_freq(~strcmpi(settings.INPUT.gal_freq,'OFF')));
 no_freq_bds = BDS_on * length(settings.INPUT.bds_freq(~strcmpi(settings.INPUT.bds_freq,'OFF')));
+no_freq_qzss = QZSS_on * length(settings.INPUT.qzss_freq(~strcmpi(settings.INPUT.qzss_freq,'OFF')));
 
 % number of processed frequencies
-num_freq = max([GPS_on * no_freq_gps, GLO_on * no_freq_glo, GAL_on * no_freq_gal, BDS_on * no_freq_bds]);
+num_freq = max([GPS_on * no_freq_gps, GLO_on * no_freq_glo, GAL_on * no_freq_gal, BDS_on * no_freq_bds, QZSS_on * no_freq_qzss]);
 % names of processed frequencies
-proc_frqs_gps = settings.INPUT.gps_freq;
-proc_frqs_glo = settings.INPUT.glo_freq;
-proc_frqs_gal = settings.INPUT.gal_freq;
-proc_frqs_bds = settings.INPUT.bds_freq;
+proc_frqs_gps  = settings.INPUT.gps_freq;
+proc_frqs_glo  = settings.INPUT.glo_freq;
+proc_frqs_gal  = settings.INPUT.gal_freq;
+proc_frqs_bds  = settings.INPUT.bds_freq;
+proc_frqs_qzss = settings.INPUT.qzss_freq;
 
 if ~prebatch_check
     % No observation file selected
@@ -58,10 +61,11 @@ if ~prebatch_check
         valid_settings = false;     return;
     end
     % observed frequencies
-    obs_frqs_gps = DEF.freq_GPS_names(rheader.ind_gps_freq);
-    obs_frqs_glo = DEF.freq_GLO_names(rheader.ind_glo_freq);
-    obs_frqs_gal = DEF.freq_GAL_names(rheader.ind_gal_freq);
-    obs_frqs_bds = DEF.freq_BDS_names(rheader.ind_bds_freq);
+    obs_frqs_gps  = DEF.freq_GPS_names(rheader.ind_gps_freq);
+    obs_frqs_glo  = DEF.freq_GLO_names(rheader.ind_glo_freq);
+    obs_frqs_gal  = DEF.freq_GAL_names(rheader.ind_gal_freq);
+    obs_frqs_bds  = DEF.freq_BDS_names(rheader.ind_bds_freq);
+    obs_frqs_qzss = DEF.freq_QZSS_names(rheader.ind_qzss_freq);
     % create some time-dependent variables
     jd_start = cal2jd_GT(rheader.first_obs(1), rheader.first_obs(2), rheader.first_obs(3));
     [doy, yyyy] = jd2doy_GT(jd_start);
@@ -172,9 +176,42 @@ if num_freq ~= 3
             errordlg({'Check order of processed BeiDou frequencies!', 'Disabled frequencies should be at the end.'}, windowname);
             valid_settings = false; return
         end
-    end    
+    end  
+    if QZSS_on
+        off_idx_J = strcmpi(proc_frqs_qzss, 'OFF');
+        if no_freq_qzss >= 1 && off_idx_J(1) == 1
+            errordlg({'Check order of processed QZSS frequencies!', 'Disabled frequencies should be at the end.'}, windowname);
+            valid_settings = false; return
+        end
+        if no_freq_qzss >= 2 && off_idx_J(2) == 1
+            errordlg({'Check order of processed QZSS frequencies!', 'Disabled frequencies should be at the end.'}, windowname);
+            valid_settings = false; return
+        end
+    end     
 end
 
+
+%% Check if GNSS enabled, but all frequencies are OFF
+if GPS_on && no_freq_gps == 0
+    errordlg({'All GPS frequencies are OFF.', 'Please deactivate processing GPS', 'or select frequencies.'}, windowname);
+    valid_settings = false; return
+end
+if GLO_on && no_freq_glo == 0
+    errordlg({'All GLONASS frequencies are OFF.', 'Please deactivate processing GLONASS', 'or select frequencies.'}, windowname);
+    valid_settings = false; return
+end
+if GAL_on && no_freq_gal == 0
+    errordlg({'All Galileo frequencies are OFF.', 'Please deactivate processing Galileo', 'or select frequencies.'}, windowname);
+    valid_settings = false; return
+end
+if BDS_on && no_freq_bds == 0
+    errordlg({'All BeiDou frequencies are OFF.', 'Please deactivate processing BeiDou', 'or select frequencies.'}, windowname);
+    valid_settings = false; return
+end
+if QZSS_on && no_freq_qzss == 0
+    errordlg({'All QZSS frequencies are OFF.', 'Please deactivate processing QZSS', 'or select frequencies.'}, windowname);
+    valid_settings = false; return
+end
 
 
 %% Check for errors
@@ -250,6 +287,10 @@ if strcmp(settings.IONO.model,'3-Frequency-IF-LC') && ~prebatch_check
         errordlg('Not enough BeiDou frequencies for 3-Frequency-IF-LC selected!', windowname);
         valid_settings = false;     return;
     end
+    if QZSS_on && no_freq_qzss < 3
+        errordlg('Not enough QZSS frequencies for 3-Frequency-IF-LC selected!', windowname);
+        valid_settings = false;     return;
+    end    
 end
 
 % some wrong input for the STD of code and phase and ionosphere observations
@@ -665,7 +706,6 @@ if ~prebatch_check && settings.OTHER.antex_rec_manual
     end
 end
 
-
 % check if VMF coefficients are existing (year is >= 1980 and the date is 
 % at least 2 days behind the current date)
 if ~prebatch_check && (...
@@ -687,6 +727,29 @@ if ~prebatch_check && (...
         valid_settings = false; return
     end
 end
+
+% Polar tide correction is not implemented for manual selection of
+% satellite products (no option to load an *.erp-file manually into the
+% GUI)
+if settings.OTHER.polar_tides && strcmp(settings.ORBCLK.prec_prod, 'manually')
+    errordlg({'Polar Tide correction is not implemented', 'for manually selecting satellite products:', ...
+        'Please deactivate the Polar Tide correction!'}, windowname);
+    valid_settings = false; return
+end
+
+% QZSS is implemented only for precise products 
+if settings.INPUT.use_QZSS && ~settings.ORBCLK.bool_precise
+    errordlg({'QZSS is only implemented using precise products.', 'Please change selections of satellite orbits and clocks.'}, windowname);
+    valid_settings = false; return
+end
+
+% QZSS is not implemented only for Android raw data
+if settings.INPUT.use_QZSS && ~prebatch_check && rheader.version_full == 0
+    errordlg({'QZSS is only implemented for RINEX files.', 'Please disable processing QZSS or change input file.'}, windowname);
+    valid_settings = false; return
+end
+
+
 
 
 

@@ -26,10 +26,12 @@ if settings.EXP.model_save && proc_freqs == 1
     model_save.ZTD              = sparse(model_save.ZTD);
     model_save.iono             = sparse(model_save.iono);
     model_save.mfw              = sparse(model_save.mfw);
+	model_save.mfh              = sparse(model_save.mfh);
     model_save.delta_windup     = sparse(model_save.delta_windup);
     model_save.windup           = sparse(model_save.windup);
     model_save.solid_tides      = sparse(model_save.solid_tides);
     model_save.ocean_loading    = sparse(model_save.ocean_loading);
+	model_save.polar_tides      = sparse(model_save.polar_tides);
     model_save.PCO_rec     		= sparse(model_save.PCO_rec);
     model_save.PCV_rec     		= sparse(model_save.PCV_rec);
     model_save.ARP_ECEF       	= sparse(model_save.ARP_ECEF);

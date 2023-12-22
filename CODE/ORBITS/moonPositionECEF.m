@@ -1,8 +1,16 @@
 function [moonECEF] = moonPositionECEF(y, m, D, UT)
 % Calculates the position of the moon in ECEF.
-%
+% 
+% INPUT:
+%   y               year, 4-digit
+%   m               month
+%   D               day of month
+%   UT              hour of day [UTC]
+% OUTPUT:
+%	moonECEF        3x1, moon position in ECEF [m]
+% 
 % Oliver Montenbruck (2000), Satellite Orbits, p. 70 - 73
-% Approximate Position of Sun and Moon in ECEF [km]
+% Approximate Position of Sun and Moon in ECEF
 % -------------------------------------------------------------------------
 % Based on 5 fundamental arguments:
 % mean longitude of moon                                              L0

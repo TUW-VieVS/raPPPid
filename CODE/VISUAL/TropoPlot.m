@@ -267,6 +267,8 @@ xlim([hours(1) hours(end)])
 Grid_Xoff_Yon()
 legend(leg_txt)
 dy = 0.05*abs(y_min);
+if y_min==0 && dy==0; y_min = -Inf; end
+if y_max==0 && dy==0; y_max =  Inf; end    
 ylim([y_min-dy, y_max + dy])
 
 % save legend for creating a figure

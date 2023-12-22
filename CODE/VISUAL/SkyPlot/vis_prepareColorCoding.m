@@ -2,7 +2,7 @@ function [val_min, val_max, LUT] = vis_prepareColorCoding(Value, bool_def, val_m
 % Prepare color-coding of the skyplot
 %
 % INPUT:
-%   Value       epochs x 399, C/N0 or residuals of all satellites and epochs, matrix
+%   Value       epochs x 410, C/N0 or residuals of all satellites and epochs, matrix
 %   bool_def    boolean, true = use own thresholds for color-coding
 %   val_max, val_min    thresholds from Skyplot GUI
 % OUTPUT:

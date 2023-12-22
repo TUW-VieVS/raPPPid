@@ -16,6 +16,7 @@ classdef F
         weight_GLO = 1;
         weight_GAL = 1;
         weight_BDS = 1;
+        weight_QZSS = 1;
         
         % default settings for Kalman Filter Iterative [m]
         % coordinates

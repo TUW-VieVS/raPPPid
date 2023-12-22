@@ -18,7 +18,7 @@ function xyz = ApproximatePosition(Epoch, input, obs, settings)
 
 
 num_freq = settings.INPUT.proc_freqs;
-param = zeros(7,1);     % build parameter-vector: 3 coordinates and 4 time offsets for each GNSS
+param = zeros(8,1);     % build parameter-vector: 3 coordinates and 5 time offsets for each GNSS
  
 % Start iteration
 for iteration = 1:10
@@ -45,13 +45,14 @@ for iteration = 1:10
     dR_dx       = -( sat_pos_x(:)-param(1) ) ./  model.rho(:) .* ~cutoff;
     dR_dy       = -( sat_pos_y(:)-param(2) ) ./  model.rho(:) .* ~cutoff;
     dR_dz       = -( sat_pos_z(:)-param(3) ) ./  model.rho(:) .* ~cutoff;
-    dR_dt_GPS   = repmat(1*Epoch.gps, num_freq, 1) .* ~cutoff;
-    dR_dt_GLO   = repmat(1*Epoch.glo, num_freq, 1) .* ~cutoff;
-    dR_dt_GAL   = repmat(1*Epoch.gal, num_freq, 1) .* ~cutoff;
-    dR_dt_BDS   = repmat(1*Epoch.bds, num_freq, 1) .* ~cutoff;
+    dR_dt_GPS   = repmat(1*Epoch.gps,  num_freq, 1) .* ~cutoff;
+    dR_dt_GLO   = repmat(1*Epoch.glo,  num_freq, 1) .* ~cutoff;
+    dR_dt_GAL   = repmat(1*Epoch.gal,  num_freq, 1) .* ~cutoff;
+    dR_dt_BDS   = repmat(1*Epoch.bds,  num_freq, 1) .* ~cutoff;
+    dR_dt_QZSS  = repmat(1*Epoch.qzss, num_freq, 1) .* ~cutoff;
     
     % Build Design-Matrix
-    A = [dR_dx, dR_dy, dR_dz, dR_dt_GPS, dR_dt_GLO, dR_dt_GAL, dR_dt_BDS];
+    A = [dR_dx, dR_dy, dR_dz, dR_dt_GPS, dR_dt_GLO, dR_dt_GAL, dR_dt_BDS, dR_dt_QZSS];
     
     % Build Weight-Matrix
     P_diag = createWeights(Epoch, model.el, settings);

@@ -59,12 +59,13 @@ satellites = varargin{1};
 storeData = varargin{2};
 vec_epochs   = varargin{3};         % vector of epochs
 station_date = varargin{4};         % string, station name and date
-isGPS = varargin{5};                % true, if GNSS is plotted
-isGLO = varargin{6};
-isGAL = varargin{7};
-isBDS = varargin{8};
-cutoff = varargin{9};               % elevation cutoff from GUI
-bool_fixed = varargin{10};          % true, if fixed residuals to use
+isGPS  = varargin{5};             	% true, if GNSS is plotted
+isGLO  = varargin{6};
+isGAL  = varargin{7};
+isBDS  = varargin{8};
+isQZSS = varargin{9};
+cutoff = varargin{10};              % elevation cutoff from GUI
+bool_fixed = varargin{11};          % true, if fixed residuals to use
 
 epoch_last = vec_epochs(end);   % last epoch
 
@@ -77,7 +78,7 @@ if isempty(MP_LC); handles.radiobutton_mp_lc.Enable     = 'off'; end
 
 % remove GNSS which are not plotted
 [AZ, EL, SNR, C_res, P_res, I_res, MP_LC] = ...
-    vis_removeGNSS(AZ, EL, SNR, C_res, P_res, I_res, MP_LC, isGPS, isGLO, isGAL, isBDS);
+    vis_removeGNSS(AZ, EL, SNR, C_res, P_res, I_res, MP_LC, isGPS, isGLO, isGAL, isBDS, isQZSS);
 
 % set reasonable value in last n epochs text-field
 n = numel(vec_epochs)/5;        % a fifth of all epochs
@@ -341,26 +342,7 @@ switch string_colorcod
     case 'Multipath LC'
         Value = handles.MP_LC(idx,:);
         % remove constant part of MP LC before plotting
-        Value(isnan(Value)) = 0;        % replace zeros with NaN
-        for i = 1:size(Value,2)
-            vec = Value(:,i);           % MP LC for current satellite
-            if any(~isnan(vec) & vec~=0)
-                mask = logical(vec');                       % force row vector
-                starts = strfind([false, mask], [0 1]);     % data begins
-                stops = strfind([mask, false], [1 0]);      % data ends
-                n = numel(starts);
-                for ii = 1:n            % loop over data series of current satellite
-                    s1 = starts(ii);
-                    s2 = stops(ii);
-                    if s1 == s2
-                        continue        % skip if only one epoch observed
-                    end
-                    vec(s1:s2) = vec(s1:s2) - mean(vec(s1:s2));     % remove mean
-                end
-                Value(:,i) = vec;       % save after mean was removed
-            end
-            
-        end
+        Value = RemoveMeanPerSatelliteArc(Value);
         Value = abs(Value);             % plot absolute values
         handles.text_unit.String = '[cm]';
 end

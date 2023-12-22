@@ -54,13 +54,15 @@ for i = 1:no_sats
         y = y(~isnan(y));       y = y(end);
         z = z(~isnan(z));       z = z(end);
         if bool_txt
-            if i > 300              % prn > 300: beidou-satellite
+            if i > 400              % prn > 400: QZSS
+                prn_text = ['J', num2str(i-400, '%02.0f')];            
+            elseif i > 300              % prn > 300: BeiDou
                 prn_text = ['C', num2str(i-300, '%02.0f')];
-            elseif i > 200        	% prn > 200: galileo-satellite
+            elseif i > 200        	% prn > 200: Galileo
                 prn_text = ['E', num2str(i-200, '%02.0f')];
-            elseif i > 100          % prn > 100: glonass-satellite
+            elseif i > 100          % prn > 100: GLONASS
                 prn_text = ['R', num2str(i-100, '%02.0f')];
-            elseif i > 0            % gps-satellite
+            elseif i > 0            % GPS
                 prn_text = ['G', num2str(i    , '%02.0f')];
             end
         text(x, y, z, prn_text, 'color','k', 'FontWeight','bold', 'FontSize',10);

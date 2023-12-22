@@ -32,15 +32,12 @@ q = Epoch.q;        %	epoch number of processing
 % Preparation of estimation of parameters depending on the chosen
 % (ionosphere) PPP model
 switch settings.IONO.model
-    case 'Estimate with ... as constraint'
+    case {'Estimate with ... as constraint', 'Estimate'}
         [Epoch, Adjust] = ...
-            adjPrep_ZD_iono_est(settings, Adjust, Epoch, Epoch.old.sats, satellites.elev, obs.interval);
-    case 'Estimate'
-        [Epoch, Adjust] = ...
-            adjPrep_ZD_iono_est(settings, Adjust, Epoch, Epoch.old.sats, satellites.elev, obs.interval);
+            adjPrep_ZD_iono_est(settings, Adjust, Epoch, Epoch.old.sats, obs.interval);
     otherwise
         [Epoch, Adjust] = ...
-            adjustmentPreparation_ZD(settings, Adjust, Epoch, Epoch.old.sats, satellites.elev, obs.interval);
+            adjustmentPreparation_ZD(settings, Adjust, Epoch, Epoch.old.sats, obs.interval);
 end
 % Estimation of float paramaters
 [Epoch, Adjust, model] = ...
@@ -72,24 +69,13 @@ if settings.AMBFIX.bool_AMBFIX
                 [Epoch, Adjust] = ...
                     PPPAR_3IF(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, input, satellites, obs, model);
                 
-            case 'Estimate with ... as constraint'
-                [Epoch, Adjust] = ...
-                    PPPAR_UC(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, input, satellites, obs, model);
-                
-            case 'Estimate'
-                [Epoch, Adjust] = ...
-                    PPPAR_UC(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, input, satellites, obs, model);
-                
-            case 'off'
-                % simulated data
+            case {'Estimate with ... as constraint', 'Estimate', 'off'}     % off: simulated data
                 [Epoch, Adjust] = ...
                     PPPAR_UC(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, input, satellites, obs, model);
                 
             otherwise
                 errordlg('PPP-AR is not implemented for this ionosphere model!', 'Error');
-        end     % end of switch
-    end         % end of fixing has started
-end             % end of Ambiguity Fixing
-
-
-end         % end of ZD_processing
+        end
+    end 
+    
+end    

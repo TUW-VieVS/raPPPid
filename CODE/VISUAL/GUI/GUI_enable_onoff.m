@@ -58,6 +58,7 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
     set(handles.checkbox_GLO, 'Enable', onoff);
     set(handles.checkbox_GAL, 'Enable', onoff);
     set(handles.checkbox_BDS, 'Enable', onoff);
+    set(handles.checkbox_QZSS, 'Enable', onoff);
     set(handles.popupmenu_gps_1, 'Enable', onoff);
     set(handles.popupmenu_gps_2, 'Enable', onoff);
     set(handles.popupmenu_gps_3, 'Enable', onoff);
@@ -70,12 +71,16 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
     set(handles.popupmenu_bds_1, 'Enable', onoff);
     set(handles.popupmenu_bds_2, 'Enable', onoff);
     set(handles.popupmenu_bds_3, 'Enable', onoff);
+    set(handles.popupmenu_qzss_1, 'Enable', onoff);
+    set(handles.popupmenu_qzss_2, 'Enable', onoff);
+    set(handles.popupmenu_qzss_3, 'Enable', onoff);    
     % observation ranking
     set(handles.text_rank, 'Enable', onoff);
     set(handles.edit_gps_rank, 'Enable', onoff);
     set(handles.edit_glo_rank, 'Enable', onoff);
     set(handles.edit_gal_rank, 'Enable', onoff);
     set(handles.edit_bds_rank, 'Enable', onoff);
+    set(handles.edit_qzss_rank, 'Enable', onoff);
     % realtime processing
     set(handles.checkbox_realtime, 'Enable', onoff);
     set(handles.edit_RT_from, 'Enable', onoff);
@@ -181,6 +186,29 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
             handles.text_bds_time_offset.Enable = 'Off';
             handles.text_bds_time_offset_m.Enable = 'Off';
         end
+        % Checkbox QZSS
+        handles.checkbox_QZSS.Enable = 'On';
+        if handles.checkbox_QZSS.Value       % BeiDou processing enabled
+            set(handles.popupmenu_qzss_1,                     'Enable', 'On');
+            set(handles.popupmenu_qzss_2,                     'Enable', 'On');
+            set(handles.popupmenu_qzss_3,                     'Enable', 'On');
+            set(handles.edit_qzss_rank,                       'Enable', 'On');
+            handles.edit_filter_qzss_offset_sigma0.Enable = 'On';
+            handles.edit_filter_qzss_offset_Q.Enable = 'On';
+            handles.popupmenu_filter_qzss_offset_dynmodel.Enable = 'On';
+            handles.text_qzss_time_offset.Enable = 'On';
+            handles.text_qzss_time_offset_m.Enable = 'On';
+        else
+            set(handles.popupmenu_qzss_1,                     'Enable', 'Off');
+            set(handles.popupmenu_qzss_2,                     'Enable', 'Off');
+            set(handles.popupmenu_qzss_3,                     'Enable', 'Off');
+            set(handles.edit_qzss_rank,                       'Enable', 'Off');
+            handles.edit_filter_qzss_offset_sigma0.Enable = 'Off';
+            handles.edit_filter_qzss_offset_Q.Enable = 'Off';
+            handles.popupmenu_filter_qzss_offset_dynmodel.Enable = 'Off';
+            handles.text_qzss_time_offset.Enable = 'Off';
+            handles.text_qzss_time_offset_m.Enable = 'Off';
+        end        
     end
     
     % analyze RINEX is only possible if observation file is defined
@@ -278,20 +306,12 @@ if strcmpi(handles.uipanel_ionosphere.Visible, 'on')
     switch handles.buttongroup_models_ionosphere.SelectedObject.String
         case {'2-Frequency-IF-LCs', '3-Frequency-IF-LC', 'Estimate', 'off'}
             set(handles.buttongroup_source_ionosphere,'Visible','Off');
-            set(handles.text_constraint_until,'Visible','Off');
-            set(handles.edit_constraint_until,'Visible','Off');
-            set(handles.text_constraint_decrease,'Visible','Off');
-            set(handles.edit_constraint_decrease,'Visible','Off');
             set(handles.buttongroup_models_ionosphere_ionex,'Visible','Off');
             set(handles.buttongroup_models_ionosphere_autodetect,'Visible','Off');
             set(handles.buttongroup_models_ionosphere_ionex_type,'Visible','Off');
             
         case {'Estimate with ... as constraint', 'Correct with ...'}
             set(handles.buttongroup_source_ionosphere,'Visible','On');
-            set(handles.text_constraint_until,'Visible','On');
-            set(handles.edit_constraint_until,'Visible','On');
-            set(handles.text_constraint_decrease,'Visible','On');
-            set(handles.edit_constraint_decrease,'Visible','On');
             if strcmp(handles.buttongroup_source_ionosphere.SelectedObject.String, 'IONEX File')
                 set(handles.buttongroup_models_ionosphere_ionex,'Visible','On');
                 set(handles.buttongroup_models_ionosphere_ionex_type,'Visible','Off');
@@ -318,13 +338,6 @@ if strcmpi(handles.uipanel_ionosphere.Visible, 'on')
                 set(handles.buttongroup_models_ionosphere_ionex_type,'Visible','Off');
                 set(handles.text_iono_interpol,            'Visible', 'Off');
                 set(handles.popupmenu_iono_interpol,            'Visible', 'Off');
-            end
-            % Remove the contents which are not used for "Correct with..."
-            if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Correct with ...')
-                set(handles.text_constraint_until,'Visible','Off');
-                set(handles.edit_constraint_until,'Visible','Off');
-                set(handles.text_constraint_decrease,'Visible','Off');
-                set(handles.edit_constraint_decrease,'Visible','Off');
             end
     end
 end
@@ -597,7 +610,7 @@ end
 
 
 
-%% Stochastic/Filter aka Adjustment
+%% Adjustment/Filter
 if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     % check if filter is enabled
     filter_sett = handles.popupmenu_filter.String(handles.popupmenu_filter.Value);
@@ -673,6 +686,21 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
         set(handles.text_bds_time_offset_m,                  'Enable', 'Off');
         set(handles.popupmenu_filter_beidou_offset_dynmodel, 'Enable', 'Off');
     end
+
+    % Receiver Clock QZSS
+    if handles.checkbox_QZSS.Value
+        set(handles.edit_filter_qzss_offset_Q,             'Enable', 'On');
+        set(handles.edit_filter_qzss_offset_sigma0,        'Enable', 'On');
+        set(handles.text_qzss_time_offset,                	 'Enable', 'On');
+        set(handles.text_qzss_time_offset_m,                  'Enable', 'On');
+        set(handles.popupmenu_filter_qzss_offset_dynmodel, 'Enable', 'On');
+    else
+        set(handles.edit_filter_qzss_offset_Q,             'Enable', 'Off');
+        set(handles.edit_filter_qzss_offset_sigma0,        'Enable', 'Off');
+        set(handles.text_qzss_time_offset,                    'Enable', 'Off');
+        set(handles.text_qzss_time_offset_m,                  'Enable', 'Off');
+        set(handles.popupmenu_filter_qzss_offset_dynmodel, 'Enable', 'Off');
+    end
     
     % estimation of receiver DCBs
     if handles.checkbox_estimate_rec_dcbs.Value
@@ -711,26 +739,15 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     end
     
     % Check ionosphere model
-    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint')
+    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, ...
+            'Estimate with ... as constraint') || ...
+            strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate')
         % filter settings
         set(handles.edit_filter_iono_Q,             'Enable', 'On');
         set(handles.edit_filter_iono_sigma0,        'Enable', 'On');
         set(handles.popupmenu_filter_iono_dynmodel, 'Enable', 'On');
         set(handles.text_iono,                      'Enable', 'On');
         set(handles.text_iono_m,                    'Enable', 'On');
-        % std iono observations
-        set(handles.text_std_iono,                  'Enable', 'On');
-        set(handles.edit_Std_Iono,                  'Enable', 'On');
-    elseif strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate')
-        % filter settings
-        set(handles.edit_filter_iono_Q,             'Enable', 'On');
-        set(handles.edit_filter_iono_sigma0,        'Enable', 'On');
-        set(handles.popupmenu_filter_iono_dynmodel, 'Enable', 'On');
-        set(handles.text_iono,                      'Enable', 'On');
-        set(handles.text_iono_m,                    'Enable', 'On');
-        % std iono observations
-        set(handles.text_std_iono,                  'Enable', 'Off');
-        set(handles.edit_Std_Iono,                  'Enable', 'Off');
     else
         % filter settings
         set(handles.edit_filter_iono_Q,             'Enable', 'Off');
@@ -738,9 +755,31 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
         set(handles.popupmenu_filter_iono_dynmodel, 'Enable', 'Off');
         set(handles.text_iono,                      'Enable', 'Off');
         set(handles.text_iono_m,                    'Enable', 'Off');
-        % std iono observations
-        set(handles.text_std_iono,                  'Enable', 'Off');
-        set(handles.edit_Std_Iono,                  'Enable', 'Off');
+    end    
+end
+
+
+
+%% Observation Weighting
+if strcmpi(handles.uipanel_weighting.Visible, 'on')
+    
+    % Check handling of ionospheric delay
+    set(handles.text_std_iono,                  'Enable', 'Off');
+    set(handles.edit_Std_Iono,                  'Enable', 'Off');
+    set(handles.buttongroup_source_ionosphere,  'Visible','Off');
+    set(handles.text_constraint_until,          'Visible','Off');
+    set(handles.edit_constraint_until,          'Visible','Off');
+    set(handles.text_constraint_decrease,       'Visible','Off');
+    set(handles.edit_constraint_decrease,       'Visible','Off');
+    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint')
+        % Ionospheric constraint
+        set(handles.text_std_iono,                  'Enable', 'On');
+        set(handles.edit_Std_Iono,                  'Enable', 'On');
+        set(handles.buttongroup_source_ionosphere,  'Visible','On');
+        set(handles.text_constraint_until,          'Visible','On');
+        set(handles.edit_constraint_until,          'Visible','On');
+        set(handles.text_constraint_decrease,       'Visible','On');
+        set(handles.edit_constraint_decrease,       'Visible','On');
     end
     
     % GNSS weighting
@@ -748,11 +787,13 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     handles.edit_weight_GLO.Enable = 'Off'; handles.text_weight_GLO.Enable = 'Off';
     handles.edit_weight_GAL.Enable = 'Off'; handles.text_weight_GAL.Enable = 'Off';
     handles.edit_weight_BDS.Enable = 'Off'; handles.text_weight_BDS.Enable = 'Off';
+    handles.edit_weight_QZSS.Enable = 'Off';handles.text_weight_QZSS.Enable = 'Off';
     if batch_proc
         handles.edit_weight_GPS.Enable = 'On'; handles.text_weight_GPS.Enable = 'On';
         handles.edit_weight_GLO.Enable = 'On'; handles.text_weight_GLO.Enable = 'On';
         handles.edit_weight_GAL.Enable = 'On'; handles.text_weight_GAL.Enable = 'On';
         handles.edit_weight_BDS.Enable = 'On'; handles.text_weight_BDS.Enable = 'On';
+        handles.edit_weight_QZSS.Enable = 'On';handles.text_weight_QZSS.Enable = 'On';
     else
         if handles.checkbox_GPS.Value
             handles.edit_weight_GPS.Enable = 'On'; handles.text_weight_GPS.Enable = 'On';
@@ -766,6 +807,21 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
         if handles.checkbox_BDS.Value
             handles.edit_weight_BDS.Enable = 'On'; handles.text_weight_BDS.Enable = 'On';
         end
+        if handles.checkbox_QZSS.Value
+            handles.edit_weight_QZSS.Enable = 'On';handles.text_weight_QZSS.Enable = 'On';
+        end		
+    end
+    
+    % Frequency-specific standard observations for code and phase
+    handles.uitable_code_std_frqs.Enable =  'Off';
+    handles.uitable_phase_std_frqs.Enable =  'Off';
+    handles.text_table_code_frq_std.Enable = 'Off';
+    handles.text_table_phase_frq_std.Enable = 'Off';
+    if handles.checkbox_std_frqs.Value
+        handles.uitable_code_std_frqs.Enable =  'On';
+        handles.uitable_phase_std_frqs.Enable =  'On';
+        handles.text_table_code_frq_std.Enable = 'On';
+        handles.text_table_phase_frq_std.Enable = 'On';
     end
     
 end
@@ -847,6 +903,10 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
     set(handles.edit_omc_thresh_p, 'Enable', onoff);
     set(handles.edit_omc_fac, 'Enable', onoff);
     set(handles.edit_omc_window, 'Enable', onoff);
+    if ~contains(proc_meth, 'phase')
+        set(handles.text_omc_thresh_p, 'Enable', 'Off');
+        set(handles.edit_omc_thresh_p, 'Enable', 'Off');
+    end
     
 end
 
@@ -903,6 +963,7 @@ if strcmpi(handles.uipanel_single_plot.Visible, 'on')
         handles.checkbox_plot_glo.Enable = 'On';
         handles.checkbox_plot_gal.Enable = 'On';
         handles.checkbox_plot_bds.Enable = 'On';
+		handles.checkbox_plot_qzss.Enable = 'On';
         handles = en_disable_AllPlotCheckboxes(handles, 'On');
     else
         onoff = 'On';

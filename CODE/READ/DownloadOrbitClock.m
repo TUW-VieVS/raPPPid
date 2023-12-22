@@ -20,16 +20,18 @@ function [settings] = DownloadOrbitClock(settings, gpsweek, dow, yyyy, mm, doy)
 
 
 %% Preparations
+% define target folders
 targets = {...
     [Path.DATA, 'ORBIT/', yyyy, '/', doy]
     [Path.DATA, 'CLOCK/', yyyy, '/', doy]};
-[~, ~] = mkdir(targets{1});
-[~, ~] = mkdir(targets{2});
-URL_host = 'igs.ign.fr:21';                                 % default ftp-server
-URL_host_2 = 'https://cddis.nasa.gov'; URL_folders_2 = '';  files_2 = ''; % option 2: CDDIS
-download = true;    % boolean variable if products need still to be downloaded
-multiple = false;   % is set to true if multiple sp3-files are needed (e.g. ???)
-bool_archive = true;         % true, if archives are downloaded
+
+URL_host = 'igs.ign.fr:21';                 % default ftp-server                                     
+URL_host_2 = 'https://cddis.nasa.gov';      % option 2: CDDIS
+URL_folders_2 = '';  files_2 = ''; 
+
+download = true;        % boolean variable if products need still to be downloaded
+multiple = false;       % is set to true if multiple sp3-files are needed (e.g. ???)
+bool_archive = true;  	% true, if archives are downloaded
 
 
 %% switch source of orbits/clocks
@@ -51,8 +53,8 @@ switch settings.ORBCLK.prec_prod
                             ['IGS0OPSFIN_' yyyy doy '0000_01D_30S_CLK.CLK.gz']};
                     else
                         files = {...
-                            ['igs', gpsweek, dow, '.', 'sp3',     '.Z']     	% IGS precise orbits (gps only)
-                            ['igs', gpsweek, dow, '.', 'clk_30s', '.Z']};     	% IGS 30sec clock (gps only)
+                            ['igs' gpsweek dow '.sp3.Z']                % IGS precise orbits (gps only)
+                            ['igs' gpsweek dow '.clk_30s.Z']};          % IGS 30sec clock (gps only)
                     end
                     
                 elseif settings.INPUT.use_GLO
@@ -125,9 +127,11 @@ switch settings.ORBCLK.prec_prod
             [~,files{1},~] = fileparts(files{1});
             [~,files{2},~] = fileparts(files{2});
             if ~isfile([targets{1}, '/', files{1}])
+                [~, ~] = mkdir(targets{1});
                 websave([targets{1}, '/', file_sp3] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_sp3]);
             end
             if ~isfile([targets{2}, '/', files{2}])
+                [~, ~] = mkdir(targets{2});
                 websave([targets{2}, '/', file_clk] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_clk]);
             end
             % decompress and delete archive
@@ -150,9 +154,11 @@ switch settings.ORBCLK.prec_prod
                     [~,files{1},~] = fileparts(files{1});
                     [~,files{2},~] = fileparts(files{2});
                     if ~isfile([targets{1}, '/', files{1}])
+                        [~, ~] = mkdir(targets{1});
                         websave([targets{1}, '/', file_sp3] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_sp3]);
                     end
                     if ~isfile([targets{2}, '/', files{2}])
+                        [~, ~] = mkdir(targets{2});
                         websave([targets{2}, '/', file_clk] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_clk]);
                     end
                     % decompress and delete archive
@@ -173,9 +179,11 @@ switch settings.ORBCLK.prec_prod
                     [~,files{1},~] = fileparts(files{1});
                     [~,files{2},~] = fileparts(files{2});
                     if ~isfile([targets{1}, '/', files{1}])
+                        [~, ~] = mkdir(targets{1});
                         websave([targets{1}, '/', file_sp3] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_sp3]);
                     end
                     if ~isfile([targets{2}, '/', files{2}])
+                        [~, ~] = mkdir(targets{2});
                         websave([targets{2}, '/', file_clk] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_clk]);
                     end
                     % decompress and delete archive
@@ -194,6 +202,7 @@ switch settings.ORBCLK.prec_prod
                     % remove the zip file extension
                     [~,files{1},~] = fileparts(file_sp3);
                     if ~isfile([targets{1}, '/', files{1}])
+                        [~, ~] = mkdir(targets{1});
                         websave([targets{1}, '/', file_sp3] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_sp3]);
                     end
                     % decompress and delete archive
@@ -291,8 +300,8 @@ switch settings.ORBCLK.prec_prod
                 case 'Rapid'
                     URL_folders = repmat({'/CODE/'},2,1);
                     files = {...
-                        ['CODMOPSRAP_' yyyy doy '0000_01D_05M_ORB.SP3']
-                        ['CODMOPSRAP_' yyyy doy '0000_01D_30S_CLK.CLK']};
+                        ['COD0OPSRAP_' yyyy doy '0000_01D_05M_ORB.SP3']
+                        ['COD0OPSRAP_' yyyy doy '0000_01D_30S_CLK.CLK']};
                     bool_archive = false;
                     
                 case 'Ultra-Rapid'
@@ -504,19 +513,21 @@ i = 1;
 if isempty(files_2); files_2 = files; end
 while download   &&   i <= length(files)
     file_status = 0;
+    % create target folder
+    [~, ~] = mkdir(targets{i});
     try     %#ok<TRYNC>                             % try to download from igs.ign.fr
         [file_status] = ftp_download(URL_host, URL_folders{i}, files{i}, targets{i}, true);
         if ~bool_archive       % pretend archive, otherwise the following code does not work 
             files{i} = [files{i} '.gz'];
         end
     end
-    if file_status == 1   ||   file_status == 2
+    if bool_archive   &&   (file_status == 1 || file_status == 2)
         unzip_and_delete(files(i), targets(i));
     end
     if file_status == 0 && ~isempty(URL_folders_2) 	% try to download from CDDIS
         file = files_2{i};    target = targets{i};
         file_status = get_cddis_data(URL_host_2, URL_folders_2, {file}, {target}, true);
-        if file_status == 1   ||   file_status == 2
+        if bool_archive   &&   (file_status == 1   ||   file_status == 2)
             unzip_and_delete(files_2(i), targets(i));
         end
     end
@@ -561,7 +572,6 @@ else        % e.g. ultra-rapid products only have a sp3 file
     settings.ORBCLK.file_clk = '';
     settings.ORBCLK.bool_clk = false;
 end
-
 
 
 

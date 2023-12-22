@@ -29,6 +29,7 @@ model.trop = NaN(m,n);          % Troposphere delay
 model.iono = NaN(m,n);          % Ionosphere delay
 model.iono_mf = NaN(m,1);       % Ionospheric Mapping Function
 model.iono_vtec = NaN(m,1);     % VTEC from IONEX raster
+model.mfh  = NaN(m,n);          % Hydrostatic tropo mapping function
 model.mfw  = NaN(m,n);          % Wet tropo mapping function
 model.zwd  = NaN(m,n);          % zenith wet delay (need for building a priori + estimated zwd later)
 model.zhd  = NaN(m,n);			% zenith hydrostatic delay
@@ -46,6 +47,8 @@ model.windup     = NaN(m,n);     	% Ionosphere free windup correction for Phase
 
 model.dX_solid_tides_corr = NaN(m,n);   % Correction for Solid Earth Tides projected on the Line of sight
 model.dX_ocean_loading    = NaN(m,n); 	% Correction for ocean loading projected on the Line of sight
+model.dX_polar_tides   = NaN(m,n);    	% Correction for pole tide projected on the Line of sight
+
 model.dX_GDV   = NaN(m,n);              % Correction for group delay variations
 
 model.los_APC = NaN(m,k);               % line-of-sight correction due to antenna phase corrections

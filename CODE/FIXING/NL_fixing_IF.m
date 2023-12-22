@@ -13,6 +13,9 @@ function [Epoch, Adjust] = NL_fixing_IF(Epoch, Adjust, b_WL, b_NL, elevs, settin
 % OUTPUT:
 %   Epoch     	updated with (integer fixed) NL Ambiguities [struct]
 %
+% Revision:
+%   2023/06/11, MFWG: adding QZSS
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -27,10 +30,11 @@ l1 = Epoch.l1;      % wavelength 1st processed frequency
 sats = Epoch.sats;              % satellites of current epoch
 no_sats = numel(Epoch.sats);    % number of satellites
 % number of GNSS satellites
-no_gps = sum(Epoch.gps);
-no_glo = sum(Epoch.glo);
-no_gal = sum(Epoch.gal);
-no_bds = sum(Epoch.bds);
+no_gps  = sum(Epoch.gps);
+no_glo  = sum(Epoch.glo);
+no_gal  = sum(Epoch.gal);
+no_bds  = sum(Epoch.bds);
+% no_qzss = sum(Epoch.qzss);      % not needed, because QZSS is the "last" GNSS
 % reference satellites of GPS, Galileo, BeiDou
 refSatG_idx = Epoch.refSatGPS_idx;
 refSatE_idx = Epoch.refSatGAL_idx;
@@ -46,17 +50,19 @@ param_N_gal = param_N(Epoch.gal);       % Galileo float ambiguities
 param_N_bds = param_N(Epoch.bds);       % BeiDou float ambiguities
 Q_NN = Adjust.param_sigma(idx, idx);    % covariance matrix of float ambiguities
 
-% remove Glonass (if processed for float solution)
-if settings.INPUT.use_GLO
-    sats(Epoch.glo) = [];           % Glonass satellites are not needed
-    Q_NN(Epoch.glo, :) = [];        % Glonass covariances are not needed
-    Q_NN(:, Epoch.glo) = [];
-    f1(Epoch.glo) = [];
-    f2(Epoch.glo) = [];
-    l1(Epoch.glo) = [];
-    b_WL(Epoch.glo) = [];
-    b_NL(Epoch.glo) = [];
-    fixable(Epoch.glo) = [];
+% remove Glonass and QZSS (if processed in float solution)
+if settings.INPUT.use_GLO || settings.INPUT.use_QZSS
+    % GLONASS and QZSS satellites are not needed in the following variables
+    is_glo_qzss = Epoch.glo | Epoch.qzss;
+    sats(is_glo_qzss) = [];
+    Q_NN(is_glo_qzss, :) = [];
+    Q_NN(:, is_glo_qzss) = [];
+    f1(is_glo_qzss) = [];
+    f2(is_glo_qzss) = [];
+    l1(is_glo_qzss) = [];
+    b_WL(is_glo_qzss) = [];
+    b_NL(is_glo_qzss) = [];
+    fixable(is_glo_qzss) = [];
 end
 
 

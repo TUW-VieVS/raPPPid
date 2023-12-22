@@ -1,6 +1,8 @@
 function [init_ambs, Epoch] = AdjustPhase2Code(Epoch, init_ambs)
 % Function to adjust phase data to C1 code to, for example, limiting the 
 % ambiguities for numerical reasons.
+% Useful, for example, when processing raw sensor data from Android
+% smartphones
 % 
 % INPUT:
 %   Epoch           struct, epoch-specific data for current epoch
@@ -16,7 +18,7 @@ prns = Epoch.sats;
 
 % keep initialized ambiguities only for satellites which are properly observed
 sats = prns(any(~Epoch.exclude & ~Epoch.cs_found,2));       % satellites properly observed
-delete = true(3,399);       % delete all initialized ambiguities ...
+delete = true(3,410);       % delete all initialized ambiguities ...
 delete(:,sats) = false;     % ... except satellites with valid phase observations
 init_ambs(delete) = NaN;
 

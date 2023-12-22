@@ -33,10 +33,11 @@ end
 
 epochs = 1:numel(storeData.gpstime);       % vector, 1:#epochs
 % true if GNSS was processed and should be plotted 
-isGPS = settings.INPUT.use_GPS;          
-isGLO = settings.INPUT.use_GLO;
-isGAL = settings.INPUT.use_GAL;
-isBDS = settings.INPUT.use_BDS;
+isGPS  = settings.INPUT.use_GPS;          
+isGLO  = settings.INPUT.use_GLO;
+isGAL  = settings.INPUT.use_GAL;
+isBDS  = settings.INPUT.use_BDS;
+isQZSS = settings.INPUT.use_QZSS;
 
 % take position depending on selected solution
 if settings.PLOT.fixed && settings.AMBFIX.bool_AMBFIX
@@ -160,7 +161,7 @@ if STOP_CALC; return; end   %#ok<*UNRCH>
 % -+-+-+-+- Figure: Clock Plot -+-+-+-+-
 if settings.PLOT.clock
     vis_plotReceiverClock(hours, label_x_h, storeData.param', reset_h, ...
-        isGPS, isGLO, isGAL, isBDS, settings.ORBCLK.file_clk, station, obs.startdate(1:3));
+        isGPS, isGLO, isGAL, isBDS, isQZSS, settings.ORBCLK.file_clk, station, obs.startdate(1:3));
 end
 if STOP_CALC; return; end
 
@@ -186,7 +187,7 @@ if STOP_CALC; return; end
 % -+-+-+-+- Figure: Standard Deviation of Parameters -+-+-+-+-
 if settings.PLOT.cov_info
     std_parameters = sqrt(storeData.param_var)';
-    covParaPlot(hours, std_parameters, label_x_h, settings.BIASES.estimate_rec_dcbs, isGPS, isGLO, isGAL, isBDS)
+    covParaPlot(hours, std_parameters, label_x_h, settings.BIASES.estimate_rec_dcbs, isGPS, isGLO, isGAL, isBDS, isQZSS)
 end
 if STOP_CALC; return; end
 
@@ -198,7 +199,7 @@ if settings.PLOT.satvisibility
     if ~isfield (storeData, 'exclude')
         storeData.exclude = storeData.cutoff;       % old processing results
     end
-    vis_plotSatConstellation(hours, epochs, label_x_h, satellites, storeData.exclude, isGPS, isGLO, isGAL, isBDS)
+    vis_plotSatConstellation(hours, epochs, label_x_h, satellites, storeData.exclude, isGPS, isGLO, isGAL, isBDS, isQZSS)
 end
 if STOP_CALC; return; end
 
@@ -217,6 +218,9 @@ if strcmpi(settings.PROC.method,'Code + Phase')
         end
         if isBDS
             FloatAmbPlot(hours, storeData, 301:300+DEF.SATS_BDS, settings.INPUT.proc_freqs, label_x_h, 'C', reset_h, rgb)
+        end
+        if isQZSS
+            FloatAmbPlot(hours, storeData, 401:400+DEF.SATS_QZSS,settings.INPUT.proc_freqs, label_x_h, 'J', reset_h, rgb)
         end
     end    
     %     -+-+-+-+- Figure: Fixed Ambiguity Plots -+-+-+-+-
@@ -251,7 +255,7 @@ if settings.PLOT.cov_amb && strcmpi(settings.PROC.method,'Code + Phase')
     std_amb = sqrt(full(storeData.N_var_1));      % standard deviations of estimated ambiguities
     if settings.INPUT.proc_freqs > 1; std_amb(:,:,2) = sqrt(full(storeData.N_var_2)); end
     if settings.INPUT.proc_freqs > 2; std_amb(:,:,3) = sqrt(full(storeData.N_var_3)); end
-    vis_covAmbPlot(hours, std_amb, settings.ADJ.filter.var_amb, label_x_h, rgb, satellites.obs, isGPS, isGLO, isGAL, isBDS)
+    vis_covAmbPlot(hours, std_amb, settings.ADJ.filter.var_amb, label_x_h, rgb, satellites.obs, isGPS, isGLO, isGAL, isBDS, isQZSS)
 end
 if STOP_CALC; return; end
 
@@ -260,7 +264,7 @@ if STOP_CALC; return; end
 if settings.PLOT.skyplot
     % ||| only the first frequency is taken for color-coding, CHANGE!!!
     % ||| fixed residuals
-    SkyPlot(satellites, storeData, epochs, station_date, isGPS, isGLO, isGAL, isBDS, settings.PROC.elev_mask, settings.PLOT.fixed);
+    SkyPlot(satellites, storeData, epochs, station_date, isGPS, isGLO, isGAL, isBDS, isQZSS, settings.PROC.elev_mask, settings.PLOT.fixed);
 end
 if STOP_CALC; return; end
 
@@ -271,7 +275,14 @@ if settings.PLOT.signal_qual
     satellites.CL_1 = full(storeData.C1) - full(storeData.L1);
     satellites.CL_2 = full(storeData.C2) - full(storeData.L2);
     satellites.CL_3 = full(storeData.C3) - full(storeData.L3);
-    signQualPlot(satellites, label_x_h, hours, isGPS, isGLO, isGAL, isBDS, settings, rgb);
+    signQualPlot(satellites, label_x_h, hours, isGPS, isGLO, isGAL, isBDS, isQZSS, settings, rgb);
+end
+if STOP_CALC; return; end
+
+
+%     -+-+-+-+- Figure: MP LC  -+-+-+-+-
+if settings.PLOT.MPLC
+    MPLC_Plots(storeData, satellites, settings.PROC.elev_mask, settings.PROC.SNR_mask, isGPS, isGLO, isGAL, isBDS, isQZSS);
 end
 if STOP_CALC; return; end
 
@@ -297,6 +308,7 @@ if settings.PLOT.cs && strcmpi(settings.PROC.method,'Code + Phase')
         if isGLO; vis_cs_SF(storeData, settings.OTHER.CS, 'R'); end
         if isGAL; vis_cs_SF(storeData, settings.OTHER.CS, 'E'); end
         if isBDS; vis_cs_SF(storeData, settings.OTHER.CS, 'C'); end
+        if isQZSS;vis_cs_SF(storeData, settings.OTHER.CS, 'J'); end
     else
         fprintf('L1-C1 Cycle-Slip-Detection disabled.           \n')
     end
@@ -306,6 +318,7 @@ if settings.PLOT.cs && strcmpi(settings.PROC.method,'Code + Phase')
         if isGLO; vis_cs_DF(storeData, 'R', settings.OTHER.CS.DF_threshold, satellites.elev); end
         if isGAL; vis_cs_DF(storeData, 'E', settings.OTHER.CS.DF_threshold, satellites.elev); end
         if isBDS; vis_cs_DF(storeData, 'C', settings.OTHER.CS.DF_threshold, satellites.elev); end
+        if isQZSS;vis_cs_DF(storeData, 'J', settings.OTHER.CS.DF_threshold, satellites.elev); end
     else
         fprintf('dLi-dLj Cycle-Slip-Detection disabled.          \n')
     end
@@ -315,6 +328,7 @@ if settings.PLOT.cs && strcmpi(settings.PROC.method,'Code + Phase')
         if isGLO; vis_cs_Doppler(storeData, 'R', settings.OTHER.CS.D_threshold, settings.INPUT.proc_freqs); end
         if isGAL; vis_cs_Doppler(storeData, 'E', settings.OTHER.CS.D_threshold, settings.INPUT.proc_freqs); end
         if isBDS; vis_cs_Doppler(storeData, 'C', settings.OTHER.CS.D_threshold, settings.INPUT.proc_freqs); end
+        if isQZSS;vis_cs_Doppler(storeData, 'J', settings.OTHER.CS.D_threshold, settings.INPUT.proc_freqs); end
     else
         fprintf('Cycle-Slip-Detection with Doppler disabled.          \n')
     end
@@ -324,6 +338,7 @@ if settings.PLOT.cs && strcmpi(settings.PROC.method,'Code + Phase')
         if isGLO; vis_cs_time_difference(storeData, 'R', settings.OTHER.CS.TD_degree, settings.OTHER.CS.TD_threshold); end
         if isGAL; vis_cs_time_difference(storeData, 'E', settings.OTHER.CS.TD_degree, settings.OTHER.CS.TD_threshold); end
         if isBDS; vis_cs_time_difference(storeData, 'C', settings.OTHER.CS.TD_degree, settings.OTHER.CS.TD_threshold); end
+        if isQZSS;vis_cs_time_difference(storeData, 'J', settings.OTHER.CS.TD_degree, settings.OTHER.CS.TD_threshold); end
     else
         fprintf('Cycle-Slip-Detection with time difference disabled.          \n')
     end
@@ -369,6 +384,9 @@ if settings.PLOT.res_sats
     if isBDS
         vis_res_sats(storeData, 'C', settings.INPUT.proc_freqs, strcmp(settings.PROC.method, 'Code + Phase')', settings.PLOT.fixed);
     end
+    if isQZSS
+        vis_res_sats(storeData, 'J', settings.INPUT.proc_freqs, strcmp(settings.PROC.method, 'Code + Phase')', settings.PLOT.fixed);
+    end    
 end
 if STOP_CALC; return; end
 
@@ -403,6 +421,7 @@ if settings.PLOT.stream_corr && settings.ORBCLK.bool_brdc && ~isempty(settings.O
             load(filename, 'corr2brdc_GAL');
             plotCorrection2BRDC(corr2brdc_GAL, obs, filename, 'E');
         end
+        % ||| QZSS is missing!!!
     end
 end
 if STOP_CALC; return; end
@@ -410,7 +429,7 @@ if STOP_CALC; return; end
 
 %     -+-+-+-+- Figures: Applied Biases Plot  -+-+-+-+-
 if settings.PLOT.appl_biases
-    plotAppliedBiases(storeData, isGPS, isGLO, isGAL, isBDS, rgb)
+    plotAppliedBiases(storeData, isGPS, isGLO, isGAL, isBDS, isQZSS, rgb)
 end
 if STOP_CALC; return; end
 

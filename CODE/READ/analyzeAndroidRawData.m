@@ -10,7 +10,7 @@ function [obs] = analyzeAndroidRawData(sensorlog_path, settings)
 %	obs             struct, updated with essential information for processing
 %
 % Revision:
-%   ...
+%   2023/11/08, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -30,6 +30,9 @@ L_rank_gal = []; C_rank_gal = []; S_rank_gal = []; D_rank_gal = [];
 L_bds_3 = []; C_bds_3 = []; S_bds_3 = []; D_bds_3 = []; 
 L_bds = []; C_bds = []; S_bds = []; D_bds = [];
 L_rank_bds = []; C_rank_bds = []; S_rank_bds = []; D_rank_bds = [];
+L_qzss_3 = []; C_qzss_3 = []; S_qzss_3 = []; D_qzss_3 = []; 
+L_qzss = []; C_qzss = []; S_qzss = []; D_qzss = [];
+L_rank_qzss = []; C_rank_qzss = []; S_rank_qzss = []; D_rank_qzss = [];
 receiver_type = ''; antenna_type = ''; 
 startdate = [];         enddate = [];
 shift = []; 
@@ -48,8 +51,11 @@ ant_delta = zeros(3,1);
 fid = fopen(sensorlog_path,'rt');     	% open observation-file
 
 i = 0; formatSpec = '';
-isGPS_L1 = false; isGPS_L5 = false;  isGLO_G1 = false; 
-isGAL_E1 = false; isGAL_E5a = false; isBDS_B1 = false; isBDS_B2 = false;
+isGPS_L1  = false;      isGPS_L5  = false;  
+isGLO_G1  = false; 
+isGAL_E1  = false;      isGAL_E5a = false; 
+isBDS_B1  = false;      isBDS_B2a = false;
+isQZSS_L1 = false;      isQZSS_L5 = false;
 
 while true
     
@@ -64,7 +70,11 @@ while true
         receiver_type = line(idx+7:end);
     end
     
-    if contains(line,'# Raw')         	% variables in raw data line
+    if contains(line, '# Raw GNSS measurements format:')        % GPSTest (?)
+        line = fgetl(fid);              % skip this line
+    end
+    
+    if contains(line,'# Raw') || contains(line,'#   Raw')       % variables in raw data line
         header_raw_string = strrep(line,' ','');
         header_raw_string = strrep(header_raw_string,'#','');
         vars_Raw = split(header_raw_string, ',');   % cell, contains fields with variables
@@ -193,14 +203,14 @@ while true
            end
            
        elseif idx_gnss == 5             % BeiDou
-           isBDS_B1 = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3));
-           isBDS_B2 = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2/1e3));
-           frq_char = char('1'*isBDS_B1 + '5'*isBDS_B2);
+           isBDS_B1  = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3));
+           isBDS_B2a = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2/1e3));
+           frq_char = char('1'*isBDS_B1 + '5'*isBDS_B2a);
            L = ['L' frq_char CodeType{1}];
            C = ['C' frq_char CodeType{1}];
            S = ['S' frq_char CodeType{1}];
            D = ['D' frq_char CodeType{1}];
-           if (isempty(C_bds_3) || ~contains(C_bds_3, C)) && (isBDS_B1 || isBDS_B2)
+           if (isempty(C_bds_3) || ~contains(C_bds_3, C)) && (isBDS_B1 || isBDS_B2a)
                L_bds_3 = [L_bds_3 L];
                C_bds_3 = [C_bds_3 C];
                S_bds_3 = [S_bds_3 S];
@@ -218,16 +228,44 @@ while true
                S_rank_bds = [S_rank_bds L_rank];
                D_rank_bds = [D_rank_bds L_rank];
            end
-           
+
+           elseif idx_gnss == 4             % QZSS
+               isQZSS_L1 = (round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F1/1e3));
+               isQZSS_L5 = (round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F5/1e3));
+               frq_char = char('1'*isQZSS_L1 + '5'*isQZSS_L5);
+               L = ['L' frq_char CodeType{1}];
+               C = ['C' frq_char CodeType{1}];
+               S = ['S' frq_char CodeType{1}];
+               D = ['D' frq_char CodeType{1}];
+               if (isempty(C_qzss_3) || ~contains(C_qzss_3, C)) && (isQZSS_L1 || isQZSS_L5)
+                   L_qzss_3 = [L_qzss_3 L];
+                   C_qzss_3 = [C_qzss_3 C];
+                   S_qzss_3 = [S_qzss_3 S];
+                   D_qzss_3 = [D_qzss_3 D];
+                   [L_type2, L_rank] = obs_convert(L, 'C', settings);
+                   [C_type2, C_rank] = obs_convert(C, 'C', settings);
+                   [S_type2, C_rank] = obs_convert(S, 'C', settings);
+                   [D_type2, C_rank] = obs_convert(D, 'C', settings);
+                   L_qzss = [L_qzss L_type2];
+                   C_qzss = [C_qzss C_type2];
+                   S_qzss = [S_qzss S_type2];
+                   D_qzss = [D_qzss D_type2];
+                   L_rank_qzss = [L_rank_qzss L_rank];
+                   C_rank_qzss = [C_rank_qzss L_rank];
+                   S_rank_qzss = [S_rank_qzss L_rank];
+                   D_rank_qzss = [D_rank_qzss L_rank];
+               end
+               
        end
        
        i = i + 1;
     end
     
     
-    if i > 200 || (isGPS_L1 && isGPS_L5 && isGLO_G1 && isGAL_E1 && isGAL_E5a && isBDS_B1 && isBDS_B2)
+    if i > 200 || (isGPS_L1 && isGPS_L5 && isGLO_G1 && isGAL_E1 && isGAL_E5a && isBDS_B1 && isBDS_B2a)
         % stop analyzing if all GNSS have been detected or 200 lines of
         % data have been analzed
+        % QZSS is ignored in this check
         break
     end
     
@@ -237,26 +275,30 @@ fclose(fid);        % close file
 
 
 %% SAVE
-% types of observations in 2-digit-form for gps/glonass/galileo/beidou
-obs.types_gps = [L_gps C_gps S_gps D_gps];
-obs.types_glo = [L_glo C_glo S_glo D_glo];
-obs.types_gal = [L_gal C_gal S_gal D_gal];
-obs.types_bds = [L_bds C_bds S_bds D_bds];
-% types of observations in 3-digit-form for gps/glonass/galileo/beidou
-obs.types_gps_3 = [L_gps_3 C_gps_3 S_gps_3 D_gps_3];
-obs.types_glo_3 = [L_glo_3 C_glo_3 S_glo_3 D_glo_3];
-obs.types_gal_3 = [L_gal_3 C_gal_3 S_gal_3 D_gal_3];
-obs.types_bds_3 = [L_bds_3 C_bds_3 S_bds_3 D_bds_3];
-% ranking of observations for gps/glonass/galileo /beidou
-obs.ranking_gps = [L_rank_gps C_rank_gps S_rank_gps D_rank_gps];
-obs.ranking_glo = [L_rank_glo C_rank_glo S_rank_glo D_rank_glo];
-obs.ranking_gal = [L_rank_gal C_rank_gal S_rank_gal D_rank_gal];
-obs.ranking_bds = [L_rank_bds C_rank_bds S_rank_bds D_rank_bds];
-% Number of observation types for gps/glonass/galileo/beidou
+% types of observations in 2-digit-form for GPS/GLONASS/Galileo/BeiDou/QZSS
+obs.types_gps  = [L_gps  C_gps  S_gps  D_gps];
+obs.types_glo  = [L_glo  C_glo  S_glo  D_glo];
+obs.types_gal  = [L_gal  C_gal  S_gal  D_gal];
+obs.types_bds  = [L_bds  C_bds  S_bds  D_bds];
+obs.types_qzss = [L_qzss C_qzss S_qzss D_qzss];
+% types of observations in 3-digit-form for GPS/GLONASS/Galileo/BeiDou/QZSS
+obs.types_gps_3  = [L_gps_3  C_gps_3  S_gps_3  D_gps_3];
+obs.types_glo_3  = [L_glo_3  C_glo_3  S_glo_3  D_glo_3];
+obs.types_gal_3  = [L_gal_3  C_gal_3  S_gal_3  D_gal_3];
+obs.types_bds_3  = [L_bds_3  C_bds_3  S_bds_3  D_bds_3];
+obs.types_qzss_3 = [L_qzss_3 C_qzss_3 S_qzss_3 D_qzss_3];
+% ranking of observations for GPS/GLONASS/Galileo/BeiDou/QZSS
+obs.ranking_gps  = [L_rank_gps  C_rank_gps  S_rank_gps  D_rank_gps];
+obs.ranking_glo  = [L_rank_glo  C_rank_glo  S_rank_glo  D_rank_glo];
+obs.ranking_gal  = [L_rank_gal  C_rank_gal  S_rank_gal  D_rank_gal];
+obs.ranking_bds  = [L_rank_bds  C_rank_bds  S_rank_bds  D_rank_bds];
+obs.ranking_qzss = [L_rank_qzss C_rank_qzss S_rank_qzss D_rank_qzss];
+% Number of observation types for GPS/GLONASS/Galileo/BeiDou/QZSS
 obs.no_obs_types(1) = length(obs.types_gps_3)/3;
 obs.no_obs_types(2) = length(obs.types_glo_3)/3;
 obs.no_obs_types(3) = length(obs.types_gal_3)/3;
 obs.no_obs_types(4) = length(obs.types_bds_3)/3;
+obs.no_obs_types(5) = length(obs.types_qzss_3)/3;
 
 % save observation relevant data
 obs.phase_shift   = shift;

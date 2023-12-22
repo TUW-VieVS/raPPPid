@@ -40,9 +40,9 @@ tgd2_C = 25;        % TGD between B1 and B3
 % - GPS
 if settings.INPUT.use_GPS
     if strcmp(settings.INPUT.gps_freq{1}, 'L1')
-        C1_TGD_G = input.Eph_GPS(tgd1_G,k_G(bool_G))';
+        C1_TGD_G = input.ORBCLK.Eph_GPS(tgd1_G,k_G(bool_G))';
     elseif strcmp(settings.INPUT.gps_freq{1}, 'L2')
-        C1_TGD_G = input.Eph_GPS(tgd1_G,k_G(bool_G))' * Const.GPS_F1^2 / Const.GPS_F2^2;
+        C1_TGD_G = input.ORBCLK.Eph_GPS(tgd1_G,k_G(bool_G))' * Const.GPS_F1^2 / Const.GPS_F2^2;
     else
         errordlg('not implemented', 'Error');
     end
@@ -52,11 +52,11 @@ end
 % - Galileo
 if settings.INPUT.use_GAL
     if     strcmp(settings.INPUT.gal_freq{1}, 'E1')
-        C1_TGD_E = input.Eph_GAL(tgd1_E,k_E(bool_E))';
+        C1_TGD_E = input.ORBCLK.Eph_GAL(tgd1_E,k_E(bool_E))';
     elseif strcmp(settings.INPUT.gal_freq{1}, 'E5a')
-        C1_TGD_E = input.Eph_GAL(tgd1_E,k_E(bool_E))' * Const.GAL_F1^2 / Const.GAL_F5a^2;
+        C1_TGD_E = input.ORBCLK.Eph_GAL(tgd1_E,k_E(bool_E))' * Const.GAL_F1^2 / Const.GAL_F5a^2;
     elseif strcmp(settings.INPUT.gal_freq{1}, 'E5b')
-        C1_TGD_E = input.Eph_GAL(tgd2_E,k_E(bool_E))' * Const.GAL_F1^2 / Const.GAL_F5b^2;
+        C1_TGD_E = input.ORBCLK.Eph_GAL(tgd2_E,k_E(bool_E))' * Const.GAL_F1^2 / Const.GAL_F5b^2;
     end
     % convert TGD to [m] and save
     Epoch.C1_bias(Epoch.gal & valid) = - Const.C * C1_TGD_E;
@@ -64,11 +64,11 @@ end
 % - Beidou
 if settings.INPUT.use_BDS
     if     strcmp(settings.INPUT.bds_freq{1}, 'B1')
-        C1_TGD_C = input.Eph_BDS(tgd1_C,k_C)';
+        C1_TGD_C = input.ORBCLK.Eph_BDS(tgd1_C,k_C)';
     elseif strcmp(settings.INPUT.bds_freq{1}, 'B2')
-        C1_TGD_C = input.Eph_BDS(tgd1_C,k_C)' * Const.BDS_F1^2 / Const.BDS_F2^2;
+        C1_TGD_C = input.ORBCLK.Eph_BDS(tgd1_C,k_C)' * Const.BDS_F1^2 / Const.BDS_F2^2;
     elseif strcmp(settings.INPUT.bds_freq{1}, 'B3')
-        C1_TGD_C = input.Eph_BDS(tgd2_C,k_C)' * Const.BDS_F1^2 / Const.BDS_F3^2;
+        C1_TGD_C = input.ORBCLK.Eph_BDS(tgd2_C,k_C)' * Const.BDS_F1^2 / Const.BDS_F3^2;
     end
     % convert TGD to [m] and save
     Epoch.C1_bias(Epoch.bds & valid) = - Const.C * C1_TGD_C;
@@ -81,9 +81,9 @@ end
 if settings.INPUT.num_freqs > 1
     if settings.INPUT.use_GPS
         if     strcmp(settings.INPUT.gps_freq{2}, 'L1')
-            C2_TGD_G = input.Eph_GPS(tgd1_G,k_G(bool_G))';
+            C2_TGD_G = input.ORBCLK.Eph_GPS(tgd1_G,k_G(bool_G))';
         elseif strcmp(settings.INPUT.gps_freq{2}, 'L2')
-            C2_TGD_G = input.Eph_GPS(tgd1_G,k_G(bool_G))' * Const.GPS_F1^2 / Const.GPS_F2^2;
+            C2_TGD_G = input.ORBCLK.Eph_GPS(tgd1_G,k_G(bool_G))' * Const.GPS_F1^2 / Const.GPS_F2^2;
         else
             C2_TGD_G = zeros(numel(k_G(bool_G)), 1);
             % errordlg('TGD is not usable for L5!', 'Error');
@@ -94,11 +94,11 @@ if settings.INPUT.num_freqs > 1
     % - Galileo
     if settings.INPUT.use_GAL
         if     strcmp(settings.INPUT.gal_freq{2}, 'E1')
-            C2_TGD_E = input.Eph_GAL(tgd1_E,k_E(bool_E))';
+            C2_TGD_E = input.ORBCLK.Eph_GAL(tgd1_E,k_E(bool_E))';
         elseif strcmp(settings.INPUT.gal_freq{2}, 'E5a')
-            C2_TGD_E = input.Eph_GAL(tgd1_E,k_E(bool_E))' * Const.GAL_F1^2 / Const.GAL_F5a^2;
+            C2_TGD_E = input.ORBCLK.Eph_GAL(tgd1_E,k_E(bool_E))' * Const.GAL_F1^2 / Const.GAL_F5a^2;
         elseif strcmp(settings.INPUT.gal_freq{2}, 'E5b')
-            C2_TGD_E = input.Eph_GAL(tgd2_E,k_E(bool_E))' * Const.GAL_F1^2 / Const.GAL_F5b^2;
+            C2_TGD_E = input.ORBCLK.Eph_GAL(tgd2_E,k_E(bool_E))' * Const.GAL_F1^2 / Const.GAL_F5b^2;
         end
         % convert TGD to [m] and save
         Epoch.C1_bias(Epoch.gal & valid) = - Const.C * C2_TGD_E;
@@ -106,11 +106,11 @@ if settings.INPUT.num_freqs > 1
     % - Beidou
     if settings.INPUT.use_BDS
         if     strcmp(settings.INPUT.bds_freq{2}, 'B1')
-            C2_TGD_C = input.Eph_BDS(tgd1_C,k_C(bool_C))';
+            C2_TGD_C = input.ORBCLK.Eph_BDS(tgd1_C,k_C(bool_C))';
         elseif strcmp(settings.INPUT.bds_freq{2}, 'B2')
-            C2_TGD_C = input.Eph_BDS(tgd1_C,k_C(bool_C))' * Const.BDS_F1^2 / Const.BDS_F2^2;
+            C2_TGD_C = input.ORBCLK.Eph_BDS(tgd1_C,k_C(bool_C))' * Const.BDS_F1^2 / Const.BDS_F2^2;
         elseif strcmp(settings.INPUT.bds_freq{2}, 'B3')
-            C2_TGD_C = input.Eph_BDS(tgd2_C,k_C(bool_C))' * Const.BDS_F1^2 / Const.BDS_F3^2;
+            C2_TGD_C = input.ORBCLK.Eph_BDS(tgd2_C,k_C(bool_C))' * Const.BDS_F1^2 / Const.BDS_F3^2;
         end
         % convert TGD to [m] and save
         Epoch.C2_bias(Epoch.bds & valid) = - Const.C * C2_TGD_C;

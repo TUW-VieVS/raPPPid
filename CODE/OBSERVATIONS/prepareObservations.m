@@ -4,12 +4,15 @@ function [Epoch, obs] = prepareObservations(settings, obs, Epoch, q)
 % INPUT:
 %   settings        struct, settings from GUI
 %   obs             struct, observations and data from rinex-obs-file
-%   Epoch       struct, epoch-specific data for current epoch
+%   Epoch           struct, epoch-specific data for current epoch
 %   q               number of current epoch
 % OUTPUT:
 %   Epoch       struct, updated
 %   obs             struct, updated
 %
+% Revision:
+%   2023/06/11, MFWG: adding QZSS
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -21,19 +24,21 @@ Epoch.sats = sats;
 Epoch.obs = Epoch.obs(sat_index,:);
 Epoch.LLI_bit_rinex = Epoch.LLI_bit_rinex(sat_index,:);
 Epoch.ss_digit_rinex = Epoch.ss_digit_rinex(sat_index,:);
-Epoch.gps = Epoch.gps(sat_index);
-Epoch.glo = Epoch.glo(sat_index);
-Epoch.gal = Epoch.gal(sat_index);
-Epoch.bds = Epoch.bds(sat_index);
+Epoch.gps  = Epoch.gps(sat_index);
+Epoch.glo  = Epoch.glo(sat_index);
+Epoch.gal  = Epoch.gal(sat_index);
+Epoch.bds  = Epoch.bds(sat_index);
+Epoch.qzss = Epoch.qzss(sat_index);
 Epoch.other_systems = Epoch.other_systems(sat_index);
 
 
 %% (2) Find satellite systems not used and removed them
 is_wrong_system = ...
-    ~settings.INPUT.use_GLO .* Epoch.glo...
-    | ~settings.INPUT.use_GPS .* Epoch.gps...
-    | ~settings.INPUT.use_GAL .* Epoch.gal ...
-    | ~settings.INPUT.use_BDS .* Epoch.bds ...
+      ~settings.INPUT.use_GPS  .* Epoch.gps  ...
+    | ~settings.INPUT.use_GLO  .* Epoch.glo  ...
+    | ~settings.INPUT.use_GAL  .* Epoch.gal  ...
+    | ~settings.INPUT.use_BDS  .* Epoch.bds  ...
+    | ~settings.INPUT.use_QZSS .* Epoch.qzss ...    
     | Epoch.other_systems;
 [Epoch] = remove_sats(Epoch, is_wrong_system);
 
@@ -43,10 +48,11 @@ is_wrong_system = ...
 %                      rows = excluded sats
 if ~isempty(intersect(settings.PROC.exclude_sats, Epoch.sats))      % check for agreement
     excluded_sats = settings.PROC.exclude_sats;
-    excluded_gps = (excluded_sats >   0) & (excluded_sats < 100);
-    excluded_glo = (excluded_sats > 100) & (excluded_sats < 200);
-    excluded_gal = (excluded_sats > 200) & (excluded_sats < 300);
-    excluded_bds = (excluded_sats > 300) & (excluded_sats < 400);
+    excluded_gps  = (excluded_sats >   0) & (excluded_sats < 100);
+    excluded_glo  = (excluded_sats > 100) & (excluded_sats < 200);
+    excluded_gal  = (excluded_sats > 200) & (excluded_sats < 300);
+    excluded_bds  = (excluded_sats > 300) & (excluded_sats < 400);
+    excluded_qzss = (excluded_sats > 400) & (excluded_sats < 500);
     
     if settings.INPUT.use_GPS && any(excluded_gps)      % GPS
         remove_GPS_PRN = excluded_sats(excluded_gps);           % get prns of excluded GPS satellites
@@ -72,6 +78,12 @@ if ~isempty(intersect(settings.PROC.exclude_sats, Epoch.sats))      % check for 
         remove_BDS(~Epoch.bds) = 0;
         [Epoch] = remove_sats(Epoch, remove_BDS);
     end
+    if settings.INPUT.use_QZSS && any(excluded_qzss)   	% QZSS, exactly the same as for GPS
+        remove_QZSS_PRN = excluded_sats(excluded_qzss);
+        [~,remove_QZSS] = ismember(Epoch.sats, remove_QZSS_PRN);
+        remove_QZSS(~Epoch.qzss) = 0;
+        [Epoch] = remove_sats(Epoch, remove_QZSS);
+    end    
 end
 
 
@@ -83,22 +95,24 @@ if ~isempty(settings.PROC.excl_partly)              % check for input
         prn  = mod(settings.PROC.excl_partly(:,1),100);
         gnss = floor(settings.PROC.excl_partly(:,1)/100);
         % prns of satellites which should be removed for each gnss
-        excluded_GPS_PRN = prn((gnss == 0) & (from <= q) & (q <= to));
-        excluded_GLO_PRN = prn((gnss == 1) & (from <= q) & (q <= to));
-        excluded_GAL_PRN = prn((gnss == 2) & (from <= q) & (q <= to));
-        excluded_BDS_PRN = prn((gnss == 3) & (from <= q) & (q <= to));
-        [~,remove_GPS] = ismember(Epoch.sats.*Epoch.gps,     excluded_GPS_PRN);
-        [~,remove_GLO] = ismember((Epoch.sats-100).*Epoch.glo, excluded_GLO_PRN);
-        [~,remove_GAL] = ismember((Epoch.sats-200).*Epoch.gal, excluded_GAL_PRN);
-        [~,remove_BDS] = ismember((Epoch.sats-300).*Epoch.bds, excluded_BDS_PRN);
-        [Epoch] = remove_sats(Epoch, (remove_GPS|remove_GLO|remove_GAL|remove_BDS));
+        excluded_GPS_PRN  = prn((gnss == 0) & (from <= q) & (q <= to));
+        excluded_GLO_PRN  = prn((gnss == 1) & (from <= q) & (q <= to));
+        excluded_GAL_PRN  = prn((gnss == 2) & (from <= q) & (q <= to));
+        excluded_BDS_PRN  = prn((gnss == 3) & (from <= q) & (q <= to));
+        excluded_QZSS_PRN = prn((gnss == 4) & (from <= q) & (q <= to));
+        [~,remove_GPS]  = ismember(Epoch.sats.*Epoch.gps,     excluded_GPS_PRN);
+        [~,remove_GLO]  = ismember((Epoch.sats-100) .* Epoch.glo,  excluded_GLO_PRN);
+        [~,remove_GAL]  = ismember((Epoch.sats-200) .* Epoch.gal,  excluded_GAL_PRN);
+        [~,remove_BDS]  = ismember((Epoch.sats-300) .* Epoch.bds,  excluded_BDS_PRN);
+        [~,remove_QZSS] = ismember((Epoch.sats-400) .* Epoch.qzss, excluded_QZSS_PRN);
+        [Epoch] = remove_sats(Epoch, (remove_GPS|remove_GLO|remove_GAL|remove_BDS|remove_QZSS));
     end
 end
 
 
 %% (5) Apply Phase Shift to Phase Observations
 for i = 1:size(obs.phase_shift,2)
-    system = obs.phase_shift(1,i);         % get GNSS, (1,2,3,4) = (gps,glo,gal,bds)
+    system = obs.phase_shift(1,i);         % get GNSS, (1,2,3,4,5) = (gps,glo,gal,bds,qzss)
     col    = obs.phase_shift(2,i);         % get column of observation
     value  = obs.phase_shift(3,i);         % get value of phase-shift
     % create vector with phase-shift value to correct the observation matrix
@@ -112,6 +126,8 @@ for i = 1:size(obs.phase_shift,2)
             shift = shift .* Epoch.gal;
         case 4          % only bds-rows
             shift = shift .* Epoch.bds;
+        case 5          % only qzss-rows
+            shift = shift .* Epoch.qzss;            
     end
     % apply phase-shift following RINEX 3 specification which says:
     % phi_RINEX = PHI_original + phase_shift

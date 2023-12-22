@@ -1,16 +1,19 @@
-function [] = plotAppliedBiases(storeData, use_GPS, use_GLO, use_GAL, use_BDS, rgb)
+function [] = plotAppliedBiases(storeData, GPS, GLO, GAL, BDS, QZSS, rgb)
 % Plots the applied Biases of all satellites and epochs
 % INPUT:
 %   storeData       data from all processed epochs
-%   use_GPS         boolean
-%   use_GLO         boolean
-%   use_GAL         boolean
-%   use_BDS         boolean
+%   GPS             boolean
+%   GLO             boolean
+%   GAL             boolean
+%   BDS             boolean
+%   QZSS            boolean
 %   rgb             n x 3, colors for plotting
 % OUTPUT:
 %   []
 %
-%
+% Revision:
+%   2023/12/21, MFWG: adding QZSS to plots
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -18,12 +21,12 @@ function [] = plotAppliedBiases(storeData, use_GPS, use_GLO, use_GAL, use_BDS, r
 fig_biases = figure('Name', 'Applied Satellite Biases Plot [m]', 'NumberTitle','off');
 
 % plot applied bias
-plotBiases(storeData.C1_bias, 1, 'C1 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
-plotBiases(storeData.C2_bias, 3, 'C2 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
-plotBiases(storeData.C3_bias, 5, 'C3 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
-plotBiases(storeData.L1_bias, 2, 'L1 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
-plotBiases(storeData.L2_bias, 4, 'L2 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
-plotBiases(storeData.L3_bias, 6, 'L3 Biases', use_GPS, use_GLO, use_GAL, use_BDS, rgb)
+plotBiases(storeData.C1_bias, 1, 'C1 Biases', GPS, GLO, GAL, BDS, QZSS, rgb)
+plotBiases(storeData.C2_bias, 3, 'C2 Biases', GPS, GLO, GAL, BDS, QZSS, rgb)
+plotBiases(storeData.C3_bias, 5, 'C3 Biases', GPS, GLO, GAL, BDS, QZSS, rgb)
+plotBiases(storeData.L1_bias, 2, 'L1 Biases', GPS, GLO, GAL, BDS, QZSS, rgb)
+plotBiases(storeData.L2_bias, 4, 'L2 Biases', GPS, GLO, GAL, BDS, QZSS, rgb)
+plotBiases(storeData.L3_bias, 6, 'L3 Biases', GPS, GLO, GAL, BDS, QZSS, rgb)
 
 % add customized datatip
 dcm = datacursormode(fig_biases);
@@ -33,7 +36,7 @@ set(dcm, 'updatefcn', @vis_customdatatip_applBiases)
 end
 
 
-function [] = plotBiases(biases, n_plot, title_str, use_GPS, use_GLO, use_GAL, use_BDS, rgb)
+function [] = plotBiases(biases, n_plot, title_str, GPS, GLO, GAL, BDS, QZSS, rgb)
 % function to plot code or phase biases from a specific frequency
 
 % replace zeros with NaN
@@ -50,7 +53,7 @@ subplot(3, 2, n_plot)
 hold on
 
 % GPS
-if use_GPS
+if GPS
     ax = gca;
     ax.ColorOrder = rgb;
     gps_biases = biases(:,   1:DEF.SATS_GPS);
@@ -79,7 +82,7 @@ if use_GPS
     text(x,y, strcat('G',sprintfc('%02.0f', 1:DEF.SATS_GPS)),  'FontSize',8);
 end
 % Glonass
-if use_GLO
+if GLO
     ax = gca;
     ax.ColorOrder = rgb;
     glo_biases = biases(:, 101:(100+DEF.SATS_GLO));
@@ -108,7 +111,7 @@ if use_GLO
     text(x,y, strcat('R',sprintfc('%02.0f', 1:DEF.SATS_GLO)),  'FontSize',8);
 end
 % Galileo
-if use_GAL
+if GAL
     ax = gca;
     ax.ColorOrder = rgb;
     gal_biases = biases(:, 201:(200+DEF.SATS_GAL));
@@ -137,16 +140,16 @@ if use_GAL
     text(x,y, strcat('E',sprintfc('%02.0f', 1:DEF.SATS_GAL)),  'FontSize',8);
 end
 % BeiDou
-if use_BDS
+if BDS
     ax = gca;
     ax.ColorOrder = rgb;
-    bds_biases = biases(:, 301:(300+DEF.SATS_BDS));
-    plot(bds_biases, ':')
+    qzs_biases = biases(:, 301:(300+DEF.SATS_BDS));
+    plot(qzs_biases, ':')
     % prepare plotting text to each bias
     x = NaN(1,DEF.SATS_BDS);
     y = NaN(1,DEF.SATS_BDS);
     for i = 1:DEF.SATS_BDS
-        sat_biases = bds_biases(:,i);
+        sat_biases = qzs_biases(:,i);
         if all(isnan(sat_biases))
             xi = NaN; y(i) = NaN;
         else
@@ -165,7 +168,35 @@ if use_BDS
     % plot text to each bias
     text(x,y, strcat('C',sprintfc('%02.0f', 1:DEF.SATS_BDS)),  'FontSize',8);
 end
-
+% QZSS
+if QZSS
+    ax = gca;
+    ax.ColorOrder = rgb;
+    qzs_biases = biases(:, 401:(400+DEF.SATS_QZSS));
+    plot(qzs_biases, ':')
+    % prepare plotting text to each bias
+    x = NaN(1,DEF.SATS_QZSS);
+    y = NaN(1,DEF.SATS_QZSS);
+    for i = 1:DEF.SATS_QZSS
+        sat_biases = qzs_biases(:,i);
+        if all(isnan(sat_biases))
+            xi = NaN; y(i) = NaN;
+        else
+            xi = find(~isnan(sat_biases), 1, 'first');
+            % some tuning to the text placement
+            if xi == 1
+                idx = 1:numel(sat_biases);
+                idx = idx(~isnan(sat_biases));
+                xi = floor(median(idx));
+            end
+            x(i) = xi;
+            y(i) = sat_biases(x(i));
+        end
+        
+    end
+    % plot text to each bias
+    text(x,y, strcat('J',sprintfc('%02.0f', 1:DEF.SATS_QZSS)),  'FontSize',8);
+end
 
 
 % style plot

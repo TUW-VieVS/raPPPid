@@ -24,6 +24,7 @@ GPS_on = settings.INPUT.use_GPS;                % boolean, true if GNSS is enabl
 GLO_on = settings.INPUT.use_GLO;
 GAL_on = settings.INPUT.use_GAL;
 BDS_on = settings.INPUT.use_BDS;
+QZSS_on = settings.INPUT.use_QZSS;
 bool_print = ~settings.INPUT.bool_parfor;       % boolean, true if output is printed to command window
 
 % get variables from ANTEX read-in
@@ -49,6 +50,12 @@ if BDS_on
     PCV_BDS 		= input.OTHER.PCV.sat_BDS;
     PCV_rec_BDS 	= input.OTHER.PCV.rec_BDS;
 end
+if QZSS_on
+    PCO_QZSS		= input.OTHER.PCO.sat_QZSS;
+    PCO_rec_QZSS	= input.OTHER.PCO.rec_QZSS;
+    PCV_QZSS 		= input.OTHER.PCV.sat_QZSS;
+    PCV_rec_QZSS 	= input.OTHER.PCV.rec_QZSS;
+end
 
 
 %% RECEIVER PCO/PCV
@@ -66,6 +73,9 @@ if GAL_on && ~isempty(PCV_rec_GAL) && size(PCV_rec_GAL,3)
 end
 if BDS_on && ~isempty(PCV_rec_BDS) && size(PCV_rec_BDS,3)
     PCV_rec_BDS(end,end,5) = 0;
+end
+if QZSS_on && ~isempty(PCV_rec_QZSS) && size(PCV_rec_QZSS,3)
+    PCV_rec_QZSS(end,end,5) = 0;
 end
 
 
@@ -254,6 +264,53 @@ if BDS_on
 end
 
 
+% -) QZSS:
+% replace missing corrections with values of 1st frequency. If no 
+% corrections exist at all, receiver PCO or PCV values from GPS are taken
+L2_proc = any(settings.INPUT.qzss_freq_idx == 2);
+L5_proc = any(settings.INPUT.qzss_freq_idx == 3);
+L6_proc = any(settings.INPUT.qzss_freq_idx == 4);
+if QZSS_on
+    % --- PCO ---
+    if ~all(PCO_rec_QZSS(:) == 0)
+        no_PCO = all(PCO_rec_QZSS == 0,1);
+        n = sum(no_PCO);               % number of frequencies without PCO
+        QZSS_L1_PCO = PCO_rec_QZSS(:,1);      % get E1 PCO
+        PCO_rec_QZSS(:,no_PCO) = repmat(QZSS_L1_PCO, 1, n, 1);    % replace missing PCOs
+        if no_PCO(2) && L2_proc; error_pco = [error_pco, '-QZSS_L2 ']; end
+        if no_PCO(3) && L5_proc; error_pco = [error_pco, '-QZSS_L5 ']; end
+        if no_PCO(4) && L6_proc; error_pco = [error_pco, '-QZSS_L6 ']; end     
+    else        % no QZSS receiver PCO at all
+        PCO_rec_QZSS = PCO_rec_GPS;
+        error_pco = [error_pco, '-QZSS '];
+    end
+    
+    % --- PCV---
+    if ~isempty(PCV_rec_QZSS)
+        PCV_rec_QZSS_1 = PCV_rec_QZSS(:,:,1);
+        PCV_rec_QZSS_2 = PCV_rec_QZSS(:,:,2);
+        PCV_rec_QZSS_3 = PCV_rec_QZSS(:,:,3);
+        PCV_rec_QZSS_4 = PCV_rec_QZSS(:,:,4);
+        % replace missing receiver PCVs of 2nd and 3rd frequency with L1 values
+        if all(PCV_rec_QZSS_2(:) == 0)
+            PCV_rec_QZSS(:,:,2) = PCV_rec_QZSS_1;
+            if L2_proc; error_pcv = [error_pcv, '-QZSS_L2 ']; end
+        end
+        if all(PCV_rec_QZSS_3(:) == 0)
+            PCV_rec_QZSS(:,:,3) = PCV_rec_QZSS_1;
+            if L5_proc; error_pcv = [error_pcv, '-QZSS_L5 ']; end
+        end
+        if all(PCV_rec_QZSS_4(:) == 0)
+            PCV_rec_QZSS(:,:,4) = PCV_rec_QZSS_1;
+            if L6_proc; error_pcv = [error_pcv, '-QZSS_L6 ']; end
+        end                
+    else        % no QZSS receiver PCV at all
+        PCV_rec_QZSS = PCV_rec_GPS;
+        error_pcv = [error_pcv, '-QZSS '];
+    end
+end
+
+
 % print error message with missing receiver corrections
 if ~strcmp(antenna_type, 'XxXxX') && bool_print
     if ~isempty(error_pco)
@@ -357,9 +414,27 @@ if BDS_on
     PCV_BDS(3,:) = PCV_BDS_B3;
 end
 
+if QZSS_on
+    % missing QZSS satellite PCOs are replaced during processing (with values of L1 frequency)
+    % replace missing QZSS PCV with values of L1
+    PCV_QZSS_L1 = PCV_QZSS(1,:);
+    PCV_QZSS_L2 = PCV_QZSS(2,:);
+    PCV_QZSS_L5 = PCV_QZSS(3,:);
+    PCV_QZSS_L6 = PCV_QZSS(4,:);
+    PCV_QZSS_L2(cellfun(@isempty,PCV_QZSS_L2)) = PCV_QZSS_L1(cellfun(@isempty,PCV_QZSS_L2));
+    PCV_QZSS_L5(cellfun(@isempty,PCV_QZSS_L5)) = PCV_QZSS_L1(cellfun(@isempty,PCV_QZSS_L5));
+    PCV_QZSS_L6(cellfun(@isempty,PCV_QZSS_L6)) = PCV_QZSS_L1(cellfun(@isempty,PCV_QZSS_L6));
+    PCV_QZSS(1,:) = PCV_QZSS_L1;
+    PCV_QZSS(2,:) = PCV_QZSS_L2;
+    PCV_QZSS(3,:) = PCV_QZSS_L5;
+    PCV_QZSS(4,:) = PCV_QZSS_L6;
+end
+
+
 
 
 %% save variables
+% save PCO and for processed GNSS
 if GPS_on
     input.OTHER.PCO.sat_GPS = PCO_GPS;
     input.OTHER.PCO.rec_GPS = PCO_rec_GPS;
@@ -384,6 +459,14 @@ if BDS_on
     input.OTHER.PCV.sat_BDS = PCV_BDS;
     input.OTHER.PCV.rec_BDS = PCV_rec_BDS;
 end
+if QZSS_on
+    input.OTHER.PCO.sat_QZSS = PCO_QZSS;
+    input.OTHER.PCO.rec_QZSS = PCO_rec_QZSS;
+    input.OTHER.PCV.sat_QZSS = PCV_QZSS;
+    input.OTHER.PCV.rec_QZSS = PCV_rec_QZSS;
+end
+
+% save error messages
 input.OTHER.PCO.rec_error = error_pco;
 input.OTHER.PCV.rec_error = error_pcv;
 

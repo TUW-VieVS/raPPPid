@@ -66,10 +66,10 @@ if ~isempty(rec_types)
 %     'CLK'    % ||| implement    
 %     'CRT'    % ||| implement
     if any(contains(rec_types, 'ATT'))
-        ATT.q0 = zeros(m,399); 
-        ATT.q1 = zeros(m,399); 
-        ATT.q2 = zeros(m,399); 
-        ATT.q3 = zeros(m,399); 
+        ATT.q0 = zeros(m,410); 
+        ATT.q1 = zeros(m,410); 
+        ATT.q2 = zeros(m,410); 
+        ATT.q3 = zeros(m,410); 
         ATT.sow = zeros(m,1); 
     end
 end
@@ -107,8 +107,10 @@ for i = i_header:n
             sat = sat + 200;
         case 'C'
             sat = sat + 300;
+        case 'J'
+            sat = sat + 400;
         otherwise
-            continue        % e.g. QZSS satellite 
+            continue       
     end
     switch record_type
         case 'ATT'

@@ -19,6 +19,9 @@ function [Epoch, Adjust] = ...
 % *************************************************************************
 
 
+% ||| QZSS is not considered
+
+
 % get some epoch-specific variables
 is_gps = Epoch.gps;                 % boolean for GPS satellites
 is_glo = Epoch.glo;                 % boolean for GLONASS satellites

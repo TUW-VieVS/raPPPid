@@ -9,11 +9,15 @@
 classdef DEF
     
     properties (Constant = true)
+        % size of many variables due to raPPPid internal satellite numbering
+        SATS = 410;
+        
         % maximum prn number of satellites for each GNSS constellation
         SATS_GPS = 32;
         SATS_GLO = 27;
         SATS_GAL = 36;      % because of E33 and E36
         SATS_BDS = 60;      % because of a crazy amount of BDS sats
+        SATS_QZSS = 7;      % planned 2023/2024, currently 4 
         
         % GPS three-frequency satellites which send L5 signal
         % (status Nov 2022)
@@ -40,24 +44,30 @@ classdef DEF
         RANKING_GLO = 'PCIQX';
         RANKING_GAL = 'CBIQXAZ';
         RANKING_BDS = 'IQX';
+        RANKING_QZSS = 'CLSXEZBIQDP';       % rather arbitrary
         
         % naming of frequencies
         freq_GPS = [1 2 3];         % L1 - L2  - L5
         freq_GLO = [1 2 3];         % G1 - G2  - G3
         freq_GAL = [1 2 3 4 5];     % E1 - E5a - E5b - E5 - E6
         freq_BDS = [1 2 3];         % B1 - B2  - B3
+        freq_QZSS= [1 2 3 4];      	% L1 - L2  - L5 - L6
         
         % names of frequencies
         freq_GPS_names = {'L1'; 'L2' ; 'L5' ; 'OFF'            };
         freq_GLO_names = {'G1'; 'G2' ; 'G3' ; 'OFF'            };
         freq_GAL_names = {'E1'; 'E5a'; 'E5b'; 'E5'; 'E6'; 'OFF'};
         freq_BDS_names = {'B1'; 'B2' ; 'B3' ; 'OFF'            };
+        freq_QZSS_names= {'L1'; 'L2' ; 'L5' ; 'L6'; 'OFF'      };
         
-        % number of in all epochs estimated parameters: x, y, z, tropo, (4)
-        % rec clock GPS, rec offset GLO, rec offset GAL, rec offset BDS,(4)
-        % dcb^G_1, dcb^G_2, dcb^R_1, dcb^R_2,                           (4)
-        % dcb^E_1, dcb^E_2, dcb^C_1, dcb^C_2                            (4)
-        NO_PARAM_ZD = 16;	
+        % number of estimated parameters: 
+        % x, y, z, tropo,                                               (4)
+        % rec clock GPS,   dcb^G_1, dcb^G_2,                            (3)
+        % rec offset GLO,  dcb^R_1, dcb^R_2,                            (3)
+        % rec offset GAL,  dcb^E_1, dcb^E_2,                            (3)
+        % rec offset BDS,  dcb^C_1, dcb^C_2,                            (3)  
+        % rec offset QZSS, dcb^J_1, dcb^J_2,                            (3)
+        NO_PARAM_ZD = 19;	
         
         % minimal number of satellites in an epoch to calculate a position
         MIN_SATS = 4;
@@ -85,6 +95,16 @@ classdef DEF
         
         % define resolution of gridwise VMF3 (1°x1° or 5°x5°)
         VMF3_grid_resolution = 5;
+        
+        % model of the conventional mean pole
+        ctpm = 'cubic';                % options: 'linear', 'cubic', 'cmp2015'
+        
+        % colors of GNSS
+        COLOR_G = [1 0 0];
+        COLOR_R = [0 1 1];
+        COLOR_E = [0 0 1];
+        COLOR_C = [1 0 1];
+        COLOR_J = [0 1 0];
         
     end
     

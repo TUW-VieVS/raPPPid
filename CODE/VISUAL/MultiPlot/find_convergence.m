@@ -11,8 +11,8 @@ function [conv_dN, conv_dE, conv_dH, conv_2D, conv_3D] = ...
 %   MultiPlot   struct, settings for Multi-Plots
 % OUTPUT:
 %   conv_dN/_dE/_dH/_2D/_3D
-%               vector, time when convergence is reached in dN/... for all 
-%           	convergence periods [min]
+%                   vector, time when convergence is reached in dN/... for
+%                   all convergence periods [min]
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************

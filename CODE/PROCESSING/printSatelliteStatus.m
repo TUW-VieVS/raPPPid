@@ -82,6 +82,8 @@ for i = 1:n
         gnsschar = 'E';
     elseif prn < 400
         gnsschar = 'C';
+    elseif prn < 500
+        gnsschar = 'J';
     end
     
     % print info to command window

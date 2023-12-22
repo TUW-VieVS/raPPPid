@@ -35,15 +35,15 @@ if obs.rinex_version == 2
     CC = {['C' f_1]; ['C' f_2]; ''};
     SS = {['S' f_1]; ['S' f_2]; ''};
     DD = {['D' f_1]; ['D' f_2]; ''};
-    % P-Code is prefered angainst C-Code
+%     % P-Code is prefered angainst C-Code
     P2_idx = contains(CC, 'C2');
     P1_idx = contains(CC, 'C1');
     if any(P2_idx) && contains(obs.types_gps, 'P2')     % P2 is taken instead of C2
         CC(P2_idx) = {'P2'};
     end
-    if any(P1_idx) && contains(obs.types_gps, 'P1')     % P1 is taken instead of C1
-        CC(P1_idx) = {'P1'};
-    end
+%     if any(P1_idx) && contains(obs.types_gps, 'P1')     % P1 is taken instead of C1
+%         CC(P1_idx) = {'P1'};
+%     end
 end
 
 
@@ -104,19 +104,35 @@ bds_col.D1 = find_obs_type(DD{1}, obs.types_bds, obs.ranking_bds);
 bds_col.D2 = find_obs_type(DD{2}, obs.types_bds, obs.ranking_bds);
 bds_col.D3 = find_obs_type(DD{3}, obs.types_bds, obs.ranking_bds);
 
+% FOR QZSS
+qzss_col.L1 = find_obs_type(LL{1}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.L2 = find_obs_type(LL{2}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.L3 = find_obs_type(LL{3}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.C1 = find_obs_type(CC{1}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.C2 = find_obs_type(CC{2}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.C3 = find_obs_type(CC{3}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.S1 = find_obs_type(SS{1}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.S2 = find_obs_type(SS{2}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.S3 = find_obs_type(SS{3}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.D1 = find_obs_type(DD{1}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.D2 = find_obs_type(DD{2}, obs.types_qzss, obs.ranking_qzss);
+qzss_col.D3 = find_obs_type(DD{3}, obs.types_qzss, obs.ranking_qzss);
+
+
 
 
 %% Create obs.use_column
 % Cell-Array indicating which columns are ranked best for each GNSS and 
 % observation type. 
-% 1st row GPS, 2nd GLO, 3rd GAL, 4rd BDS
+% 1st row GPS, 2nd GLO, 3rd GAL, 4th BDS, 5th QZSS
 % columns:  1 | 2| 3| 4| 5| 6| 7| 8| 9|10|11|12
 %           L1|L2|L3|C1|C2|C3|S1|S2|S3|D1|D2|D3
 obs.use_column = [...
-    save_best_columns(gps_col, settings.INPUT.gps_freq ); ...
+    save_best_columns(gps_col, settings.INPUT.gps_freq); ...
     save_best_columns(glo_col, settings.INPUT.glo_freq); ...
-    save_best_columns(gal_col, settings.INPUT.gal_freq )
-    save_best_columns(bds_col, settings.INPUT.bds_freq )];
+    save_best_columns(gal_col, settings.INPUT.gal_freq); ...
+    save_best_columns(bds_col, settings.INPUT.bds_freq); ...
+    save_best_columns(qzss_col, settings.INPUT.qzss_freq)];
 
 
 end

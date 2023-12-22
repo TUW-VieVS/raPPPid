@@ -12,7 +12,7 @@ function [storeData] = create_output(storeData, obs, settings, q_end)
 %   storeData       struct, collects data from all epochs
 %  
 % Revision:
-%   ...
+%   23/10/09, MFWG: improving layout of results_float/fixed.txt
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -140,7 +140,7 @@ if settings.EXP.results_float
     fprintf(fid,'%s\n','# (20) sigma receiver clock error dt_GLONASS [m]');
     fprintf(fid,'%s\n','# (21) sigma receiver clock error dt_Galileo [m]');
     fprintf(fid,'%s\n','# (22) sigma receiver clock error dt_BeiDou [m]');
-    fprintf(fid,'%s\n','# (23) delta zwd [m]');
+    fprintf(fid,'%s\n','# (23) estimated zwd [m]');
     fprintf(fid,'%s\n','# (24) zwd (a priori + estimate) [m]');
     fprintf(fid,'%s\n','# (25) zhd modelled [m]');
     fprintf(fid,'%s\n','# (26) DCB GPS frequency 1 and 2 [m]');
@@ -152,12 +152,12 @@ if settings.EXP.results_float
     fprintf(fid,'%s\n','# (32) DCB BeiDou frequency 1 and 2 [m]');
     fprintf(fid,'%s\n','# (33) DCB BeiDou frequency 1 and 3 [m]');
     fprintf(fid,'%s\n','#************************************************** ');
-    fprintf(fid,'%s\n','# (1)  (2)    (3)            (4)             (5)             (6)            (7)       (8)        (9)         (10)           (11)          (12)         (13)            (14)                (15)            (16)            (17)            (18)        (19)          (20)      (21)      (22)       (23)       (24)       (25)     (26)   (27)   (28)   (29)   (30)   (31)   (32)   (33)');
+    fprintf(fid,'%s\n','# (1)  (2)    (3)           (4)             (5)             (6)          (7)       (8)        (9)         (10)           (11)          (12)        (13)            (14)                (15)            (16)            (17)            (18)      (19)        (20)      (21)       (22)       (23)       (24)       (25)      (26)   (27)   (28)   (29)   (30)   (31)   (32)   (33)');
     
     % print the data with loop over epochs
     for q = 1:q_end
         %              1      2      3       4       5       6        7      8      9       10       11     12       13     14         15      16     17      18     19       20     21     22     23     24     25     26     27     28     29     30     31     32      33
-        fprintf(fid,'%4.0f  %4.0f  %8.1f   %14.6f  %14.6f  %14.6f   %9.6f  %9.6f  %9.6f   %12.9f  %13.10f  %9.4f   %14.6f  %14.6f   %14.6f  %14.6f  %14.6f  %14.6f   %9.6f   %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  \n'   ,   ...
+        fprintf(fid,'%4.0f  %4.0f  %8.1f  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %12.9f  %13.10f  %9.4f  %14.6f  %14.6f  %14.6f  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  \n'   ,   ...
             epochs(q) , obs.startGPSWeek , timeCalculated(q) , ...  % 1, 2, 3
             posFloat(q,1) , posFloat(q,2) , posFloat(q,3) , ...     % 4, 5, 6
             sigma_posFloat(q,1) , sigma_posFloat(q,2) , sigma_posFloat(q,3) , ...
@@ -204,11 +204,11 @@ if settings.AMBFIX.bool_AMBFIX && settings.EXP.results_fixed    % only if ambigu
     fprintf(fid,'%s\n','# (13) receiver position: x_UTM [m]');
     fprintf(fid,'%s\n','# (14) receiver position: y_UTM [m]');
     fprintf(fid,'%s\n','#************************************************** ');
-    fprintf(fid,'%s\n','# (1)  (2)    (3)           (4)             (5)             (6)             (7)       (8)        (9)         (10)           (11)          (12)         (13)            (14)');
+    fprintf(fid,'%s\n','# (1)  (2)    (3)          (4)             (5)             (6)          (7)        (8)        (9)         (10)         (11)            (12)         (13)            (14)');
     
     % print the data with loop over epochs
     for q = 1:q_end
-        fprintf(fid,'%4.0f  %4.0f  %8.1f   %14.6f  %14.6f  %14.6f   %9.6f  %9.6f  %9.6f   %12.9f  %13.10f  %9.4f   %14.6f  %14.6f   \n'   ,   ...
+        fprintf(fid,'%4.0f  %4.0f  %8.1f  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %12.9f  %13.10f  %9.4f  %14.6f  %14.6f   \n'   ,   ...
             epochs(q) , obs.startGPSWeek , timeCalculated(q) , ...
             posFixed(q,1) , posFixed(q,2) , posFixed(q,3) , ...
             sigma_posFixed(q,1) , sigma_posFixed(q,2) , sigma_posFixed(q,3) , ... 
@@ -258,14 +258,16 @@ end
 
 
 %% Output to command window 
-if ~settings.INPUT.bool_parfor
-    approx_pos_WGS84 = cart2geo(settings.INPUT.pos_approx);
-    fprintf('Approximate Position (WGS84)\n');
-    fprintf('phi:\t %9.5f [°]\n',    approx_pos_WGS84.lat*(180/pi));
-    fprintf('lambda:\t %9.5f [°]\n', approx_pos_WGS84.lon*(180/pi));
-    fprintf('h:\t\t %9.3f [m]\n',  approx_pos_WGS84.h);
-    fprintf('X:\t%12.3f [m]\n',  settings.INPUT.pos_approx(1));
-    fprintf('Y:\t%12.3f [m]\n',  settings.INPUT.pos_approx(2));
-    fprintf('Z:\t%12.3f [m]\n\n',settings.INPUT.pos_approx(3));
-end
+
+% % print approximate position (latitude, longitude, height, X, Y, Z)
+% if ~settings.INPUT.bool_parfor
+%     approx_pos_WGS84 = cart2geo(settings.INPUT.pos_approx);
+%     fprintf('Approximate Position (WGS84)\n');
+%     fprintf('latitude: \t %9.5f [°]\n',    approx_pos_WGS84.lat*(180/pi));
+%     fprintf('longitude:\t %9.5f [°]\n', approx_pos_WGS84.lon*(180/pi));
+%     fprintf('h:\t\t %9.3f [m]\n',  approx_pos_WGS84.h);
+%     fprintf('X:\t%12.3f [m]\n',  settings.INPUT.pos_approx(1));
+%     fprintf('Y:\t%12.3f [m]\n',  settings.INPUT.pos_approx(2));
+%     fprintf('Z:\t%12.3f [m]\n\n',settings.INPUT.pos_approx(3));
+% end
 

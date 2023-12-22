@@ -9,7 +9,7 @@ function [settings] = getSettingsFromGUI(handles)
 %   settings        struct, settings for processing with PPP_main.m
 %
 % Revision:
-%   ...
+%   2023/10/23, MFWG: adding QZSS and panel weighting
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -40,29 +40,34 @@ settings.INPUT.realtime_start_GUI = handles.edit_RT_from.String;
 settings.INPUT.realtime_ende_GUI  = handles.edit_RT_to.String;
 
 % get frequencies which should be processed
-settings.INPUT.able_GPS = get(handles.checkbox_GPS, 'Enable');
-settings.INPUT.able_GLO = get(handles.checkbox_GPS, 'Enable');
-settings.INPUT.able_GAL = get(handles.checkbox_GPS, 'Enable');
-settings.INPUT.able_BDS = get(handles.checkbox_GPS, 'Enable');
-settings.INPUT.use_GPS = logical(get(handles.checkbox_GPS, 'Value'));
-settings.INPUT.use_GLO = logical(get(handles.checkbox_GLO, 'Value'));
-settings.INPUT.use_GAL = logical(get(handles.checkbox_GAL, 'Value'));
-settings.INPUT.use_BDS = logical(get(handles.checkbox_BDS, 'Value'));
+settings.INPUT.able_GPS  = get(handles.checkbox_GPS,  'Enable');
+settings.INPUT.able_GLO  = get(handles.checkbox_GLO,  'Enable');
+settings.INPUT.able_GAL  = get(handles.checkbox_GAL,  'Enable');
+settings.INPUT.able_BDS  = get(handles.checkbox_BDS,  'Enable');
+settings.INPUT.able_QZSS = get(handles.checkbox_QZSS, 'Enable');
+settings.INPUT.use_GPS  = logical(get(handles.checkbox_GPS,  'Value'));
+settings.INPUT.use_GLO  = logical(get(handles.checkbox_GLO,  'Value'));
+settings.INPUT.use_GAL  = logical(get(handles.checkbox_GAL,  'Value'));
+settings.INPUT.use_BDS  = logical(get(handles.checkbox_BDS,  'Value'));
+settings.INPUT.use_QZSS = logical(get(handles.checkbox_QZSS, 'Value'));
 % cell with strings of processed frequencies
-settings.INPUT.gps_freq = [ handles.popupmenu_gps_1.String(handles.popupmenu_gps_1.Value); handles.popupmenu_gps_2.String(handles.popupmenu_gps_2.Value); handles.popupmenu_gps_3.String(handles.popupmenu_gps_3.Value) ];
-settings.INPUT.glo_freq = [ handles.popupmenu_glo_1.String(handles.popupmenu_glo_1.Value); handles.popupmenu_glo_2.String(handles.popupmenu_glo_2.Value); handles.popupmenu_glo_3.String(handles.popupmenu_glo_3.Value) ];
-settings.INPUT.gal_freq = [ handles.popupmenu_gal_1.String(handles.popupmenu_gal_1.Value); handles.popupmenu_gal_2.String(handles.popupmenu_gal_2.Value); handles.popupmenu_gal_3.String(handles.popupmenu_gal_3.Value) ];
-settings.INPUT.bds_freq = [ handles.popupmenu_bds_1.String(handles.popupmenu_bds_1.Value); handles.popupmenu_bds_2.String(handles.popupmenu_bds_2.Value); handles.popupmenu_bds_3.String(handles.popupmenu_bds_3.Value) ];
+settings.INPUT.gps_freq  = [ handles.popupmenu_gps_1.String(handles.popupmenu_gps_1.Value); handles.popupmenu_gps_2.String(handles.popupmenu_gps_2.Value); handles.popupmenu_gps_3.String(handles.popupmenu_gps_3.Value) ];
+settings.INPUT.glo_freq  = [ handles.popupmenu_glo_1.String(handles.popupmenu_glo_1.Value); handles.popupmenu_glo_2.String(handles.popupmenu_glo_2.Value); handles.popupmenu_glo_3.String(handles.popupmenu_glo_3.Value) ];
+settings.INPUT.gal_freq  = [ handles.popupmenu_gal_1.String(handles.popupmenu_gal_1.Value); handles.popupmenu_gal_2.String(handles.popupmenu_gal_2.Value); handles.popupmenu_gal_3.String(handles.popupmenu_gal_3.Value) ];
+settings.INPUT.bds_freq  = [ handles.popupmenu_bds_1.String(handles.popupmenu_bds_1.Value); handles.popupmenu_bds_2.String(handles.popupmenu_bds_2.Value); handles.popupmenu_bds_3.String(handles.popupmenu_bds_3.Value) ];
+settings.INPUT.qzss_freq = [ handles.popupmenu_qzss_1.String(handles.popupmenu_qzss_1.Value); handles.popupmenu_qzss_2.String(handles.popupmenu_qzss_2.Value); handles.popupmenu_qzss_3.String(handles.popupmenu_qzss_3.Value) ];
 % indices of selected frequencies
-[~, settings.INPUT.gps_freq_idx] = ismember(settings.INPUT.gps_freq, DEF.freq_GPS_names);
-[~, settings.INPUT.glo_freq_idx] = ismember(settings.INPUT.glo_freq, DEF.freq_GLO_names);
-[~, settings.INPUT.gal_freq_idx] = ismember(settings.INPUT.gal_freq, DEF.freq_GAL_names);
-[~, settings.INPUT.bds_freq_idx] = ismember(settings.INPUT.bds_freq, DEF.freq_BDS_names);
+[~, settings.INPUT.gps_freq_idx]  = ismember(settings.INPUT.gps_freq,  DEF.freq_GPS_names);
+[~, settings.INPUT.glo_freq_idx]  = ismember(settings.INPUT.glo_freq,  DEF.freq_GLO_names);
+[~, settings.INPUT.gal_freq_idx]  = ismember(settings.INPUT.gal_freq,  DEF.freq_GAL_names);
+[~, settings.INPUT.bds_freq_idx]  = ismember(settings.INPUT.bds_freq,  DEF.freq_BDS_names);
+[~, settings.INPUT.qzss_freq_idx] = ismember(settings.INPUT.qzss_freq, DEF.freq_QZSS_names);
 % get ranking of observations
-settings.INPUT.gps_ranking = get(handles.edit_gps_rank, 'String');
-settings.INPUT.glo_ranking = get(handles.edit_glo_rank, 'String');
-settings.INPUT.gal_ranking = get(handles.edit_gal_rank, 'String');
-settings.INPUT.bds_ranking = get(handles.edit_bds_rank, 'String');
+settings.INPUT.gps_ranking  = get(handles.edit_gps_rank,  'String');
+settings.INPUT.glo_ranking  = get(handles.edit_glo_rank,  'String');
+settings.INPUT.gal_ranking  = get(handles.edit_gal_rank,  'String');
+settings.INPUT.bds_ranking  = get(handles.edit_bds_rank,  'String');
+settings.INPUT.qzss_ranking = get(handles.edit_qzss_rank, 'String');
 % subfolder for input data files
 settings.INPUT.subfolder = path.rinex_date;
 
@@ -176,10 +181,6 @@ settings.IONO.file_ionex = join_path(path.ionex_1, path.ionex_2);
 
 % Ionex File Type
 settings.IONO.type_ionex = get(handles.buttongroup_models_ionosphere_ionex_type.SelectedObject,'String');
-% number of epochs where ionospheric constraint is used
-settings.IONO.constraint_until = str2double(handles.edit_constraint_until.String);  % [minute]
-% decrease standard deviation of ionospheric pseudo-observation to this value:
-settings.IONO.var_iono_decr = str2double(handles.edit_constraint_decrease.String)^2;
 
 value = get(handles.popupmenu_iono_source, 'Value');
 string_all = get(handles.popupmenu_iono_source, 'String');
@@ -243,6 +244,7 @@ settings.OTHER.bool_solid_tides = get(handles.checkbox_solid_tides,  'Value');
 settings.OTHER.bool_wind_up     = get(handles.checkbox_wind_up,      'Value');
 settings.OTHER.bool_GDV         = get(handles.checkbox_GDV,          'Value');
 settings.OTHER.ocean_loading    = get(handles.checkbox_ocean_loading,'Value');
+settings.OTHER.polar_tides      = get(handles.checkbox_polar_tides,  'Value');
 settings.OTHER.bool_eclipse     = get(handles.checkbox_eclipse,      'Value');
 
 
@@ -339,29 +341,10 @@ end
 
 %% Estimation - Adjustment
 
-
 % LSQ or Filter
 value = get(handles.popupmenu_filter, 'Value');
 string_all = get(handles.popupmenu_filter, 'String');
 settings.ADJ.filter.type = string_all{value};		% 'No Filter' or 'Kalman Filter' or 'Kalman Filter Iterative'
-% observation weights
-settings.ADJ.var_code 		 = str2double( get(handles.edit_Std_CA_Code, 'String') )^2;
-settings.ADJ.var_phase       = str2double( get(handles.edit_Std_Phase, 'String') )^2;
-settings.ADJ.var_iono        = str2double( get(handles.edit_Std_Iono, 'String') )^2;
-% observation weighting
-settings.ADJ.weight_elev	 = get(handles.radiobutton_Elevation_Dependency, 'Value');
-settings.ADJ.elev_weight_fun = ...  % get elevation function string and convert to function handle
-    ElevationWeightingFunction(get(handles.edit_elevation_weighting_function, 'String'));
-settings.ADJ.weight_mplc  	 = get(handles.radiobutton_MPLC_Dependency, 'Value');
-settings.ADJ.weight_sign_str = get(handles.radiobutton_Signal_Strength_Dependency, 'Value');
-settings.ADJ.snr_weight_fun = ...  % get snr function string and convert to function handle
-    SNRWeightingFunction(get(handles.edit_snr_weighting_function, 'String'));
-settings.ADJ.weight_none     = get(handles.radiobutton_No_Dependency, 'Value');
-% GNSS weighting
-settings.ADJ.fac_GPS = str2double(handles.edit_weight_GPS.String);
-settings.ADJ.fac_GLO = str2double(handles.edit_weight_GLO.String);
-settings.ADJ.fac_GAL = str2double(handles.edit_weight_GAL.String);
-settings.ADJ.fac_BDS = str2double(handles.edit_weight_BDS.String);
 
 % Filter Settings: values of dropdown menus (popupmenus) have to be taken - 1 to have [0;1]
 % Coordinates
@@ -390,9 +373,14 @@ settings.ADJ.filter.Q_rclk_gal = str2double( get(handles.edit_filter_galileo_off
 settings.ADJ.filter.dynmodel_rclk_gal = get(handles.popupmenu_filter_galileo_offset_dynmodel, 'Value')-1;
 
 % Receiver Clock Error (BeiDou)
-settings.ADJ.filter.var_rclk_bds = str2double( get(handles.edit_filter_beidou_offset_sigma0, 'String') )^2;    % a-priori-variance of GAL receiver clock
-settings.ADJ.filter.Q_rclk_bds = str2double( get(handles.edit_filter_beidou_offset_Q, 'String') )^2;          % system noise of GAL receiver clock
+settings.ADJ.filter.var_rclk_bds = str2double( get(handles.edit_filter_beidou_offset_sigma0, 'String') )^2;    % a-priori-variance of BDS receiver clock
+settings.ADJ.filter.Q_rclk_bds = str2double( get(handles.edit_filter_beidou_offset_Q, 'String') )^2;          % system noise of BDS receiver clock
 settings.ADJ.filter.dynmodel_rclk_bds = get(handles.popupmenu_filter_beidou_offset_dynmodel, 'Value')-1;
+
+% Receiver Clock Error (QZSS)
+settings.ADJ.filter.var_rclk_qzss = str2double( get(handles.edit_filter_qzss_offset_sigma0, 'String') )^2;    % a-priori-variance of QZSS receiver clock
+settings.ADJ.filter.Q_rclk_qzss = str2double( get(handles.edit_filter_qzss_offset_Q, 'String') )^2;          % system noise of QZSS receiver clock
+settings.ADJ.filter.dynmodel_rclk_qzss = get(handles.popupmenu_filter_qzss_offset_dynmodel, 'Value')-1;
 
 % Receiver Differential Code Biases
 settings.BIASES.estimate_rec_dcbs = get(handles.checkbox_estimate_rec_dcbs, 'Value');      % en/disable estimation of receiver DCBs
@@ -409,6 +397,54 @@ settings.ADJ.filter.dynmodel_amb = get(handles.popupmenu_filter_ambiguities_dynm
 settings.ADJ.filter.var_iono = str2double( get(handles.edit_filter_iono_sigma0, 'String') )^2;    % a-priori-variance of ionosphere
 settings.ADJ.filter.Q_iono = str2double( get(handles.edit_filter_iono_Q, 'String') )^2;          % system noise of ionosphere
 settings.ADJ.filter.dynmodel_iono = get(handles.popupmenu_filter_iono_dynmodel, 'Value') - 1;
+
+
+
+%% Estimation - Weighting
+
+% observation weights
+settings.ADJ.var_code 		 = str2double( get(handles.edit_Std_CA_Code, 'String') )^2;
+settings.ADJ.var_phase       = str2double( get(handles.edit_Std_Phase, 'String') )^2;
+settings.ADJ.var_iono        = str2double( get(handles.edit_Std_Iono, 'String') )^2;
+
+% number of epochs where ionospheric constraint is used
+settings.IONO.constraint_until = str2double(handles.edit_constraint_until.String);  % [minute]
+% decrease standard deviation of ionospheric pseudo-observation to this value:
+settings.IONO.var_iono_decr = str2double(handles.edit_constraint_decrease.String)^2;
+
+% weighting function
+settings.ADJ.weight_elev	 = get(handles.radiobutton_Elevation_Dependency, 'Value');
+settings.ADJ.elev_weight_fun = ...  % get elevation function string and convert to function handle
+    ElevationWeightingFunction(get(handles.edit_elevation_weighting_function, 'String'));
+settings.ADJ.weight_mplc  	 = get(handles.radiobutton_MPLC_Dependency, 'Value');
+settings.ADJ.weight_sign_str = get(handles.radiobutton_Signal_Strength_Dependency, 'Value');
+settings.ADJ.snr_weight_fun = ...  % get snr function string and convert to function handle
+    SNRWeightingFunction(get(handles.edit_snr_weighting_function, 'String'));
+settings.ADJ.weight_none     = get(handles.radiobutton_No_Dependency, 'Value');
+
+% GNSS weighting
+settings.ADJ.fac_GPS = str2double(handles.edit_weight_GPS.String);
+settings.ADJ.fac_GLO = str2double(handles.edit_weight_GLO.String);
+settings.ADJ.fac_GAL = str2double(handles.edit_weight_GAL.String);
+settings.ADJ.fac_BDS = str2double(handles.edit_weight_BDS.String);
+settings.ADJ.fac_QZSS= str2double(handles.edit_weight_QZSS.String);
+
+% frequency-specific standard-devations, boolean
+settings.ADJ.bool_std_frqs = handles.checkbox_std_frqs.Value;
+
+% code, frequency-specific standard-devations, table
+settings.ADJ.var_code_frq_GUI = ...             % save raw table data from GUI 
+    handles.uitable_code_std_frqs.Data;     
+T = handles.uitable_code_std_frqs.Data;
+T(cellfun('isempty',T)) = {sqrt(settings.ADJ.var_code)};
+settings.ADJ.var_code_frq = cell2mat(T).^2; 	% manipulated table used during processing
+
+% phase, frequency-specific standard-devations, table
+settings.ADJ.var_phase_frq_GUI = ...            % save raw table data from GUI 
+    handles.uitable_phase_std_frqs.Data;     
+T = handles.uitable_phase_std_frqs.Data;
+T(cellfun('isempty',T)) = {sqrt(settings.ADJ.var_phase)};
+settings.ADJ.var_phase_frq = cell2mat(T).^2;   % manipulated table used during processing
 
 
 %% Run - Processing Options
@@ -564,7 +600,7 @@ settings.PLOT.corr          = get(handles.checkbox_plot_corr,           'Value')
 settings.PLOT.skyplot       = get(handles.checkbox_plot_skyplot,        'Value');
 settings.PLOT.residuals     = get(handles.checkbox_plot_residuals,      'Value');
 settings.PLOT.DOP           = get(handles.checkbox_plot_DOP,            'Value');
-% settings.PLOT.GI           	= get(handles.checkbox_plot_GI,             'Value');
+settings.PLOT.MPLC         	= get(handles.checkbox_plot_mplc,             'Value');
 settings.PLOT.iono          = get(handles.checkbox_plot_iono,           'Value');
 settings.PLOT.cs            = get(handles.checkbox_plot_cs,             'Value');
 settings.PLOT.mp            = get(handles.checkbox_plot_mp,             'Value');

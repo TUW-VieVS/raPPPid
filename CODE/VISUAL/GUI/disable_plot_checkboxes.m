@@ -89,3 +89,12 @@ if settings.INPUT.use_BDS
     handles.checkbox_plot_bds.Enable = 'on';
     handles.checkbox_plot_bds.Value = 1;
 end
+% QZSS
+handles.checkbox_plot_qzss.Enable = 'off';
+handles.checkbox_plot_qzss.Value = 0;
+try
+    if settings.INPUT.use_QZSS
+        handles.checkbox_plot_qzss.Enable = 'on';
+        handles.checkbox_plot_qzss.Value = 1;
+    end
+end

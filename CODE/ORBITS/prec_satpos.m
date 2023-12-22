@@ -11,7 +11,7 @@ function [X, V, cutoff, status] = prec_satpos(precEph, prn, sv, Ttr, cutoff, sta
 % 	... .Y         y coordinate of satellite orbit [m]
 %  	... .Z         z coordinate of satellite orbit [m]
 % 	... .dT        clock correction [s]
-%   prn         raPPPid satellite number [0, 399]
+%   prn         raPPPid satellite number [0, 410]
 % 	sv          satellite number [0, 99]
 % 	Ttr         time of observation in seconds of week
 % 	cutoff      boolean, true if satellite has to be excluded

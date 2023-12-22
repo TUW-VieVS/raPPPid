@@ -1,6 +1,6 @@
 function Adjust = Designmatrix_code_doppler_ZD(Adjust, Epoch, model, settings)
 % Creates Design-Matrix and calculates observed minus computed range for 
-% code solution and Zero-Difference-Model
+% code+Doppler solution and Zero-Difference-Model
 % 
 % INPUT:  
 %	Adjust      ...
@@ -11,27 +11,32 @@ function Adjust = Designmatrix_code_doppler_ZD(Adjust, Epoch, model, settings)
 %   Adjust      updated with A, omc
 %
 %   Revision:
-%       ... 
+%   2023/07/11, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
 % --- Preparations
-num_freq = settings.INPUT.proc_freqs;
+num_freq = settings.INPUT.proc_freqs;       % number of processed frequencies
 param = Adjust.param;                       % parameter estimations from last epoch
 obs_code = Epoch.code;                      % code observations [m] of current epoch
 no_sats = numel(Epoch.sats);                % number of satellites in current epoch
 s_f = no_sats * num_freq;
-isGPS = repmat(Epoch.gps, num_freq, 1); 	% logical vector for all frequencies true if GPS satellite
-isGLO = repmat(Epoch.glo, num_freq, 1);     % logical vector for all frequencies, true if GLO satellite
-isGAL = repmat(Epoch.gal, num_freq, 1);  	% logical vector for all frequencies, true if GAL satellite
-isBDS = repmat(Epoch.bds, num_freq, 1);  	% logical vector for all frequencies, true if GAL satellite
-cutoff = Epoch.exclude(:);
+exclude = Epoch.exclude(:);
 rho = model.rho(:);
+
+% logical vector for all frequencies, true if satellite belongs to this GNSS
+isGPS  = repmat(Epoch.gps,  num_freq, 1); 	
+isGLO  = repmat(Epoch.glo,  num_freq, 1);  
+isGAL  = repmat(Epoch.gal,  num_freq, 1);  
+isBDS  = repmat(Epoch.bds,  num_freq, 1);  
+isQZSS = repmat(Epoch.qzss, num_freq, 1);  
+
 sat_pos_x = repmat(model.Rot_X(1,:)', 1, num_freq);  	% satellite ECEF position x
 sat_pos_y = repmat(model.Rot_X(2,:)', 1, num_freq);  	% satellite ECEF position y
 sat_pos_z = repmat(model.Rot_X(3,:)', 1, num_freq);  	% satellite ECEF position z
+
 sat_vel_x = repmat(model.Rot_V(1,:)', 1, num_freq);  	% satellite ECEF velocity x
 sat_vel_y = repmat(model.Rot_V(2,:)', 1, num_freq);  	% satellite ECEF velocity y
 sat_vel_z = repmat(model.Rot_V(3,:)', 1, num_freq);  	% satellite ECEF velocity z
@@ -40,7 +45,7 @@ sat_vel_z = repmat(model.Rot_V(3,:)', 1, num_freq);  	% satellite ECEF velocity 
 
 %% Code Observations
 % --- observed minus computed
-omc = (obs_code(:) - model.model_code(:)) .* ~cutoff;
+omc = (obs_code(:) - model.model_code(:)) .* ~exclude;
 
 % --- Partial derivatives
 % coordinates
@@ -52,37 +57,40 @@ dR_dz    = -( sat_pos_z(:)-param(3) ) ./ rho;         % z
 dR_dtrop =  model.mfw(:);       % wet mapping function
 
 % clock and DCBs
-dR_time_dcb = zeros(s_f, 12);
+dR_time_dcb = zeros(s_f, 15);
 % receiver clock error
 if settings.INPUT.use_GPS
-    dR_time_dcb(:, 1) = isGPS + isGLO + isGAL + isBDS;       % gps
+    dR_time_dcb(:, 1) = isGPS + isGLO + isGAL + isBDS;       % GPS
 end
 % time offsets
-dR_time_dcb(:, 4) = isGLO;       % glonass
-dR_time_dcb(:, 7) = isGAL;       % galileo
-dR_time_dcb(:,10) = isBDS;       % beidou
+dR_time_dcb(:, 4) = isGLO;       % GLONASS
+dR_time_dcb(:, 7) = isGAL;       % Galileo
+dR_time_dcb(:,10) = isBDS;       % BeiDou
+dR_time_dcb(:,13) = isQZSS;      % QZSS
 % Differential Code Biases
 if settings.BIASES.estimate_rec_dcbs
     % DCBs between 1st and 2nd frequency
     if num_freq > 1
         frq_2 = (no_sats+1):2*no_sats;
-        dR_time_dcb(frq_2, 2) = -isGPS(frq_2);   	% gps
-        dR_time_dcb(frq_2, 5) = -isGLO(frq_2);   	% glonass
-        dR_time_dcb(frq_2, 8) = -isGAL(frq_2);   	% galileo
-        dR_time_dcb(frq_2,11) = -isBDS(frq_2);   	% beidou
+        dR_time_dcb(frq_2, 2) = -isGPS(frq_2);   	% GPS
+        dR_time_dcb(frq_2, 5) = -isGLO(frq_2);   	% GLONASS
+        dR_time_dcb(frq_2, 8) = -isGAL(frq_2);   	% Galileo
+        dR_time_dcb(frq_2,11) = -isBDS(frq_2);   	% BeiDou
+        dR_time_dcb(frq_2,14) = -isQZSS(frq_2);   	% QZSS
     end
     % DCBs between 1st and 3rd frequency
     if num_freq > 2
         frq_3 = (2*no_sats+1):3*no_sats;
-        dR_time_dcb(frq_3, 3) = -isGPS(frq_3);  	% gps
-        dR_time_dcb(frq_3, 6) = -isGLO(frq_3);   	% glonass
-        dR_time_dcb(frq_3, 9) = -isGAL(frq_3);    	% galileo
-        dR_time_dcb(frq_3,12) = -isBDS(frq_3);   	% beidou
+        dR_time_dcb(frq_3, 3) =  -isGPS(frq_3);  	% GPS
+        dR_time_dcb(frq_3, 6) =  -isGLO(frq_3);   	% GLONASS
+        dR_time_dcb(frq_3, 9) =  -isGAL(frq_3);    	% Galileo
+        dR_time_dcb(frq_3,12) =  -isBDS(frq_3);   	% BeiDou
+        dR_time_dcb(frq_3,15) = -isQZSS(frq_3);   	% QZSS
     end
 end
 
 % --- Build A-Matrix
-A = [dR_dx, dR_dy, dR_dz, dR_dtrop, dR_time_dcb] .* ~cutoff;
+A = [dR_dx, dR_dy, dR_dz, dR_dtrop, dR_time_dcb] .* ~exclude;
 
 % --- add ionosphere estimation part to A, P and omc
 if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Estimate')
@@ -127,12 +135,12 @@ dTime(:,1) = 1;         % |||D: this is the place of the wmf, tropo estimation!
 % ionosphere part
 A_doppler_iono = zeros(no_sats);
 % create Design-Matrix of Doppler observations
-A_doppler = [dD_dx, dD_dy, dD_dz, dTime, A_doppler_iono] .* ~cutoff;
+A_doppler = [dD_dx, dD_dy, dD_dz, dTime, A_doppler_iono] .* ~exclude;
 % put Design-Matrix of Doppler together
 A = [A; A_doppler];
 % update observed-minus-computed
-omc_doppler  = (model.model_doppler + Epoch.D1) .* ~cutoff;
-omc_doppler_ = (model.model_doppler - Epoch.D1) .* ~cutoff;
+omc_doppler  = (model.model_doppler + Epoch.D1) .* ~exclude;
+omc_doppler_ = (model.model_doppler - Epoch.D1) .* ~exclude;
 if norm(omc_doppler_) < norm(omc_doppler)
     omc_doppler = omc_doppler_;     % |||D: check if this is really necessary!
 end

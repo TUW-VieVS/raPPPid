@@ -1,4 +1,4 @@
-function [obs] = assign_sinex_biases(obs, input, settings)
+function [obs] = assign_sinex_biases(obs, SinexBiases, settings)
 % Finds the correct biases from a Sinex BIAS file and assigns it to struct 
 % obs.C1_bias/L1_bias/...
 % If needed (DSB) biases are missing it is attempted to calculate them from
@@ -33,17 +33,17 @@ function [obs] = assign_sinex_biases(obs, input, settings)
 %
 %
 % INPUT:
-%   obs         struct
-%   input       struct
-%   settings    struct, processing settings from GUI
+%   obs             struct, observation-specific data
+%   SinexBiases     struct, biases read from Sinex-Bias-File (read_SinexBias.m)
+%   settings        struct, processing settings from GUI
 % OUTPUT:
-%   obs         struct, updated with obs.C1/.C2/.C3/.L1/.L2/.L3_bias/_start/_ende
+%   obs             struct, updated with obs.C1/.C2/.C3/.L1/.L2/.L3_bias/_start/_ende
 %               which are matrices with columns = sats and rows = data
 %               entries, bias and start and ende have same size, an element
 %               of bias has his start/end-date at the same place in start/ende
 %
 % Revision:
-%   ...
+%   2023/06/11, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -59,17 +59,22 @@ function [obs] = assign_sinex_biases(obs, input, settings)
 
 %% Preparations
 week = obs.startGPSWeek;        % gps week of observation file
-gps_on = settings.INPUT.use_GPS;
-glo_on = settings.INPUT.use_GLO;
-gal_on = settings.INPUT.use_GAL;
-bds_on = settings.INPUT.use_BDS;
-SinexBiases = input.BIASES.sinex;
-C1_.value = zeros(1,399,3);   C1_.start = zeros(1,399,3); 	C1_.ende = zeros(1,399,3);   C1_.week_start = zeros(1,399,3); 	C1_.week_ende = zeros(1,399,3);
-C2_.value = zeros(1,399,3);   C2_.start = zeros(1,399,3); 	C2_.ende = zeros(1,399,3);   C2_.week_start = zeros(1,399,3); 	C2_.week_ende = zeros(1,399,3);
-C3_.value = zeros(1,399,3);   C3_.start = zeros(1,399,3);	C3_.ende = zeros(1,399,3);   C3_.week_start = zeros(1,399,3);	C3_.week_ende = zeros(1,399,3);
-L1_.value = zeros(1,399,3);   L1_.start = zeros(1,399,3); 	L1_.ende = zeros(1,399,3);   L1_.week_start = zeros(1,399,3); 	L1_.week_ende = zeros(1,399,3);
-L2_.value = zeros(1,399,3);   L2_.start = zeros(1,399,3); 	L2_.ende = zeros(1,399,3);   L2_.week_start = zeros(1,399,3); 	L2_.week_ende = zeros(1,399,3);
-L3_.value = zeros(1,399,3);   L3_.start = zeros(1,399,3);	L3_.ende = zeros(1,399,3);   L3_.week_start = zeros(1,399,3);	L3_.week_ende = zeros(1,399,3);
+
+% boolean if GNSS processed
+gps_on  = settings.INPUT.use_GPS;
+glo_on  = settings.INPUT.use_GLO;
+gal_on  = settings.INPUT.use_GAL;
+bds_on  = settings.INPUT.use_BDS;
+qzss_on = settings.INPUT.use_QZSS;
+
+% initizalize
+nnn = DEF.SATS;
+C1_.value = zeros(1,nnn,3);   C1_.start = zeros(1,nnn,3); 	C1_.ende = zeros(1,nnn,3);   C1_.week_start = zeros(1,nnn,3); 	C1_.week_ende = zeros(1,nnn,3);
+C2_.value = zeros(1,nnn,3);   C2_.start = zeros(1,nnn,3); 	C2_.ende = zeros(1,nnn,3);   C2_.week_start = zeros(1,nnn,3); 	C2_.week_ende = zeros(1,nnn,3);
+C3_.value = zeros(1,nnn,3);   C3_.start = zeros(1,nnn,3);	C3_.ende = zeros(1,nnn,3);   C3_.week_start = zeros(1,nnn,3);	C3_.week_ende = zeros(1,nnn,3);
+L1_.value = zeros(1,nnn,3);   L1_.start = zeros(1,nnn,3); 	L1_.ende = zeros(1,nnn,3);   L1_.week_start = zeros(1,nnn,3); 	L1_.week_ende = zeros(1,nnn,3);
+L2_.value = zeros(1,nnn,3);   L2_.start = zeros(1,nnn,3); 	L2_.ende = zeros(1,nnn,3);   L2_.week_start = zeros(1,nnn,3); 	L2_.week_ende = zeros(1,nnn,3);
+L3_.value = zeros(1,nnn,3);   L3_.start = zeros(1,nnn,3);	L3_.ende = zeros(1,nnn,3);   L3_.week_start = zeros(1,nnn,3);	L3_.week_ende = zeros(1,nnn,3);
 
 % Get different bias types which could be in Sinex Bias File
 SinexDSB = SinexBiases.DSB;     % Differential Signal Bias
@@ -474,6 +479,74 @@ if bds_on
 end
 
 
+%% --- QZSS ---
+if qzss_on
+    QZSS_obs = obs.QZSS;
+    
+    C1_to_C1C = ['C1C', QZSS_obs.C1];
+    C2_to_C2L = ['C2L', QZSS_obs.C2];
+    C3_to_C2L = ['C2L', QZSS_obs.C3];
+    C1C_to_C2L = 'C1CC2L';
+
+    for ii = 1:DEF.SATS_QZSS        % loop over QZSS satellites
+        sat_ = ['J', sprintf('%02d', ii)];
+        
+        % --- Observable-specific Signal Biases ---
+        if bool_OSB         
+            if isfield(SinexOSB.(sat_), QZSS_obs.C1)     % OSB for code 1
+                C1_ = save_data(SinexOSB.(sat_).(QZSS_obs.C1), week, 400+ii, 1, C1_, 1);
+            end
+            if isfield(SinexOSB.(sat_), QZSS_obs.C2)     % OSB for code 2
+                C2_ = save_data(SinexOSB.(sat_).(QZSS_obs.C2), week, 400+ii, 1, C2_, 1);
+            end
+            if isfield(SinexOSB.(sat_), QZSS_obs.C3)     % OSB for code 3
+                C3_ = save_data(SinexOSB.(sat_).(QZSS_obs.C3), week, 400+ii, 1, C3_, 1);
+            end
+        end
+        % --- Observable-specific Signal Biases ---
+        if bool_DSB
+            % Code 1
+            if ~strcmp(QZSS_obs.C1,'C2I') && isfield(SinexDSB.(sat_), C1_to_C1C)
+                C1_ = save_data(SinexDSB.(sat_).(C1_to_C1C), week,  400+ii, -1, C1_, 1); 	% DSB from observation to C1C
+            end
+            % 2nd dimension is left empty
+            if isfield(SinexDSB.(sat_), C1C_to_C2L)
+                C1_ = save_data(SinexDSB.(sat_).(C1C_to_C2L), week, 400+ii, -1, C1_, 3);  	% DSB from C1C to C2L
+            end
+            % Code 2
+            if isfield(SinexDSB.(sat_), C2_to_C2L)          % DSB from observation to C2L
+                C2_ = save_data(SinexDSB.(sat_).(C2_to_C2L), week,  400+ii, -1, C2_, 1);
+            end
+            % 2nd dimension is left empty
+            if isfield(SinexDSB.(sat_), C1C_to_C2L)         % DSB from C1C to C2L
+                C2_ = save_data(SinexDSB.(sat_).(C1C_to_C2L), week, 300+ ii, -1, C2_, 3);
+            end
+            % Code 3
+            if isfield(SinexDSB.(sat_), C3_to_C2L)          % DSB from observation to C2L
+                C3_ = save_data(SinexDSB.(sat_).(C3_to_C2L), week,  400+ii, -1, C3_, 1);
+            end
+            % 2nd dimension is left empty
+            if isfield(SinexDSB.(sat_), C1C_to_C2L)         % DSB from C1C to C2L
+                C3_ = save_data(SinexDSB.(sat_).(C1C_to_C2L), week, 400+ii, -1, C3_, 3);
+            end
+            % ||| no DSBs for phase implemented
+        end
+        
+%         % --- Phase Biases ---
+%         if bool_OSB && settings.AMBFIX.bool_AMBFIX 
+%             if isfield(SinexOSB.(sat_), QZSS_obs.L1)   	% Phase 1, OSB
+%                 L1_ = save_data(SinexOSB.(sat_).(QZSS_obs.L1), week, 400+ii, 1, L1_, 1);
+%             end
+%             if isfield(SinexOSB.(sat_), QZSS_obs.L2)  	% Phase 2, OSB
+%                 L2_ = save_data(SinexOSB.(sat_).(QZSS_obs.L2), week, 400+ii, 1, L2_, 1);
+%             end
+%             if isfield(SinexOSB.(sat_), QZSS_obs.L3)  	% Phase 3, OSB
+%                 L3_ = save_data(SinexOSB.(sat_).(QZSS_obs.L3), week, 400+ii, 1, L3_, 1);
+%             end
+%         end
+    end             % end of loop over QZSS satellites
+end
+
 
 
 %% save data in struct obs
@@ -501,10 +574,11 @@ end
 % This functions checks biases for processed signals before the assignment
 % is tried
 function [] = preCheckBiases4ProcessedSignals(settings, obs, bool_DSB, bool_OSB, bool_ISB)
-obs_GPS = obs.GPS;
-obs_GLO = obs.GLO;
-obs_GAL = obs.GAL;
-obs_BDS = obs.BDS;
+obs_GPS  = obs.GPS;
+obs_GLO  = obs.GLO;
+obs_GAL  = obs.GAL;
+obs_BDS  = obs.BDS;
+obs_QZSS = obs.QZSS;
 % -) Wuhan Phase biases contain only C1W, C2W, L1C, L2W Biases
 if settings.INPUT.use_GPS
     if strcmp(settings.BIASES.phase(1:3), 'WHU')
@@ -531,6 +605,7 @@ if strcmp(settings.BIASES.code, 'CODE OSBs') && ~strcmp(settings.IONO.model, '2-
         end
     end
     % ||| BeiDou?!?!?!
+    % ||| QZSS?!?!?!
 end
 %  -) ISB are not implemented
 if bool_ISB
@@ -541,10 +616,9 @@ end
 
 % This functions checks if biases were assigned
 function [] = CheckBiases4ProcessedSignals(settings, obs, bool_DSB, bool_OSB, bool_ISB)
-% ||| BDS and GLO are missing
 windowname = [obs.stationname ' ' sprintf('%04.0f', obs.startdate(1)) '/' sprintf('%03.0f', obs.doy)];
 error_str = '';
-idx_G = 001:099;   idx_R = 101:199;   idx_E = 201:299;   idx_C = 301:399;
+idx_G = 001:099;   idx_R = 101:199;   idx_E = 201:299;   idx_C = 301:399;   idx_J = 401:410;
 
 % CNES integer recovery clock does not need additional phase biases
 CNES_int_rec = strcmp(settings.BIASES.code, 'CODE MGEX') && settings.AMBFIX.bool_AMBFIX ...
@@ -584,10 +658,18 @@ if bool_OSB
         if settings.INPUT.use_BDS && ~isempty(obs.use_column{4,3+i})
             if all(all(obs.([frq '_bias']).value(1,idx_C,:) == 0))
                 if ~(CODE_MGEX && contains(obs.BDS.(frq), {'C2I', 'C7I'}))      % ||| check this
-                    error_str = [error_str 'C' obs.GPS.(frq) ', '];
+                    error_str = [error_str 'C' obs.BDS.(frq) ', '];
                 end
             end
         end
+        
+        if settings.INPUT.use_QZSS && ~isempty(obs.use_column{4,3+i})
+            if all(all(obs.([frq '_bias']).value(1,idx_J,:) == 0))
+                if ~(CODE_MGEX && contains(obs.QZSS.(frq), {'C1C', 'C2L'}))      % ||| check this
+                    error_str = [error_str 'J' obs.QZSS.(frq) ', '];
+                end
+            end
+        end        
         
     end
 end

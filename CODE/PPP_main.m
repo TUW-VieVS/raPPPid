@@ -1,16 +1,21 @@
 function settings = PPP_main(settings)
 
 % Main function for PPP processing and calculations
+% 
 % raPPPid intern numbering of frequencies:
 % GPS:      1 | 2 | 3         = L1 | L2  | L5
 % Glonass:  1 | 2 | 3         = G1 | G2  | G3
 % Galileo:  1 | 2 | 3 | 4 | 5 = E1 | E5a | E5b | E5 | E6
 % BeiDou:   1 | 2 | 3         = B1 | B2  | B3
+% QZSS:     1 | 2 | 3 | 4     = L1 | L2  | L5  | L6
+% 
 % raPPPid intern numbering of satellites and acronyms:
 % GPS:      001-099     gps     G
 % Glonass:  101-199     glo     R
 % Galileo:  201-299     gal     E
 % BeiDou:   301-399     bds     C
+% QZSS:     401-410     qzss    J
+% 
 % This function is a component of raPPPid, VieVS PPP.
 % 
 % INPUT:
@@ -57,7 +62,7 @@ global STOP_CALC;	% for stopping calculations before last epoch, set to zero in 
 [settings.INPUT.num_freqs, settings.INPUT.proc_freqs] = CountProcessedFrequencies(settings);
 
 % number of processed GNSS
-settings.INPUT.use_GNSS = settings.INPUT.use_GPS + settings.INPUT.use_GLO + settings.INPUT.use_GAL + settings.INPUT.use_BDS;
+settings.INPUT.use_GNSS = settings.INPUT.use_GPS + settings.INPUT.use_GLO + settings.INPUT.use_GAL + settings.INPUT.use_BDS + settings.INPUT.use_QZSS;
 
 % check which biases are applied
 bool_sinex = strcmp(settings.BIASES.phase(1:3), 'WHU') || ...
@@ -83,7 +88,7 @@ if settings.INPUT.bool_realtime
     fid_obs = fopen(settings.INPUT.file_obs, 'r');              % fseek(fid_obs,-100,'eof');
     fid_navmess = fopen(settings.ORBCLK.file_nav_multi);    % do not jump
     fid_corr2brdc = fopen(settings.ORBCLK.file_corr2brdc, 'r'); % fseek(fid_corr2brdc,-100,'eof');
-    input.Eph_GPS = []; input.Eph_GLO = []; input.Eph_GAL = []; input.Eph_BDS = [];
+    input.ORBCLK.Eph_GPS = []; input.ORBCLK.Eph_GLO = []; input.ORBCLK.Eph_GAL = []; input.ORBCLK.Eph_BDS = [];
     q_update = 1; 
 end
 
@@ -117,15 +122,15 @@ end
 [Epoch, satellites, storeData, obs, model_save, Adjust] = initProcessing(settings, obs);
 
 % create init_ambiguities
-init_ambiguities = NaN(3, 399);     % columns = satellites, rows = frequencies
+init_ambiguities = NaN(3, 410);     % columns = satellites, rows = frequencies
 
 % initialize matrices for Hatch-Melbourne-Wübbena (HMW) LC between
 % different frequencies, e.g., for GPS L1-L2-L5 processing
 HMW_12 = []; HMW_23 = []; HMW_13 = [];
 if settings.AMBFIX.bool_AMBFIX
-    HMW_12 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, 399);  % e.g., Wide-Lane (WL)
-    HMW_23 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, 399);  % e.g., Extra-Wide-Lane (EW)
-    HMW_13 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, 399);  % e.g., Medium-Lane (ML)
+    HMW_12 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, 410);  % e.g., Wide-Lane (WL)
+    HMW_23 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, 410);  % e.g., Extra-Wide-Lane (EW)
+    HMW_13 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, 410);  % e.g., Medium-Lane (ML)
 end
 
 % Creating q for loop of epoch calculations, q is used for indexing the epochs
@@ -229,8 +234,8 @@ for q = q_range         % loop over epochs
     [Epoch, obs] = prepareObservations(settings, obs, Epoch, q);
     
     % ----- check, if enough satellites -----
-    bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, ...
-        sum(Epoch.gps), sum(Epoch.glo), sum(Epoch.gal), sum(Epoch.bds), settings.INPUT.use_GNSS);
+    bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, settings.INPUT.use_QZSS, ...
+        sum(Epoch.gps), sum(Epoch.glo), sum(Epoch.gal), sum(Epoch.bds), sum(Epoch.qzss), settings.INPUT.use_GNSS);
     if ~bool_enough_sats 
         if bool_print
             fprintf('Less than %d usable satellites in epoch %d (%s)        \n', DEF.MIN_SATS, q, Epoch.rinex_header);
@@ -249,9 +254,9 @@ for q = q_range         % loop over epochs
     % number of satellites in current epoch
     Epoch.no_sats = numel(Epoch.sats);
     % frequency
-    f1 = Epoch.gps .* Const.GPS_F(strcmpi(DEF.freq_GPS_names,settings.INPUT.gps_freq{1})) + Epoch.gal .* Const.GAL_F(strcmpi(DEF.freq_GAL_names,settings.INPUT.gal_freq{1})) + Epoch.bds .* Const.BDS_F(strcmpi(DEF.freq_BDS_names,settings.INPUT.bds_freq{1}));
-    f2 = Epoch.gps .* Const.GPS_F(strcmpi(DEF.freq_GPS_names,settings.INPUT.gps_freq{2})) + Epoch.gal .* Const.GAL_F(strcmpi(DEF.freq_GAL_names,settings.INPUT.gal_freq{2})) + Epoch.bds .* Const.BDS_F(strcmpi(DEF.freq_BDS_names,settings.INPUT.bds_freq{2}));
-    f3 = Epoch.gps .* Const.GPS_F(strcmpi(DEF.freq_GPS_names,settings.INPUT.gps_freq{3})) + Epoch.gal .* Const.GAL_F(strcmpi(DEF.freq_GAL_names,settings.INPUT.gal_freq{3})) + Epoch.bds .* Const.BDS_F(strcmpi(DEF.freq_BDS_names,settings.INPUT.bds_freq{3}));
+    f1 = Epoch.gps .* Const.GPS_F(strcmpi(DEF.freq_GPS_names,settings.INPUT.gps_freq{1})) + Epoch.gal .* Const.GAL_F(strcmpi(DEF.freq_GAL_names,settings.INPUT.gal_freq{1})) + Epoch.bds .* Const.BDS_F(strcmpi(DEF.freq_BDS_names,settings.INPUT.bds_freq{1})) + Epoch.qzss .* Const.QZSS_F(strcmpi(DEF.freq_QZSS_names,settings.INPUT.qzss_freq{1}) );
+    f2 = Epoch.gps .* Const.GPS_F(strcmpi(DEF.freq_GPS_names,settings.INPUT.gps_freq{2})) + Epoch.gal .* Const.GAL_F(strcmpi(DEF.freq_GAL_names,settings.INPUT.gal_freq{2})) + Epoch.bds .* Const.BDS_F(strcmpi(DEF.freq_BDS_names,settings.INPUT.bds_freq{2})) + Epoch.qzss .* Const.QZSS_F(strcmpi(DEF.freq_QZSS_names,settings.INPUT.qzss_freq{2}) );
+    f3 = Epoch.gps .* Const.GPS_F(strcmpi(DEF.freq_GPS_names,settings.INPUT.gps_freq{3})) + Epoch.gal .* Const.GAL_F(strcmpi(DEF.freq_GAL_names,settings.INPUT.gal_freq{3})) + Epoch.bds .* Const.BDS_F(strcmpi(DEF.freq_BDS_names,settings.INPUT.bds_freq{3})) + Epoch.qzss .* Const.QZSS_F(strcmpi(DEF.freq_QZSS_names,settings.INPUT.qzss_freq{3}) );
     f1(Epoch.glo) = Epoch.f1_glo;
     f2(Epoch.glo) = Epoch.f2_glo;
     f3(Epoch.glo) = Epoch.f3_glo;
@@ -261,7 +266,7 @@ for q = q_range         % loop over epochs
     lam2 = Const.C ./ f2;
     lam3 = Const.C ./ f3;
     Epoch.l1 = lam1;   Epoch.l2 = lam2;   Epoch.l3 = lam3;
-    % get prn: GPS [0-99], Glonass [100-199], Galileo [200-299], BeiDou [300-399]
+    % get prn: GPS [0-99], Glonass [100-199], Galileo [200-299], BeiDou [300-399], QZSS [410-410]
     prn_Id = Epoch.sats;
     % increase epoch counter
     Epoch.tracked(prn_Id) = Epoch.tracked(prn_Id) + 1;
@@ -368,28 +373,6 @@ end
 if settings.INPUT.bool_realtime
     fclose(fid_obs);
 end
-
-% % Ambiguities are reduced by the following values of cycles
-% % (calculated from difference to C1 code) for numerical reasons:
-% fprintf('\n\nAmbiguities are reduced by the following values of cycles\n(calculated from difference to C1 code) for numerical reasons:\n')
-% if settings.INPUT.use_GPS
-%     fprintf('GPS\n')
-%     for i=1:size(init_ambiguities_gps,1)
-%         fprintf('%02d %16.1f %16.1f\n', i, init_ambiguities_gps(i,1), init_ambiguities_gps(i,2))
-%     end
-% end
-% if settings.INPUT.use_GLO
-%     fprintf('GLONASS\n')
-%     for i=1:size(init_ambiguities_glo,1)
-%         fprintf('%02d %16.1f %16.1f\n', i, init_ambiguities_glo(i,1), init_ambiguities_glo(i,2))
-%     end
-% end
-% if settings.INPUT.use_GAL
-%     fprintf('GALILEO\n')
-%     for i=1:size(init_ambiguities_gal,1)
-%         fprintf('%02d %16.1f %16.1f\n', i, init_ambiguities_gal(i,1), init_ambiguities_gal(i,2))
-%     end
-% end
 
 % save epochs of reset
 storeData.float_reset_epochs = Adjust.float_reset_epochs;

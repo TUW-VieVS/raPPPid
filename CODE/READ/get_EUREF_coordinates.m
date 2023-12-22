@@ -61,7 +61,7 @@ for i = 1:n
     URL_folder = ['/EUREF/products/', gpsweek_str, '/'];
     URL_file = [center gpsweek_str dow_str '.snx.Z'];
     target = [Path.DATA, 'COORDS/', yyyy_str, '/', doy_str];
-    [~, ~] = mkdir(target)
+    [~, ~] = mkdir(target);
     file_status = ftp_download(URL_host, URL_folder, URL_file, target, false);
     if file_status == 0
         return          % file doqn

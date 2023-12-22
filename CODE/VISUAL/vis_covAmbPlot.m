@@ -1,4 +1,4 @@
-function vis_covAmbPlot(hours, STD, s0_amb, label_x, rgb, observ, isGPS, isGLO, isGAL, isBDS)
+function vis_covAmbPlot(hours, STD, s0_amb, label_x, rgb, observ, isGPS, isGLO, isGAL, isBDS, isQZSS)
 % creates Covariance Plot of the Ambiguities
 %
 % INPUT:
@@ -8,9 +8,14 @@ function vis_covAmbPlot(hours, STD, s0_amb, label_x, rgb, observ, isGPS, isGLO, 
 %   s0_amb      initial stdev for ambiguities from GUI
 %   label_x     string, label for x-axis
 %   rgb      	colors for plot
-%   isGPS, isGLO, isGAL, isBDS      boolean, true if GNSS is enabled
+%   isGPS, isGLO, isGAL, isBDS, isQZSS      
+%               boolean, true if GNSS is enabled
 % OUTPUT:
 %   []
+% 
+% Revision:
+%   2023/11/08, MFWG: adding QZSS
+% 
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -21,10 +26,10 @@ function vis_covAmbPlot(hours, STD, s0_amb, label_x, rgb, observ, isGPS, isGLO, 
 STD(STD == 0) = NaN;                % replace 0 with NaN
 STD(STD == sqrt(s0_amb)) = NaN;    	% replace default std with NaN, otherwise satellites which are under cut-off destroy plot
 [~, ~, no_frqs] = size(STD);
-no_GNSS = isGPS + isGLO + isGAL + isBDS;    % number of GNSS to plot
-idx = 1:399;
+no_GNSS = isGPS + isGLO + isGAL + isBDS + isQZSS;	% number of GNSS to plot
 obs_bool = logical(full(observ));
-obs_prns = idx(sum(obs_bool(:,idx),1) > 0);       % prns of observed satellites
+idx = 1:size(obs_bool,2);
+obs_prns = idx(sum(obs_bool(:,idx),1) > 0);         % prns of observed satellites
 y_max = max(STD(:));
 x_limits = [min(hours) max(hours)];
 
@@ -107,6 +112,23 @@ for j = 1:no_frqs
         title(hleg, 'PRN')          % title for legend
         legend off
     end
+    if isQZSS
+        % plot
+        subplot(no_frqs, no_GNSS, i_plot);
+        hold on
+        qzss_prns = obs_prns(obs_prns > 400 & obs_prns < 500); i_plot = i_plot + 1;
+        plot(hours, STD_plot(:, qzss_prns));        
+        % style
+        title(['Standard Deviation QZSS Ambiguities ' frq_string])
+        xlabel(label_x)
+        ylabel('\sigma [m]')
+        ylim([0 y_max])
+        xlim(x_limits)
+        % create legend (otherwise datatip is not working)
+        hleg = legend(strcat('C', sprintfc('%02.0f', qzss_prns)));
+        title(hleg, 'PRN')          % title for legend
+        legend off
+    end    
 end
 
 % add customized datatip

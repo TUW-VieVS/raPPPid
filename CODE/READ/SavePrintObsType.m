@@ -37,6 +37,11 @@ obs.BDS.C1 = [];   obs.BDS.C2 = [];   obs.BDS.C3 = [];
 obs.BDS.L1 = [];   obs.BDS.L2 = [];   obs.BDS.L3 = [];
 obs.BDS.S1 = [];   obs.BDS.S2 = [];   obs.BDS.S3 = [];
 obs.BDS.D1 = [];   obs.BDS.D2 = [];   obs.BDS.D3 = [];
+% QZSS
+obs.QZSS.C1 = [];   obs.QZSS.C2 = [];   obs.QZSS.C3 = [];
+obs.QZSS.L1 = [];   obs.QZSS.L2 = [];   obs.QZSS.L3 = [];
+obs.QZSS.S1 = [];   obs.QZSS.S2 = [];   obs.QZSS.S3 = [];
+obs.QZSS.D1 = [];   obs.QZSS.D2 = [];   obs.QZSS.D3 = [];
 
 % --- GPS ---
 if settings.INPUT.use_GPS
@@ -240,6 +245,52 @@ if settings.INPUT.use_BDS
             obs.BDS.D3 = BDS_2_to_1(obs.types_bds_3(3*idx_D-2:3*idx_D));
         end
         if bool_print; fprintf('  BDS 3: %s, %s, %s, %s\n', obs.BDS.C3, obs.BDS.L3, obs.BDS.S3, obs.BDS.D3); end
+    end
+end
+
+% --- QZSS ---
+if settings.INPUT.use_QZSS
+    if ~strcmpi(settings.INPUT.qzss_freq(1),'OFF')
+        idx_L = obs.use_column{5, 1};
+        idx_C = obs.use_column{5, 4};
+        idx_S = obs.use_column{5, 7};
+        idx_D = obs.use_column{5,10};
+        if obs.rinex_version >= 3 || obs.rinex_version == 0
+            % observation type exists only from rinex 3 onwards
+            obs.QZSS.L1 = obs.types_qzss_3(3*idx_L-2:3*idx_L);
+            obs.QZSS.C1 = obs.types_qzss_3(3*idx_C-2:3*idx_C);
+            obs.QZSS.S1 = obs.types_qzss_3(3*idx_S-2:3*idx_S);
+            obs.QZSS.D1 = obs.types_qzss_3(3*idx_D-2:3*idx_D);
+        end
+        if bool_print; fprintf(' QZSS 1: %s, %s, %s, %s\n', obs.QZSS.C1, obs.QZSS.L1, obs.QZSS.S1, obs.QZSS.D1); end
+    end
+    if ~strcmpi(settings.INPUT.qzss_freq(2),'OFF')
+        idx_L = obs.use_column{5, 2};
+        idx_C = obs.use_column{5, 5};
+        idx_S = obs.use_column{5, 8};
+        idx_D = obs.use_column{5,11};
+        if obs.rinex_version >= 3 || obs.rinex_version == 0
+            % observation type exists only from rinex 3 onwards
+            obs.QZSS.L2 = obs.types_qzss_3(3*idx_L-2:3*idx_L);
+            obs.QZSS.C2 = obs.types_qzss_3(3*idx_C-2:3*idx_C);
+            obs.QZSS.S2 = obs.types_qzss_3(3*idx_S-2:3*idx_S);
+            obs.QZSS.D2 = obs.types_qzss_3(3*idx_D-2:3*idx_D);
+        end
+        if bool_print; fprintf(' QZSS 2: %s, %s, %s, %s\n', obs.QZSS.C2, obs.QZSS.L2, obs.QZSS.S2, obs.QZSS.D2); end
+    end
+    if ~strcmpi(settings.INPUT.qzss_freq(3),'OFF')
+        idx_L = obs.use_column{5, 3};
+        idx_C = obs.use_column{5, 6};
+        idx_S = obs.use_column{5, 9};
+        idx_D = obs.use_column{5, 12};
+        if obs.rinex_version >= 3 || obs.rinex_version == 0
+            % observation type exists only from rinex 3 onwards
+            obs.QZSS.L3 = obs.types_qzss_3(3*idx_L-2:3*idx_L);
+            obs.QZSS.C3 = obs.types_qzss_3(3*idx_C-2:3*idx_C);
+            obs.QZSS.S3 = obs.types_qzss_3(3*idx_S-2:3*idx_S);
+            obs.QZSS.D3 = obs.types_qzss_3(3*idx_D-2:3*idx_D);
+        end
+        if bool_print; fprintf(' QZSS 3: %s, %s, %s, %s\n', obs.QZSS.C3, obs.QZSS.L3, obs.QZSS.S3, obs.QZSS.D3); end
     end
 end
 

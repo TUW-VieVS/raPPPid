@@ -1,6 +1,6 @@
 function [type2, rank] = obs_convert(type, system, settings)
 % Function to convert the RINEX v3 denomination to the one which is used in
-% VieVS PPP. Compare this function with RINEX v3 format specification
+% VieVS PPP. Compare this function with RINEX v3 format specification.
 % For example, the phase observation type processed on the 2nd frequency is
 % converted to L2 or the code observation type processed on the 3rd
 % frequency to C3.
@@ -16,7 +16,7 @@ function [type2, rank] = obs_convert(type, system, settings)
 %   rank            rank of this observation used if multiple observations of this type
 %  
 % Revision:
-%   ...
+%   2023/11/03, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -32,24 +32,28 @@ gps_freq = settings.INPUT.gps_freq;
 glo_freq = settings.INPUT.glo_freq;
 gal_freq = settings.INPUT.gal_freq;
 bds_freq = settings.INPUT.bds_freq;
+qzss_freq = settings.INPUT.qzss_freq;
 % ranking of observation types
 gps_ranking = settings.INPUT.gps_ranking;   
 glo_ranking = settings.INPUT.glo_ranking;
 gal_ranking = settings.INPUT.gal_ranking;
 bds_ranking = settings.INPUT.bds_ranking;  
+qzss_ranking = settings.INPUT.qzss_ranking;  
 
 
 % find ranking of observation in string with observation ranking
 obs_char = type(3);
 switch system
-    case 'G'	% for GPS-observation-types
+    case 'G'	% for GPS observation-types
         rank = strfind(gps_ranking, obs_char);
-    case 'R'	% for GPS-observation-types
+    case 'R'	% for GLONASS observation-types
         rank = strfind(glo_ranking, obs_char);
-    case 'E'	% for Galileo-observation-types
+    case 'E'	% for Galileo observation-types
         rank = strfind(gal_ranking, obs_char);
-    case 'C'	% for Galileo-observation-types
+    case 'C'	% for BeiDou observation-types
         rank = strfind(bds_ranking, obs_char);
+    case 'J'	% for QZSS observation-types
+        rank = strfind(qzss_ranking, obs_char);
     otherwise   % all other GNSS
         rank = 99;
         
@@ -402,6 +406,117 @@ switch system
             % all others
             otherwise; rank = 99; type2 = '??';
         end
+% --------------------------------------------------------------------------
+    case 'J'        % QZSS
+        switch type
+            %----------------------------------------------------            
+            % L1: Code
+            case 'C1C'; type2 = convert(CODE, qzss_freq, 'L1'); 
+            case 'C1E'; type2 = convert(CODE, qzss_freq, 'L1');
+            case 'C1S'; type2 = convert(CODE, qzss_freq, 'L1');
+            case 'C1L'; type2 = convert(CODE, qzss_freq, 'L1'); 
+            case 'C1X'; type2 = convert(CODE, qzss_freq, 'L1');
+            case 'C1Z'; type2 = convert(CODE, qzss_freq, 'L1');
+            case 'C1B'; type2 = convert(CODE, qzss_freq, 'L1');
+            % L1: Phase 
+            case 'L1C'; type2 = convert(PHASE, qzss_freq, 'L1'); 
+            case 'L1E'; type2 = convert(PHASE, qzss_freq, 'L1'); 
+            case 'L1S'; type2 = convert(PHASE, qzss_freq, 'L1');
+            case 'L1L'; type2 = convert(PHASE, qzss_freq, 'L1');
+            case 'L1X'; type2 = convert(PHASE, qzss_freq, 'L1');
+            case 'L1Z'; type2 = convert(PHASE, qzss_freq, 'L1');
+            case 'L1B'; type2 = convert(PHASE, qzss_freq, 'L1');                
+            % L1: Signal Strength
+            case 'S1C'; type2 = convert(SIGSTR, qzss_freq, 'L1');
+            case 'S1E'; type2 = convert(SIGSTR, qzss_freq, 'L1'); 
+            case 'S1S'; type2 = convert(SIGSTR, qzss_freq, 'L1');
+            case 'S1L'; type2 = convert(SIGSTR, qzss_freq, 'L1');
+            case 'S1X'; type2 = convert(SIGSTR, qzss_freq, 'L1');
+            case 'S1Z'; type2 = convert(SIGSTR, qzss_freq, 'L1');
+            case 'S1B'; type2 = convert(SIGSTR, qzss_freq, 'L1');
+            % L1: Doppler
+            case 'D1C'; type2 = convert(DOPPLER, qzss_freq, 'L1');
+            case 'D1E'; type2 = convert(DOPPLER, qzss_freq, 'L1');
+            case 'D1S'; type2 = convert(DOPPLER, qzss_freq, 'L1');
+            case 'D1L'; type2 = convert(DOPPLER, qzss_freq, 'L1');
+            case 'D1X'; type2 = convert(DOPPLER, qzss_freq, 'L1');  
+            case 'D1Z'; type2 = convert(DOPPLER, qzss_freq, 'L1');
+            case 'D1B'; type2 = convert(DOPPLER, qzss_freq, 'L1');                  
+            %----------------------------------------------------
+            % L2: Code
+            case 'C2S'; type2 = convert(CODE, qzss_freq, 'L2'); 
+            case 'C2L'; type2 = convert(CODE, qzss_freq, 'L2');
+            case 'C2X'; type2 = convert(CODE, qzss_freq, 'L2');
+            % L2: Phase
+            case 'L2S'; type2 = convert(PHASE, qzss_freq, 'L2'); 
+            case 'L2L'; type2 = convert(PHASE, qzss_freq, 'L2'); 
+            case 'L2X'; type2 = convert(PHASE, qzss_freq, 'L2');
+            % L2: Signal Strength
+            case 'S2S'; type2 = convert(SIGSTR, qzss_freq, 'L2');
+            case 'S2L'; type2 = convert(SIGSTR, qzss_freq, 'L2');
+            case 'S2X'; type2 = convert(SIGSTR, qzss_freq, 'L2');
+            % L2: Doppler
+            case 'D2S'; type2 = convert(DOPPLER, qzss_freq, 'L2');
+            case 'D2L'; type2 = convert(DOPPLER, qzss_freq, 'L2');
+            case 'D2X'; type2 = convert(DOPPLER, qzss_freq, 'L2');                    
+            %----------------------------------------------------
+            % L5: Code
+            case 'C5I'; type2 = convert(CODE, qzss_freq, 'L5');
+            case 'C5Q'; type2 = convert(CODE, qzss_freq, 'L5');
+            case 'C5X'; type2 = convert(CODE, qzss_freq, 'L5');
+            case 'C5D'; type2 = convert(CODE, qzss_freq, 'L5');
+            case 'C5P'; type2 = convert(CODE, qzss_freq, 'L5');
+            case 'C5Z'; type2 = convert(CODE, qzss_freq, 'L5');
+            % L5: Phase
+            case 'L5I'; type2 = convert(PHASE, qzss_freq, 'L5');
+            case 'L5Q'; type2 = convert(PHASE, qzss_freq, 'L5');
+            case 'L5X'; type2 = convert(PHASE, qzss_freq, 'L5');
+            case 'L5D'; type2 = convert(PHASE, qzss_freq, 'L5');
+            case 'L5P'; type2 = convert(PHASE, qzss_freq, 'L5');
+            case 'L5Z'; type2 = convert(PHASE, qzss_freq, 'L5');
+            % L5: Signal Strength
+            case 'S5I'; type2 = convert(SIGSTR, qzss_freq, 'L5');
+            case 'S5Q'; type2 = convert(SIGSTR, qzss_freq, 'L5');
+            case 'S5X'; type2 = convert(SIGSTR, qzss_freq, 'L5');
+            case 'S5D'; type2 = convert(SIGSTR, qzss_freq, 'L5');
+            case 'S5P'; type2 = convert(SIGSTR, qzss_freq, 'L5');
+            case 'S5Z'; type2 = convert(SIGSTR, qzss_freq, 'L5');
+            % L5: Doppler
+            case 'D5I'; type2 = convert(DOPPLER, qzss_freq, 'L5');
+            case 'D5Q'; type2 = convert(DOPPLER, qzss_freq, 'L5');
+            case 'D5X'; type2 = convert(DOPPLER, qzss_freq, 'L5');
+            case 'D5D'; type2 = convert(DOPPLER, qzss_freq, 'L5');
+            case 'D5P'; type2 = convert(DOPPLER, qzss_freq, 'L5');
+            case 'D5Z'; type2 = convert(DOPPLER, qzss_freq, 'L5');
+            %----------------------------------------------------
+            % L6: Code
+            case 'C6S'; type2 = convert(CODE, qzss_freq, 'L6');
+            case 'C6L'; type2 = convert(CODE, qzss_freq, 'L6');
+            case 'C6X'; type2 = convert(CODE, qzss_freq, 'L6');
+            case 'C6E'; type2 = convert(CODE, qzss_freq, 'L6');
+            case 'C6Z'; type2 = convert(CODE, qzss_freq, 'L6');
+            % L6: Phase
+            case 'L6S'; type2 = convert(PHASE, qzss_freq, 'L6');
+            case 'L6L'; type2 = convert(PHASE, qzss_freq, 'L6');
+            case 'L6X'; type2 = convert(PHASE, qzss_freq, 'L6');
+            case 'L6E'; type2 = convert(PHASE, qzss_freq, 'L6');
+            case 'L6Z'; type2 = convert(PHASE, qzss_freq, 'L6');
+            % L6: Signal Strength
+            case 'S6S'; type2 = convert(SIGSTR, qzss_freq, 'L6');
+            case 'S6L'; type2 = convert(SIGSTR, qzss_freq, 'L6');
+            case 'S6X'; type2 = convert(SIGSTR, qzss_freq, 'L6');
+            case 'S6E'; type2 = convert(SIGSTR, qzss_freq, 'L6');
+            case 'S6Z'; type2 = convert(SIGSTR, qzss_freq, 'L6');
+            % L6: Doppler
+            case 'D6S'; type2 = convert(DOPPLER, qzss_freq, 'L6');
+            case 'D6L'; type2 = convert(DOPPLER, qzss_freq, 'L6');
+            case 'D6X'; type2 = convert(DOPPLER, qzss_freq, 'L6');
+            case 'D6E'; type2 = convert(DOPPLER, qzss_freq, 'L6');
+            case 'D6Z'; type2 = convert(DOPPLER, qzss_freq, 'L6');
+            %----------------------------------------------------			
+            % all others
+            otherwise; rank = 99; type2 = '??';
+        end        
     otherwise       % all other systems (e.g. Compass/Beidou)
          rank = 99; type2 = '??';
 end

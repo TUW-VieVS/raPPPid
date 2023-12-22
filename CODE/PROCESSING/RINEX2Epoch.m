@@ -9,17 +9,15 @@ function [Epoch] = RINEX2Epoch(RINEX, epochheader, Epoch, n, ...
 %   epochheader     vector, number of lines where header occurs
 %   Epoch           struct, epoch-specific data for current epoch
 %   n               epoch of RINEX-observation-file which should be treated 
-%   no_obs_types	total number of observation types for [GPS, GLO, GAL, BDS]
+%   no_obs_types	total number of observation types for [GPS, GLO, GAL, BDS, QZSS]
 %   r_version       RINEX-version
-%   checkLLI        boolean, true if LLI from RINEX File should be used
-%   use_GPS, use_GLO, use_GAL, use_BDS
-%                   boolean, true if GNSS is processed
+%   settings        struct, processing settings from GUI
 % OUTPUT:
 %   Epoch       struct, epoch-specific data for current epoch
 %   eof             boolean, true if end of file is reached
 %  
 %   Revision:
-%   ...
+%   2023/11/03, MFWG: adding QZSS
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -27,10 +25,11 @@ function [Epoch] = RINEX2Epoch(RINEX, epochheader, Epoch, n, ...
 
 % Preparations
 checkLLI = settings.PROC.LLI;
-use_GPS = settings.INPUT.use_GPS;
-use_GLO = settings.INPUT.use_GLO;
-use_GAL = settings.INPUT.use_GAL;
-use_BDS = settings.INPUT.use_BDS;
+use_GPS  = settings.INPUT.use_GPS;
+use_GLO  = settings.INPUT.use_GLO;
+use_GAL  = settings.INPUT.use_GAL;
+use_BDS  = settings.INPUT.use_BDS;
+use_QZSS = settings.INPUT.use_QZSS;
 
 
 % Find relevant data
@@ -194,27 +193,29 @@ elseif r_version == 3 || r_version == 4
     
     sys = cellfun( @(a) a(1,1), data_epoch);  	% get system identifier
     % logical vectors
-    is_gps = (sys == 'G');                          
-    is_glo = (sys == 'R');
-    is_gal = (sys == 'E');
-    is_bds = (sys == 'C');
-    is_other = ~is_gps & ~is_glo & ~is_gal & ~is_bds;
+    is_gps  = (sys == 'G');                          
+    is_glo  = (sys == 'R');
+    is_gal  = (sys == 'E');
+    is_bds  = (sys == 'C');
+    is_qzss = (sys == 'J');
+    is_other = ~is_gps & ~is_glo & ~is_gal & ~is_bds & ~is_qzss;
     % get satellite numbers and convert them to raPPPid notation
     sats = [cellfun( @(a) a(1,2), data_epoch), cellfun( @(a) a(1,3), data_epoch)];
     sats = str2num(sats);                       % str2num is slow but exclusively works here
-    sats(is_glo) = sats(is_glo) + 100;
-    sats(is_gal) = sats(is_gal) + 200;
-    sats(is_bds) = sats(is_bds) + 300;
+    sats(is_glo)  = sats(is_glo)  + 100;
+    sats(is_gal)  = sats(is_gal)  + 200;
+    sats(is_bds)  = sats(is_bds)  + 300;
+    sats(is_qzss) = sats(is_qzss) + 400;
     % create boolean vector for GNSS satellites which are processed and so
     % their observations should be extracted
-    extract = use_GPS .* is_gps | use_GLO .* is_glo | use_GAL .* is_gal | use_BDS .* is_bds;
+    extract = use_GPS .* is_gps | use_GLO .* is_glo | use_GAL .* is_gal | use_BDS .* is_bds | use_QZSS .* is_qzss;
     
     
     for i_SV = 1:lgth_epoch            	% loop over the lines of current epoch
         if extract(i_SV)                    % improves performances a lot
             % ||| change to textscan at some point -> maybe faster?!
             line = data_epoch{i_SV};        % current line as string
-            obsis = is_gps(i_SV)*no_obs_types(1) + is_glo(i_SV)*no_obs_types(2) + is_gal(i_SV)*no_obs_types(3) + is_bds(i_SV)*no_obs_types(4) + is_other(i_SV)*max(no_obs_types);
+            obsis = is_gps(i_SV)*no_obs_types(1) + is_glo(i_SV)*no_obs_types(2) + is_gal(i_SV)*no_obs_types(3) + is_bds(i_SV)*no_obs_types(4) + is_qzss(i_SV)*no_obs_types(5) + is_other(i_SV)*max(no_obs_types);
             line = line(4:end);             % remove beginning of line
             line(end+1:max(obsis)*setlength)=' ';       % fill line with empty spaces for missing observations at the end
             
@@ -255,10 +256,11 @@ Epoch.gps_time = gps_time;
 Epoch.gps_week = gps_week;
 Epoch.mjd = mjd;
 Epoch.sats = sats;
-Epoch.gps = is_gps;
-Epoch.glo = is_glo;
-Epoch.gal = is_gal;
-Epoch.bds = is_bds;
+Epoch.gps  = is_gps;
+Epoch.glo  = is_glo;
+Epoch.gal  = is_gal;
+Epoch.bds  = is_bds;
+Epoch.qzss = is_qzss;
 Epoch.other_systems = is_other;
 Epoch.usable = usable;
 Epoch.rinex_header = epoch_header;

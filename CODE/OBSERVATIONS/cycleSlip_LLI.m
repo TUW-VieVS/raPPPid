@@ -11,7 +11,7 @@ function Epoch = cycleSlip_LLI(Epoch, use_column, settings)
 %	Epoch       updated with detected cycle slips
 %
 % Revision:
-%   ...
+%   2023/11/03, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -26,12 +26,14 @@ gps_col = cell2mat(use_column(1,1:3)); n_gps = numel(gps_col);
 glo_col = cell2mat(use_column(2,1:3)); n_glo = numel(glo_col);
 gal_col = cell2mat(use_column(3,1:3)); n_gal = numel(gal_col);
 bds_col = cell2mat(use_column(4,1:3)); n_bds = numel(bds_col);
+qzss_col = cell2mat(use_column(5,1:3)); n_qzss = numel(qzss_col);
 
 % get LLI bit for all satellites and input frequencies
 LLI(Epoch.gps,1:n_gps) = Epoch.LLI_bit_rinex(Epoch.gps, gps_col);
 LLI(Epoch.glo,1:n_glo) = Epoch.LLI_bit_rinex(Epoch.glo, glo_col);
 LLI(Epoch.gal,1:n_gal) = Epoch.LLI_bit_rinex(Epoch.gal, gal_col);
 LLI(Epoch.bds,1:n_bds) = Epoch.LLI_bit_rinex(Epoch.bds, bds_col);
+LLI(Epoch.qzss,1:n_qzss) = Epoch.LLI_bit_rinex(Epoch.qzss, qzss_col);
 
 % if LLI bit is set on any frequency, the phase observations are excluded
 % on all frequencies (||| sensible???)
