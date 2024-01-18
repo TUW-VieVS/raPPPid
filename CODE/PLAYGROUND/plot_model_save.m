@@ -165,6 +165,11 @@ if windup
     simplePlot(model_save.windup, hsv_color, 'WindUp Correction', derivation)
 end
 
+% Shapiro effect correction
+if windup
+    simplePlot(model_save.shapiro, hsv_color, 'Shapiro effect', derivation)
+end
+
 % solid tides correction
 if solid_tides
     simplePlot(model_save.solid_tides, hsv_color, 'Solid Tides Correction', derivation)

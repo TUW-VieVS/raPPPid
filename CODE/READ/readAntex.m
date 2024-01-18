@@ -18,6 +18,7 @@ function input = readAntex(input, settings, jd_start, antenna_type)
 %
 % Revision:
 %   2023/11/03, MFWG: adding QZSS
+%   2024/01/04, MFWG: adding additional BeiDou frequencies
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -38,29 +39,29 @@ bool_print = ~settings.INPUT.bool_parfor;       % boolean, true if output is pri
 % each dimension corresponds to a frequency, on each dimension each row 
 % corresponds to a satellite and the columns are:
 % prn | PCO in X | PCO in Y | PCO in Z | raPPPid number of frequency
-PCO_GPS = zeros(DEF.SATS_GPS,5,5); 	% L1 - L2  - L5 - empty - empty
-PCO_GLO = zeros(DEF.SATS_GLO,5,5); 	% G1 - G2  - G3  - empty - empty
-PCO_GAL = zeros(DEF.SATS_GAL,5,5);	% E1 - E5a - E5b - E5    - E6
-PCO_BDS = zeros(DEF.SATS_BDS,5,5);	% B1 - B2  - B3  - empty - empty
-PCO_QZSS= zeros(DEF.SATS_QZSS,5,5);	% L1 - L2  - L5  - L6    - empty
+PCO_GPS = zeros(DEF.SATS_GPS,5,6); 	% L1 - L2  - L5  - empty - empty - empty
+PCO_GLO = zeros(DEF.SATS_GLO,5,6); 	% G1 - G2  - G3  - empty - empty - empty
+PCO_GAL = zeros(DEF.SATS_GAL,5,6);	% E1 - E5a - E5b - E5    - E6    - empty
+PCO_BDS = zeros(DEF.SATS_BDS,5,6);	% B1 - B2  - B3  - B1AC  - B2a   - B2ab
+PCO_QZSS= zeros(DEF.SATS_QZSS,5,6);	% L1 - L2  - L5  - L6    - empty - empty
 
 % Phase Center Offsets receiver [m]:
 % Each column belongs to one frequency. The rows are the PCO in North, East
 % and in Up component.
-PCO_rec_GPS = zeros(3,5);           % L1 - L2  - L5  - empty - empty
-PCO_rec_GLO = zeros(3,5);           % G1 - G2  - G3  - empty - empty
-PCO_rec_GAL = zeros(3,5);           % E1 - E5a - E5b - E5    - E6
-PCO_rec_BDS = zeros(3,5);           % B1 - B2  - B3  - empty - empty
-PCO_rec_QZSS= zeros(3,5);           % L1 - L2  - L5  - L6    - empty
+PCO_rec_GPS = zeros(3,6);           % L1 - L2  - L5  - empty - empty - empty
+PCO_rec_GLO = zeros(3,6);           % G1 - G2  - G3  - empty - empty - empty
+PCO_rec_GAL = zeros(3,6);           % E1 - E5a - E5b - E5    - E6    - empty
+PCO_rec_BDS = zeros(3,6);           % B1 - B2  - B3  - B1AC  - B2a   - B2ab
+PCO_rec_QZSS= zeros(3,6);           % L1 - L2  - L5  - L6    - empty - empty
 
 % Phase Center Variations satellites [m]:
 % each row corresponds to one frequency and the columns belong to the
 % satellite prn e.g. the PCV on L2 for G31 is the matrix located in PCV_GPS{2,31}
-PCV_GPS = cell(5, DEF.SATS_GPS); 	% L1 - L2  - L5  - empty - empty
-PCV_GLO = cell(5, DEF.SATS_GLO);   	% G1 - G2  - G3  - empty - empty
-PCV_GAL = cell(5, DEF.SATS_GAL); 	% E1 - E5a - E5b - E5    - E6
-PCV_BDS = cell(5, DEF.SATS_BDS);	% B1 - B2  - B3  - empty - empty
-PCV_QZSS= cell(5, DEF.SATS_QZSS);	% L1 - L2  - L5  - L6    - empty
+PCV_GPS = cell(6, DEF.SATS_GPS); 	% L1 - L2  - L5  - empty - empty
+PCV_GLO = cell(6, DEF.SATS_GLO);   	% G1 - G2  - G3  - empty - empty
+PCV_GAL = cell(6, DEF.SATS_GAL); 	% E1 - E5a - E5b - E5    - E6
+PCV_BDS = cell(6, DEF.SATS_BDS);	% B1 - B2  - B3  - B1AC  - B2a   - B2ab
+PCV_QZSS= cell(6, DEF.SATS_QZSS);	% L1 - L2  - L5  - L6    - empty
 
 % Phase Center Variations receiver [m]:
 % -) each dimension will lateron correspond to one frequency e.g. the PCVs
@@ -70,11 +71,11 @@ PCV_QZSS= cell(5, DEF.SATS_QZSS);	% L1 - L2  - L5  - L6    - empty
 % zenith distance (not elevation!)
 % -) some antennas have no azimuth dependendy, then the matrix is a vector
 % only
-PCV_rec_GPS = [];   	% L1 - L2  - L5  - empty - empty
-PCV_rec_GLO = [];      	% G1 - G2  - G3  - empty - empty
-PCV_rec_GAL = [];     	% E1 - E5a - E5b - E5    - E6
-PCV_rec_BDS = [];      	% B1 - B2  - B3  - empty - empty
-PCV_rec_QZSS= [];      	% L1 - L2  - L5  - L6    - empty
+PCV_rec_GPS = [];   	% L1 - L2  - L5  - empty - empty - empty
+PCV_rec_GLO = [];      	% G1 - G2  - G3  - empty - empty - empty
+PCV_rec_GAL = [];     	% E1 - E5a - E5b - E5    - E6    - empty
+PCV_rec_BDS = [];      	% B1 - B2  - B3  - B1AC  - B2a   - B2ab
+PCV_rec_QZSS= [];      	% L1 - L2  - L5  - L6    - empty - empty
 
 % open file
 fid = fopen(file);
@@ -219,7 +220,7 @@ while i < length(lines)                             % loop over lines
                                 PCO_rec_GAL(:,nr) = sscanf(tline,'%f',3)/1000;  % Receiver Phase center offsets [m]
                                 [PCV_rec_GAL, i] = read_save_PCV_rec(lines, i, PCV_rec_GAL, zen, nr);
                             end
-                        case 'C'        % BeiDou
+                        case {'B', 'C'} % BeiDou
                             if BDS_on
                                 PCO_rec_BDS(:,nr) = sscanf(tline,'%f',3)/1000;  % Receiver Phase center offsets [m]
                                 [PCV_rec_BDS, i] = read_save_PCV_rec(lines, i, PCV_rec_BDS, zen, nr);
@@ -299,7 +300,7 @@ if myantex
                                 PCO_rec_GAL(:,nr) = sscanf(tline,'%f',3)/1000;  % Receiver Phase center offsets [m]
                                 [PCV_rec_GAL, ii] = read_save_PCV_rec(lines, ii, PCV_rec_GAL, zen, nr);
                             end
-                        case 'C'        % BeiDou
+                        case {'B', 'C'} % BeiDou
                             if BDS_on
                                 PCO_rec_BDS(:,nr) = sscanf(tline,'%f',3)/1000;  % Receiver Phase center offsets [m]
                                 [PCV_rec_BDS, ii] = read_save_PCV_rec(lines, ii, PCV_rec_BDS, zen, nr);
@@ -374,75 +375,81 @@ end
 
 
 %% AUXIALIARY FUNCTIONS
-function [frequ_str, nr] = freque_name(string)
-% Convert the frequency name to a string for printing and a nr for saving
+function [freq, nr] = freque_name(string)
+% Convert the ANTEX frequency name to the frequency band and the raPPPid 
+% number for saving
 switch string
     % --- GPS ---
     case 'G01'
-        frequ_str = 'L01';
+        freq = 'L1';
         nr = 1;
     case 'G02'
-        frequ_str = 'L02';
+        freq = 'L2';
         nr = 2;
     case 'G05'
-        frequ_str = 'L05';
+        freq = 'L5';
         nr = 3;
         % --- Glonass ---
     case 'R01'
-        frequ_str = 'G01';
+        freq = 'G1';
         nr = 1;
     case 'R02'
-        frequ_str = 'G02';
+        freq = 'G2';
         nr = 2;
     case 'R03'
-        frequ_str = 'G03';
+        freq = 'G3';
         nr = 3;
         % --- Galileo ---
     case 'E01'
-        frequ_str = 'E01';
+        freq = 'E1';
         nr = 1;
     case 'E05'
-        frequ_str = 'E5a';
+        freq = 'E5a';
         nr = 2;
     case 'E07'
-        frequ_str = 'E5b';
+        freq = 'E5b';
         nr = 3;
     case 'E08'
-        frequ_str = 'E05';
+        freq = 'E5';
         nr = 4;
     case 'E06'
-        frequ_str = 'E06';
+        freq = 'E6';
         nr = 5;
         % --- BeiDou ---
-    case 'C01'              % Rinex 3 format specification says C1x and C2x should be treated as C2x
-        frequ_str = 'B01';
-        nr = 1;
+    case 'C01'
+        freq = 'B1AC';
+        nr = 4;
     case 'C02'
-        frequ_str = 'B01';
+        freq = 'B1';
         nr = 1;
+    case 'C05'        
+        freq = 'B2a';
+        nr = 5;
     case 'C06'
-        frequ_str = 'B02';
-        nr = 2;
-    case 'C07'
-        frequ_str = 'B03';
+        freq = 'B3';
         nr = 3;
+    case 'C07'
+        freq = 'B2';
+        nr = 2;
+    case 'C08'
+        freq = 'B2ab';
+        nr = 6;
         % --- QZSS ---
     case 'J01'
-        frequ_str = 'J01';
+        freq = 'J1';
         nr = 1;
     case 'J02'
-        frequ_str = 'J02';
+        freq = 'J2';
         nr = 2;
     case 'J05'
-        frequ_str = 'J05';
+        freq = 'J5';
         nr = 3;
     case 'J06'
-        frequ_str = 'J05';
+        freq = 'J6';
         nr = 4;
         % --- everything else ---
     otherwise
-        frequ_str = [];
-        nr = [];
+        freq = [];        nr = [];
 end
 end
 

@@ -24,7 +24,10 @@ function [N,E,Zone,lcm]=ell2utm_GT(lat,lon,a,e2,lcm)
 %          E   - vector of UTM eastings (m)
 %          Zone- vector of UTM zones (zeros if lcm specified)
 %          lcm - central meridian(s) used in conversion (rad)
-
+% 
+% Revision:
+%   2024 Jan 18, MFWG: add check if lat, lon are zero
+% 
 % Copyright (c) 2011, Michael R. Craymer
 % All rights reserved.
 % Email: mike@craymer.com
@@ -32,6 +35,11 @@ function [N,E,Zone,lcm]=ell2utm_GT(lat,lon,a,e2,lcm)
 if nargin ~= 2 & nargin ~= 3 & nargin ~= 4 & nargin ~= 5
   warning('Incorrect number of input arguments');
   return
+end
+
+if lat == 0 || lon == 0
+    N = NaN; E = NaN; Zone = NaN; lcm = NaN;
+    return
 end
 
 if nargin == 3

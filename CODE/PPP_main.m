@@ -205,7 +205,7 @@ for q = q_range         % loop over epochs
     if ~settings.INPUT.rawDataAndroid       % from RINEX observation file
         [Epoch] = RINEX2Epoch(OBSDATA, obs.newdataepoch, Epoch, n, obs.no_obs_types, obs.rinex_version, settings);
     else                                % from Android raw sensor data
-        [Epoch] = RawSensor2Epoch(OBSDATA, obs.newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column);
+        [Epoch] = RawSensor2Epoch(OBSDATA, obs.newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column, obs.leap_sec);
     end
     
     % ----- check usability of epoch -----

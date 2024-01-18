@@ -14,14 +14,16 @@ function rheader = anheader_GUI(file)
 %                       first observation in RINEX file
 %       time_system     string, time system specified in header
 %       no_eps          number of epochs
-%       gps_ranking     string, ranking of gps observations types
-%       glo_ranking     string, ranking of glonass observations types
-%       gal_ranking     string, ranking of galileo observations types
-%       bds_ranking     string, ranking of beidou observations types
-%       ind_gps_freq    vector, numbers of observed gps frequencies
-%       ind_glo_freq    vector, numbers of observed glonass frequencies
-%       ind_gal_freq    vector, numbers of observed galileo frequencies
+%       gps_ranking     string, ranking of GPS observations types
+%       glo_ranking     string, ranking of GLONASS observations types
+%       gal_ranking     string, ranking of Galileo observations types
+%       bds_ranking     string, ranking of Beidou observations types
+%       qzss_ranking    string, ranking of QZSS observations types
+%       ind_gps_freq    vector, numbers of observed GPS frequencies
+%       ind_glo_freq    vector, numbers of observed GLONASS frequencies
+%       ind_gal_freq    vector, numbers of observed Galileo frequencies
 %       ind_bds_freq    vector, numbers of observed BeiDou frequencies
+%       ind_qzss_freq   vector, numbers of observed QZSS frequencies
 %       station         string, 4-digit name of station
 %       antenna         string, antenna of RINEX file
 %       receiver        string, receiver of RINEX file
@@ -156,20 +158,20 @@ while 1
         if gnss == 'G'
             gps_ranking = check_obs_types(gps_ranking, types);
             ind_gps_freq = check_freq(freq);
-            ind_gps_freq = (ind_gps_freq ~= 0) .* [1 2 0 0 3 0 0 0];
+            ind_gps_freq = (ind_gps_freq ~= 0) .* [1 2 0 0 3 0 0 0];    % convert RINEX number (observation code) to raPPPid frequency index
         elseif gnss == 'R'
             glo_ranking = check_obs_types(glo_ranking, types);
             ind_glo_freq = check_freq(freq);
-            ind_glo_freq = (ind_glo_freq ~= 0) .* [1 2 3 0 0 0 0 0];
+            ind_glo_freq = (ind_glo_freq ~= 0) .* [1 2 3 0 0 0 0 0];    
         elseif gnss == 'E'
             gal_ranking = check_obs_types(gal_ranking, types);
             ind_gal_freq = check_freq(freq);
             ind_gal_freq = (ind_gal_freq ~= 0) .* [1 0 0 0 2 5 3 4];
         elseif gnss == 'C'
             bds_ranking = check_obs_types(bds_ranking, types);
-            freq = strrep(freq, '1', '2');      % RINEX v3 specification says C1x = C2x, C1x should be treated as C2x
+            % freq = strrep(freq, '1', '2');      % RINEX v3 specification says C1x = C2x, C1x should be treated as C2x
             ind_bds_freq = check_freq(freq);
-            ind_bds_freq = (ind_bds_freq ~= 0) .* [0 1 0 0 0 3 2 0];
+            ind_bds_freq = (ind_bds_freq ~= 0) .* [4 1 0 0 5 3 2 6];
         elseif gnss == 'J'
             qzss_ranking = check_obs_types(qzss_ranking, types);
             ind_qzss_freq = check_freq(freq);

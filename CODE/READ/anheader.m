@@ -378,7 +378,3 @@ obs.antenna_type 	= antenna_type;
 obs.receiver_type   = receiver_type;
 obs.rec_ant_delta 	= [ant_delta(3); ant_delta(2); ant_delta(1)];   % North / East / Height
 
-
-
-
-end     % of anheader.m

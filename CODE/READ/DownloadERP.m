@@ -351,7 +351,8 @@ while download   &&   i <= length(file)
     end
     % other download sources can be added here
     if file_status == 0
-        errordlg({['Downloading ' settings.ORBCLK.prec_prod ' ERP file failed.']}, 'Error');
+        errordlg({['Downloading ' settings.ORBCLK.prec_prod ' ERP file failed.'] 'Polar Tides correction is not applied.'}, 'Error');
+        settings.ORBCLK.file_erp = '';
         return
     end
     [~,file{i},~] = fileparts(file{i});   % remove the zip file extension

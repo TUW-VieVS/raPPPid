@@ -1,7 +1,8 @@
 % Class for all relevant geodetic constants in VieVS PPP.
 %  
 %   Revision:
-%   2023/11/03, MFWG: adding QZSS
+%       2023/11/03, MFWG: adding QZSS
+%       2024/01/04, MFWG: adding additional BeiDou frequencies
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -17,13 +18,17 @@ classdef Const
         WE_GLO = 7.29221150e-5; 
         WE_BDS = Const.WE_GLO;
         WE_GAL = Const.WE;
-        % Earths Gravitational constant  [m^3/s^2], [22]: Table 1.5
+        % Earths geocentric gravitational constant  [m^3/s^2], [22]: Table 1.5
         GM = 3.986005e14;        % for GPS, cf. GPS ICD
         GM_GAL = 3.986004418e14; % Galileo [15]: p.44 and BeiDou [16]: p.36
         GM_GLO = Const.GM_GAL;
         
-        %% Constants for all GNSS
+        
+        %% Constants for multiple GNSS
         F0 = 10.23*10^6;         % fundamental frequency of GPS and Galileo
+        
+        % Difference from BeiDou to GPS time, GPST = BDST + BDST_GPST
+        BDST_GPST = 14;                 % seconds
         
         
         %% GPS specific Parameters
@@ -77,21 +82,25 @@ classdef Const
         
         
         %% BDS specific Parameters c.f. RINEX v3 specification
-        % frequency, [Hz]
-        BDS_F1 = 1561.098 * 1e6;        % B1
-        BDS_F2 = 1207.14  * 1e6;        % B2
-        BDS_F3 = 1268.52  * 1e6;        % B3
-        BDS_F  = [Const.BDS_F1 Const.BDS_F2 Const.BDS_F3 0];
+        % frequency, [Hz]               ||| fundamental frequency???
+        BDS_F1   = 1561.098 * 1e6;      % B1
+        BDS_F2   = 1207.14  * 1e6;      % B2
+        BDS_F3   = 1268.52  * 1e6;      % B3
+        BDS_F1AC = 1575.42  * 1e6;      % B1A and B1C
+        BDS_F2a  = 1176.45  * 1e6;      % B2a
+        BDS_F2ab = 1191.795 * 1e6;      % B2(B2a+B2b)
+        BDS_F  = [Const.BDS_F1 Const.BDS_F2 Const.BDS_F3 Const.BDS_F1AC Const.BDS_F2a Const.BDS_F2ab 0];
         % wavelength, [m]
-        BDS_L1 = Const.C / Const.BDS_F1;
-        BDS_L2 = Const.C / Const.BDS_F2;
-        BDS_L3 = Const.C / Const.BDS_F3;
+        BDS_L1   = Const.C / Const.BDS_F1;
+        BDS_L2   = Const.C / Const.BDS_F2;
+        BDS_L3   = Const.C / Const.BDS_F3;
+        BDS_L1AC = Const.C / Const.BDS_F1AC;
+        BDS_L2a  = Const.C / Const.BDS_F2a;
+        BDS_L2ab = Const.C / Const.BDS_F2ab;
         BDS_L  = Const.C ./ Const.BDS_F;
         % Coefficients for Ionosphere Linear-Combination of precise products, []
         BDS_IF_k1 = Const.BDS_F1^2  / (Const.BDS_F1^2-Const.BDS_F2^2);   % 2.4872 (?)
         BDS_IF_k2 = Const.BDS_F2^2 /  (Const.BDS_F1^2-Const.BDS_F2^2);   % 1.4872 (?)
-        % Difference from BeiDou to GPS time, GPST = BDST + BDST_GPST
-        BDST_GPST = 14;                 % seconds
         
         
         
@@ -112,6 +121,7 @@ classdef Const
         
         %% Reference systems
         % WGS84 parameters
+        WGS84 = wgs84Ellipsoid;             % Matlab reference ellisoid object [m]
         WGS84_A = 6378137.0;                % semimajor axis, [m]
         WGS84_E_SQUARE = 6.69437999013 * 10^(-3);
         WGS84_B = Const.WGS84_A*sqrt(1-Const.WGS84_E_SQUARE);

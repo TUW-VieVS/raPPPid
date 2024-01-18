@@ -306,6 +306,7 @@ if settings.EXP.model_save
     end
     model_save.code(q,prns,j)  = model.model_code(:,j);         % modelled code ranges
     model_save.windup(q,prns,j)   	= model.windup(:,j);    	% Phase windup effect, scaled to frequency
+    model_save.shapiro(q,prns,j)   	= model.shapiro(:,j);    	% Phase windup effect, scaled to frequency
     model_save.PCO_rec(q,prns,j) = model.dX_PCO_rec_corr(:,j);	% Receiver phase center offset corrections
     model_save.PCV_rec(q,prns,j) = model.dX_PCV_rec_corr(:,j);	% Receiver phase center offset corrections
     model_save.iono(q,prns,j)  = model.iono(:,j);      	% Ionosphere delay

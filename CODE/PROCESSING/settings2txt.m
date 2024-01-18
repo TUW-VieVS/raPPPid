@@ -280,6 +280,9 @@ if settings.OTHER.bool_rec_arp || settings.OTHER.bool_rec_pco || settings.OTHER.
     if settings.OTHER.bool_eclipse && ~settings.ORBCLK.bool_obx
         fprintf(fileID,'    %s\n','o Eclipse condition is on');
     end
+    if settings.OTHER.shapiro
+        fprintf(fileID,'    %s\n','o Shapiro Effect Correction');
+    end
     if settings.OTHER.bool_GDV
         fprintf(fileID,'    %s\n','o Group Delay Variation Correction');
     end

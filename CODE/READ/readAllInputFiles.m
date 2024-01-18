@@ -130,7 +130,7 @@ if settings.ORBCLK.bool_clk
     input.ORBCLK.preciseClk_GLO = preClk_GLO;
     input.ORBCLK.preciseClk_GAL = preClk_GAL;
     input.ORBCLK.preciseClk_BDS = preClk_BDS;
-    input.ORBCLK.preciseClk_QZSS = preClk_QZSS;
+    if settings.INPUT.use_QZSS; input.ORBCLK.preciseClk_QZSS = preClk_QZSS; end
 elseif settings.ORBCLK.bool_sp3         % no precise clock file but a precise orbit (sp3 file)   
     % save the clock information from sp3 as it would be from precise clock file
     input = preciseOrbit2Clock(input, settings);

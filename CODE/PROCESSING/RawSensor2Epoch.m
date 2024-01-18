@@ -1,4 +1,4 @@
-function [Epoch] = RawSensor2Epoch(RAW, epochheader, q, raw_variables, Epoch, settings, use_column)
+function [Epoch] = RawSensor2Epoch(RAW, epochheader, q, raw_variables, Epoch, settings, use_column, leap_sec)
 % This function is called at the beginning of an epoch and gets all data 
 % (e.g., raw GNSS measurements) from the raw sensor file (Android) for the 
 % current epoch. The observations and additional data is saved in the 
@@ -12,6 +12,7 @@ function [Epoch] = RawSensor2Epoch(RAW, epochheader, q, raw_variables, Epoch, se
 %   Epoch           struct, containing epoch-specific data
 %   settings        struct, processing settings 
 %   use_column      cell, indicating location of processed observations
+%   leap_sec        [s], number of leap seconds between UTC and GPST
 % OUTPUT:
 %	Epoch           updated with data of currently processed epoch
 %
@@ -24,13 +25,13 @@ function [Epoch] = RawSensor2Epoch(RAW, epochheader, q, raw_variables, Epoch, se
 
 % ||| third-frequency is ignored because no triple-frequency smartphones exist
 
-% Bits of raw state:
+% Bits of gnssRaw.State (2^xxx):
 % 0: Code Lock                      1: Bit Sync     
 % 2: Subframe Sync                  3: Time Of Week Decoded State     
 % 4: Millisecond Ambiguity          5: Symbol Sync 
 % 6: GLONASS String Sync            7: GLONASS Time Of Day Decoded      
 % 8: BEIDOU D2 Bit Sync             9: BEIDOU D2 Subframe Sync       
-% 10: Galileo E1BC Code Lock       	11: Galileo E1C 2^nd^ Code Lock
+% 10: Galileo E1BC Code Lock       	11: Galileo E1C 2^nd Code Lock
 % 12: Galileo E1B Page Sync         13: SBAS Sync
 % 14: Time Of Week Known            15: GLONASS Time Of Day Known
 
@@ -51,28 +52,36 @@ RAW_epoch = RAW(range,:);                               % data of current epoch
 % 0 = UNKNOWN, 1 = GPS, 2 = SBAS, 3 = GLO, 4 = QZSS, 5 = BDS, 6 = GAL, 7 = IRNSS
 sats = gnssRaw.Svid + ...       	% satellite number
     (gnssRaw.ConstellationType == 3) * 100 + ...    % GLONASS
+    (gnssRaw.ConstellationType == 6) * 200 + ...    % Galileo
     (gnssRaw.ConstellationType == 5) * 300 + ...    % BeiDou
-    (gnssRaw.ConstellationType == 6) * 200;         % Galileo
+    (gnssRaw.ConstellationType == 4) * 400;         % QZSS
+
+% correct satellite numbers of BeiDou (||| explanation for this issue???)
+adjust_QZSS_prn = (gnssRaw.ConstellationType == 4) & (gnssRaw.Svid > 100);
+sats(adjust_QZSS_prn) = sats(adjust_QZSS_prn) - 192;
+
 
 % detect the origin of the measurement (GNSS and frequency) using approximate frequency
-isGPS_L1 = (gnssRaw.ConstellationType == 1) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GPS_F1/1e4));
-isGPS_L5 = (gnssRaw.ConstellationType == 1) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GPS_F5/1e4));
-isGLO_G1 = (gnssRaw.ConstellationType == 3) & (round(gnssRaw.CarrierFrequencyHz/1e7) == round(Const.GLO_F1/1e7));
-isGAL_E1 = (gnssRaw.ConstellationType == 6) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GAL_F1/1e4));
+isGPS_L1 = (gnssRaw.ConstellationType == 1) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GPS_F1 /1e4));
+isGPS_L5 = (gnssRaw.ConstellationType == 1) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GPS_F5 /1e4));
+isGLO_G1 = (gnssRaw.ConstellationType == 3) & (round(gnssRaw.CarrierFrequencyHz/1e7) == round(Const.GLO_F1 /1e7));
+isGAL_E1 = (gnssRaw.ConstellationType == 6) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GAL_F1 /1e4));
 isGAL_E5a= (gnssRaw.ConstellationType == 6) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GAL_F5a/1e4));
-isBDS_B1 = (gnssRaw.ConstellationType == 5) & (round(gnssRaw.CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3));
-isBDS_B2 = (gnssRaw.ConstellationType == 5) & (round(gnssRaw.CarrierFrequencyHz/1e3) == round(Const.BDS_F2/1e3));
+isBDS_B1 = (gnssRaw.ConstellationType == 5) & (round(gnssRaw.CarrierFrequencyHz/1e3) == round(Const.BDS_F1 /1e3));
+isBDS_B2a= (gnssRaw.ConstellationType == 5) & (round(gnssRaw.CarrierFrequencyHz/1e3) == round(Const.BDS_F2a/1e3));
+isQZS_L1 = (gnssRaw.ConstellationType == 4) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.QZSS_F1/1e4));
+isQZS_L5 = (gnssRaw.ConstellationType == 4) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.QZSS_F5/1e4));
 
 
 %% time and observations
 % -) generate GPS time and week with the measurements of the first GPS satellite
 idx = find(gnssRaw.ConstellationType, 1, 'first');
-gpstime = gnssRaw.TimeNanos(idx) - gnssRaw.FullBiasNanos(idx) - gnssRaw.BiasNanos(idx);     % [ns]
-gpstime = double(mod(gpstime, 604800*1e9))*1e-9;        % convert to double and [s]
-gpsweek = floor(abs(double(gnssRaw.FullBiasNanos(idx)))*1e-9 / 604800);    % gps week, []
+[gpsweek, gpstime] = generateGpsTimeWeek(gnssRaw.TimeNanos(idx), gnssRaw.FullBiasNanos(idx), gnssRaw.BiasNanos(idx), ...
+    gnssRaw.ReceivedSvTimeNanos(idx), gnssRaw.TimeOffsetNanos(idx), gnssRaw.FullBiasNanos_1, gnssRaw.BiasNanos_1);
+
 
 % -) generate code pseudorange for all satellites
-PR = generateCodePseudorange(gnssRaw, isGPS_L1, isGPS_L5, isGLO_G1, isGAL_E1, isGAL_E5a, isBDS_B1, isBDS_B2);
+PR = generateCodePseudorange(gnssRaw, leap_sec, isGPS_L1, isGPS_L5, isGLO_G1, isGAL_E1, isGAL_E5a, isBDS_B1, isBDS_B2a, isQZS_L1, isQZS_L5);
 % MultipathIndicator:
 % 0 ... presence or absence of multipath is unknown
 % 1 ... multipath detected
@@ -111,21 +120,22 @@ Epoch.sats = unique(sort(sats));
 
 % save observation data into Epoch.obs
 obs = NaN(numel(Epoch.sats),8); Epoch.obs = obs;
-first_frq = isGPS_L1 | isGLO_G1 | isGAL_E1 | isBDS_B1;
-secon_frq = isGPS_L5 | isGAL_E5a| isBDS_B2;     % not considered: isGLO_G2
+first_frq = isGPS_L1 | isGLO_G1 | isGAL_E1 | isBDS_B1 | isQZS_L1;
+secnd_frq = isGPS_L5 | isGAL_E5a| isBDS_B2a| isQZS_L5;     % not considered: isGLO_G2
 [obs]  = save2obs(obs, 1, Epoch.sats, sats, PR, Phase, SNR, Doppler, first_frq);
-[obs]  = save2obs(obs, 2, Epoch.sats, sats, PR, Phase, SNR, Doppler, secon_frq);
+[obs]  = save2obs(obs, 2, Epoch.sats, sats, PR, Phase, SNR, Doppler, secnd_frq);
 % obs is ordered the following at the moment:
 %     1 2 [] 3 4 [] 5 6 [] 7 8 []; ...    % GPS
 %     1 2 [] 3 4 [] 5 6 [] 7 8 []; ...    % GLONASS
 %     1 2 [] 3 4 [] 5 6 [] 7 8 []; ...    % Galileo
 %     1 2 [] 3 4 [] 5 6 [] 7 8 [];        % BeiDou
+%     1 2 [] 3 4 [] 5 6 [] 7 8 [];        % QZSS
 
 % variables with information of the Epoch
 n = numel(Epoch.sats);      % number of satellites
 Epoch.usable = true;
 Epoch.rinex_header = createRinexHeader(Epoch.gps_week, Epoch.gps_time, Epoch.usable, n);
-Epoch.LLI_bit_rinex = zeros(n, 8);
+Epoch.LLI_bit_rinex  = zeros(n, 8);
 Epoch.ss_digit_rinex = zeros(n, 8);
 
 % boolean vectors for each GNSS
@@ -133,21 +143,23 @@ Epoch.gps  = Epoch.sats < 100;
 Epoch.glo  = Epoch.sats > 100 & Epoch.sats < 200;
 Epoch.gal  = Epoch.sats > 200 & Epoch.sats < 300;
 Epoch.bds  = Epoch.sats > 300 & Epoch.sats < 400;
-Epoch.qzss = Epoch.sats > 400;
+Epoch.qzss = Epoch.sats > 400 & Epoch.sats < 500;
 Epoch.other_systems = ~Epoch.gps & ~Epoch.glo & ~Epoch.gal & ~Epoch.bds & ~Epoch.qzss;
 
 % rearrange obs to Epoch.obs to make it consistent with obs.use_column and
 % keep only processed frequencies
 % first frequency:
-Epoch.obs = rearrangGNSS(Epoch.obs, obs, Epoch.gps, use_column(1,1:3:10), [1 3 5 7]);
-Epoch.obs = rearrangGNSS(Epoch.obs, obs, Epoch.glo, use_column(2,1:3:10), [1 3 5 7]);
-Epoch.obs = rearrangGNSS(Epoch.obs, obs, Epoch.gal, use_column(3,1:3:10), [1 3 5 7]);
-Epoch.obs = rearrangGNSS(Epoch.obs, obs, Epoch.bds, use_column(4,1:3:10), [1 3 5 7]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gps, use_column(1,1:3:10), [1 3 5 7]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.glo, use_column(2,1:3:10), [1 3 5 7]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gal, use_column(3,1:3:10), [1 3 5 7]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.bds, use_column(4,1:3:10), [1 3 5 7]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.qzss,use_column(5,1:3:10), [1 3 5 7]);
 % second frequency:
-Epoch.obs = rearrangGNSS(Epoch.obs, obs, Epoch.gps, use_column(1,2:3:11), [2 4 6 8]);
-Epoch.obs = rearrangGNSS(Epoch.obs, obs, Epoch.glo, use_column(2,2:3:11), [2 4 6 8]);
-Epoch.obs = rearrangGNSS(Epoch.obs, obs, Epoch.gal, use_column(3,2:3:11), [2 4 6 8]);
-Epoch.obs = rearrangGNSS(Epoch.obs, obs, Epoch.bds, use_column(4,2:3:11), [2 4 6 8]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gps, use_column(1,2:3:11), [2 4 6 8]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.glo, use_column(2,2:3:11), [2 4 6 8]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gal, use_column(3,2:3:11), [2 4 6 8]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.bds, use_column(4,2:3:11), [2 4 6 8]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.qzss,use_column(5,2:3:11), [2 4 6 8]);
 
 
 
@@ -189,7 +201,7 @@ obs(idx_a, frq + 6) = D_data_(idx_b);     % Doppler
 
 
 
-function Epoch_obs = rearrangGNSS(Epoch_obs, obs, bool, use_column, idx)
+function Epoch_obs = rearranGeNSS(Epoch_obs, obs, bool, use_column, idx)
 % rearrange observations from raw sensor data to Epoch_obs to make it
 % consistent with obs.use_column and the observation types detected at the 
 % beginning of the processing

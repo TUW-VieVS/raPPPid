@@ -55,6 +55,7 @@ code_model = model.rho...                                 	% theoretical range
     - model.dX_solid_tides_corr + model.dX_GDV...       	% solid tides and group delay variations
 	- model.dX_ocean_loading ...                   			% ocean loading
 	- model.dX_polar_tides...                   			% pole tide
+	+ model.shapiro ... 									% Shapiro effect
     - model.dX_PCO_rec_corr + model.dX_PCO_sat_corr...    	% Phase Center Offset correction
     + model.dX_PCV_rec_corr + model.dX_PCV_sat_corr...  	% Phase Center Variation correction
     - model.dX_ARP_ECEF_corr;                           	% Antenna Reference Point correction
@@ -77,6 +78,7 @@ if contains(settings.PROC.method,'+ Phase')
         - model.dX_solid_tides_corr ...                   	% solid tides
 		- model.dX_ocean_loading ...                   		% ocean loading
 		- model.dX_polar_tides...                   		% pole tide
+		+ model.shapiro ... 								% Shapiro effect
         - model.dX_PCO_rec_corr + model.dX_PCO_sat_corr... 	% Phase Center Offset correction
 		+ model.dX_PCV_rec_corr + model.dX_PCV_sat_corr... 	% Phase Center Variation correction
         - model.dX_ARP_ECEF_corr...                       	% Antenna Reference Point correction

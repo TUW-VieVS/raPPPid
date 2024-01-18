@@ -47,6 +47,7 @@ idx_frqs_bds(idx_frqs_bds>DEF.freq_BDS(end)) = [];
 idx_frqs_qzss(idx_frqs_qzss>DEF.freq_QZSS(end)) = [];
 
 
+
 %% Epoch-specific corrections
 % corrections which are valid for all satellites but only for a specific epoch
 
@@ -324,6 +325,17 @@ for i_sat = 1:num_sat
             windupCorr(2) = windupCorr_L2;
             windupCorr(3) = windupCorr_L3;
         end
+    end
+    
+    % --- The Shapiro effect ---
+    % Shapiro effect is approximately 60 ps or 2 cm for GNSS MEO satellites.
+    % For IGSO satellites (e.g., BeiDou) it is in the order of 70 ps.
+    % check [17], p.564
+    shapiro = 0;
+    if settings.OTHER.shapiro
+        r_S = norm(X_rot);
+        r_R = norm(pos_XYZ);
+        shapiro = (2*Const.GM)/Const.C^2 * log( (r_S +  r_R + rho)/(r_S + r_R  - rho) ); % [m]
     end
     
     
@@ -635,7 +647,7 @@ for i_sat = 1:num_sat
     
     % --- Satellite Antenna Phase Center Variation Correction---
     dX_PCV_sat = [0,0,0];
-    if settings.OTHER.bool_sat_pcv && settings.ORBCLK.bool_sp3 && ~exclude 
+    if settings.OTHER.bool_sat_pcv && settings.ORBCLK.bool_sp3 && ~exclude
         [dX_PCV_sat, ~] = calc_PCV_sat(PCV_sat, SatOr_ECEF, los0, j, settings.IONO.model, f1, f2, f3, X_rot, pos_XYZ);
     end
     
@@ -677,10 +689,12 @@ for i_sat = 1:num_sat
     % Windup
     model.delta_windup(i_sat,frqs) = delta_windup;          % Phase windup effect [cycles]
     model.windup(i_sat,frqs)       = windupCorr(frqs);      % Phase windup effect, scaled to frequency [m]
+    % Shapiro effect
+    model.shapiro(i_sat,frqs) = shapiro;        % Shapiro effect [m]
     % station displacements
     model.dX_solid_tides_corr(i_sat,frqs) = dX_solid_tides_corr; 	% Solid tides range correction [m]
     model.dX_ocean_loading(i_sat,frqs)    = dX_ocean_loading;     	% Ocean loading range correction [m]
-    model.dX_polar_tides(i_sat,frqs)       = dX_polar_tides;        	% Polar motion range correction [m]
+    model.dX_polar_tides(i_sat,frqs)      = dX_polar_tides;        	% Polar motion range correction [m]
     % group delay variation
     model.dX_GDV(i_sat,frqs)  = dX_GDV(frqs);                           % Group delay variation correction [m]
     % phase center offsets and variations

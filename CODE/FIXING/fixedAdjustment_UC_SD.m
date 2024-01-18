@@ -184,6 +184,7 @@ model_code_fix = model.rho...                        	% theoretical range
     - model.dX_solid_tides_corr ...                 	% solid tides
 	- model.dX_ocean_loading ...                   		% ocean loading	
 	- model.dX_polar_tides...                   		% pole tide
+	+ model.shapiro ... 								% Shapiro effect
     - model.dX_PCO_rec_corr ...                     	% Phase Center Offset Receiver
     + model.dX_PCV_rec_corr ...                      	% Phase Center Variation Receiver
     - model.dX_ARP_ECEF_corr ...                       	% Antenna Reference Point Receiver
@@ -200,6 +201,7 @@ model_phase_fix = model.rho...                          % theoretical range
     - model.dX_solid_tides_corr ...                  	% solid tides
 	- model.dX_ocean_loading ...                   		% ocean loading	
 	- model.dX_polar_tides...                   		% pole tide
+	+ model.shapiro ... 								% Shapiro effect
     - model.dX_PCO_rec_corr ...                      	% Phase Center Offset Receiver
 	+ model.dX_PCV_rec_corr ...                      	% Phase Center Variation Receiver
     - model.dX_ARP_ECEF_corr ...                        % Antenna Reference Point Receiver

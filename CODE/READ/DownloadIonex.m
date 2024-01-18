@@ -285,16 +285,17 @@ switch settings.IONO.file_source
         [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
         
     case 'IGS RT GIM'
-        try
-            file =  {['irtg' doy '0.' yyyy(3:4) 'i']};
-            file_zip = {[file{1} '.Z']};
-            webfolder = ['http://chapman.upc.es/irtg/archive/' yyyy '/' doy '/global_vtec_movie_since_last_midnight/ionex_file/'];
-            websave([target{1} '/' file_zip{1}] , [webfolder file_zip{1}]);
-            unzip_and_delete(file_zip, target);        
-        catch
-            errordlg('Download of IGS Real-Time GIM failed.', 'Error');
+        file =  {['irtg' doy '0.' yyyy(3:4) 'i']};
+        if ~isfile([target{1} file{1}])
+            try     % try download only if file is not yet existing
+                file_zip = {[file{1} '.Z']};
+                webfolder = ['http://chapman.upc.es/irtg/archive/' yyyy '/' doy '/global_vtec_movie_since_last_midnight/ionex_file/'];
+                websave([target{1} '/' file_zip{1}] , [webfolder file_zip{1}]);
+                unzip_and_delete(file_zip, target);
+            catch
+                errordlg('Download of IGS Real-Time GIM failed.', 'Error');
+            end
         end
-
     otherwise
         errordlg(['Ionex Source ' settings.IONO.file_source ' not implemented!'], 'Error');
         

@@ -182,6 +182,7 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q
         model_save.zhd              = model_save.zhd(eps);
         model_save.delta_windup     = model_save.delta_windup(eps,:);
         model_save.windup           = model_save.windup(eps,:,:);
+		model_save.shapiro          = model_save.shapiro(eps,:,:);
         model_save.solid_tides      = model_save.solid_tides(eps,:);
         model_save.ocean_loading    = model_save.ocean_loading(eps,:);
 		model_save.polar_tides      = model_save.polar_tides(eps,:);

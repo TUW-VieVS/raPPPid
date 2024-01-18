@@ -515,20 +515,24 @@ while download   &&   i <= length(files)
     file_status = 0;
     % create target folder
     [~, ~] = mkdir(targets{i});
-    try     %#ok<TRYNC>                             % try to download from igs.ign.fr
+    try     %#ok<TRYNC>                             % try to download
         [file_status] = ftp_download(URL_host, URL_folders{i}, files{i}, targets{i}, true);
-        if ~bool_archive       % pretend archive, otherwise the following code does not work 
+        if ~bool_archive       % pretend archive, otherwise the following code does not work
             files{i} = [files{i} '.gz'];
         end
     end
     if bool_archive   &&   (file_status == 1 || file_status == 2)
-        unzip_and_delete(files(i), targets(i));
+        decompressed = unzip_and_delete(files(i), targets(i));
+        [~, file_dec, ext_dec] = fileparts(decompressed{1});
+        files{i} = [file_dec ext_dec  '.gz'];       % save name of decompressed file (pretend its an archive)
     end
     if file_status == 0 && ~isempty(URL_folders_2) 	% try to download from CDDIS
         file = files_2{i};    target = targets{i};
         file_status = get_cddis_data(URL_host_2, URL_folders_2, {file}, {target}, true);
         if bool_archive   &&   (file_status == 1   ||   file_status == 2)
-            unzip_and_delete(files_2(i), targets(i));
+            decompressed = unzip_and_delete(files_2(i), targets(i));
+            [~, file_dec, ext_dec] = fileparts(decompressed{1});
+            files{i} = [file_dec ext_dec  '.gz'];       % save name of decompressed file (pretend its an archive)
         end
     end
     % other download sources can be added here

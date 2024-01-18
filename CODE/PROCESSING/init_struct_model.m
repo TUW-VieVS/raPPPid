@@ -44,6 +44,7 @@ model.Rot_V  = NaN(3,m);        % Sat Velocity after rotation
 
 model.delta_windup  = NaN(m,n);     % Phase windup effect in cycles
 model.windup     = NaN(m,n);     	% Ionosphere free windup correction for Phase
+model.shapiro    = NaN(m,n);     	% Shapiro effect
 
 model.dX_solid_tides_corr = NaN(m,n);   % Correction for Solid Earth Tides projected on the Line of sight
 model.dX_ocean_loading    = NaN(m,n); 	% Correction for ocean loading projected on the Line of sight

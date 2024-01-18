@@ -92,10 +92,10 @@ while true
            TimeNanos = line_data{strcmp(vars_Raw, 'TimeNanos')};    % extract variables
            FullBiasNanos = line_data{strcmp(vars_Raw, 'FullBiasNanos')};
            BiasNanos = line_data{strcmp(vars_Raw, 'BiasNanos')};
+           ReceivedSvTimeNanos = line_data{strcmp(vars_Raw, 'ReceivedSvTimeNanos')};
+           TimeOffsetNanos = line_data{strcmp(vars_Raw, 'TimeOffsetNanos')};
            % build gps time and week
-           gpstime = TimeNanos - FullBiasNanos - BiasNanos;         % [ns]
-           gpstime = double(mod(gpstime, 604800*1e9))*1e-9;         % convert to double and [s]
-           gpsweek = floor(abs(double(FullBiasNanos))*1e-9 / 604800);    % gps week, []
+           [gpsweek, gpstime] = generateGpsTimeWeek(TimeNanos, FullBiasNanos, BiasNanos, ReceivedSvTimeNanos, TimeOffsetNanos);
            % convert to julian date and then to calendar data
            start_jd = gps2jd_GT(gpsweek,gpstime);
            [startdate(1), startdate(2), dd] = jd2cal_GT(start_jd);
@@ -118,6 +118,8 @@ while true
            isGPS_L5 = (round(CarrierFrequencyHz/1e4) == round(Const.GPS_F5/1e4));
            % create char of frequency
            frq_char = char('1'*isGPS_L1 + '5'*isGPS_L5);
+           % check if CodeType is available
+           CodeType = checkSignalType(CodeType, 'G', frq_char);
            % create 3-digit name of observation (RINEX conventation)
            L = ['L' frq_char CodeType{1}];
            C = ['C' frq_char CodeType{1}];
@@ -133,8 +135,8 @@ while true
                % convert to 2-digit and check rank
                [L_type2, L_rank] = obs_convert(L, 'G', settings);
                [C_type2, C_rank] = obs_convert(C, 'G', settings);
-               [S_type2, C_rank] = obs_convert(S, 'G', settings);
-               [D_type2, C_rank] = obs_convert(D, 'G', settings);
+               [S_type2, S_rank] = obs_convert(S, 'G', settings);
+               [D_type2, D_rank] = obs_convert(D, 'G', settings);
                % save 2-digit observation type
                L_gps = [L_gps L_type2];
                C_gps = [C_gps C_type2];
@@ -142,9 +144,9 @@ while true
                D_gps = [D_gps D_type2];
                % save ranking
                L_rank_gps = [L_rank_gps L_rank];
-               C_rank_gps = [C_rank_gps L_rank];
-               S_rank_gps = [S_rank_gps L_rank];
-               D_rank_gps = [D_rank_gps L_rank];
+               C_rank_gps = [C_rank_gps C_rank];
+               S_rank_gps = [S_rank_gps S_rank];
+               D_rank_gps = [D_rank_gps D_rank];
            end
 
            % other GNSS are handled identical (but different frequencies!)
@@ -152,6 +154,7 @@ while true
        elseif idx_gnss == 3             % GLONASS
            isGLO_G1 = (round(CarrierFrequencyHz/1e7) == round(Const.GLO_F1/1e7));
            frq_char = char('1'*isGLO_G1);
+           CodeType = checkSignalType(CodeType, 'R', frq_char);
            L = ['L' frq_char CodeType{1}];
            C = ['C' frq_char CodeType{1}];
            S = ['S' frq_char CodeType{1}];
@@ -163,22 +166,23 @@ while true
                D_glo_3 = [D_glo_3 D];
                [L_type2, L_rank] = obs_convert(L, 'R', settings);
                [C_type2, C_rank] = obs_convert(C, 'R', settings);
-               [S_type2, C_rank] = obs_convert(S, 'R', settings);
-               [D_type2, C_rank] = obs_convert(D, 'R', settings);
+               [S_type2, S_rank] = obs_convert(S, 'R', settings);
+               [D_type2, D_rank] = obs_convert(D, 'R', settings);
                L_glo = [L_glo L_type2];
                C_glo = [C_glo C_type2];
                S_glo = [S_glo S_type2];
                D_glo = [D_glo D_type2];
                L_rank_glo = [L_rank_glo L_rank];
-               C_rank_glo = [C_rank_glo L_rank];
-               S_rank_glo = [S_rank_glo L_rank];
-               D_rank_glo = [D_rank_glo L_rank];
+               C_rank_glo = [C_rank_glo C_rank];
+               S_rank_glo = [S_rank_glo S_rank];
+               D_rank_glo = [D_rank_glo D_rank];
            end
            
        elseif idx_gnss == 6             % Galileo
            isGAL_E1 = (round(CarrierFrequencyHz/1e4) == round(Const.GAL_F1/1e4));
            isGAL_E5a= (round(CarrierFrequencyHz/1e4) == round(Const.GAL_F5a/1e4));
            frq_char = char('1'*isGAL_E1 + '5'*isGAL_E5a);
+           CodeType = checkSignalType(CodeType, 'E', frq_char);
            L = ['L' frq_char CodeType{1}];
            C = ['C' frq_char CodeType{1}];
            S = ['S' frq_char CodeType{1}];
@@ -190,22 +194,23 @@ while true
                D_gal_3 = [D_gal_3 D];
                [L_type2, L_rank] = obs_convert(L, 'E', settings);
                [C_type2, C_rank] = obs_convert(C, 'E', settings);
-               [S_type2, C_rank] = obs_convert(S, 'E', settings);
-               [D_type2, C_rank] = obs_convert(D, 'E', settings);
+               [S_type2, S_rank] = obs_convert(S, 'E', settings);
+               [D_type2, D_rank] = obs_convert(D, 'E', settings);
                L_gal = [L_gal L_type2];
                C_gal = [C_gal C_type2];
                S_gal = [S_gal S_type2];
                D_gal = [D_gal D_type2];
                L_rank_gal = [L_rank_gal L_rank];
-               C_rank_gal = [C_rank_gal L_rank];
-               S_rank_gal = [S_rank_gal L_rank];
-               D_rank_gal = [D_rank_gal L_rank];
+               C_rank_gal = [C_rank_gal C_rank];
+               S_rank_gal = [S_rank_gal S_rank];
+               D_rank_gal = [D_rank_gal D_rank];
            end
            
        elseif idx_gnss == 5             % BeiDou
            isBDS_B1  = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3));
-           isBDS_B2a = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2/1e3));
+           isBDS_B2a = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2a/1e3));
            frq_char = char('1'*isBDS_B1 + '5'*isBDS_B2a);
+           CodeType = checkSignalType(CodeType, 'C', frq_char);
            L = ['L' frq_char CodeType{1}];
            C = ['C' frq_char CodeType{1}];
            S = ['S' frq_char CodeType{1}];
@@ -217,22 +222,23 @@ while true
                D_bds_3 = [D_bds_3 D];
                [L_type2, L_rank] = obs_convert(L, 'C', settings);
                [C_type2, C_rank] = obs_convert(C, 'C', settings);
-               [S_type2, C_rank] = obs_convert(S, 'C', settings);
-               [D_type2, C_rank] = obs_convert(D, 'C', settings);
+               [S_type2, S_rank] = obs_convert(S, 'C', settings);
+               [D_type2, D_rank] = obs_convert(D, 'C', settings);
                L_bds = [L_bds L_type2];
                C_bds = [C_bds C_type2];
                S_bds = [S_bds S_type2];
                D_bds = [D_bds D_type2];
                L_rank_bds = [L_rank_bds L_rank];
-               C_rank_bds = [C_rank_bds L_rank];
-               S_rank_bds = [S_rank_bds L_rank];
-               D_rank_bds = [D_rank_bds L_rank];
+               C_rank_bds = [C_rank_bds C_rank];
+               S_rank_bds = [S_rank_bds S_rank];
+               D_rank_bds = [D_rank_bds D_rank];
            end
 
            elseif idx_gnss == 4             % QZSS
                isQZSS_L1 = (round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F1/1e3));
                isQZSS_L5 = (round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F5/1e3));
                frq_char = char('1'*isQZSS_L1 + '5'*isQZSS_L5);
+               CodeType = checkSignalType(CodeType, 'J', frq_char);
                L = ['L' frq_char CodeType{1}];
                C = ['C' frq_char CodeType{1}];
                S = ['S' frq_char CodeType{1}];
@@ -242,18 +248,18 @@ while true
                    C_qzss_3 = [C_qzss_3 C];
                    S_qzss_3 = [S_qzss_3 S];
                    D_qzss_3 = [D_qzss_3 D];
-                   [L_type2, L_rank] = obs_convert(L, 'C', settings);
-                   [C_type2, C_rank] = obs_convert(C, 'C', settings);
-                   [S_type2, C_rank] = obs_convert(S, 'C', settings);
-                   [D_type2, C_rank] = obs_convert(D, 'C', settings);
+                   [L_type2, L_rank] = obs_convert(L, 'J', settings);
+                   [C_type2, C_rank] = obs_convert(C, 'J', settings);
+                   [S_type2, S_rank] = obs_convert(S, 'J', settings);
+                   [D_type2, D_rank] = obs_convert(D, 'J', settings);
                    L_qzss = [L_qzss L_type2];
                    C_qzss = [C_qzss C_type2];
                    S_qzss = [S_qzss S_type2];
                    D_qzss = [D_qzss D_type2];
                    L_rank_qzss = [L_rank_qzss L_rank];
-                   C_rank_qzss = [C_rank_qzss L_rank];
-                   S_rank_qzss = [S_rank_qzss L_rank];
-                   D_rank_qzss = [D_rank_qzss L_rank];
+                   C_rank_qzss = [C_rank_qzss C_rank];
+                   S_rank_qzss = [S_rank_qzss S_rank];
+                   D_rank_qzss = [D_rank_qzss D_rank];
                end
                
        end

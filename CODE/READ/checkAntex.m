@@ -12,7 +12,7 @@ function input = checkAntex(input, settings, antenna_type)
 %   
 %
 % Revision:
-%   ...
+%   2024/01/04, MFWG: additional BeiDou frequencies + better handling
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -63,19 +63,19 @@ error_pco = ''; error_pcv = '';
 
 % add missing dimension to PCV
 if ~isempty(PCV_rec_GPS) && size(PCV_rec_GPS,3)
-    PCV_rec_GPS(end,end,5) = 0;
+    PCV_rec_GPS(end,end,6) = 0;
 end
 if GLO_on && ~isempty(PCV_rec_GLO) && size(PCV_rec_GLO,3)
-    PCV_rec_GLO(end,end,5) = 0;
+    PCV_rec_GLO(end,end,6) = 0;
 end
 if GAL_on && ~isempty(PCV_rec_GAL) && size(PCV_rec_GAL,3)
-    PCV_rec_GAL(end,end,5) = 0;
+    PCV_rec_GAL(end,end,6) = 0;
 end
 if BDS_on && ~isempty(PCV_rec_BDS) && size(PCV_rec_BDS,3)
-    PCV_rec_BDS(end,end,5) = 0;
+    PCV_rec_BDS(end,end,6) = 0;
 end
 if QZSS_on && ~isempty(PCV_rec_QZSS) && size(PCV_rec_QZSS,3)
-    PCV_rec_QZSS(end,end,5) = 0;
+    PCV_rec_QZSS(end,end,6) = 0;
 end
 
 
@@ -224,8 +224,11 @@ end
 % -) BeiDou:
 % replace missing corrections with values of 1st frequency. If no 
 % corrections exist at all, receiver PCO or PCV values from GPS are taken
-B2_proc = any(settings.INPUT.bds_freq_idx == 2);
-B3_proc = any(settings.INPUT.bds_freq_idx == 3);
+B2_proc   = any(settings.INPUT.bds_freq_idx == 2);
+B3_proc   = any(settings.INPUT.bds_freq_idx == 3);
+B1AC_proc = any(settings.INPUT.bds_freq_idx == 4);
+B2a_proc  = any(settings.INPUT.bds_freq_idx == 5);
+B2ab_proc = any(settings.INPUT.bds_freq_idx == 6);
 if BDS_on
     % --- PCO ---
     if ~all(PCO_rec_BDS(:) == 0)
@@ -233,8 +236,11 @@ if BDS_on
         n = sum(no_PCO);               % number of frequencies without PCO
         BDS_L1_PCO = PCO_rec_BDS(:,1);      % get B1 PCO
         PCO_rec_BDS(:,no_PCO) = repmat(BDS_L1_PCO, 1, n, 1);    % replace missing PCOs
-        if no_PCO(2) && B2_proc; error_pco = [error_pco, '-BeiDou_B2 ']; end        
-        if no_PCO(3) && B3_proc; error_pco = [error_pco, '-BeiDou_B3 ']; end
+        if no_PCO(2) && B2_proc;   error_pco = [error_pco, '-BeiDou_B2 ']; end        
+        if no_PCO(3) && B3_proc;   error_pco = [error_pco, '-BeiDou_B3 ']; end
+        if no_PCO(4) && B1AC_proc; error_pco = [error_pco, '-BeiDou_B1AC ']; end
+        if no_PCO(5) && B2a_proc;  error_pco = [error_pco, '-BeiDou_B2a '];  end
+        if no_PCO(6) && B2ab_proc; error_pco = [error_pco, '-BeiDou_B2ab ']; end
     else        % no BeiDou receiver PCO at all
         PCO_rec_BDS = PCO_rec_GPS;
         error_pco = [error_pco, '-BeiDou '];
@@ -245,6 +251,9 @@ if BDS_on
         PCV_rec_BDS_1 = PCV_rec_BDS(:,:,1);
         PCV_rec_BDS_2 = PCV_rec_BDS(:,:,2);
         PCV_rec_BDS_3 = PCV_rec_BDS(:,:,3);
+        PCV_rec_BDS_4 = PCV_rec_BDS(:,:,4);
+        PCV_rec_BDS_5 = PCV_rec_BDS(:,:,5);
+        PCV_rec_BDS_6 = PCV_rec_BDS(:,:,6);
         % replace missing receiver PCVs of 2nd and 3rd frequency with B1 values
         if all(PCV_rec_BDS_2(:) == 0)
             PCV_rec_BDS(:,:,2) = PCV_rec_BDS_1;
@@ -254,6 +263,18 @@ if BDS_on
             PCV_rec_BDS(:,:,3) = PCV_rec_BDS_1;
             if B3_proc; error_pcv = [error_pcv, '-BeiDou_B3 ']; end
         end
+        if all(PCV_rec_BDS_4(:) == 0)
+            PCV_rec_BDS(:,:,4) = PCV_rec_BDS_1;
+            if B1AC_proc; error_pcv = [error_pcv, '-BeiDou_B1AC ']; end
+        end
+        if all(PCV_rec_BDS_5(:) == 0)
+            PCV_rec_BDS(:,:,5) = PCV_rec_BDS_1;
+            if B2a_proc; error_pcv = [error_pcv, '-BeiDou_B2a ']; end
+        end
+        if all(PCV_rec_BDS_6(:) == 0)
+            PCV_rec_BDS(:,:,6) = PCV_rec_BDS_1;
+            if B2ab_proc; error_pcv = [error_pcv, '-BeiDou_B2ab ']; end
+        end        
         % replace empty frequencies with B1 values
         PCV_rec_BDS(:,:,4) = PCV_rec_BDS_1;
         PCV_rec_BDS(:,:,5) = PCV_rec_BDS_1;
@@ -313,10 +334,10 @@ end
 
 % print error message with missing receiver corrections
 if ~strcmp(antenna_type, 'XxXxX') && bool_print
-    if ~isempty(error_pco)
+    if ~isempty(error_pco) && settings.OTHER.bool_rec_pco
         fprintf(2,'\nANTEX lacks receiver PCOs:\n%s\n', error_pco);
     end
-    if ~isempty(error_pcv)
+    if ~isempty(error_pcv) && settings.OTHER.bool_rec_pcv
         fprintf(2,'\nANTEX lacks receiver PCVs:\n%s\n', error_pcv);
     end
 end
@@ -373,45 +394,55 @@ if GAL_on
 end
 
 if BDS_on
-    % ----- SATELLITE PHASE CENTER OFFSETS
-    % some BeiDou satellites lack PCOs, values from first BeiDou satellite
-    % with PCO sare taken (this might not be optimal due to different
-    % satellite types (e.g., GEO, IGSO, MEO))
-    n_sats = size(PCO_BDS,1);           % number of BDS satellites
-    prns = 1:n_sats;                    % vector with prns
-    % frequency 1
-    empty = all(PCO_BDS(:,:,1) == 0,2);     % find empty rows
-    idx1 = find(empty==0, 1, 'first');      % first satellite with PCOs
-    PCO_BDS(empty, 1, 1) = prns(empty);     % insert prns into empty rows
-    PCO_BDS(empty,2:5,1) = repmat(PCO_BDS(idx1,2:5,1), sum(empty), 1);     % copy PCOs
-    % frequency 2
-    empty = all(PCO_BDS(:,:,2) == 0,2);     % find empty rows
-    idx1 = find(empty==0, 1, 'first');      % first satellite with PCOs
-    PCO_BDS(empty, 1, 2) = prns(empty);     % insert prns into empty rows
-    PCO_BDS(empty,2:5,2) = repmat(PCO_BDS(idx1,2:5,2), sum(empty), 1);     % copy PCOs
-    % frequency 3
-    empty = all(PCO_BDS(:,:,3) == 0,2);     % find empty rows
-    idx1 = find(empty==0, 1, 'first');      % first satellite with PCOs
-    PCO_BDS(empty, 1, 3) = prns(empty);     % insert prns into empty rows
-    PCO_BDS(empty,2:5,3) = repmat(PCO_BDS(1,2:5,3), sum(empty), 1);     % copy PCOs
-    % 4th and 5th dimension are empty
+    % ----- SATELLITE PHASE CENTER OFFSETS (BeiDou)
+    % some BeiDou satellites might lack PCOs (contrary to other GNSS)
+    n_sats_bds = size(PCO_BDS,1);           % number of BDS satellites
+    % frequency B1: replace missing PCOs with the PCO from last satellite
+    last_PCO_B1 = [0.6069 0.0076 1.3731];   % random initialization
+    PCO_B1 = PCO_BDS(:,:,1);                % get PCOs of B1 frequency
+    for i = 1:n_sats_bds        % loop to replace missing B1 PCOs
+        PCO_B1_sat = PCO_B1(i,:);           % get B1 PCO of current satellite
+        if all(PCO_B1_sat(2:4) == 0)
+            PCO_B1_sat(1) = i;            	% write satellite number
+            PCO_B1_sat(2:4) = last_PCO_B1; 	% write PCO replacement
+            PCO_B1_sat(5) = 1;            	% write frequency index number
+            PCO_B1(i,:) = PCO_B1_sat;       % save replacement
+        end
+        last_PCO_B1 = PCO_B1_sat(2:4);      % save current satellite as last PCO correction
+    end
+    PCO_BDS(:,:,1) = PCO_B1;                % save B1 PCOs
+    % other missing BeiDou satellite PCOs are replaced during processing (with values of G1 frequency)
     
-    % ----- SATELLITE PHASE CENTER VARIATIONS
-    % replace missing satellite corrections on B1 with the values of the
-    % first satellite with PCVs (this might not be optimal due to different
-    % satellite types (e.g., GEO, IGSO, MEO))
+    % ----- SATELLITE PHASE CENTER VARIATIONS (BeiDou)    
+    % frequency B1: replace missing PCOs with the PCO from last satellite
     PCV_BDS_B1 = PCV_BDS(1,:);
-    empty = cellfun(@isempty,PCV_BDS_B1);   % find satellites without PCVs
-    idx = find(empty==0, 1, 'first');       % first satellite with PCVs
-    PCV_BDS_B1(empty) = PCV_BDS_B1(idx);    % replace missing PCVs with values from 1st BDS satellite with PCVs
-    % replace missing BeiDou PCV with values of B1
-    PCV_BDS_B2 = PCV_BDS(2,:);
-    PCV_BDS_B3 = PCV_BDS(3,:);
-    PCV_BDS_B2(cellfun(@isempty,PCV_BDS_B2)) = PCV_BDS_B1(cellfun(@isempty,PCV_BDS_B2));
-    PCV_BDS_B3(cellfun(@isempty,PCV_BDS_B3)) = PCV_BDS_B1(cellfun(@isempty,PCV_BDS_B3));
+    last_PCV_B1 = [0 0 1 2 3 4 5 6 7 8 9;0 0 0 0 0 0 0 0 0 0 0]; % random initialization
+    for i = 1:n_sats_bds       	% loop to replace missing B1 PCVs
+        PCV_B1_sat = PCV_BDS_B1{i};         % get PCV of current satellite
+        if isempty(PCV_B1_sat)
+            PCV_B1_sat = last_PCV_B1;       % use last PCV as replacement
+            PCV_BDS_B1{i} = PCV_B1_sat;     % save replaced values
+        end
+        last_PCV_B1 = PCV_B1_sat;           % save current satellite as last PCO correction       
+    end
+    PCV_BDS(1,:) = PCV_BDS_B1;
+    % other frequencies: replace missing BeiDou PCVs with values of B1
+    PCV_BDS_B2   = PCV_BDS(2,:);
+    PCV_BDS_B3   = PCV_BDS(3,:);
+    PCV_BDS_B1AC = PCV_BDS(4,:);
+    PCV_BDS_B2a  = PCV_BDS(5,:);
+    PCV_BDS_B2ab = PCV_BDS(6,:);
+    PCV_BDS_B2  (cellfun(@isempty,PCV_BDS_B2  )) = PCV_BDS_B1(cellfun(@isempty,PCV_BDS_B2  ));
+    PCV_BDS_B3  (cellfun(@isempty,PCV_BDS_B3  )) = PCV_BDS_B1(cellfun(@isempty,PCV_BDS_B3  ));
+    PCV_BDS_B1AC(cellfun(@isempty,PCV_BDS_B1AC)) = PCV_BDS_B1(cellfun(@isempty,PCV_BDS_B1AC));
+    PCV_BDS_B2a (cellfun(@isempty,PCV_BDS_B2a )) = PCV_BDS_B1(cellfun(@isempty,PCV_BDS_B2a ));
+    PCV_BDS_B2ab(cellfun(@isempty,PCV_BDS_B2ab)) = PCV_BDS_B1(cellfun(@isempty,PCV_BDS_B2ab));
     PCV_BDS(1,:) = PCV_BDS_B1;
     PCV_BDS(2,:) = PCV_BDS_B2;
     PCV_BDS(3,:) = PCV_BDS_B3;
+    PCV_BDS(4,:) = PCV_BDS_B1AC;
+    PCV_BDS(5,:) = PCV_BDS_B2a;
+    PCV_BDS(6,:) = PCV_BDS_B2ab;
 end
 
 if QZSS_on

@@ -4,7 +4,7 @@ function [dX_PCV_sat, los_PCO_s] = ...
 % phase center variations. Azimuthal dependency is ignored because during
 % test no improvement could be detected.
 % Missing PCV are replaced with the values on the first frequency in
-% readAntex.m
+% checkAntex.m
 %
 % INPUT:
 %	PCV_sat         satellite phase center variations, internal format

@@ -50,13 +50,20 @@ set(gca, 'Units', 'pixels', 'Position', [18 516 900 80])
 axis off
 
 % Set Copyright and Version in the lower right
-set(handles.text_version, 'String', ['Version 2.3 ', char(169), ' TUW 2023']);
+set(handles.text_version, 'String', ['Version 2.4 ', char(169), ' TUW 2023']);
 
 % load default filter settings for selected filter
 handles = LoadDefaultFilterSettings(handles);
 
 % load default thresholds for Multi-Plot
 radiobutton_multi_plot_float_fixed_Callback(hObject, eventdata, handles);
+
+% load default observation ranking
+handles.edit_gps_rank.String  = DEF.RANKING_GPS;
+handles.edit_glo_rank.String  = DEF.RANKING_GLO;
+handles.edit_gal_rank.String  = DEF.RANKING_GAL;
+handles.edit_bds_rank.String  = DEF.RANKING_BDS;
+handles.edit_qzss_rank.String = DEF.RANKING_QZSS;
 
 % Menu-Items, set data panel at the front when opening GUI
 menu_file_setInputFile_Callback(hObject, eventdata, handles)
@@ -102,7 +109,7 @@ parameters = settings2parameters(settings);     % change the settings to paramet
 try
     save(defaultParamFilename, 'parameters')        % save variable settings into file
 catch
-    errordlg('Saving default parameters failed.', 'Error');
+    msgbox('Saving default parameters somehow failed.', 'Info');
 end
 
 end
@@ -1192,7 +1199,7 @@ for i = 1:rows
 end
 startfolder = [Path.DATA, '/OBS'];
 while true      % loop to add multiple files
-    [files, fpath] = uigetfile({'*.*o;*.rnx;*.obs'}, 'Select (multiple) RINEX-Files for Batch-Processing', startfolder, 'MultiSelect', 'on');
+    [files, fpath] = uigetfile({'*.*o;*.rnx;*.obs;*.txt'}, 'Select (multiple) RINEX-Files for Batch-Processing', startfolder, 'MultiSelect', 'on');
 	fpath = relativepath(fpath);   % convert absolute path to relative path
     if isempty(files) || isnumeric(files)          
         return       % no files selected, stopp adding files in table
@@ -1201,11 +1208,23 @@ while true      % loop to add multiple files
     files = cellstr(files);     % necessary if only one file was selected
     % creating waitbar
     WBAR = waitbar(0, 'Preparing file-loading...', 'Name','Progress of writing Batch-Processing table');
-    % loop over selected files to fill uitable_batch_proc
+    
     no_files = numel(files);
-    for i = 1:no_files
+    for i = 1:no_files          % loop over all selected files to fill uitable_batch_proc
         
-        rheader = anheader_GUI([fpath,files{i}]);
+        path2file = [fpath,files{i}];
+        
+        % analyze header 
+        rheader = anheader_GUI(path2file);
+        rheader = analyzeAndroidRawData_GUI(path2file, rheader);
+        
+        % check if current file could be analyzed 
+        if isempty(rheader)
+            fprintf(2, 'Loading failed: %s    \n', path2file)
+            continue
+        end
+                
+        % get observation ranking of all GNSS
         gps_ranking = rheader.gps_ranking;
         glo_ranking = rheader.glo_ranking;
         gal_ranking = rheader.gal_ranking;
@@ -1320,14 +1339,23 @@ while true      % loop to add multiple files
     WBAR = waitbar(0, 'Loading Rinex-Files...', 'Name','Writing Batch-Processing table');
     
     % search all Rinex Files with extension *.rnx, *.*o, *.obs
-    AllFiles = [dir([PathName '/**/*.rnx']); dir([PathName '/**/*.*o']); dir([PathName '/**/*.obs'])];
+    AllFiles = [dir([PathName '/**/*.rnx']); dir([PathName '/**/*.*o']); dir([PathName '/**/*.obs']); dir([PathName '/**/*.txt'])];
     n = length(AllFiles);
     
     % initialize some variables
     for i = 1:n         % loop over all detected Rinex-files
         % read header of current Rinex file
-        path_rinex = [AllFiles(i).folder '/' AllFiles(i).name];
-        rheader = anheader_GUI(path_rinex);
+        path_obsfile = [AllFiles(i).folder '/' AllFiles(i).name];
+        rheader = anheader_GUI(path_obsfile);
+        rheader = analyzeAndroidRawData_GUI(path_obsfile, rheader);
+        
+        % check if current file could be analyzed 
+        if isempty(rheader)
+            fprintf(2, 'Loading failed: %s    \n', path_obsfile)
+            continue
+        end
+                
+        % get observation ranking of all GNSS
         gps_ranking = rheader.gps_ranking;
         glo_ranking = rheader.glo_ranking;
         gal_ranking = rheader.gal_ranking;
@@ -3182,6 +3210,10 @@ end
 
 % Phase wind-up correction
 function checkbox_wind_up_Callback(hObject, eventdata, handles)
+end
+
+% Shapiro effect correction
+function checkbox_shapiro_Callback(hObject, eventdata, handles)
 end
 
 

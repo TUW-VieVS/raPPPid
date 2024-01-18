@@ -35,12 +35,13 @@ end
 
 %% Eliminate data of unprocessed GNSS
 % 1 = GPS, 2 = SBAS, 3 = GLO, 4 = QZSS, 5 = BDS, 6 = GAL
-useGPS = (gnssRaw.ConstellationType == 1) * settings.INPUT.use_GPS;
-useGLO = (gnssRaw.ConstellationType == 3) * settings.INPUT.use_GLO;
-useGAL = (gnssRaw.ConstellationType == 6) * settings.INPUT.use_GAL;
-useBDS = (gnssRaw.ConstellationType == 5) * settings.INPUT.use_BDS;
+bool_G = (gnssRaw.ConstellationType == 1) * settings.INPUT.use_GPS;
+bool_R = (gnssRaw.ConstellationType == 3) * settings.INPUT.use_GLO;
+bool_E = (gnssRaw.ConstellationType == 6) * settings.INPUT.use_GAL;
+bool_C = (gnssRaw.ConstellationType == 5) * settings.INPUT.use_BDS;
+bool_J = (gnssRaw.ConstellationType == 4) * settings.INPUT.use_QZSS;
 
-keep = useGPS | useGLO | useGAL | useBDS;
+keep = bool_G | bool_R | bool_E | bool_C | bool_J;
 
 % loop over all variables for eliminating
 if any(~keep)

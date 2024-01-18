@@ -12,7 +12,8 @@ function [storeData] = create_output(storeData, obs, settings, q_end)
 %   storeData       struct, collects data from all epochs
 %  
 % Revision:
-%   23/10/09, MFWG: improving layout of results_float/fixed.txt
+%   2023/10/09, MFWG: improving layout of results_float/fixed.txt
+%   2024/01/18, MFWG: comments, improve trafos, output to command 
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -24,10 +25,14 @@ function [storeData] = create_output(storeData, obs, settings, q_end)
 obs_int = obs.interval;
 epochs = settings.PROC.epochs(1):settings.PROC.epochs(2)+1;   % processed epochs of the rinex observation file
 
+if isempty(epochs)
+    % no epochs processed -> can not write any output
+    return
+end
 
 % --- Get estimated parameters from storeData ---
-posFloat       = storeData.param(:,1:3);            % estimated float position
-sigma_posFloat = sqrt(storeData.param_var(:,1:3)); 	% sigma estimated float position
+posFloat         = storeData.param(:,1:3);              % estimated float position
+sigma_posFloat   = sqrt(storeData.param_var(:,1:3));	% sigma estimated float position
 delta_zwd        = storeData.param(:,4);        % estimated Zenith Wet Delay
 % estimated receiver clock error / time offsets
 rec_dt_GPS       = storeData.param(:, 5);       % estimated receiver clock error for GPS
@@ -52,22 +57,22 @@ rec_dcb_13_BDS = storeData.param(:,16);        % estimated DCB between BeiDou fr
 if settings.AMBFIX.bool_AMBFIX
     posFixed = storeData.xyz_fix(:,1:3);                      % estimated fixed position
     sigma_posFixed = sqrt(storeData.param_var_fix(:,1:3));      % fixed coordinates variances
-    iNotCalculated = (posFixed(:,1)==0.0);    % find epochs not calculated
-else
-    iNotCalculated = posFloat(:,1)==0.0;
 end
 
 if obs_int >= 1
+    % round observation interval to full second
     timeCalculated = round(storeData.gpstime);
 else
-    % Round to 2 decimal places
+    % round observation interval to 2 decimal places
     timeCalculated = round(100*storeData.gpstime)/100;
 end
 
-posFloat_geo = NaN(size(posFloat,1),3);
-posFloat_utm = NaN(size(posFloat,1),3);
-posFixed_geo = NaN(size(posFloat,1),3);
-posFixed_utm = NaN(size(posFloat,1),3);
+% initialize
+n = size(posFloat,1);
+posFloat_geo = NaN(n,3);
+posFloat_utm = NaN(n,3);
+posFixed_geo = NaN(n,3);
+posFixed_utm = NaN(n,3);
 
 % read the a priori zwd and zhd, those are equal for all satellites
 zwd_model = storeData.zwd;
@@ -77,16 +82,20 @@ zhd_model = storeData.zhd;
 %% Output-Data transformations
 
 
-for i = 1:size(posFloat,1)
-    temp_geo = cart2geo(posFloat(i,1:3));
-    %[temp_geo.lat,temp_geo.lon,temp_geo.h] = xyz2ell_GT(posFloat(1,i),posFloat(2,i),posFloat(3,i));   % would do the same as above
-    [North, East] = ell2utm_GT(temp_geo.lat, temp_geo.lon);
+for i = 1:n         % loop over all epochs to transform coordinates
+    
+    % float coordinate solution
+    temp_geo = cart2geo(posFloat(i,1:3));                       % ellipsoidal coordinates
+    [North, East] = ell2utm_GT(temp_geo.lat, temp_geo.lon);     % UTM coordinates
+    % save UTM and ellipsoidal coordinates from current epoch (float)
     posFloat_geo(i,:) = [temp_geo.lat, temp_geo.lon, temp_geo.h];
     posFloat_utm(i,:) = [North,  East,  temp_geo.h];
+    
     if settings.AMBFIX.bool_AMBFIX
-        temp_geo = cart2geo(posFixed(i,1:3));
-        %temp_utm = ell2utm_GT(temp_geo.lat, temp_geo.lon);
-        [North, East] = ell2utm_GT(temp_geo.lat, temp_geo.lon);
+        % fixed coordinate solution
+        temp_geo = cart2geo(posFixed(i,1:3));                 	% ellipsoidal coordinates
+        [North, East] = ell2utm_GT(temp_geo.lat, temp_geo.lon);	% UTM coordinates
+        % save UTM and ellipsoidal coordinates from current epoch (fixed)
         posFixed_geo(i,:) = [temp_geo.lat, temp_geo.lon, temp_geo.h];
         posFixed_utm(i,:) = [North,  East,  temp_geo.h];
     end
@@ -259,15 +268,19 @@ end
 
 %% Output to command window 
 
-% % print approximate position (latitude, longitude, height, X, Y, Z)
-% if ~settings.INPUT.bool_parfor
-%     approx_pos_WGS84 = cart2geo(settings.INPUT.pos_approx);
-%     fprintf('Approximate Position (WGS84)\n');
-%     fprintf('latitude: \t %9.5f [°]\n',    approx_pos_WGS84.lat*(180/pi));
-%     fprintf('longitude:\t %9.5f [°]\n', approx_pos_WGS84.lon*(180/pi));
-%     fprintf('h:\t\t %9.3f [m]\n',  approx_pos_WGS84.h);
-%     fprintf('X:\t%12.3f [m]\n',  settings.INPUT.pos_approx(1));
-%     fprintf('Y:\t%12.3f [m]\n',  settings.INPUT.pos_approx(2));
-%     fprintf('Z:\t%12.3f [m]\n\n',settings.INPUT.pos_approx(3));
-% end
+% print coordinates of the last epoch
+if ~settings.INPUT.bool_parfor
+    % get ellipsoidal and cartesian coordinates from the last epoch
+    geo_print = posFloat_geo(n,:);
+    XYZ_print = posFloat(n,:);
+    % print ellipsoidal coordinates
+    fprintf('\nFloat coordinates of the last processed epoch\n');
+    fprintf('Latitude: \t %9.5f [°]\n', geo_print(1)*(180/pi));
+    fprintf('Longitude:\t %9.5f [°]\n', geo_print(2)*(180/pi));
+    fprintf('Height:\t\t %9.3f [m], WGS84\n', geo_print(3));
+    % print cartesian coordinates
+    fprintf('X:\t%12.3f [m]\n', XYZ_print(1));
+    fprintf('Y:\t%12.3f [m]\n', XYZ_print(2));
+    fprintf('Z:\t%12.3f [m], %s\n\n',XYZ_print(3), obs.coordsyst);
+end
 

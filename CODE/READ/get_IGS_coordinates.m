@@ -75,19 +75,22 @@ for i = 1:n
     URL_folder2  = ['/gnss/products/' gpsweek_str '/'];
     cddis_folder = ['/archive/gnss/products/' gpsweek_str];
     switch sys
-        case {'IGS14', 'IGb14', ''}
-																  
+        case {'IGS14', 'IGb14', ''}													  
             URL_file = ['igs' yyyy_str(3:4) 'P' gpsweek_str dow_str '.ssc.Z'];
+            if gpsweek > 2237
+                % starting with GPS week 2238: only long filename avaible
+                URL_file = ['IGS0OPSSNX_' yyyy_str doy_str '0000_01D_01D_CRD.SNX.gz'];
+            end
             
-        case 'IGS20'
-																  
+            
+        case 'IGS20'												  
             URL_file = ['IGS0OPSSNX_' yyyy_str doy_str '0000_01D_01D_CRD.SNX.gz'];
-            cddis_folder = ['/archive/gnss/products/' gpsweek_str];
-        case 'IGSR3'
-																		 
+
+        case 'IGSR3'														 
             URL_file = ['IGS0R03SNX_' yyyy_str doy_str '0000_01D_01D_CRD.SNX.gz'];
             URL_folder  = ['/pub/igs/products/repro3/' gpsweek_str '/'];
             URL_folder2 = '';
+            
         otherwise       % use ITRF2020 coordinates
 																  
             URL_file = ['IGS0OPSSNX_' yyyy_str doy_str '0000_01D_01D_CRD.SNX.gz'];

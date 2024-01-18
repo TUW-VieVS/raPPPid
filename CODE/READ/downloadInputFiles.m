@@ -35,7 +35,7 @@ function settings = downloadInputFiles(settings, obs_startdate, glo_channels)
 
 % give a command window output that files are downloaded
 if ~settings.INPUT.bool_parfor
-    fprintf('\nDownloading required data, this can take some seconds...\n')
+    fprintf('\nDownloading required data, this can take some time...\n')
 end
 
 % date conversion to julian date

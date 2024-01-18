@@ -1,7 +1,9 @@
-% Class for all persistent variables in VieVS PPP (like DEFINE in c code)
-% useful: https://www.gpsworld.com/the-almanac/
+% Class for all persistent variables in VieVS PPP
+% 
+% useful link: https://www.gpsworld.com/the-almanac/
+% 
 %   Revision:
-%   ...
+%       2024/01/04, MFWG: update observation ranking, adding BDS frequencies
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -40,25 +42,26 @@ classdef DEF
         THRESHOLD_corr2brdc_orb_dt = 120;       % [s], for orbit corrections
         
         % default observation type ranking
-        RANKING_GPS = 'WCDPSLXYMNDIQF';
+        RANKING_GPS = 'WCDPSLXYMDIQ';
         RANKING_GLO = 'PCIQX';
-        RANKING_GAL = 'CBIQXAZ';
-        RANKING_BDS = 'IQX';
+        RANKING_GAL = 'CQBIXAZ';
+        RANKING_BDS = 'IQPDXZSL';
         RANKING_QZSS = 'CLSXEZBIQDP';       % rather arbitrary
         
         % naming of frequencies
         freq_GPS = [1 2 3];         % L1 - L2  - L5
         freq_GLO = [1 2 3];         % G1 - G2  - G3
-        freq_GAL = [1 2 3 4 5];     % E1 - E5a - E5b - E5 - E6
-        freq_BDS = [1 2 3];         % B1 - B2  - B3
-        freq_QZSS= [1 2 3 4];      	% L1 - L2  - L5 - L6
+        freq_GAL = [1 2 3 4 5];     % E1 - E5a - E5b - E5   - E6
+        freq_BDS = [1 2 3 4 5 6];	% B1 - B2  - B3  - B1AC - B2a - B2ab
+        freq_QZSS= [1 2 3 4];      	% L1 - L2  - L5  - L6   
         
-        % names of frequencies
-        freq_GPS_names = {'L1'; 'L2' ; 'L5' ; 'OFF'            };
-        freq_GLO_names = {'G1'; 'G2' ; 'G3' ; 'OFF'            };
-        freq_GAL_names = {'E1'; 'E5a'; 'E5b'; 'E5'; 'E6'; 'OFF'};
-        freq_BDS_names = {'B1'; 'B2' ; 'B3' ; 'OFF'            };
-        freq_QZSS_names= {'L1'; 'L2' ; 'L5' ; 'L6'; 'OFF'      };
+        % names and order of frequencies
+        freq_GPS_names = {'L1'; 'L2' ; 'L5' ; 'OFF'                        };
+        freq_GLO_names = {'G1'; 'G2' ; 'G3' ; 'OFF'                        };
+        freq_GAL_names = {'E1'; 'E5a'; 'E5b'; 'E5'  ; 'E6';  'OFF'         };
+        freq_BDS_names = {'B1'; 'B2' ; 'B3' ; 'B1AC'; 'B2a'; 'B2ab'; 'OFF' };
+        freq_QZSS_names= {'L1'; 'L2' ; 'L5' ; 'L6'  ; 'OFF'                };
+        %                  1     2      3      4       5      6       7
         
         % number of estimated parameters: 
         % x, y, z, tropo,                                               (4)

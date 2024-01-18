@@ -354,6 +354,7 @@ if settings.EXP.model_save
     model_save.zhd    = zeros(tot_eps,1);     		% zenith hydrostatic delay
     model_save.delta_windup = zeros(tot_eps,nnn); % Phase windup effect in cycles
     model_save.windup      = zeros(tot_eps,nnn,proc_frqs);     % Phase windup effect, scaled to frequency
+	model_save.shapiro     = zeros(tot_eps,nnn,proc_frqs);     % Shapiro effect correction
     model_save.solid_tides = zeros(tot_eps,nnn);	% Solid tides range correction
     model_save.ocean_loading = zeros(tot_eps,nnn);	% Ocean loading range correction
 	model_save.polar_tides= zeros(tot_eps,nnn);	    % Pole tide range correction

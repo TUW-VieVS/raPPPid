@@ -243,6 +243,7 @@ settings.OTHER.bool_sat_pcv     = get(handles.checkbox_sat_pcv,      'Value');
 settings.OTHER.bool_solid_tides = get(handles.checkbox_solid_tides,  'Value');
 settings.OTHER.bool_wind_up     = get(handles.checkbox_wind_up,      'Value');
 settings.OTHER.bool_GDV         = get(handles.checkbox_GDV,          'Value');
+settings.OTHER.shapiro          = get(handles.checkbox_shapiro,      'Value');
 settings.OTHER.ocean_loading    = get(handles.checkbox_ocean_loading,'Value');
 settings.OTHER.polar_tides      = get(handles.checkbox_polar_tides,  'Value');
 settings.OTHER.bool_eclipse     = get(handles.checkbox_eclipse,      'Value');

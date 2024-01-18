@@ -124,9 +124,9 @@ if bool_settings        % do this only for the settings structure
         set(handles.popupmenu_bds_2, 'Enable', 'On');
         set(handles.popupmenu_bds_3, 'Enable', 'On');
     end
-    set(handles.popupmenu_bds_1, 'Value', structure.INPUT.bds_freq_idx(1));
-    set(handles.popupmenu_bds_2, 'Value', structure.INPUT.bds_freq_idx(2));
-    set(handles.popupmenu_bds_3, 'Value', structure.INPUT.bds_freq_idx(3));
+    set(handles.popupmenu_bds_1, 'Value', find(strcmpi(structure.INPUT.bds_freq{1},DEF.freq_BDS_names)));
+    set(handles.popupmenu_bds_2, 'Value', find(strcmpi(structure.INPUT.bds_freq{2},DEF.freq_BDS_names)));
+    set(handles.popupmenu_bds_3, 'Value', find(strcmpi(structure.INPUT.bds_freq{3},DEF.freq_BDS_names)));
     try
         if structure.INPUT.use_QZSS      % QZSS
             set(handles.popupmenu_qzss_1, 'Enable', 'On');
@@ -510,6 +510,8 @@ try
             handles.radiobutton_models_biases_code_CNES_OSB.Value = 1;        
         case 'CODE MGEX'
             handles.radiobutton_models_biases_code_CODE_IAR.Value = 1;
+        case 'CNES MGEX'
+            handles.radiobutton_models_biases_code_CNES_MGEX.Value = 1;
         case 'WUM OSBs'
             handles.radiobutton_models_biases_code_WUM_MGEX.Value = 1;
         case 'WUM MGEX'
@@ -612,6 +614,11 @@ try
 end
 set(handles.checkbox_solid_tides, 'Value', structure.OTHER.bool_solid_tides);
 set(handles.checkbox_wind_up,     'Value', structure.OTHER.bool_wind_up);
+try
+    set(handles.checkbox_shapiro, 'Value', structure.OTHER.shapiro); 
+catch
+    set(handles.checkbox_shapiro, 'Value', 0); 
+end
 try
     set(handles.checkbox_GDV,     'Value', structure.OTHER.bool_GDV); 
 catch

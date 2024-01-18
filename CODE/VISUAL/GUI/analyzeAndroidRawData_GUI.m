@@ -11,6 +11,7 @@ function [rheader] = analyzeAndroidRawData_GUI(sensorlog_path, rheader)
 %
 % Revision:
 %   2023/11/08, MFWG: adding QZSS
+%   2024/01/15, MFWG: repairing missing CodeType
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -18,6 +19,15 @@ function [rheader] = analyzeAndroidRawData_GUI(sensorlog_path, rheader)
 
 if isstruct(rheader)
     % contains already data! probably a RINEX file
+    return
+end
+
+fid = fopen(sensorlog_path,'rt');     	% open observation-file
+
+% check it this is a suitable file
+line = fgetl(fid);
+if fid == -1 || ~strcmp(line(1), '#')
+    fclose(fid);
     return
 end
 
@@ -38,12 +48,7 @@ ind_glo_freq  = [];
 ind_gal_freq  = [];
 ind_bds_freq  = [];
 ind_qzss_freq = [];
-
-
-
-%% ANALYZE
-fid = fopen(sensorlog_path,'rt');     	% open observation-file
-
+% some variables for each GNSS
 allGNSS = false; i = 0; formatSpec = '';
 bool_GPS = false; bool_GLO = false; bool_GAL = false; bool_BDS = false; bool_QZSS = false;
 obstypes_gps = ''; obstypes_glo = ''; obstypes_gal = ''; obstypes_bds = ''; obstypes_qzss = '';
@@ -53,6 +58,8 @@ isGAL_E1  = false;      isGAL_E5a = false;
 isBDS_B1  = false;      isBDS_B2a = false;
 isQZSS_L1 = false;      isQZSS_L5 = false;
 
+
+%% ANALYZE
 while true
     
     line = fgetl(fid);                  % get next line
@@ -87,10 +94,10 @@ while true
            TimeNanos = line_data{strcmp(vars_Raw, 'TimeNanos')};    % extract variables
            FullBiasNanos = line_data{strcmp(vars_Raw, 'FullBiasNanos')};
            BiasNanos = line_data{strcmp(vars_Raw, 'BiasNanos')};
+           ReceivedSvTimeNanos = line_data{strcmp(vars_Raw, 'ReceivedSvTimeNanos')};
+           TimeOffsetNanos = line_data{strcmp(vars_Raw, 'TimeOffsetNanos')};
            % build gps time and week
-           gpstime = TimeNanos - FullBiasNanos - BiasNanos;         % [ns]
-           gpstime = double(mod(gpstime, 604800*1e9))*1e-9;         % convert to double and [s]
-           gpsweek = floor(abs(double(FullBiasNanos))*1e-9 / 604800);    % gps week, []
+           [gpsweek, gpstime] = generateGpsTimeWeek(TimeNanos, FullBiasNanos, BiasNanos, ReceivedSvTimeNanos, TimeOffsetNanos);
            % convert to julian date and then to calendar data
            start_jd = gps2jd_GT(gpsweek,gpstime);
            [startdate(1), startdate(2), dd] = jd2cal_GT(start_jd);
@@ -109,28 +116,47 @@ while true
        CarrierFrequencyHz = line_data{strcmp(vars_Raw, 'CarrierFrequencyHz')};
        if idx_gnss == 1                     % GPS
            bool_GPS = true;
+           isL1 = round(CarrierFrequencyHz/1e4) == round(Const.GPS_F1/1e4);
+           isL5 = round(CarrierFrequencyHz/1e4) == round(Const.GPS_F5/1e4);
+           frq_char = char('1'*isL1 + '5'*isL5);
+           CodeType = checkSignalType(CodeType, 'G', frq_char);
            obstypes_gps = [obstypes_gps CodeType{1}];
-           isGPS_L1 = isGPS_L1 || (round(CarrierFrequencyHz/1e4) == round(Const.GPS_F1/1e4));
-           isGPS_L5 = isGPS_L5 || (round(CarrierFrequencyHz/1e4) == round(Const.GPS_F5/1e4));
+           isGPS_L1 = isGPS_L1 || isL1;
+           isGPS_L5 = isGPS_L5 || isL5;
        elseif idx_gnss == 3                 % GLONASS
            bool_GLO = true;
+           isG1 = round(CarrierFrequencyHz/1e7) == round(Const.GLO_F1/1e7);
+           frq_char = char('1'*isG1);
+           CodeType = checkSignalType(CodeType, 'R', frq_char);
            obstypes_glo = [obstypes_glo CodeType{1}];
-           isGLO_G1 = isGLO_G1 || (round(CarrierFrequencyHz/1e7) == round(Const.GLO_F1/1e7));
+           isGLO_G1 = isGLO_G1 || isG1;
        elseif idx_gnss == 6                 % Galileo
            bool_GAL = true;
+           isE1  = round(CarrierFrequencyHz/1e4) == round(Const.GAL_F1/1e4);
+           isE5a = round(CarrierFrequencyHz/1e4) == round(Const.GAL_F5a/1e4);
+           frq_char = char('1'*isE1 + '5'*isE5a);
+           CodeType = checkSignalType(CodeType, 'E', frq_char);
            obstypes_gal = [obstypes_gal CodeType{1}];
-           isGAL_E1 = isGAL_E1  || (round(CarrierFrequencyHz/1e4) == round(Const.GAL_F1/1e4));
-           isGAL_E5a= isGAL_E5a || (round(CarrierFrequencyHz/1e4) == round(Const.GAL_F5a/1e4));
+           isGAL_E1 = isGAL_E1  || isE1;
+           isGAL_E5a= isGAL_E5a || isE5a;
        elseif idx_gnss == 5                 % BeiDou
            bool_BDS = true;
+           isB1  = round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3);
+           isB2a = round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2a/1e3);
+           frq_char = char('1'*isB1 + '5'*isB2a);
+           CodeType = checkSignalType(CodeType, 'C', frq_char);
            obstypes_bds = [obstypes_bds CodeType{1}];
-           isBDS_B1  = isBDS_B1  || (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3));
-           isBDS_B2a = isBDS_B2a || (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2/1e3));
+           isBDS_B1  = isBDS_B1  || isB1;
+           isBDS_B2a = isBDS_B2a || isB2a;
        elseif idx_gnss == 4                 % QZSS
            bool_QZSS = true;
+           isL1 = round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F1/1e3);
+           isL5 = round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F5/1e3);
+           frq_char = char('1'*isL1 + '5'*isL5);
+           CodeType = checkSignalType(CodeType, 'J', frq_char);
            obstypes_qzss = [obstypes_qzss CodeType{1}];
-           isQZSS_L1 = isQZSS_L1 || (round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F1/1e3));
-           isQZSS_L5 = isQZSS_L5 || (round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F5/1e3));
+           isQZSS_L1 = isQZSS_L1 || isL1;
+           isQZSS_L5 = isQZSS_L5 || isL5;
        end       
        
        i = i + 1;
@@ -189,7 +215,7 @@ if bool_GAL
 end
 if bool_BDS
     if isBDS_B1 && isBDS_B2a
-        ind_bds_freq = [1 2];
+        ind_bds_freq = [1 5];
     elseif isBDS_B1
         ind_bds_freq = 1;
     end

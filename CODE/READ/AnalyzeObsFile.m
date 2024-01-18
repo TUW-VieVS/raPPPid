@@ -113,7 +113,7 @@ for q = 1:n
     if bool_RINEX
         [Epoch] = RINEX2Epoch(OBSDATA, newdataepoch, Epoch, q, obs.no_obs_types, obs.rinex_version, settings);
     else
-        [Epoch] = RawSensor2Epoch(OBSDATA, newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column);
+        [Epoch] = RawSensor2Epoch(OBSDATA, newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column, obs.leap_sec);
     end
     
     % check for identical observation data records

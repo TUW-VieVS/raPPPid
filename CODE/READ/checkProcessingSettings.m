@@ -28,23 +28,23 @@ GPS_on  = settings.INPUT.use_GPS;
 GLO_on  = settings.INPUT.use_GLO;
 GAL_on  = settings.INPUT.use_GAL;
 BDS_on  = settings.INPUT.use_BDS;
-QZSS_on = settings.INPUT.use_QZSS;
+QZS_on = settings.INPUT.use_QZSS;
 
 % number of processed frequencies for GPS and Galileo
 no_freq_gps = GPS_on * length(settings.INPUT.gps_freq(~strcmpi(settings.INPUT.gps_freq,'OFF')));
 no_freq_glo = GLO_on * length(settings.INPUT.glo_freq(~strcmpi(settings.INPUT.glo_freq,'OFF')));
 no_freq_gal = GAL_on * length(settings.INPUT.gal_freq(~strcmpi(settings.INPUT.gal_freq,'OFF')));
 no_freq_bds = BDS_on * length(settings.INPUT.bds_freq(~strcmpi(settings.INPUT.bds_freq,'OFF')));
-no_freq_qzss = QZSS_on * length(settings.INPUT.qzss_freq(~strcmpi(settings.INPUT.qzss_freq,'OFF')));
+no_freq_qzs = QZS_on * length(settings.INPUT.qzss_freq(~strcmpi(settings.INPUT.qzss_freq,'OFF')));
 
 % number of processed frequencies
-num_freq = max([GPS_on * no_freq_gps, GLO_on * no_freq_glo, GAL_on * no_freq_gal, BDS_on * no_freq_bds, QZSS_on * no_freq_qzss]);
+num_freq = max([GPS_on * no_freq_gps, GLO_on * no_freq_glo, GAL_on * no_freq_gal, BDS_on * no_freq_bds, QZS_on * no_freq_qzs]);
 % names of processed frequencies
 proc_frqs_gps  = settings.INPUT.gps_freq;
 proc_frqs_glo  = settings.INPUT.glo_freq;
 proc_frqs_gal  = settings.INPUT.gal_freq;
 proc_frqs_bds  = settings.INPUT.bds_freq;
-proc_frqs_qzss = settings.INPUT.qzss_freq;
+proc_frqs_qzs  = settings.INPUT.qzss_freq;
 
 if ~prebatch_check
     % No observation file selected
@@ -177,13 +177,13 @@ if num_freq ~= 3
             valid_settings = false; return
         end
     end  
-    if QZSS_on
-        off_idx_J = strcmpi(proc_frqs_qzss, 'OFF');
-        if no_freq_qzss >= 1 && off_idx_J(1) == 1
+    if QZS_on
+        off_idx_J = strcmpi(proc_frqs_qzs, 'OFF');
+        if no_freq_qzs >= 1 && off_idx_J(1) == 1
             errordlg({'Check order of processed QZSS frequencies!', 'Disabled frequencies should be at the end.'}, windowname);
             valid_settings = false; return
         end
-        if no_freq_qzss >= 2 && off_idx_J(2) == 1
+        if no_freq_qzs >= 2 && off_idx_J(2) == 1
             errordlg({'Check order of processed QZSS frequencies!', 'Disabled frequencies should be at the end.'}, windowname);
             valid_settings = false; return
         end
@@ -208,7 +208,7 @@ if BDS_on && no_freq_bds == 0
     errordlg({'All BeiDou frequencies are OFF.', 'Please deactivate processing BeiDou', 'or select frequencies.'}, windowname);
     valid_settings = false; return
 end
-if QZSS_on && no_freq_qzss == 0
+if QZS_on && no_freq_qzs == 0
     errordlg({'All QZSS frequencies are OFF.', 'Please deactivate processing QZSS', 'or select frequencies.'}, windowname);
     valid_settings = false; return
 end
@@ -287,7 +287,7 @@ if strcmp(settings.IONO.model,'3-Frequency-IF-LC') && ~prebatch_check
         errordlg('Not enough BeiDou frequencies for 3-Frequency-IF-LC selected!', windowname);
         valid_settings = false;     return;
     end
-    if QZSS_on && no_freq_qzss < 3
+    if QZS_on && no_freq_qzs < 3
         errordlg('Not enough QZSS frequencies for 3-Frequency-IF-LC selected!', windowname);
         valid_settings = false;     return;
     end    
@@ -370,15 +370,15 @@ end
 % check for errors related to estimation of receiver DCBs
 if settings.BIASES.estimate_rec_dcbs && ~prebatch_check
     if num_freq == 1
-        errordlg({'Only 1-Frequency is processed:', 'Please disable estimation of Receiver DCBs!'}, windowname);
+        errordlg({'Only 1-Frequency is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation -> Adjustment'}, windowname);
         valid_settings = false; return
     end
     if num_freq == 2 && strcmp(settings.IONO.model,'2-Frequency-IF-LCs')
-        errordlg({'Only one 2-Frequency-IF-LC is processed:', 'Please disable estimation of Receiver DCBs!'}, windowname);
+        errordlg({'Only one 2-Frequency-IF-LC is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation -> Adjustment'}, windowname);
         valid_settings = false; return
     end
     if strcmp(settings.IONO.model,'3-Frequency-IF-LC')
-        errordlg({'3-Frequency-IF-LC is processed:', 'Please disable estimation of Receiver DCBs!'}, windowname);
+        errordlg({'3-Frequency-IF-LC is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation -> Adjustment'}, windowname);
         valid_settings = false; return
     end
 end
@@ -438,7 +438,7 @@ end
 
 % 3-frequencies enabled, 2xIF-LC is processed and receiver DCB estimation is disabled
 if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && num_freq == 3 && ~settings.BIASES.estimate_rec_dcbs && ~prebatch_check
-    errordlg({'Three frequencies and 2-Frequency-IF-LCs selected:', 'Please enable the receiver DCB estimation or deactivate the 3rd frequency!'}, windowname);
+    errordlg({'Three frequencies and 2-Frequency-IF-LCs selected:', 'Please enable the receiver DCB estimation or deactivate the 3rd frequency!', '(Menu: Estimation -> Adjustment'}, windowname);
     valid_settings = false; return
 end
 
@@ -743,13 +743,6 @@ if settings.INPUT.use_QZSS && ~settings.ORBCLK.bool_precise
     valid_settings = false; return
 end
 
-% QZSS is not implemented only for Android raw data
-if settings.INPUT.use_QZSS && ~prebatch_check && rheader.version_full == 0
-    errordlg({'QZSS is only implemented for RINEX files.', 'Please disable processing QZSS or change input file.'}, windowname);
-    valid_settings = false; return
-end
-
-
 
 
 
@@ -835,7 +828,7 @@ if settings.AMBFIX.bool_AMBFIX
     
     % CNES integer recovery clock PPP-AR (for GPS and Galileo) might need CODE MGEX biases
     if settings.ORBCLK.bool_precise && ~strcmp(settings.BIASES.phase, 'SGG FCBs') && ...
-            strcmp(settings.ORBCLK.prec_prod, 'CNES') && ~strcmp(settings.BIASES.code, 'CODE MGEX')
+            strcmp(settings.ORBCLK.prec_prod, 'CNES') && ~strcmp(settings.BIASES.code, 'CODE MGEX')&& ~strcmp(settings.BIASES.code, 'CNES MGEX')
         msgbox('CNES integer recovery clock approach might need CODE MGEX biases!', windowname);
     end
     
