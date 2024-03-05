@@ -13,6 +13,7 @@ function Epoch = cycleSlip_CLdiff(settings, Epoch, use_column)
 %
 % Revision:
 %   2023/06/11, MFWG: adding QZSS
+%   2023/01/22, MFWG: major bug
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -23,23 +24,23 @@ thresh = settings.OTHER.CS.l1c1_threshold; 	% from GUI
 window = settings.OTHER.CS.l1c1_window;    	% from GUI
 
 % get code observation on 1st frequency for current epoch as they are in the RINEX file
-C1_gps  = Epoch.obs(Epoch.gps,  use_column{1,1});
-C1_glo  = Epoch.obs(Epoch.glo,  use_column{2,1});
-C1_gal  = Epoch.obs(Epoch.gal,  use_column{3,1});
-C1_bds  = Epoch.obs(Epoch.bds,  use_column{4,1});
-C1_qzss = Epoch.obs(Epoch.qzss, use_column{5,1});
+C1_gps  = Epoch.obs(Epoch.gps,  use_column{1,4});
+C1_glo  = Epoch.obs(Epoch.glo,  use_column{2,4});
+C1_gal  = Epoch.obs(Epoch.gal,  use_column{3,4});
+C1_bds  = Epoch.obs(Epoch.bds,  use_column{4,4});
+C1_qzss = Epoch.obs(Epoch.qzss, use_column{5,4});
 C1  = [C1_gps; C1_glo; C1_gal; C1_bds; C1_qzss];
 % get phase observation on 1st frequency for current epoch
-L1_gps  = Epoch.obs(Epoch.gps,  use_column{1,4});
-L1_glo  = Epoch.obs(Epoch.glo,  use_column{2,4});
-L1_gal  = Epoch.obs(Epoch.gal,  use_column{3,4});
-L1_bds  = Epoch.obs(Epoch.bds,  use_column{4,4});
-L1_qzss = Epoch.obs(Epoch.qzss, use_column{5,4});
+L1_gps  = Epoch.obs(Epoch.gps,  use_column{1,1});
+L1_glo  = Epoch.obs(Epoch.glo,  use_column{2,1});
+L1_gal  = Epoch.obs(Epoch.gal,  use_column{3,1});
+L1_bds  = Epoch.obs(Epoch.bds,  use_column{4,1});
+L1_qzss = Epoch.obs(Epoch.qzss, use_column{5,1});
 L1  = [L1_gps; L1_glo; L1_gal; L1_bds; L1_qzss];
+
+% convert phase to [m] if necessary (e.g., RINEX file)
 if ~settings.INPUT.rawDataAndroid
-    % convert phase to [m] if necessary (e.g., RINEX file)
-    lambda_1 = Const.C ./ Epoch.f1;     % wavelength [m]
-    L1 = L1 .* lambda_1;                % convert from [cy] to [m]
+    L1 = L1 .* Epoch.l1;                % convert from [cy] to [m]
 end
 
 % calculate L1-C1 over epochs, kind of GF-LC [m]

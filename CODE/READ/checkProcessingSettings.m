@@ -841,7 +841,7 @@ if settings.AMBFIX.bool_AMBFIX
     % CNES started providing postprocessed product in an archive containing
     % all necessary files.
     if strcmp(settings.BIASES.code, 'CNES postprocessed')
-        errordlg({'CNES now provides post-processed products as an archive!', 'Download that archive, extract it, and manually select the files.', 'Try the link in command window.'}, windowname);
+        errordlg({'CNES now provides post-processed products as an archive!', 'Try the link in command window.', 'Download that archive, extract it, and manually select the files.'}, windowname);
         fprintf(['\nhttp://www.ppp-wizard.net/products/POST_PROCESSED/post_' sprintf('%04.0f', yyyy) sprintf('%03.0f', doy) '.tgz\n\n'])
         valid_settings = false; return
     end
@@ -850,13 +850,13 @@ if settings.AMBFIX.bool_AMBFIX
     % CODE MGEX needs its own ANTEX file
     if ~strcmp(settings.BIASES.phase, 'SGG FCBs') && settings.ORBCLK.bool_precise && prec_prod_CODE_MGEX 
         if ~strcmp(settings.OTHER.antex, 'Manual choice:')
-            % [IGS-MGEX] CODE MGEX switch from IGb14 to IGS14R3 (starting from GPS week 2156)
-            % However, this seems not totally true...
-            if gpsweek >= 2156
-                errordlg({'PPP-AR with CODE MGEX needs ', 'its own ANTEX File: Please select M20.ATX!'}, windowname);
+            % According to email correspondance I20.atx should be used and
+            % M20.atx before GPS Week 2238
+            if gpsweek >= 2238
+                errordlg({'PPP-AR with CODE MGEX needs ', 'its own ANTEX File: Please use', 'downloadAntexFromCODE()', 'Then select I20.ATX!'}, windowname);
                 valid_settings = false; return
             else
-                errordlg({'PPP-AR with CODE MGEX needs ', 'its own ANTEX File: Please select M14.ATX!'}, windowname);
+                errordlg({'PPP-AR with CODE MGEX needs ', 'its own ANTEX File: Please use', 'downloadAntexFromCODE()', 'Then select M20.ATX!'}, windowname);
                 valid_settings = false; return
             end
         end

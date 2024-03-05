@@ -50,7 +50,10 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q
     if settings.AMBFIX.bool_AMBFIX
         storeData.fixed             = storeData.fixed(eps);
         storeData.refSatGPS         = storeData.refSatGPS(eps);
+		storeData.refSatGLO         = storeData.refSatGLO(eps);
         storeData.refSatGAL         = storeData.refSatGAL(eps);
+		storeData.refSatBDS         = storeData.refSatBDS(eps);
+		storeData.refSatQZS         = storeData.refSatQZS(eps);
         if contains(settings.IONO.model,'IF-LC')
             storeData.HMW_12            = storeData.HMW_12(eps,:);
             storeData.N_WL_12           = storeData.N_WL_12(eps,:);
@@ -149,7 +152,7 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q
             storeData.residuals_phase_fix_3 = storeData.residuals_phase_fix_3(eps,:);
         end
     end
-    if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Estimate')   % if ionosphere is estimated
+    if contains(settings.IONO.model,'Estimate') 	% if ionosphere is estimated
         storeData.constraint = storeData.constraint(eps,:);
         storeData.iono_est = storeData.iono_est(eps,:);
     end

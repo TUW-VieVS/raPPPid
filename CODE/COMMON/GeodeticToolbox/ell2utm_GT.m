@@ -26,18 +26,19 @@ function [N,E,Zone,lcm]=ell2utm_GT(lat,lon,a,e2,lcm)
 %          lcm - central meridian(s) used in conversion (rad)
 % 
 % Revision:
-%   2024 Jan 18, MFWG: add check if lat, lon are zero
+%   2024 Jan 18, MFWG: add check if lat, lon are zero or NaN
 % 
 % Copyright (c) 2011, Michael R. Craymer
 % All rights reserved.
 % Email: mike@craymer.com
 
-if nargin ~= 2 & nargin ~= 3 & nargin ~= 4 & nargin ~= 5
+if nargin ~= 2 && nargin ~= 3 && nargin ~= 4 && nargin ~= 5
   warning('Incorrect number of input arguments');
   return
 end
 
-if lat == 0 || lon == 0
+if (numel(lat) == 1 && numel(lon) == 1 ) && (lat == 0 || lon == 0 || isnan(lat) || isnan(lon))
+    % scalar input, latitude or longitude are zero or NaN
     N = NaN; E = NaN; Zone = NaN; lcm = NaN;
     return
 end
@@ -45,13 +46,13 @@ end
 if nargin == 3
   lcm=a;
 end
-if nargin == 2 | nargin == 3
+if nargin == 2 || nargin == 3
   [a,b,e2,finv]=refell_GT('grs80');
   f=1/finv;
 else
   f=1-sqrt(1-e2);
 end
-if nargin == 3 | nargin==5
+if nargin == 3 || nargin==5
   Zone=zeros(size(lat));
 else
   Zone=floor((rad2deg_GT(lon)-180)/6)+1;

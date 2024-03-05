@@ -57,7 +57,7 @@ if settings.INPUT.use_GPS
         refSat = gps_prns(elev_gps == min(elev_gps));
         Epoch.refSatGPS = refSat(1);
     end
-    % Epoch.refSatGPS_idx is handled in change2refSat.m
+    % Epoch.refSatGPS_idx is handled in change2refSat_IF/_DCM
     
 end
 

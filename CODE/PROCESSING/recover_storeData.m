@@ -32,7 +32,7 @@ storeData.N_1 = []; storeData.N_var_1 = []; storeData.residuals_code_1 = [];
 storeData.N_2 = []; storeData.N_var_2 = []; storeData.residuals_code_2 = [];
 storeData.N_3 = []; storeData.N_var_3 = []; storeData.residuals_code_3 = [];
 storeData.fixed = []; storeData.ttff = [];
-storeData.refSatGPS = []; storeData.refSatGAL = []; storeData.refSatBDS = [];
+storeData.refSatGPS = []; storeData.refSatGLO = []; storeData.refSatGAL = []; storeData.refSatBDS = []; storeData.refSatQZS = [];
 storeData.xyz_fix = []; storeData.param_var_fix = [];
 storeData.HMW_12 = []; storeData.HMW_23 = []; storeData.HMW_13 = [];
 storeData.residuals_code_fix_1 = []; storeData.residuals_phase_fix_1 = [];

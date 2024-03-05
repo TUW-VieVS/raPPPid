@@ -237,6 +237,8 @@ output_txt{i} = ['Sat: ', sprintf('%02.0f', prn)];   % number of clicked line e.
 i = i + 1;
 output_txt{i} = ['Epoch: ', sprintf('%.0f', epoch)];    % epoch
 i = i + 1;
-output_txt{i} = ['Value: ', sprintf('%.4f', value) ' [m]'];    % value
+output_txt{i} = ['Value: ', sprintf('%.4f', value) ' [m]'];    % value [m]
+i = i + 1;
+output_txt{i} = ['Value: ', sprintf('%.4f', value/Const.C*1e9) ' [ns]'];   % value [ns]
 
 end

@@ -161,7 +161,7 @@ if STOP_CALC; return; end   %#ok<*UNRCH>
 % -+-+-+-+- Figure: Clock Plot -+-+-+-+-
 if settings.PLOT.clock
     vis_plotReceiverClock(hours, label_x_h, storeData.param', reset_h, ...
-        isGPS, isGLO, isGAL, isBDS, isQZSS, settings.ORBCLK.file_clk, station, obs.startdate(1:3));
+        settings, settings.ORBCLK.file_clk, station, obs.startdate(1:3));
 end
 if STOP_CALC; return; end
 
@@ -169,7 +169,11 @@ if STOP_CALC; return; end
 % -+-+-+-+- Figure: DCB Plot -+-+-+-+- 
 if settings.PLOT.dcb
     if settings.BIASES.estimate_rec_dcbs
-        vis_plotReceiverDCBs(hours, label_x_h, storeData.param', reset_h, settings, obs);
+        if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+            plotReceiverBiases(hours, label_x_h, storeData.param, reset_h, settings)
+        else
+            vis_plotReceiverDCBs(hours, label_x_h, storeData.param', reset_h, settings, obs);
+        end
     else
         fprintf('No DCBs estimated.\n');
     end  
@@ -187,7 +191,7 @@ if STOP_CALC; return; end
 % -+-+-+-+- Figure: Standard Deviation of Parameters -+-+-+-+-
 if settings.PLOT.cov_info
     std_parameters = sqrt(storeData.param_var)';
-    covParaPlot(hours, std_parameters, label_x_h, settings.BIASES.estimate_rec_dcbs, isGPS, isGLO, isGAL, isBDS, isQZSS)
+    covParaPlot(hours, std_parameters, label_x_h, settings);
 end
 if STOP_CALC; return; end
 
@@ -289,7 +293,7 @@ if STOP_CALC; return; end
 
 %     -+-+-+-+- Figures: Ionospheric Correction Plot  -+-+-+-+-
 if settings.PLOT.iono
-    if strcmpi(settings.IONO.model,'Correct with ...')   ||   strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmpi(settings.IONO.model,'Estimate')
+    if strcmpi(settings.IONO.model,'Correct with ...')   ||   contains(settings.IONO.model,'Estimate')
         obs_bool = logical(full(satellites.obs));
         vis_iono_plot(settings, storeData, label_x_h, hours, reset_h, obs_bool, rgb);
         vis_ionodiff_histo(settings, storeData, obs_bool, full(satellites.elev));

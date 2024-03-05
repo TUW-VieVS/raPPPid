@@ -28,7 +28,7 @@ TIME = d.dT;
 d2D = sqrt(dN.^2 + dE.^2);          	% 2D position error
 d3D = sqrt(dN.^2 + dE.^2 + dH.^2);      % 3D position error
 
-thresh_2D = sprintf('%5.3f', PlotStruct.thresh_2D);
+thresh_2D = sprintf('%5.3f', PlotStruct.thresh_2D);     % 2D convergence threshold
 
 % remove outliers
 thresh = 10;                            % [m], seems to be a good value
@@ -169,7 +169,7 @@ fprintf(['Average 3D position error after ' n_str ' minutes: '])
 fprintf('%06.3f', average_3D_n)
 fprintf(' [cm]\n')
 
-fprintf(['Stdev of 3D position errors after ' n_str ' minutes: '])
+fprintf(['Std of 3D position errors after ' n_str ' minutes: '])
 fprintf('%06.3f', stdev_3D_n)
 fprintf(' [cm]\n')
 

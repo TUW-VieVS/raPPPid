@@ -14,4 +14,3 @@ Epoch.WL_23(1:99) = NaN;
 Epoch.WL_12(1:99) = NaN;
 Epoch.NL_12(1:99) = NaN;
 Epoch.NL_23(1:99) = NaN;
-

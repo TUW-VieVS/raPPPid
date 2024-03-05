@@ -23,7 +23,7 @@ function [] = vis_ionodiff_histo(settings, storeData, bool_obs, elev)
 
 %% Preparation
 bool_corr = strcmpi(settings.IONO.model,'Correct with ...')   ||   strcmpi(settings.IONO.model,'Estimate with ... as constraint');
-bool_est = strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmpi(settings.IONO.model,'Estimate');
+bool_est = contains(settings.IONO.model,'Estimate');
 bool_fixed = settings.PLOT.fixed;
 
 if ~(bool_corr && bool_est)

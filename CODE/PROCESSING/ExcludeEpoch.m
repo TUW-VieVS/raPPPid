@@ -46,12 +46,9 @@ if any(q == settings.PROC.excl_epochs_reset)
         Epoch.WL_12(:) = NaN;
         Epoch.NL_12(:) = NaN;
         Epoch.NL_23(:) = NaN;
-        Epoch.refSatGPS = 0;            % reset reference satellites GPS and Galileo
-        Epoch.refSatGPS_idx = [];
-        Epoch.refSatGAL = 0;
-        Epoch.refSatGAL_idx = [];
-        Epoch.refSatBDS = 0;
-        Epoch.refSatBDS_idx = [];
+		% reset reference satellites
+        Epoch.refSatGPS = 0; Epoch.refSatGLO = 0; Epoch.refSatGAL = 0; Epoch.refSatBDS = 0; Epoch.refSatQZS = 0;
+        Epoch.refSatGPS_idx = []; Epoch.refSatGLO_idx = []; Epoch.refSatGAL_idx = []; Epoch.refSatBDS_idx = []; Epoch.refSatQZS_idx = [];
         % restart fixing in [GUI-definded] epochs
         settings.AMBFIX.start_fixing(end+1, :) = ...    % -1 as we are already in epoch where reset is happening
             [q+settings.AMBFIX.start_WL-1, q+settings.AMBFIX.start_NL-1];

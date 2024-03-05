@@ -69,8 +69,8 @@ if isempty(model)
     end
     if settings.OTHER.polar_tides && ~isempty(input.ORBCLK.ERP)         % Rotational deformation due to polar motion (pole tide)
         if size(input.ORBCLK.ERP(:,1),1) > 1
-            xp = interp1(input.ORBCLK.ERP(:,1), input.ORBCLK.ERP(:,2), Epoch.mjd, 'linear');
-            yp = interp1(input.ORBCLK.ERP(:,1), input.ORBCLK.ERP(:,3), Epoch.mjd, 'linear');
+            xp = interp1(input.ORBCLK.ERP(:,1), input.ORBCLK.ERP(:,2), Epoch.mjd, 'linear', 'extrap');
+            yp = interp1(input.ORBCLK.ERP(:,1), input.ORBCLK.ERP(:,3), Epoch.mjd, 'linear', 'extrap');
         else
             xp = input.ORBCLK.ERP(:,2); yp = input.ORBCLK.ERP(:,3);
         end
@@ -146,6 +146,17 @@ for i_sat = 1:num_sat
     exclude = Epoch.exclude(i_sat);	status = Epoch.sat_status(i_sat,:);
     % receiver clock error [s]
 	dt_rx = (param(5) + isGLO*param(8) + isGAL*param(11) + isBDS*param(14) + isQZSS*param(17))/Const.C;      
+    
+    % check if satellite has valid code observations
+    if all(isnan(Epoch.code(i_sat,:)))
+        Epoch.exclude(i_sat,frqs) = true; 	% eliminate satellite
+        Epoch.sat_status(i_sat) = 16;
+        Epoch.tracked(prn) = 1;
+        model.Rot_X(:,i_sat) = [0; 0; 0];
+        model.el(i_sat,frqs) = 0;
+        continue
+    end
+    
     
     %% get input data and frequency indices depending on GNSS of satellite
     if isGPS

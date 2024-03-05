@@ -22,7 +22,7 @@ X = XYZ(1);
 Y = XYZ(2);
 Z = XYZ(3);
 
-if X == 0 || Y == 0 || Z == 0
+if X == 0 || Y == 0 || Z == 0 || isnan(X) || isnan(Y) || isnan(Z)
     x.lat = NaN; x.lon = NaN; x.h = NaN;
     return
 end

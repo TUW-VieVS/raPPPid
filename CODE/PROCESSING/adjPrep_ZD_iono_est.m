@@ -62,7 +62,7 @@ if ~Adjust.float
     param_vec(1:3,1) = settings.INPUT.pos_approx;       % approximate position (X,Y,Z)
     % other parameters don´t have approximate values so they are zero
     Adjust.param = param_vec;
-    Adjust.param_pred = Adjust.param;
+    Adjust.param_pred = param_vec;
     % -) build covariance matrix of parameters
     param_sigma = eye(NO_PARAM + no_ambiguities + no_sats);	% initialize
     GPS_ON  = settings.INPUT.use_GPS;
@@ -271,7 +271,7 @@ if bool_filter   &&   Adjust.float       % Filter is enabled and valid float sol
     if bool_code_phase      % add dynamic model of float ambiguities
         Transition(N_idx,N_idx) = N_eye*FILTER.dynmodel_amb;
     end
-    Transition(iono_idx,iono_idx) = iono_eye*FILTER.dynmodel_iono; % add noise of ionospheric delays
+    Transition(iono_idx,iono_idx) = iono_eye*FILTER.dynmodel_iono; % add dynamic model of ionospheric delays
     Adjust.Transition = Transition; 	% save Transition Matrix in Adjust
     % -) check if estimation of ZWD starts in current epoch
     if Adjust.est_ZWD && Adjust.param_sigma(4,4) == 1

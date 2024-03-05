@@ -71,14 +71,21 @@ classdef DEF
         % rec offset BDS,  dcb^C_1, dcb^C_2,                            (3)  
         % rec offset QZSS, dcb^J_1, dcb^J_2,                            (3)
         NO_PARAM_ZD = 19;	
+
+        % decoupled clock model, number of estimated parameters : 
+        % x, y, z, tropo,                                               (4)
+        % rec clock code:  GPS, GLO, GAL, BDS, QZSS                     (5)
+        % rec clock phase: GPS, GLO, GAL, BDS, QZSS                     (5)
+        % IFB: GPS, GLO, GAL, BDS, QZSS                                 (5)
+        % L2 bias: GPS, GLO, GAL, BDS, QZSS                             (5)  
+        % L3 bias: GPS, GLO, GAL, BDS, QZSS                             (5)  
+        NO_PARAM_DCM = 29;        
         
         % minimal number of satellites in an epoch to calculate a position
         MIN_SATS = 4;
         
         % some persistent variables for Ambiguity Fixing
-        CUTOFF_REF_SAT_GPS = 20;       	 % [°], try to change GPS reference satellite if under this angle
-        CUTOFF_REF_SAT_GAL = 20;       	 % ... for Galileo
-        CUTOFF_REF_SAT_BDS = 10;       	 % ... for BeiDou
+        CUTOFF_REF_SAT = 20;    % [°], try to change reference satellite if below
         AR_THRES_SUCCESS_RATE = 0.99;    % for LAMBDA method
         
         % default thresholds [m] for multi-plot

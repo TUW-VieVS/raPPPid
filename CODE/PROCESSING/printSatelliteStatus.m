@@ -66,6 +66,8 @@ for i = 1:n
                 str_add = 'on multipath cooldown';
             case 15
                 str_add = 'no BRDC ephemeris';
+            case 16
+                str_add = 'faulty code observations';                
             otherwise
                 str_add = '';
         end

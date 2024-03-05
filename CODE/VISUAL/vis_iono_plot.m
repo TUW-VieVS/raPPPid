@@ -25,7 +25,7 @@ function [] = vis_iono_plot(settings, storeData, xaxis_label, hours, resets, boo
 
 %% Preparation
 bool_corr = strcmpi(settings.IONO.model,'Correct with ...')   ||   strcmpi(settings.IONO.model,'Estimate with ... as constraint');
-bool_est  = strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmpi(settings.IONO.model,'Estimate');
+bool_est  = contains(settings.IONO.model,'Estimate');
 bool_fixed = settings.PLOT.fixed;
 
 % change default colors for plotting

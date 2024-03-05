@@ -83,6 +83,8 @@ if contains(settings.PROC.name, '$')
                 iono_str = 'off';
             case 'Estimate'
                 iono_str = 'est';
+            case 'Estimate, decoupled clock'
+                iono_str = 'dcm';
         end
         proc_name = strrep(proc_name, '$iono', iono_str);
     end

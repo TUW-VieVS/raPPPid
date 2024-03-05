@@ -3,10 +3,10 @@ function Adjust = Designmatrix_ZD(Adjust, Epoch, model, settings)
 % and phase solution for Zero-Difference-Model
 % 
 % INPUT:
-%   Adjust      ...
-% 	Epoch       ...
-% 	model           struct model
-%   settings        settings from GUI
+%   Adjust      struct, adjustment-specific variables
+% 	Epoch       struct, epoch-specific data
+% 	model       struct, observation model
+%   settings    struct, settings from GUI
 % OUTPUT: 
 %   Adjust      updated with A and omc
 %
@@ -53,10 +53,8 @@ code_row = 1:2:2*s_f;   	% rows for code  obs [1,3,5,7,...]
 phase_row = 2:2:2*s_f;  	% rows for phase obs [2,4,6,8,...]
 
 % --- observed minus computed
-omc(code_row,1)	 = (obs_code(:)  - model.model_code(:))  .*  ~exclude; 	% for code-observations
-omc(phase_row,1) = (obs_phase(:) - model.model_phase(:)) .*  ~exclude .*  usePhase;    % for phase-observations
-% usePhase = true, satellite is tracked long enough
-% ~cutoff = true, satellite is true
+omc(code_row,1)	 = (obs_code(:)  - model.model_code(:))  .*  ~exclude;                  % code observations
+omc(phase_row,1) = (obs_phase(:) - model.model_phase(:)) .*  ~exclude .*  usePhase;     % phase observations
 
 % --- Partial derivatives
 % coordinates

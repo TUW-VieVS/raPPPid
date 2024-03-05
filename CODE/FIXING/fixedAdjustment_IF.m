@@ -30,7 +30,7 @@ no_GLO = sum(Epoch.glo);            % number of Glonass satellites
 
 %% Prepare observations
 [model_code_fix, model_phase_fix] = ...
-    model_fixed_observations(model, Epoch, Adjust.param);
+    model_IF_fixed_observations(model, Epoch, Adjust.param);
 
 % calculate observed minus computed; for code and phase as vector alternately
 omc(1:2:2*length(Epoch.sats),1) =  (Epoch.code -  model_code_fix).*(~Epoch.exclude);

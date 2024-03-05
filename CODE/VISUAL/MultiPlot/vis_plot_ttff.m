@@ -1,13 +1,11 @@
-function [] = vis_plot_ttff(TTFF, TTCF, labels, coleurs)
+function [] = vis_plot_ttff(TTCF, labels, coleurs)
 % Creates a histogram for all labels of the first fixes of each convergence 
 % period.
 % 
 % INPUT:
-%   TTFF        cell, time to first fix [min] for all convergence periods
-%               of a specific label
 %   TTCF        cell, time to correct fix [min] for all convergence periods
 %               of a specific label
-%   labels      cell, labels corresponding to the cells in TTFF
+%   labels      cell, labels corresponding to the cells in TTCF
 %   coleurs     colors for each label
 % OUTPUT:
 %   []
@@ -53,31 +51,6 @@ title({['Accumulated Time to Correct Fix (until ' min_str 'min)']})
 xlabel({'Minutes'})
 ylabel('[%]')
 yticklabels(yticks*100)
-
-% ----- OLD CODE: Plot Time to First Fix
-% subplot(2,1,1)
-% hold on
-% labels_leg = cell(n,1);
-% for i = 1:n     % loop over data
-%     data = round(TTFF{i}, 2);       % data of current label
-%     idx = isnan(data) | data > min_end;
-%     no_fix = sum(idx);    % no fix at all or fix after plotting period
-%     m = numel(data);
-%     % plot
-%     histogram(data, edges, 'Normalization','probability', 'facecolor',coleurs(i,:), 'facealpha',.5, 'edgecolor','k')
-%     % add information about percent of no fixes to legend
-%     labels_leg{i} = [labels{i}, ': ', sprintf('%2.2f', no_fix/m*100), '%'];
-% end
-% % Style
-% hleg = legend(labels_leg, 'Location', 'best');
-% title(hleg, {'Color, label, no fix [%]'}) 	% title for legend
-% box off
-% axis tight
-% xlim([0 min_end])
-% title({['Time to First Fix (until ' min_str 'min)']})
-% xlabel({'Minutes'})
-% ylabel('[%]')
-% yticklabels(yticks*100)
 
 
 

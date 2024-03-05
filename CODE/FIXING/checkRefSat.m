@@ -1,94 +1,94 @@
-function [new_GPS, new_GAL, new_BDS, change_GPS, change_GAL, change_BDS] = ...
-    checkRefSat(Epoch, settings, cutoff, elev)
-% This functions checks if the reference satellite of GPS or Galileo has to
-% be changed. The reference satellite is not set to zero this is done later
+function [newRefSat, changeRefSat] = checkRefSat(Epoch, settings, elev)
+% This functions checks if any reference satellites have to be changed. 
+% 
 % INPUT:
-%   Epoch           struct, epoch-specific data for current epoch
+%   Epoch               struct, epoch-specific data for current epoch
 %   settings            struct, processing settings from GUI
+%   elev                elevation of all satellites [°]
 % OUTPUT:
-%   new_GPS             true if a new Galileo reference satellite has to be chosen
-%   new_GAL             true if a new Galileo reference satellite has to be chosen
-%   new_BDS             true if a new BeiDou reference satellite has to be chosen
-%   change_GPS          true if GPS reference satellite should be changed  
-%   change_GAL          true if Galileo reference satellite should be changed
-%   change_BDS          true if BeiDou reference satellite should be changed
-%
+%   newRefSat           1x5, boolean, true if a new reference satellite 
+%                           has to be chosen (GPS, GLO, GAL, BDS, QZSS)
+%   changeRefSat        1x5, boolean, true if a reference satellite should
+%                           be changed (GPS, GLO, GAL, BDS, QZSS)
+% 
+% Revision:
+%   2024/02/05, MFWG: improve code, extend to all GNSS
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
-%% prepare
-new_GPS = false;
-new_GAL = false;
-new_BDS = false;
-change_GPS = false;
-change_GAL = false;
-change_BDS = false;
+%% initialize variables
+newRefSat    = false(1,5);     % GPS, GLO, GAL, BDS, QZSS
+changeRefSat = false(1,5);     % GPS, GLO, GAL, BDS, QZSS
+
+kill = any(Epoch.exclude | Epoch.cs_found | ~Epoch.fixable, 2);
+kill_GLO = any(Epoch.exclude | Epoch.cs_found, 2);      % GLONASS satellites are usually not fixable
+
+HighestSat = strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite');
 
 
-%% handle GPS
-if settings.INPUT.use_GPS 
-    % check GPS reference satellite
-    elev_gps = elev(Epoch.gps);
-    if Epoch.refSatGPS ~= 0 && any(Epoch.gps)
-        lost = ~ismember(Epoch.refSatGPS, Epoch.sats) || cutoff(Epoch.refSatGPS_idx);
-        cs = Epoch.cs_found(Epoch.refSatGPS_idx);       % gps reference satellite has experienced a cycle-slip
-        if lost || cs
-            change_GPS = true;
-        elseif strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite')
-            % check for a better (=higher) reference satellite
-            elev_refSatGPS = elev(Epoch.refSatGPS_idx);
-            if elev_refSatGPS <= DEF.CUTOFF_REF_SAT_GPS && max(elev_gps) > elev_refSatGPS
-                change_GPS = true;
-            end
-        end
-    else            % no reference satellite
-        new_GPS = true;
-    end
+%% check reference satellites
+
+% GPS
+if settings.INPUT.use_GPS
+    [newRefSat, changeRefSat] = checkRefSat_GNSS(newRefSat, changeRefSat, ...
+        HighestSat, Epoch.refSatGPS, Epoch.refSatGPS_idx, elev, Epoch.gps, Epoch.sats, kill, 1);
 end
 
+% GLONASS
+if settings.INPUT.use_GLO
+    [newRefSat, changeRefSat] = checkRefSat_GNSS(newRefSat, changeRefSat, HighestSat, ...
+        Epoch.refSatGLO, Epoch.refSatGLO_idx, elev, Epoch.glo, Epoch.sats, kill_GLO, 2);
+end
 
-%% handle Galileo
-if settings.INPUT.use_GAL 
-    % check Galileo reference
-    elev_gal = elev(Epoch.gal);
-    if Epoch.refSatGAL ~= 0 && any(Epoch.gal)
-        lost = ~ismember(Epoch.refSatGAL, Epoch.sats) || cutoff(Epoch.refSatGAL_idx);
-        cs = Epoch.cs_found(Epoch.refSatGAL_idx);       % Galileo reference satellite has experienced a cycle-slip
-        if lost || cs
-            change_GAL = true;
-        elseif strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite')
-            % check for a better (=higher) reference satellite
-            elev_refSatGAL = elev(Epoch.refSatGAL_idx);
-            if elev_refSatGAL <= DEF.CUTOFF_REF_SAT_GAL && max(elev_gal) > elev_refSatGAL
-                change_GAL = true;
-            end
-        end
-    else            % no reference satellite
-        new_GAL = true;
-    end
+% Galileo
+if settings.INPUT.use_GAL
+    [newRefSat, changeRefSat] = checkRefSat_GNSS(newRefSat, changeRefSat, HighestSat, ...
+        Epoch.refSatGAL, Epoch.refSatGAL_idx, elev, Epoch.gal, Epoch.sats, kill, 3);
+end
+
+% BeiDou
+if settings.INPUT.use_BDS
+    [newRefSat, changeRefSat] = checkRefSat_GNSS(newRefSat, changeRefSat, HighestSat, ...
+        Epoch.refSatBDS, Epoch.refSatBDS_idx, elev, Epoch.bds, Epoch.sats, kill, 4);
+end
+
+% QZSS
+if settings.INPUT.use_QZSS
+    [newRefSat, changeRefSat] = checkRefSat_GNSS(newRefSat, changeRefSat, ...
+    HighestSat, Epoch.refSatQZS, Epoch.refSatQZS_idx, elev, Epoch.qzss, Epoch.sats, kill, 5);
 end
 
 
 
-%% handle BeiDou
-if settings.INPUT.use_BDS 
-    % check BeiDou reference
-    elev_bds = elev(Epoch.bds);
-    if Epoch.refSatBDS ~= 0 && any(Epoch.bds)
-        lost = ~ismember(Epoch.refSatBDS, Epoch.sats) || cutoff(Epoch.refSatBDS_idx);
-        cs = Epoch.cs_found(Epoch.refSatBDS_idx);       % BeiDou reference satellite has experienced a cycle-slip
-        if lost || cs
-            change_BDS = true;
-        elseif strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite')
-            % check for a better (=higher) reference satellite
-            elev_refSatBDS = elev(Epoch.refSatBDS_idx);
-            if elev_refSatBDS <= DEF.CUTOFF_REF_SAT_BDS && max(elev_bds) > elev_refSatBDS
-                change_BDS = true;
-            end
-        end
-    else            % no reference satellite
-        new_BDS = true;
-    end
-end
 
+
+function [newRefSat, changeRefSat] = checkRefSat_GNSS(newRefSat, changeRefSat, ...
+    HighestSat, refSat, refSat_idx, elev, gnss, sats, kill, i)
+% check reference satellite of current GNSS
+% HighestSat ... boolean, true if highest satellites are chosen as ref sats
+% refSat ... satellite number of reference satellite
+% refSat_idx ... index of reference satellite in Epoch.sats
+% elev ... elevation of all satellites [°]
+% gnss ... boolean vector for current GNSS
+% kill ... boolean, cycle slip or other bad event
+% i ... index of GNSS (e.g., 1 for GPS)
+
+elev_gnss = elev(gnss);     % [°], elevation of satellites from current GNSS
+elev_refSat = elev(refSat_idx);    % [°], elevation of reference satellite
+
+if refSat ~= 0 && any(gnss)
+    if ~ismember(refSat, sats) || kill(refSat_idx)
+        % reference satellite got lost
+        changeRefSat(i) = true;
+    elseif HighestSat
+        % check for a better (=higher) reference satellite
+        if elev_refSat <= DEF.CUTOFF_REF_SAT && max(elev_gnss) > elev_refSat
+            changeRefSat(i) = true;
+        end
+    end
+else
+    % currently no reference satellite for this GNSS
+    newRefSat(i) = true;
+end

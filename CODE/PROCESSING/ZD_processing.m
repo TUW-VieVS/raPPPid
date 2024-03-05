@@ -28,25 +28,24 @@ function [Adjust, Epoch, model, obs, HMW_12, HMW_23, HMW_13] = ...
 q = Epoch.q;        %	epoch number of processing
 
 
-%% ------ Float Processing -------
+%% ------ Float Solution -------
 % Preparation of estimation of parameters depending on the chosen
 % (ionosphere) PPP model
 switch settings.IONO.model
     case {'Estimate with ... as constraint', 'Estimate'}
-        [Epoch, Adjust] = ...
-            adjPrep_ZD_iono_est(settings, Adjust, Epoch, Epoch.old.sats, obs.interval);
+        [Epoch, Adjust] = adjPrep_ZD_iono_est(settings, Adjust, Epoch, Epoch.old.sats, obs.interval);
+    case 'Estimate, decoupled clock'
+        [Epoch, Adjust] = adjPrep_DCM(settings, Adjust, Epoch, Epoch.old.sats, obs.interval);
     otherwise
-        [Epoch, Adjust] = ...
-            adjustmentPreparation_ZD(settings, Adjust, Epoch, Epoch.old.sats, obs.interval);
+        [Epoch, Adjust] = adjustmentPreparation_ZD(settings, Adjust, Epoch, Epoch.old.sats, obs.interval);
 end
 % Estimation of float paramaters
-[Epoch, Adjust, model] = ...
-    calc_float_solution(input, obs, Adjust, Epoch, settings);
+[Epoch, Adjust, model] = calc_float_solution(input, obs, Adjust, Epoch, settings);
 
 
-%% ------ Fixed Processing ------
+%% ------ Fixed Solution ------
 
-if settings.AMBFIX.bool_AMBFIX
+if settings.AMBFIX.bool_AMBFIX && ~strcmp(settings.IONO.model, 'Estimate, decoupled clock')
     
     % --- Build HMW LC ---
     [HMW_12, HMW_23, HMW_13] = create_HMW_LC(Epoch, settings, HMW_12, HMW_23, HMW_13, model.los_APC);
@@ -57,7 +56,7 @@ if settings.AMBFIX.bool_AMBFIX
         Epoch = CheckSatellitesFixable(Epoch, settings, model, input);
         
         % --- Choose reference satellite for fixing ---
-        Epoch = handleRefSats(Epoch, model, settings, HMW_12, HMW_23, HMW_13);
+        Epoch = handleRefSats(Epoch, model.el, settings, Adjust);
         
         % --- Start fixing depending on PPP model ---
         switch settings.IONO.model
@@ -72,10 +71,14 @@ if settings.AMBFIX.bool_AMBFIX
             case {'Estimate with ... as constraint', 'Estimate', 'off'}     % off: simulated data
                 [Epoch, Adjust] = ...
                     PPPAR_UC(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, input, satellites, obs, model);
-                
+
             otherwise
                 errordlg('PPP-AR is not implemented for this ionosphere model!', 'Error');
         end
     end 
-    
+   
+elseif settings.AMBFIX.bool_AMBFIX
+    % Decoupled clock model
+    [Epoch, Adjust] = PPPAR_DCM(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, model);
+
 end    
