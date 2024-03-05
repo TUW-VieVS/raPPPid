@@ -67,7 +67,7 @@ end
 
 
 %% Prepare solving the NL ambiguities
-% Single-difference ambiguities and covariance matrix
+% Single-difference covariance matrix
 C = eye(no_gps+no_gal+no_bds);
 % Create matrix C for covariance propagation of covariance matrix
 C = -C;
@@ -87,6 +87,9 @@ if settings.INPUT.use_BDS
     C(bool_bds,refSatC_idx-no_glo) = 1;
     C(refSatC_idx-no_glo,refSatC_idx-no_glo) = 0;
 end
+% calculate covariance propagation
+Q_NN_SD = C*Q_NN*C';  	% Variance-Covariance-Matrix of SD float ambiguities
+
 % Single difference ambiguities
 if ~isempty(refSatG_idx)
     param_N_gps = param_N_gps(refSatG_idx) - param_N_gps;
@@ -97,9 +100,8 @@ end
 if ~isempty(refSatC_idx)
     param_N_bds = param_N_bds(refSatC_idx-no_gps-no_glo-no_gal) - param_N_bds;
 end
-
-Q_NN_SD = C*Q_NN*C';  	% Variance-Covariance-Matrix of SD float ambiguities
 param_N_SD = [param_N_gps; param_N_gal; param_N_bds];    % SD float ambiguities
+
 
 % calculate NL ambiguities from the float IF ambiguities
 NL_float = param_N_SD./l1 .* (f1+f2)./f1 - Epoch.WL_12(sats) .* (f2 ./ (f1-f2));  % [00]: (4.17)

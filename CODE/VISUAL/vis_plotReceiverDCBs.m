@@ -96,7 +96,7 @@ end
 % This function plots a single DCB
 function [leg_cell] = plotdcb(leg_cell, time, dcb, title_str, coleur)
 % plot
-plot(time, dcb * 1e9 / Const.C, coleur)
+plot(time, dcb * 1e9 / Const.C, coleur)     % convert from [m] to [ns]
 hold on
 % add to legend 
 leg_cell{end+1} = title_str;
@@ -114,7 +114,8 @@ function output_txt = vis_customdatatip_dcb(obj,event_obj)
 % get position of click (x-value = time [sod], y-value = depends on plot)
 pos = get(event_obj,'Position');
 sod = pos(1) * 3600;    % convert from hours to seconds
-value = pos(2);
+value_ns = pos(2);              % DCB [ns]
+value_m  = value_ns / 1e9 * Const.C;      % DCB [m]
 
 % calculate epoch from sod (attention: missing epochs are not considered!)
 epoch = find(event_obj.Target.XData * 3600 == sod, 1, 'first');
@@ -129,20 +130,22 @@ end
 str_time = [sprintf('%02.0f', hour), ':', sprintf('%02.0f', min), ':', sprintf('%02.0f', sec)];
 
 if isempty(event_obj.Target.DisplayName)
-    output_txt{1} = ['IGS-Value: ' sprintf('%.3f', value) ' ns'];         % DCB 
+    output_txt{1} = ['IGS-Value: ' sprintf('%.3f', value_ns) ' ns'];         % DCB 
 
     return
 end
 
 % create cell with strings as output (which will be shown when clicking)
 i = 1;
-output_txt{i} = [event_obj.Target.DisplayName];         % DCB 
+output_txt{i} = [event_obj.Target.DisplayName];         % DCB type 
 i = i + 1;
-output_txt{i} = ['Time: '  str_time];                  % time of day
+output_txt{i} = ['Time: '  str_time];                   % time of day
 i = i + 1;
-output_txt{i} = ['Epoch: ' sprintf('%.0f', epoch)];    % epoch
+output_txt{i} = ['Epoch: ' sprintf('%.0f', epoch)];     % epoch
 i = i + 1;
-output_txt{i} = ['Value: ' sprintf('%.3f', value) ' ns'];    % value
+output_txt{i} = ['Value: ' sprintf('%.3f', value_ns) ' ns']; 	% DCB [ns]
+i = i + 1;
+output_txt{i} = ['Value: ' sprintf('%.3f', value_ns) ' m'];  	% DCB [m]
 
 
 

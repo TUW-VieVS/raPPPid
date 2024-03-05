@@ -1,15 +1,15 @@
-function [Epoch] = EpochlyReset_Epoch(Epoch)
+function Epoch = EpochlyReset_Epoch(Epoch)
 % Function to reset the struct Epoch for the current epoch of 
 % processing. All fields which should not carry information from the last
 % epoch in the current epoch are handled here.
-% The fields are initialized in get_obs.m as the number of satellites is
-% not known yet.
+% Some fields are initialized in get_obs.m as the number of satellites is
+% not known yet when calling this function.
 % IMPORTANT: some variables are not reseted as they stay the same for the
-% next epoch (e.g. fixed ambiguities, reference satellites). They are
-% handled seperately (e.g. resetSolution.m)
+% next epoch (e.g., fixed ambiguities, reference satellites). They are
+% handled seperately (e.g., resetSolution.m)
 % 
 % INPUT:
-%   Epoch       struct, containing epoch-specific data from last epoch
+%   Epoch       struct, contains epoch-specific data from last epoch
 % OUTPUT:
 %   Epoch       struct, emptied (except some variables)
 % 

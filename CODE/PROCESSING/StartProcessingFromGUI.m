@@ -115,10 +115,11 @@ if bool_BATCH_PROC          % batch processing
             msgbox(mess_header, 'Achievement', 'help');
             delete('PROCESSLIST/LastFailed.mat');
         else
-            mess_header = {'Batch-Processing is done.'; l_start; l_end; 'Failed:'};
+            n_failed = sum(~success);
+            mess_header = {'Batch-Processing is done.'; l_start; l_end; ...
+                ['Failed ' sprintf('%d', n_failed) ' times:']};
             % add number to failed file name (could be vectorized somehow)
             idx_failed = find(~success);
-            n_failed = sum(~success);
             failed2 = cell(n_failed, 1);
             for i = 1:n_failed
                 failed2{i} = ['#' num2str(idx_failed(i)) ' ' failed{i}];

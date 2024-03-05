@@ -41,8 +41,11 @@ isBDS = settings.INPUT.use_BDS;
 %% Adjust
 % determine number of in all epochs estimated parameters (e.g., xyz but not
 % ambiguities)
-NO_PARAM = DEF.NO_PARAM_ZD;
-Adjust.NO_PARAM = NO_PARAM;        
+Adjust.NO_PARAM = DEF.NO_PARAM_ZD;
+if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+    % |||!!!
+    Adjust.NO_PARAM = DEF.NO_PARAM_DCM;
+end   
 % Initialize Adjust for 1st epoch
 Adjust.float = false;
 Adjust.fixed = false;
@@ -64,7 +67,7 @@ end
 
 %% obs
 obs.total_epochs = tot_eps;         % total number of epochs
-
+obs.coordsyst = '';                 % coordinate system of processing
 
 %% Epoch
 % time
@@ -119,13 +122,18 @@ Epoch.WL_12 = NaN(nnn,1);                  % WL Ambiguities between 1st and 2nd 
 Epoch.WL_23 = NaN(nnn,1);                  % ...
 Epoch.WL_13 = NaN(nnn,1);                  % ...
 Epoch.NL_12 = NaN(nnn,1);                  % NL Ambiguities between 1st and 2nd frequency
-Epoch.NL_23 = NaN(nnn,1);                  % ...               
+Epoch.NL_23 = NaN(nnn,1);                  % ...   
+% reference satellites            
 Epoch.refSatGPS = 0;                    % GPS reference satellite, default/none = 0
 Epoch.refSatGPS_idx = [];               % index of GPS reference satellite in Epoch.sats, default/none = []
-Epoch.refSatGAL = 0;                    % Galileo reference satellite, default/none = 0
-Epoch.refSatGAL_idx = [];               % index of Galileo reference satellite in Epoch.sats, default/none = []
-Epoch.refSatBDS = 0;                    % BeiDou reference satellite, default/none = 0
-Epoch.refSatBDS_idx = [];               % index of BeiDou reference satellite in Epoch.sats, default/none = []
+Epoch.refSatGLO = 0;                    % ...
+Epoch.refSatGLO_idx = [];
+Epoch.refSatGAL = 0;                    % ...
+Epoch.refSatGAL_idx = [];
+Epoch.refSatBDS = 0;     
+Epoch.refSatBDS_idx = [];
+Epoch.refSatQZS = 0;     
+Epoch.refSatQZS_idx = [];
 % Multipath LCs
 Epoch.mp1 = [];                         
 Epoch.mp2 = [];
@@ -169,7 +177,7 @@ Epoch.corr2brdc_clk = zeros(5,nnn);		% timestamp, a0, a1, a2, IOD
 %% storeData
 storeData.gpstime = zeros(tot_eps,1);
 storeData.dt_last_reset = zeros(tot_eps,1);
-storeData.NO_PARAM = NO_PARAM;
+storeData.NO_PARAM = Adjust.NO_PARAM;
 storeData.obs_interval = obs.interval;
 storeData.float = false(tot_eps,1);         % set to true when float position is achieved
 % Adjusted Parameters and Covariance
@@ -207,9 +215,12 @@ end
 if settings.AMBFIX.bool_AMBFIX
     storeData.fixed = false(tot_eps,1);         % true if fixed solution in this epoch
     storeData.ttff = NaN;                       % time/epoch to first fix
-    storeData.refSatGPS = NaN(tot_eps,1);       % GPS reference satellite
-    storeData.refSatGAL = NaN(tot_eps,1);       % Galileo reference satellite
-    storeData.refSatBDS = NaN(tot_eps,1);       % BeiDou reference satellite
+	% intialize reference satellites
+    storeData.refSatGPS = NaN(tot_eps,1);       % GPS
+	storeData.refSatGLO = NaN(tot_eps,1);       % GLONASS
+    storeData.refSatGAL = NaN(tot_eps,1);       % Galileo
+    storeData.refSatBDS = NaN(tot_eps,1);       % BeiDou
+	storeData.refSatQZS = NaN(tot_eps,1);       % QZSS
     storeData.xyz_fix = zeros(tot_eps,3);    	% fixed coordinates
     storeData.param_var_fix = zeros(tot_eps,3);	% variances of fixed coordinates
     storeData.HMW_12 = zeros(tot_eps,nnn);       % HMW LC between 1st and 2nd frequency
@@ -288,7 +299,7 @@ end
 
 
 % when ionosphere is estimated
-if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Estimate')  
+if contains(settings.IONO.model,'Estimate') 
     storeData.constraint = false(tot_eps,1);      % set to true when ionospheric constraint is used
     storeData.iono_est = zeros(tot_eps,nnn);      % values of estimated ionospheric delay
 end

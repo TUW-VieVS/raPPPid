@@ -51,7 +51,7 @@ if settings.INPUT.use_GAL
         refSat = gal_prns(elev_gal == min(elev_gal));
         Epoch.refSatGAL = refSat(1);
     end
-    % Epoch.refSatGAL_idx is handled in change2refSat.m
+    % Epoch.refSatGAL_idx is handled in change2refSat_IF/_DCM
     
 end
 

@@ -21,9 +21,14 @@ model.k   = NaN(m,n);       	% Column of ephemerides
 model.solid_tides_ECEF   = [0; 0; 0];   % ECEF displacement because of solid tides
 model.ocean_loading_ECEF = [0; 0; 0];  	% ECEF displacement because of ocean loading
 
-% receiver clock and DCB (calculated in calc_float_solution.m)
+% receiver clock and DCB
 model.dt_rx_clock = zeros(m,n);	% receiver clock error 
 model.dcbs = zeros(m,n);        % receiver dcbs
+% receiver code/phase clock, IFB, and L2/L3 biases
+model.dt_rx_clock_code  = zeros(m,n); 	% receiver code clock 
+model.dt_rx_clock_phase = zeros(m,n); 	% receiver phase clock
+model.IFB = zeros(m,n);         % Interfrequency Bias (IFB)
+model.L_biases = zeros(m,n);    % L2/L3 bias
 
 model.trop = NaN(m,n);          % Troposphere delay
 model.iono = NaN(m,n);          % Ionosphere delay

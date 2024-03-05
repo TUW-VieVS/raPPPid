@@ -65,7 +65,7 @@ if ~isempty(col_G); C(Epoch.gps)  = Epoch.obs(Epoch.gps,  col_G); end
 if ~isempty(col_R); C(Epoch.glo)  = Epoch.obs(Epoch.glo,  col_R); end
 if ~isempty(col_E); C(Epoch.gal)  = Epoch.obs(Epoch.gal,  col_E); end
 if ~isempty(col_C); C(Epoch.bds)  = Epoch.obs(Epoch.bds,  col_C); end
-if ~isempty(col_J); C(Epoch.qzss) = Epoch.obs(Epoch.qzss, col_j); end
+if ~isempty(col_J); C(Epoch.qzss) = Epoch.obs(Epoch.qzss, col_J); end
 
 
 

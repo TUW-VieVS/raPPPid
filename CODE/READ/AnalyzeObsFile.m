@@ -206,7 +206,7 @@ signQualPlot(satellites, label_x_h, hours, isGPS, isGLO, isGAL, isBDS, isQZSS, s
 vis_plotSatConstellation(hours, epochs, label_x_h, satellites, storeData.exclude, isGPS, isGLO, isGAL, isBDS, isQZSS)
 
 
-if obs.interval < 5     % this plots make only sense for high-rate observation data
+if obs.interval <= 15 	% this plots make only sense for high-rate observation data
     
     print_std = true;       % true to print observation difference standard devation
     

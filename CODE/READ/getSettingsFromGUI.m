@@ -305,14 +305,14 @@ if strcmp(settings.AMBFIX.refSatChoice, 'manual choice (list):')
     str_refSatGAL = strrep(str_refSatGAL, 'E', ' ');
     if ~isempty(str_refSatGAL)
         settings.AMBFIX.refSatGAL = str2num(str_refSatGAL);    
-        settings.AMBFIX.refSatGAL(settings.AMBFIX.refSatGAL < 300) = settings.AMBFIX.refSatGAL(settings.AMBFIX.refSatGAL < 300) + 300;
+        settings.AMBFIX.refSatGAL(settings.AMBFIX.refSatGAL < 300) = settings.AMBFIX.refSatGAL(settings.AMBFIX.refSatGAL < 300) + 200;
     end
     str_refSatBDS = get(handles.edit_refSatBDS, 'String');
     str_refSatBDS = strrep(str_refSatBDS, ',', ' ');
     str_refSatBDS = strrep(str_refSatBDS, 'C', ' ');
     if ~isempty(str_refSatBDS)
         settings.AMBFIX.refSatBDS = str2num(str_refSatBDS);     
-        settings.AMBFIX.refSatBDS(settings.AMBFIX.refSatBDS < 200) = settings.AMBFIX.refSatBDS(settings.AMBFIX.refSatBDS < 200) + 200;
+        settings.AMBFIX.refSatBDS(settings.AMBFIX.refSatBDS < 400) = settings.AMBFIX.refSatBDS(settings.AMBFIX.refSatBDS < 400) + 300;
     end
 end
 % satellites manually excluded from ambiguity fixing
@@ -481,11 +481,16 @@ settings.PROC.timeSpan_format_HOD    = get(handles.radiobutton_timeSpan_format_H
 settings.PROC.elev_mask = str2double(get(handles.edit_Elevation_Mask, 'String'));
 settings.PROC.SNR_mask = str2num(get(handles.edit_SNR_Mask, 'String'));
 settings.PROC.ss_thresh = str2double(get(handles.edit_ss_thresh, 'String'));
+
+% check observed minus computed
 settings.PROC.check_omc = handles.checkbox_check_omc.Value;
 settings.PROC.omc_code_thresh = str2double(get(handles.edit_omc_thresh_c, 'String'));
 settings.PROC.omc_phase_thresh = str2double(get(handles.edit_omc_thresh_p, 'String'));
 settings.PROC.omc_factor = str2double(get(handles.edit_omc_fac, 'String'));
 settings.PROC.omc_window = str2double(get(handles.edit_omc_window, 'String'));
+
+% detect and compensate receiver clock jump
+settings.PROC.bool_rec_clk_jump = handles.checkbox_rec_clk_jump.Value;
 
 % reset solution
 settings.PROC.reset_float = get(handles.checkbox_reset_float, 'Value' );

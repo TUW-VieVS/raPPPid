@@ -153,7 +153,7 @@ switch settings.IONO.model
             storeData.iono_mf(q,prns)   = model.iono_mf;
             storeData.iono_vtec(q,prns) = model.iono_vtec;
         end
-    case 'Estimate'
+    case {'Estimate', 'Estimate, decoupled clock'}
         numel_param = numel(Adjust.param);
         % estimated ionospheric delay:
         storeData.iono_est(q,prns,1) = Adjust.param((numel_param-no_sats+1):numel_param);  
@@ -199,8 +199,10 @@ end
 if settings.AMBFIX.bool_AMBFIX
     % save reference satellites
     storeData.refSatGPS(q) = Epoch.refSatGPS;
+	storeData.refSatGLO(q) = Epoch.refSatGLO;
     storeData.refSatGAL(q) = Epoch.refSatGAL;
     storeData.refSatBDS(q) = Epoch.refSatBDS;
+	storeData.refSatQZS(q) = Epoch.refSatQZS;
     % save fixed ambiguities
     if contains(settings.IONO.model,'IF-LC')
         storeData.N_WL_12(q,:) = Epoch.WL_12';        % fixed Wide-Lane

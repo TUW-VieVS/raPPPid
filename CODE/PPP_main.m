@@ -180,7 +180,7 @@ for q = q_range         % loop over epochs
     % save data from last epoch (step q-1) and reset Epoch
     Epoch.old = Epoch;  
     Epoch.q = q;            % save number of epoch 
-    [Epoch] = EpochlyReset_Epoch(Epoch);
+    Epoch = EpochlyReset_Epoch(Epoch);
     
     n = settings.PROC.epochs(1) + q - 1;        
     if ~settings.INPUT.bool_realtime && ~settings.INPUT.rawDataAndroid
@@ -288,8 +288,13 @@ for q = q_range         % loop over epochs
         [Epoch] = cycleSlip(Epoch, settings, obs.use_column);
     end
     
+    % --- perform receiver clock jump detection ---
+    if settings.PROC.bool_rec_clk_jump && ~isempty(Epoch.old.obs)
+        init_ambiguities = DetectReceiverClockJump(Epoch, obs.use_column, init_ambiguities, ~settings.INPUT.bool_parfor);
+    end
+    
     % --- Adjust phase data to Code to limit the ambiguities ---
-    if strcmpi(settings.PROC.method, 'Code + Phase') && settings.PROC.AdjustPhase2Code
+    if strcmpi(settings.PROC.method, 'Code + Phase') && (settings.PROC.AdjustPhase2Code || settings.PROC.bool_rec_clk_jump)
         [init_ambiguities, Epoch] = AdjustPhase2Code(Epoch, init_ambiguities);
     end
     
@@ -399,7 +404,7 @@ if settings.EXP.settings
 end
 
 % Create Output Files
-[storeData] = create_output(storeData, obs, settings, Epoch.q );
+[storeData] = create_output(storeData, obs, settings, Epoch.q ); 
 
 % write data4plot.mat
 if settings.EXP.data4plot

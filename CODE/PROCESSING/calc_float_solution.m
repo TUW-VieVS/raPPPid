@@ -54,29 +54,8 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
         [model, Epoch] = modelErrorSources(settings, input, Epoch, model, Adjust, obs);
     end
     
-    % --- receiver clock error (or time offsets) and DCBs
-    model.dt_rx_clock(Epoch.gps,  :) = Adjust.param( 5);
-    model.dt_rx_clock(Epoch.glo,  :) = Adjust.param( 5) + Adjust.param( 8);
-    model.dt_rx_clock(Epoch.gal,  :) = Adjust.param( 5) + Adjust.param(11);
-    model.dt_rx_clock(Epoch.bds,  :) = Adjust.param( 5) + Adjust.param(14);
-	model.dt_rx_clock(Epoch.bds,  :) = Adjust.param( 5) + Adjust.param(14);
-	model.dt_rx_clock(Epoch.qzss, :) = Adjust.param( 5) + Adjust.param(17);
-    if settings.BIASES.estimate_rec_dcbs
-        if num_freq > 1
-            model.dcbs(Epoch.gps,  2) = Adjust.param( 6);
-            model.dcbs(Epoch.glo,  2) = Adjust.param( 9);
-            model.dcbs(Epoch.gal,  2) = Adjust.param(12);
-            model.dcbs(Epoch.bds,  2) = Adjust.param(15);
-			model.dcbs(Epoch.qzss, 2) = Adjust.param(18);
-        end
-        if num_freq > 2
-            model.dcbs(Epoch.gps,  3) = Adjust.param( 7);
-            model.dcbs(Epoch.glo,  3) = Adjust.param(10);
-            model.dcbs(Epoch.gal,  3) = Adjust.param(13);
-            model.dcbs(Epoch.bds,  3) = Adjust.param(16);
-			model.dcbs(Epoch.qzss, 3) = Adjust.param(19);
-        end
-    end
+    % --- receiver clock errors and biases
+    model = getReceiverClockBiases(model, Epoch, Adjust, settings);
     
     % --- Line-of-Sight-Vector and Theoretical Range (they might change when iterating)
     los = vecnorm2(model.Rot_X - Adjust.param(1:3));
@@ -106,7 +85,12 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
     % --- create A-Matrix and observed minus computed
     switch settings.PROC.method        % depending on Functional Model
         case 'Code + Phase'
-            Adjust = Designmatrix_ZD(Adjust, Epoch, model, settings);
+            if ~strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+                Adjust = Designmatrix_ZD(Adjust, Epoch, model, settings);
+            else
+                Epoch = handleRefSats(Epoch, model.el, settings, Adjust);
+                Adjust = Designmatrix_DCM(Adjust, Epoch, model, settings);
+            end
         case {'Code Only', 'Code (Doppler Smoothing)', 'Code (Phase Smoothing)'}
             Adjust = Designmatrix_code_ZD( Adjust, Epoch, model, settings);
         case 'Code + Doppler'
@@ -122,8 +106,9 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
     
     % --- check if too many satellites have been excluded because of e.g. 
     % elevation cutoff, check_omc, missing broadcast corrections...
-    n_gps = sum(Epoch.gps & ~Epoch.exclude);   n_glo = sum(Epoch.glo & ~Epoch.exclude);
-    n_gal = sum(Epoch.gal & ~Epoch.exclude);   n_bds = sum(Epoch.bds & ~Epoch.exclude);   n_qzss = sum(Epoch.qzss & ~Epoch.exclude);
+    exclude = any(Epoch.exclude,2);
+    n_gps = sum(Epoch.gps & ~exclude);   n_glo = sum(Epoch.glo & ~exclude);
+    n_gal = sum(Epoch.gal & ~exclude);   n_bds = sum(Epoch.bds & ~exclude);   n_qzss = sum(Epoch.qzss & ~exclude);
     bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, settings.INPUT.use_QZSS, ...
         n_gps, n_glo, n_gal, n_bds, n_qzss, settings.INPUT.use_GNSS);
     if ~bool_enough_sats && ~settings.INPUT.bool_parfor
@@ -201,7 +186,7 @@ end
 
 % Ionospheric delay is estimated AND at least one satellite is excluded:
 % -> set estimated ionospheric delay to zero
-if any(Epoch.exclude(:,1)) && (strcmpi(settings.IONO.model, 'Estimate with ... as constraint') || strcmpi(settings.IONO.model, 'Estimate'))      
+if any(Epoch.exclude(:,1)) && contains(settings.IONO.model, 'Estimate')      
     kk = 1:100;
     kk = kk(Epoch.exclude(:,1));	% index-numbers of satellites and their frequencies under cutoff
     idx_iono = kk+NO_PARAM;          % indices where to reset

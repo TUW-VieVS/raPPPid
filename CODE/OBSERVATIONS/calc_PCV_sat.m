@@ -41,6 +41,10 @@ end             % (once upon a time an error occurred with ORBEX format)
 
 for j = j_idx'
     PCV_sat_frq = PCV_sat{j};       % get satellite PCV data for current frequency
+    if isempty(PCV_sat_frq) 
+        % no satellite PCV corrections on this frequency
+        continue
+    end 
     sat_PCV_zen = PCV_sat_frq(1,2:end);         % grid in zenith angle
     PCV_sat_frq = PCV_sat_frq(2:end, 2:end);	% PCV data for current frequency
     PCV_sat_frq = mean(PCV_sat_frq,1);          % take mean over azimuth (instead of considered azimuthal dependency)

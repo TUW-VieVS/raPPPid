@@ -18,27 +18,28 @@ function [code_model, phase_model, doppler_model] = ...
 
 
 % Preparations
-f1 = Epoch.f1;
+f1 = Epoch.f1;      % frequencies 1
 f2 = Epoch.f2;
 f3 = Epoch.f3;
 exclude = Epoch.exclude;
-num_freq = settings.INPUT.proc_freqs;
-param = Adjust.param;
+proc_freq = settings.INPUT.proc_freqs;      % number of processed frequencies
+param = Adjust.param;                       % vector with unknowns
 NO_PARAM = Adjust.NO_PARAM;
-zwd = param(4);
-iono = model.iono;
-no_sats = numel(Epoch.sats);
+zwd = param(4);                 % float zenith wet delay
+no_sats = numel(Epoch.sats);   	% number of satellites
+
 
 % If ionosphere is estimated use estimated ionospheric delay instead of 
 % modelled ionospheric delay to model the observation
-if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Estimate')
+iono = model.iono;
+if contains(settings.IONO.model,'Estimate')
     n = numel(param);
     idx = (n-no_sats+1):n;
     iono = param(idx);   % estimated ionospheric delay on 1st frequency
-    if num_freq > 1
+    if proc_freq > 1
         k_2 = f1.^2 ./ f2.^2;       % to convert estimated ionospheric delay to 2nd frequency
         iono(:,2) = iono(:,1) .* k_2;   
-        if num_freq > 2
+        if proc_freq > 2
             k_3 = f1.^2 ./ f3.^2;   % to convert estimated ionospheric delay to 3rd frequency
             iono(:,3) = iono(:,1) .* k_3;
         end
@@ -51,6 +52,7 @@ end
 code_model = model.rho...                                 	% theoretical range
     - Const.C * model.dT_sat_rel ...                    	% satellite clock
     + model.dt_rx_clock - model.dcbs ...                	% receiver clock and DCBs
+    + model.dt_rx_clock_code + model.IFB ...                % only decoupled clock model (receiver clock error code, interfrequency bias)
     + model.trop + model.mfw*zwd + iono...                	% atmosphere
     - model.dX_solid_tides_corr + model.dX_GDV...       	% solid tides and group delay variations
 	- model.dX_ocean_loading ...                   			% ocean loading
@@ -68,12 +70,25 @@ code_model = code_model .* ~exclude;
 %% PHASE
 phase_model = [];
 if contains(settings.PROC.method,'+ Phase')
-    idx = (NO_PARAM+1):(NO_PARAM+no_sats*num_freq);
+    idx = (NO_PARAM+1):(NO_PARAM+no_sats*proc_freq);
     ambig = param(idx);
-    ambig = reshape(ambig, [length(ambig)/num_freq , num_freq, 1]);     % convert to vector
+    ambig = reshape(ambig, [length(ambig)/proc_freq , proc_freq, 1]);     % convert from vector to matrix
+    
+    % |||!!!
+%     if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+%         idx_G = Epoch.refSatGPS_idx;
+%         idx_E = Epoch.refSatGAL_idx;
+%         ambig(idx_G, 1:3) = [Epoch.l1(idx_G) Epoch.l2(idx_G) Epoch.l3(idx_G)];
+%         ambig(idx_E, 1:3) = [Epoch.l1(idx_E) Epoch.l2(idx_E) Epoch.l3(idx_E)];
+%     
+%     end
+    
+
+    
     phase_model = model.rho...                            	% theoretical range
         - Const.C * model.dT_sat_rel...                    	% satellite and receiver clock
         + model.dt_rx_clock - model.dcbs ...                % receiver clock and DCBs
+        + model.dt_rx_clock_phase + model.L_biases ...     	% only decoupled clock model (receiver clock error code, interfrequency bias)
         + model.trop + model.mfw*zwd - iono ...           	% atmosphere
         - model.dX_solid_tides_corr ...                   	% solid tides
 		- model.dX_ocean_loading ...                   		% ocean loading

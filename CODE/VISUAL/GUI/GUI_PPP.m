@@ -50,7 +50,7 @@ set(gca, 'Units', 'pixels', 'Position', [18 516 900 80])
 axis off
 
 % Set Copyright and Version in the lower right
-set(handles.text_version, 'String', ['Version 2.4 ', char(169), ' TUW 2023']);
+set(handles.text_version, 'String', ['Version 2.5 ', char(169), ' TUW 2023']);
 
 % load default filter settings for selected filter
 handles = LoadDefaultFilterSettings(handles);
@@ -1957,7 +1957,7 @@ end
 
 function pushbutton_multi_plot_plot_Callback(hObject, eventdata, handles)
 if ~InWorkFolder();     return;     end         % check if in WORK folder
-fprintf('\n');
+fprintf('\nStarting Multi Plot: %s\n\n', sprintf('%s', datestr(datetime('now'))));
 TABLE_use = GetTableData(handles.uitable_multi_plot.Data, 6, 6, [1 7], 1);        % Data of multi plot table [cell])
 if isempty(TABLE_use)
     msgbox('No plotable files in Multi-Plot table.', 'Empty table', 'help')
@@ -1978,6 +1978,7 @@ if boolean
     handles = un_check_multiplot_checkboxes(handles, 0);
     handles.paths.last_multi_plot = MultiPlotStruct;
 end
+fprintf('Finished Multi Plot: %s\n\n', sprintf('%s', datestr(datetime('now'))));
 guidata(hObject, handles);
 end
 
@@ -2082,24 +2083,15 @@ handles = GUI_enable_onoff(handles);
 end
 
 function checkbox_histo_conv_Callback(hObject, eventdata, handles)
-    handles.edit_conv_min.Enable = 'off';
-    handles.text_conv_min.Enable = 'off'; 
-if handles.checkbox_histo_conv.Value || handles.checkbox_bar_conv.Value
-    handles.edit_conv_min.Enable = 'on';
-    handles.text_conv_min.Enable = 'on';
-end
+handles = GUI_enable_onoff(handles);
 end
 
 function checkbox_bar_conv_Callback(hObject, eventdata, handles)
-    handles.edit_conv_min.Enable = 'off';
-    handles.text_conv_min.Enable = 'off'; 
-if handles.checkbox_histo_conv.Value || handles.checkbox_bar_conv.Value
-    handles.edit_conv_min.Enable = 'on';
-    handles.text_conv_min.Enable = 'on';
-end
+handles = GUI_enable_onoff(handles);
 end
 
 function checkbox_convaccur_Callback(hObject, eventdata, handles)
+handles = GUI_enable_onoff(handles);
 end
 
 
@@ -4416,20 +4408,29 @@ if handles.checkbox_batch_proc.Value
         return
     end
     
+    % prepare download loop
     fprintf('Starting Download for Batch Processing Table....\n')
     WBAR = waitbar(0, 'Download Data, please wait...', 'Name', 'Downloading...');
-    for i = 1:n             % loop over rows of batch processing table
-        path_obs_file = [TABLE{i,1} TABLE{i,2}];
-        rheader = anheader_GUI(path_obs_file);
-        % download the input files which are currently selected in GUI
-        settings.INPUT.bool_parfor = true;      % to avoid unecessary output to command window
-        settings = BatchProcessingPreparation(settings, TABLE(i,:));	% manipulate settings for current row
-        [~] = downloadInputFiles(settings, rheader.first_obs, false);
+    dates_done = [0 0 0];   	% variable saving days where data was already downloaded
+    
+    % loop over rows of batch processing table
+    for i = 1:n
         % Update Waitbar
         if mod(i,3) == 0 && ishandle(WBAR)
             progress = i/n;
             mess = sprintf('%s%02.0f%s', 'Download progress: ', progress*100, '%' );
             waitbar(progress, WBAR, mess)
+        end
+        path_obs_file = [TABLE{i,1} TABLE{i,2}];
+        rheader = anheader_GUI(path_obs_file);
+        yyyymmdd = rheader.first_obs(1:3);
+        % download the input files which are currently selected in GUI
+        settings.INPUT.bool_parfor = true;      % to avoid unecessary output to command window
+        settings = BatchProcessingPreparation(settings, TABLE(i,:));	% manipulate settings for current row
+        if ~any(all(dates_done == yyyymmdd, 2))
+            % no data has been downloaded for this day
+            [~] = downloadInputFiles(settings, rheader.first_obs, false);
+            dates_done(end+1,:) = yyyymmdd;     % save date to already downloaded days
         end
     end
     % print end of download

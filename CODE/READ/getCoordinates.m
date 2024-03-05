@@ -34,8 +34,12 @@ end
 XYZ = getOwnCoordinates(stations, dates, XYZ);
 if all( abs(XYZ(:)) > 1e4 );   return;   end             % only bias or no coordinates found
 
-% ----- check IGS estimation ------
-XYZ = get_IGS_coordinates(stations, dates, XYZ, coordsyst);
+% ----- check daily IGS estimation ------
+XYZ = get_daily_IGS_coordinates(stations, dates, XYZ, coordsyst);
+if all( abs(XYZ(:)) > 1e4 );   return;   end
+
+% ----- check weekly IGS estimation ------
+XYZ = get_weekly_IGS_coordinates(stations, dates, XYZ, coordsyst);
 if all( abs(XYZ(:)) > 1e4 );   return;   end
 
 % ----- check EUREF estimation -----

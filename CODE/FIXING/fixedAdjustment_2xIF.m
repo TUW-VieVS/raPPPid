@@ -31,7 +31,7 @@ n = size(A_float,2);              	% number of columns of A-Matrix
 
 %% Prepare observations
 [model_code_fix, model_phase_fix] = ...
-    model_fixed_observations(model, Epoch, Adjust.param);
+    model_IF_fixed_observations(model, Epoch, Adjust.param);
 
 % calculate observed minus computed exlude satellites under cutoff-angle
 % for code and phase as vector alternately

@@ -227,9 +227,7 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmpi
         else
             fprintf(fileID,'    %s%s%s\n',settings.IONO.model_ionex,' ',settings.IONO.file_ionex);
         end
-        if strcmpi(settings.IONO.model,'Correct with ...')
-            fprintf(fileID,'    %s%s\n','TEC-Interpolation: ',settings.IONO.interpol);
-        end
+		fprintf(fileID,'    %s%s\n','TEC-Interpolation: ',settings.IONO.interpol);
     end
 end
 fprintf(fileID,'\n');
@@ -578,14 +576,20 @@ fprintf(fileID,'  Satellite Exclusion Criteria:\n');
 fprintf(fileID,'    %s%d%s\n', 'Elevation Cutoff: ',settings.PROC.elev_mask,' [°]');
 fprintf(fileID,'    %s%s%s\n', 'C/N0 Cutoff: ', num2str(settings.PROC.SNR_mask),' [db-Hz]');
 fprintf(fileID,'    %s%d\n', 'Signal Strength Threshold: ',settings.PROC.ss_thresh);
+
 if settings.PROC.check_omc
     fprintf(fileID,'    %s\n', 'Check of observed minus (omc) computed is ON.');
     fprintf(fileID,'      %s%06.3f\n', 'Threshold Code  [m]: ', settings.PROC.omc_code_thresh);
     fprintf(fileID,'      %s%06.3f\n', 'Threshold Phase [m]: ', settings.PROC.omc_phase_thresh);
     fprintf(fileID,'      %s%d%s%d\n', 'Factor: ', settings.PROC.omc_factor, '; Window: ', settings.PROC.omc_window);
-
 else
     fprintf(fileID,'    %s\n', 'Check of observed minus (omc) computed is OFF.');
+end
+
+if settings.PROC.bool_rec_clk_jump
+    fprintf(fileID,'  %s\n', 'Receiver clock jumps are detected and compensated.');
+else
+    fprintf(fileID,'  %s\n', 'Receiver clock jumps are NOT detected and compensated.');
 end
 fprintf(fileID,'\n');
 
@@ -598,7 +602,7 @@ fprintf(fileID,'  Station name: %s\n', obs.stationname);
 fprintf(fileID,'  Observation interval: %02.2f seconds\n', obs.interval);
 fprintf(fileID,'  Antenna:  %s\n', obs.antenna_type);
 fprintf(fileID,'  Receiver: %s\n', obs.receiver_type);
-fprintf(fileID,'  Receiver antenna delta (H/E/N): %02.4f / %02.4f / %02.4f\n', obs.rec_ant_delta(1), obs.rec_ant_delta(2), obs.rec_ant_delta(3));
+fprintf(fileID,'  Receiver antenna delta (H/E/N): %02.4f / %02.4f / %02.4f\n', obs.rec_ant_delta(3), obs.rec_ant_delta(2), obs.rec_ant_delta(1));
 
 fprintf(fileID,'  Time of 1st observation (y, m, d, h, min, sec): ');
 fprintf(fileID,'%04.0f %02.0f %02.0f %02.0f %02.0f %02.0f', obs.startdate(1), obs.startdate(2), obs.startdate(3), obs.startdate(4), obs.startdate(5), obs.startdate(6));

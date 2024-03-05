@@ -14,7 +14,10 @@ function [] = MultiPlot(PATHS, XYZ_true, LABELS, PlotStruct)
 %   []
 %
 % using distinguishable_colors.m (c) 2010-2011, Tim Holy
-%
+% 
+% Revision:
+%   2024/02/12, MFWG: removing variable TTFF, calculation of TTCF
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -35,7 +38,7 @@ if PlotStruct.fixed; PlotStruct.solution = 'fixed'; end
 bars_minutes = PlotStruct.bar_position;          % point in time for bar plot
 BARS = zeros(n_unique, numel(bars_minutes)+1, 4);     % row = label, col = points in time (+sum), dim = E/N/H/2D
 % initialize variables for Time to First Fix Plot and Box Plot
-TTFF = cell(1, n_unique);  TTCF = TTFF;   BOX = cell(1, n_unique);
+TTCF = cell(1, n_unique);   BOX = cell(1, n_unique);
 % initialize variables for Quantile Convergence Plot, each row for one label
 Q68 = cell(n_unique, 6);    % 0.68 quantile for North, East, Height, 2D, 3D, ZTD
 Q95 = cell(n_unique, 6);    % 0.95 quantile for North, East, Height, 2D, 3D, ZTD
@@ -63,6 +66,8 @@ for i = 1:n_unique
         try
             fpath_data4plot = GetFullPath([paths{ii} 'data4plot.mat']);
             load(fpath_data4plot, 'storeData', 'obs');      %  variables not used: 'satellites', 'settings', 'model_save'
+            if isempty(storeData); storeData = recover_storeData(paths{ii}); end
+            if isempty(obs); obs = recover_obs(paths{ii}); end
         catch
             try
                 storeData = recover_storeData(paths{ii});   % e.g., no data4plot.mat file
@@ -116,7 +121,8 @@ for i = 1:n_unique
     % looking for points in time where convergence is reached (for all
     % convergence periods)
     [conv_dN, conv_dE, conv_dH, conv_2D, conv_3D] = find_convergence(d.N, d.E, d.H, d.dT, PlotStruct);
-    
+    if PlotStruct.fixed;   TTCF{i} = conv_2D;   end         % save time to correct fix 
+        
     % find quantiles and points in time which all convergence periods have
     [Q68, Q95, Q_dT] = prepMultiPlot(d, Q68, Q95, Q_dT, i);
     dT_all = Q_dT{i};
@@ -135,14 +141,11 @@ for i = 1:n_unique
     if PlotStruct.box            	% Box Plot
         BOX{i} = conv_2D;
     end
-    if PlotStruct.fixed             % Time to First Fix Plot
-        [TTFF, TTCF] = prepTTFF(TTFF, TTCF, d.FIXED,  PlotStruct.thresh_2D, d.dT, d.E, d.N, i);
-    end
     if PlotStruct.bar            	% Bar Plot
         BARS = prepConvergenceBars(conv_dN, conv_dE, conv_dH, conv_2D, BARS, i, bars_minutes);
     end
     if PlotStruct.convaccur        	% Convergence/Accuracy Plot
-        CA = prepConvaccurPlot(CA, d, i, conv_2D, unique_labels);
+        CA = prepConvaccurPlot(CA, d, i, conv_2D, unique_labels, PlotStruct.bar_position(end));
     end
     
     % print perfomance and statistic of current label to command window
@@ -152,7 +155,7 @@ end         % end of loop over different labels
 
 
 % Create Plots for all labels which were prepared before
-CreateAll(Q68, Q95, Q_dT, BOX, BARS, TTFF, TTCF, CA, unique_labels, bars_minutes, PlotStruct);
+CreateAll(Q68, Q95, Q_dT, BOX, BARS, TTCF, CA, unique_labels, bars_minutes, PlotStruct);
 
 
 % close waitbar
@@ -181,7 +184,7 @@ end
 % % Position Accuracy (currently not included in GUI)
 % PositionAccuracy(dN, dE, label, PlotStruct)
 
-function CreateAll(Q68, Q95, Q_dT, BOX, BARS, TTFF, TTCF, D, unique_labels, bars_minutes, PlotStruct)
+function CreateAll(Q68, Q95, Q_dT, BOX, BARS, TTCF, CA, unique_labels, bars_minutes, PlotStruct)
 % Creates plots which contain all labels
 coleurs = PlotStruct.coleurs;   % colors for each label
 % Quantile Convergence
@@ -198,7 +201,7 @@ if PlotStruct.bar
 end
 % Time to First Fix Plot
 if PlotStruct.fixed && PlotStruct.ttff 
-    vis_plot_ttff(TTFF, TTCF, unique_labels, coleurs);
+    vis_plot_ttff(TTCF, unique_labels, coleurs);
 end
 % Troposphere Quantile Convergence
 if PlotStruct.tropo
@@ -206,7 +209,7 @@ if PlotStruct.tropo
 end
 % Convergence/Accuracy Plot
 if PlotStruct.convaccur
-    ConvAccurPlot(D, coleurs, PlotStruct.solution);
+    ConvAccurPlot(CA, coleurs, PlotStruct);
 end
 
 

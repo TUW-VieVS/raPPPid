@@ -47,11 +47,13 @@ keep = bool_G | bool_R | bool_E | bool_C | bool_J;
 if any(~keep)
     for i = 1:n
         varname = raw_variables{i};     % current variable name
-        if strcmp(varname, 'Raw') || strcmp(varname, 'CodeType')
+        if strcmp(varname, 'Raw') || strcmp(varname, 'CodeType')  || strcmp(varname, 'ChipsetElapsedRealtimeNanos')
             % ignore this variables
             continue   
         end
-        gnssRaw.(varname) = gnssRaw.(varname)(keep);    % keep only the data of processed GNSS
+        if ~isempty(gnssRaw.(varname))
+            gnssRaw.(varname) = gnssRaw.(varname)(keep);    % keep only the data of processed GNSS
+        end
     end
 end
 

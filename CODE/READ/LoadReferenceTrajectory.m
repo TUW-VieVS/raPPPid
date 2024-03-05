@@ -8,15 +8,16 @@ function [pos_ref_geo, North_ref, East_ref] = ...
 %   gpstime         vector, gps time (sow) of processing's epochs
 % OUTPUT: reference positions interpolated from the reference trajectory to
 %         the points in time of the PPP solution
-%	pos_ref_geo     struct [.lat, .lon, h], WGS84 reference points
-%   North_ref       vector, UTM North reference points
-%   East_ref        vector, UTM East reference points
+%	pos_ref_geo     struct [.lat, .lon, h], WGS84 reference points, [rad rad m]
+%   North_ref       vector, UTM North reference points, [m]
+%   East_ref        vector, UTM East reference points, [m]
 %
 % Revision:
-%   ...
+%   2024/02/07, MFWG: added *.csv
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
+
 
 
 %% Load reference trajectory
@@ -68,12 +69,7 @@ switch ext
                 [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
                 
             otherwise
-                pos_ref_geo.lat = NaN;
-                pos_ref_geo.lon = NaN;
-                pos_ref_geo.h  = NaN;
-                North_ref = NaN;
-                East_ref = NaN;
-                errordlg('Implement read-in function! Check LoadReferenceTrajectory.', 'Error');
+                [pos_ref_geo, North_ref, East_ref] = LoadingFailed();
                 return
         end
         
@@ -99,13 +95,47 @@ switch ext
         lon_wgs84(exclude) = [];    h_wgs84(exclude) = [];
         East_true(exclude) = []; North_true(exclude) = [];
         
+    case '.csv'
+        % ground truth from Google Smartphone Decimeter Challenge 2023
+        % check: https://www.kaggle.com/competitions/smartphone-decimeter-2023/data
+        csv_data = readtable(filepath);     % variable type: table
+        bool_lat = contains(csv_data.Properties.VariableNames, 'LatitudeDegrees');
+        bool_lon = contains(csv_data.Properties.VariableNames, 'LongitudeDegrees');
+        bool_alt = contains(csv_data.Properties.VariableNames, 'AltitudeMeters');
+        % get time stamp (Unix Time)
+        bool_UnixTime = contains(csv_data.Properties.VariableNames, 'UnixTimeMillis');
+        UnixTime = table2array(csv_data(:, bool_UnixTime)) / 1000;   % [ms] to [s]
+        dtime = datetime(UnixTime, 'convertfrom','posixtime', 'Format','dd-MMM-yyyy HH:mm:ss.SSS');
+        jd = juliandate(dtime);     % convert Matlab datetime to julian date
+        leap_sec = GetLeapSec_UTC_GPS(jd(1));       % number of leap seconds
+        % check if variables could be detected
+        if any(bool_lat) && any(bool_lon) && any(bool_alt)
+            % get latitude, longitude, height columns
+            lat_wgs84 = table2array(csv_data(:, bool_lat)) / 180 * pi;   	% convert [°] to [rad]
+            lon_wgs84 = table2array(csv_data(:, bool_lon)) / 180 * pi;
+            h_wgs84   = table2array(csv_data(:, bool_alt));
+            pos_ref_geo.lat = lat_wgs84;
+            pos_ref_geo.lon = lon_wgs84;
+            pos_ref_geo.h = h_wgs84;
+            % convert to UTM coordinates and gps time
+            n = numel(lat_wgs84);
+            North_ref = NaN(n,1); East_ref = NaN(n,1); sod_true = NaN(n,1); 
+            for i = 1:n
+                [North_ref(i), East_ref(i)] = ell2utm_GT(lat_wgs84(i), lon_wgs84(i));
+                [~, sow, ~] = jd2gps_GT(jd(i));             % julian date to gps time
+                sod_true(i) = mod(sow, 86400) + leap_sec;   % consider leap seconds
+            end
+            % to enable interpolation at the end of function
+            North_true = North_ref;     
+            East_true  = East_ref;
+        else
+            [pos_ref_geo, North_ref, East_ref] = LoadingFailed();
+            return
+        end
+        
+        
     otherwise
-        pos_ref_geo.lat = NaN;
-        pos_ref_geo.lon = NaN;
-        pos_ref_geo.h  = NaN;
-        North_ref = NaN;
-        East_ref = NaN;
-        errordlg('Implement read-in function! Check LoadReferenceTrajectory.', 'Error');
+        [pos_ref_geo, North_ref, East_ref] = LoadingFailed();
         return
         
 end
@@ -132,3 +162,11 @@ pos_ref_geo.lon = lon_ref.Data;
 pos_ref_geo.h  = h_ref.Data;
 North_ref      = N_ref.Data;
 East_ref       = E_ref.Data;
+
+
+
+function [pos_ref_geo, North_ref, East_ref] = LoadingFailed()
+% read-in and loading reference coordinates failed, set to NaN
+pos_ref_geo.lat = NaN; pos_ref_geo.lon = NaN; pos_ref_geo.h = NaN;
+North_ref = NaN; East_ref = NaN;
+errordlg('Implement read-in function! Check LoadReferenceTrajectory.', 'Error');

@@ -58,7 +58,7 @@ if ~Adjust.float
     param_vec(1:3,1) = settings.INPUT.pos_approx;       % approximate position (X,Y,Z)
     % other parameters don´t have approximate values so they are zero
     Adjust.param = param_vec;
-    Adjust.param_pred = Adjust.param;
+    Adjust.param_pred = param_vec;
     % -) build covariance matrix of parameters
     param_sigma = eye(NO_PARAM);   	% initialize
     GPS_ON  = settings.INPUT.use_GPS;

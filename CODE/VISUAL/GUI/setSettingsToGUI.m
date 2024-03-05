@@ -424,9 +424,11 @@ switch structure.IONO.model
     case 'Estimate with ... as constraint'
         set(handles.radiobutton_models_ionosphere_estimateConstraint,   'Value', 1);
     case 'Correct with ...'
-        set(handles.radiobutton_models_ionosphere_correct,          'Value', 1);
+        set(handles.radiobutton_models_ionosphere_correct,         'Value', 1);
 	case 'Estimate'
         set(handles.radiobutton_models_ionosphere_estimate,        'Value', 1);
+    case 'Estimate, decoupled clock'
+        set(handles.radiobutton_models_ionosphere_decoupled,       'Value', 1);
     case 'off'
         set(handles.radiobutton_models_ionosphere_off,             'Value', 1);
 end
@@ -857,7 +859,7 @@ try
 catch
     handles.checkbox_LLI.Value = 1;     % old default settings
 end
-% Satellite Exclusion Criteria
+% check of observed minus computed
 try
     set(handles.edit_omc_thresh_c, 'String', num2str(structure.PROC.omc_code_thresh));
 end
@@ -873,6 +875,17 @@ end
 try     
     handles.checkbox_check_omc.Value = structure.PROC.check_omc;
 end
+
+% detect and compensate receiver clock jump
+try
+    handles.checkbox_rec_clk_jump.Value = structure.PROC.bool_rec_clk_jump;
+catch
+    handles.checkbox_rec_clk_jump.Value = 0;
+end
+
+
+
+
 
 if bool_settings == 1   % do this only for the settings structure
     % reset solution

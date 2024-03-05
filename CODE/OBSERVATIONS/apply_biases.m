@@ -26,7 +26,8 @@ k_vec_1 = zeros(1,410);     k_vec_2 = zeros(1,410);
 % ||| check this condition for e.g. TUG Products and IF-LC
 % convert observations to IF-LC of precise products
 if settings.ORBCLK.bool_precise && ...
-        (~contains(settings.IONO.model, 'IF-LC') || contains(settings.BIASES.code, 'Multi-GNSS DCBs'))
+        (~contains(settings.IONO.model, 'IF-LC') || contains(settings.BIASES.code, 'Multi-GNSS DCBs')) ...
+        && ~strcmp(settings.IONO.model, 'Estimate, decoupled clock')
     
     % following [21]: (14), but in raPPPid everything is converted to and 
     % then from the 1st frequency, therefore actually only one coefficient 

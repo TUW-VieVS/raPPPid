@@ -3,9 +3,13 @@ function [Epoch, storeData, Adjust] = SkipEpoch(Epoch, storeData, Adjust)
 % satellites are visible.
 %
 % INPUT:
-%	...
+%	Epoch           struct, epoch-specific data
+%   storeData       struct, contains saved data of processing
+%   Adjust          struct, adjustment specific-variables
 % OUTPUT:
-%	...
+%	Epoch           updated
+%   storeData       updated
+%   Adjust          updated
 %
 % Revision:
 %   ...

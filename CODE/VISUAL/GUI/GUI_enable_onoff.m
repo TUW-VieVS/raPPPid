@@ -702,19 +702,39 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
         set(handles.popupmenu_filter_qzss_offset_dynmodel, 'Enable', 'Off');
     end
     
-    % estimation of receiver DCBs
-    if handles.checkbox_estimate_rec_dcbs.Value
+    % checkbox: estimate receiver DCBs
+    handles.checkbox_estimate_rec_dcbs.Enable = 'Off';
+    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate') || ...
+            strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint')
+        handles.checkbox_estimate_rec_dcbs.Enable = 'Off';
+    end
+    
+    % handle receiver DCBs / receiver biases
+    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate, decoupled clock')
+        % Decoupled clock Model
+        handles.text_rec_dcbs.String = 'Receiver Biases:';
         handles.text_rec_dcbs.Enable = 'On';
         handles.edit_filter_dcbs_sigma0.Enable = 'On';
         handles.edit_filter_dcbs_Q.Enable = 'On';
         set(handles.text_dcbs_m, 'Enable', 'On');
         set(handles.popupmenu_filter_dcbs_dynmodel, 'Enable', 'On');
     else
-        handles.text_rec_dcbs.Enable = 'Off';
-        handles.edit_filter_dcbs_sigma0.Enable = 'Off';
-        handles.edit_filter_dcbs_Q.Enable = 'Off';
-        set(handles.text_dcbs_m, 'Enable', 'Off');
-        set(handles.popupmenu_filter_dcbs_dynmodel, 'Enable', 'Off');
+        % Receiver clocks are not decoupled
+        handles.text_rec_dcbs.String = 'Receiver DCBs:';
+        % estimation of receiver DCBs
+        if handles.checkbox_estimate_rec_dcbs.Value
+            handles.text_rec_dcbs.Enable = 'On';
+            handles.edit_filter_dcbs_sigma0.Enable = 'On';
+            handles.edit_filter_dcbs_Q.Enable = 'On';
+            set(handles.text_dcbs_m, 'Enable', 'On');
+            set(handles.popupmenu_filter_dcbs_dynmodel, 'Enable', 'On');
+        else
+            handles.text_rec_dcbs.Enable = 'Off';
+            handles.edit_filter_dcbs_sigma0.Enable = 'Off';
+            handles.edit_filter_dcbs_Q.Enable = 'Off';
+            set(handles.text_dcbs_m, 'Enable', 'Off');
+            set(handles.popupmenu_filter_dcbs_dynmodel, 'Enable', 'Off');
+        end
     end
     
     % Float ambiguities
@@ -739,9 +759,9 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     end
     
     % Check ionosphere model
-    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, ...
-            'Estimate with ... as constraint') || ...
-            strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate')
+    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint') || ...
+            strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate') || ...
+            strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate, decoupled clock')
         % filter settings
         set(handles.edit_filter_iono_Q,             'Enable', 'On');
         set(handles.edit_filter_iono_sigma0,        'Enable', 'On');
@@ -1045,6 +1065,17 @@ if strcmpi(handles.uipanel_multi_plot.Visible, 'on')
     else                                               	% fixed solution
         handles.checkbox_ttff_plot.Enable = 'On';
     end
+    
+    
+    % En/Disable definition of points in time
+    handles.edit_conv_min.Enable = 'off';
+    handles.text_conv_min.Enable = 'off';
+    if handles.checkbox_histo_conv.Value || handles.checkbox_bar_conv.Value || handles.checkbox_convaccur.Value
+        handles.edit_conv_min.Enable = 'on';
+        handles.text_conv_min.Enable = 'on';
+    end
+
+
 end
 
 

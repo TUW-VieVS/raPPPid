@@ -9,10 +9,14 @@ function [gpsweek, sow, rollover] = jd2gps_GT(jd)
 % Output:  gpsweek  - GPS week number
 %          sow      - seconds of week since 0 hr, Sun.
 %          rollover - number of GPS week rollovers (modulus 1024)
-
+% 
 % Copyright (c) 2011, Michael R. Craymer
 % All rights reserved.
 % Email: mike@craymer.com
+% 
+% Revision:
+%   2024/01/22, MFGW: adding check for jd == 0 or NaN
+
 
 if nargin ~= 1
   warning('Incorrect number of arguments');
@@ -21,6 +25,11 @@ end
 if jd < 0
   warning('Julian date must be greater than or equal to zero');
   return;
+end
+
+if jd == 0 || isnan(jd)
+    gpsweek = NaN;   sow = NaN;   rollover = NaN;
+    return
 end
 
 jdgps = cal2jd_GT(1980,1,6);    % beginning of GPS week numbering

@@ -45,7 +45,7 @@ if settings.INPUT.use_BDS
     else                            % all satellites are setting, take highest descending satellite
         Epoch.refSatBDS = bds_prns(elev_bds == min(elev_bds));
     end
-    % Epoch.refSatBDS_idx is handled in change2refSat.m
+    % Epoch.refSatBDS_idx is handled in change2refSat_IF/_DCM
     
 end
 
