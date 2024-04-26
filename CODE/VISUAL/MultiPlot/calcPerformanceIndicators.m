@@ -28,7 +28,8 @@ TIME = d.dT;
 d2D = sqrt(dN.^2 + dE.^2);          	% 2D position error
 d3D = sqrt(dN.^2 + dE.^2 + dH.^2);      % 3D position error
 
-thresh_2D = sprintf('%5.3f', PlotStruct.thresh_2D);     % 2D convergence threshold
+thresh_2D = sprintf('%5.3f', PlotStruct.thresh_2D);     % 2D threshold [m]
+thresh_3D = sprintf('%5.3f', PlotStruct.thresh_2D);     % 3D threshold [m]
 
 % remove outliers
 thresh = 10;                            % [m], seems to be a good value
@@ -37,7 +38,7 @@ d3D(d3D > thresh) = NaN;
 
 n = max(TIME_all);                      % last point in time which all convergence periods have [s]
 n_min = ceil(n/60);                     % round up [minutes]
-n_str = sprintf('%.2f', n_min);         % convert to string
+n_str = sprintf('%05.2f', n_min);        % convert to string
 
 TIME = round(TIME);                     % time after reset [s]
 d2D_n = d2D(TIME == n);                 % 2D position error after n 
@@ -55,7 +56,7 @@ if PlotStruct.float
     
     % percentage of no convergence
     not_conv = sum(isnan(conv) | conv > n_min);
-    not_conv = not_conv / numel(conv) * 100;       % [%]
+    not_conv = not_conv / numel(conv) * 100;            % [%]
     
 elseif PlotStruct.fixed
     % average time to correct fix
@@ -89,6 +90,10 @@ average_2D_n = mean(d2D_n(:), 'omitnan') * 100;         % [cm]
 
 % median 2D position error after n minutes
 median_2D_n = median(d2D_n(:), 'omitnan') * 100;        % [cm]
+
+% percentage below 2D and 3D threshold
+perc_2D_thresh = sum(d2D(:) < PlotStruct.thresh_2D, 'omitnan') / numel(d2D) * 100;     % [%]
+perc_3D_thresh = sum(d3D(:) < PlotStruct.thresh_3D, 'omitnan') / numel(d3D) * 100;     % [%]
 
 % median of the ZTD difference
 ZTD = abs(d.ZTD(:));
@@ -173,6 +178,13 @@ fprintf(['Std of 3D position errors after ' n_str ' minutes: '])
 fprintf('%06.3f', stdev_3D_n)
 fprintf(' [cm]\n')
 
+% fprintf(['Percentage of epochs (2D < ' thresh_2D 'm):            '])
+% fprintf('%06.3f', perc_2D_thresh)
+% fprintf(' [%%]\n')
+% 
+% fprintf(['Percentage of epochs (3D < ' thresh_3D 'm):            '])
+% fprintf('%06.3f', perc_3D_thresh)
+% fprintf(' [%%]\n')
 
 fprintf('\n')  
 

@@ -13,7 +13,7 @@ function [settings] = DownloadBiases(settings, gpsweek, dow, yyyy, mm, doy)
 %	settings        updated with settings.BIASES.code_file
 %
 % Revision:
-%   ...
+%   2024/03/12, MFWG: download CAS biases improved according to IGSMAIL-8399
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -28,21 +28,28 @@ switch settings.BIASES.code
         % create folder and prepare the download
         target = {[Path.DATA, 'BIASES/', yyyy, '/', doy '/']};
         [~, ~] = mkdir(target{1});
-        URL_host = 'igs.ign.fr:21';
-        URL_folder = {['/pub/igs/products/mgex/dcb/' yyyy '/']};
+        URL_host = 'ftp.gipp.org.cn:21';
+        URL_folder = {['/product/dcb/mgex/' yyyy '/']};
+        % 'CAS1' considers the latest IGS antenna model in the DCB
+        % determination for full compatibility with PPP models
+        file3 = {['CAS1OPSRAP_' yyyy doy '0000_01D_01D_DCB.BIA.gz']};   % tried first
+        file2 = {['CAS1MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz']};
+        file1 = {['CAS0OPSRAP_' yyyy doy '0000_01D_01D_DCB.BIA.gz']};
         file0 = {['CAS0MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz']};
-        file1 = {['CAS1MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz']};
-        % download, try different ftp servers
-        file_status = ftp_download(URL_host, URL_folder{1}, file0{1}, target{1}, true); file = file0;
+        % try different files until one is successfully downloaded
+        file = file3;
+        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
         if file_status == 0
-            URL_host = 'ftp.gipp.org.cn:21';
-            URL_folder = {['/product/dcb/mgex/' yyyy '/']};
-            file_status = ftp_download(URL_host, URL_folder{1}, file0{1}, target{1}, true); file = file0;
+            file = file2;
+            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
         end
         if file_status == 0
-            URL_host = 'ftp.gipp.org.cn:21';
-            URL_folder = {['/product/dcb/mgex/' yyyy '/']};
-            file_status = ftp_download(URL_host, URL_folder{1}, file1{1}, target{1}, true); file = file1;
+            file = file1;
+            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+        end
+        if file_status == 0
+            file = file0;
+            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
         end
         % unzip if download was successful
         if file_status == 1   ||   file_status == 2
@@ -59,14 +66,32 @@ switch settings.BIASES.code
         [~, ~] = mkdir(target{1});
         URL_host = 'ftp.gipp.org.cn:21';
         URL_folder = {['/product/dcb/mgex/' yyyy '/']};
-        file = {['CAS0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
-        % download, unzip, save file-path
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        file3 = {['CAS1OPSRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+        file2 = {['CAS1MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+        file1 = {['CAS0OPSRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+        file0 = {['CAS0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+        % try different files until one is successfully downloaded
+        file = file3;
+        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+        if file_status == 0
+            file = file2;
+            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+        end
+        if file_status == 0
+            file = file1;
+            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+        end
+        if file_status == 0
+            file = file0;
+            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        end
+        % unzip
         if file_status == 1   ||   file_status == 2
             unzip_and_delete(file, target);
         elseif file_status == 0
             errordlg('No CAS Multi-GNSS OSBs found on server. Please specify different source!', 'Error');
         end
+        % save file-path
         [~,file,~] = fileparts(file{1});   % remove the zip file extension
         settings.BIASES.code_file = [target{1} '/' file];
         

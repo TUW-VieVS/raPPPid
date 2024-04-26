@@ -1,4 +1,4 @@
-function [] = velocityPlot(xyz, seconds, bool, label_x_sec)
+function [] = velocityPlot(xyz, seconds, label_x_sec)
 % 
 % INPUT:
 %   ...
@@ -23,7 +23,6 @@ v = sqrt(dx.^2 + dy.^2 + dz.^2);
 v = v * 3.6;
 
 % remove first epoch and epochs without valid coordinate solution from time vector
-seconds = seconds(~bool);
 seconds = seconds(2:end);
 
 % delete outliers (velocity over 300km/h)

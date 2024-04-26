@@ -84,7 +84,7 @@ for i_sat = 1:num_sat
     % --- Get column of broadcast ephemerides for current satellite ---
     k = Epoch.BRDCcolumn(prn);
     if settings.ORBCLK.bool_brdc && isnan(k)      % no ephemeris
-        fprintf('No broadcast orbit data for satellite %d in SOW %.3f              \n', prn, Ttr);
+        if ~settings.INPUT.bool_parfor; fprintf('No broadcast orbit data for satellite %d in SOW %.3f              \n', prn, Ttr); end
         cutoff = true;      % eliminate satellite
         status(:) = 15;
         Epoch.tracked(prn) = 1;

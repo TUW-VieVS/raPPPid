@@ -706,7 +706,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     handles.checkbox_estimate_rec_dcbs.Enable = 'Off';
     if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate') || ...
             strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint')
-        handles.checkbox_estimate_rec_dcbs.Enable = 'Off';
+        handles.checkbox_estimate_rec_dcbs.Enable = 'On';
     end
     
     % handle receiver DCBs / receiver biases

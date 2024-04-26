@@ -134,6 +134,7 @@ if contains(clk_file, '$')
     clk_file = ['../DATA/CLOCK' fpath fname];
 end
 % check if clock file is existing
+rec_clk_true = [];
 if isempty(clk_file) || ~exist(clk_file, 'file')
     return
 end

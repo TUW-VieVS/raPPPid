@@ -134,7 +134,7 @@ if STOP_CALC; return; end
 % -+-+-+-+- Figure: Map Plot -+-+-+-+-
 if settings.PLOT.map
     if true
-        velocityPlot(pos_cart, seconds, bool_zero, label_x_sec)
+        velocityPlot(pos_cart, seconds, label_x_sec)
     end
     vis_MaPlot(pos_geo(:,1)*180/pi, pos_geo(:,2)*180/pi, bool_true_pos, ...
         pos_true_geo.lat*180/pi, pos_true_geo.lon*180/pi, station_date, floatfix)
@@ -355,15 +355,15 @@ if settings.PLOT.mp
     if (isfield(settings.OTHER, 'mp_detection') && settings.OTHER.mp_detection)
         if isfield(storeData, 'mp_C1_diff_n')
             C1_diff = zero2nan(storeData.mp_C1_diff_n);
-            PlotObsDiff(epochs, C1_diff, label_x_epc, rgb, 'C1 difference', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false);
+            PlotObsDiff(epochs, C1_diff, label_x_epc, rgb, 'C1', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false, obs);
         end
         if isfield(storeData, 'mp_C2_diff_n')
             C2_diff = zero2nan(storeData.mp_C2_diff_n);
-            PlotObsDiff(epochs, C2_diff, label_x_epc, rgb, 'C2 difference', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false);
+            PlotObsDiff(epochs, C2_diff, label_x_epc, rgb, 'C2', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false, obs);
         end
         if isfield(storeData, 'mp_C3_diff_n')
             C3_diff = zero2nan(storeData.mp_C3_diff_n);
-            PlotObsDiff(epochs, C3_diff, label_x_epc, rgb, 'C3 difference', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false);
+            PlotObsDiff(epochs, C3_diff, label_x_epc, rgb, 'C3', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false, obs);
         end
     else
         fprintf('Multipath detection disabled.          \n')

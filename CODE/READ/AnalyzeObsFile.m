@@ -214,21 +214,21 @@ if obs.interval <= 15 	% this plots make only sense for high-rate observation da
     degree_C = settings.OTHER.mp_degree;
     mp_C1_diff_n = NaN(n,410); mp_C2_diff_n = NaN(n,410); mp_C3_diff_n = NaN(n,410);   	
     mp_C1_diff_n(degree_C+1:end,:) = diff(C1, degree_C,1); % code difference (C1) of last n epochs
-    PlotObsDiff(epochs, mp_C1_diff_n, label_x_epc, rgb, 'C1 difference' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std);
+    PlotObsDiff(epochs, mp_C1_diff_n, label_x_epc, rgb, 'C1' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std, obs);
     mp_C2_diff_n(degree_C+1:end,:) = diff(C2, degree_C,1);
-    PlotObsDiff(epochs, mp_C2_diff_n, label_x_epc, rgb, 'C2 difference' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std);
+    PlotObsDiff(epochs, mp_C2_diff_n, label_x_epc, rgb, 'C2' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std, obs);
     mp_C3_diff_n(degree_C+1:end,:) = diff(C3, degree_C,1);
-    PlotObsDiff(epochs, mp_C3_diff_n, label_x_epc, rgb, 'C3 difference' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std);
+    PlotObsDiff(epochs, mp_C3_diff_n, label_x_epc, rgb, 'C3' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std, obs);
     
     % -+-+-+-+- Figure: Phase Difference  -+-+-+-+-
     degree_L = settings.OTHER.CS.TD_degree;	
     cs_L1_diff = NaN(n,410); cs_L2_diff = NaN(n,410); cs_L3_diff = NaN(n,410); 
     cs_L1_diff(degree_L+1:end,:) = diff(L1, degree_L,1); % phase (L1) difference of last n epochs
-    PlotObsDiff(epochs, cs_L1_diff, label_x_epc, rgb, 'L1 difference' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std);
+    PlotObsDiff(epochs, cs_L1_diff, label_x_epc, rgb, 'L1' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std, obs);
     cs_L2_diff(degree_L+1:end,:) = diff(L2, degree_L,1);
-    PlotObsDiff(epochs, cs_L2_diff, label_x_epc, rgb, 'L2 difference' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std);
+    PlotObsDiff(epochs, cs_L2_diff, label_x_epc, rgb, 'L2' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std, obs);
     cs_L3_diff(degree_L+1:end,:) = diff(L3, degree_L,1); 
-    PlotObsDiff(epochs, cs_L3_diff, label_x_epc, rgb, 'L3 difference' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std);
+    PlotObsDiff(epochs, cs_L3_diff, label_x_epc, rgb, 'L3' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std, obs);
     
     % -+-+-+-+- Figure: Doppler Difference  -+-+-+-+-
     degree_D = 3;
@@ -236,19 +236,19 @@ if obs.interval <= 15 	% this plots make only sense for high-rate observation da
         D1 = satellites.D1; D1(D1==0) = NaN;
         D1_diff = NaN(n,410);
         D1_diff(degree_D+1:end,:) = diff(D1, degree_D,1);  	% Doppler (D1) difference of last n epochs
-        PlotObsDiff(epochs, D1_diff, label_x_epc, rgb, 'D1 difference' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std);
+        PlotObsDiff(epochs, D1_diff, label_x_epc, rgb, 'D1' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std, obs);
     end
     if isfield(satellites, 'D2')
         D2 = satellites.D2; D2(D2==0) = NaN;
         D2_diff = NaN(n,410);
         D2_diff(degree_D+1:end,:) = diff(D2, degree_D,1);
-        PlotObsDiff(epochs, D2_diff, label_x_epc, rgb, 'D2 difference' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std);
+        PlotObsDiff(epochs, D2_diff, label_x_epc, rgb, 'D2' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std, obs);
     end
     if isfield(satellites, 'D3')
         D3 = satellites.D3; D3(D3==0) = NaN;
         D3_diff = NaN(n,410);
         D3_diff(degree_D+1:end,:) = diff(D3, degree_D,1);
-        PlotObsDiff(epochs, D3_diff, label_x_epc, rgb, 'D3 difference' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std);
+        PlotObsDiff(epochs, D3_diff, label_x_epc, rgb, 'D3' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std, obs);
     end
 end
 

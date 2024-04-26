@@ -1,4 +1,4 @@
-function PlotObsDiff(x, DIFF, label_x, rgb, str, settings, observed, thresh, level, unit, print)
+function PlotObsDiff(x, DIFF, label_x, rgb, C_L, settings, observed, thresh, level, unit, print, obs)
 % Plots code difference over time
 % 
 % INPUT:
@@ -6,13 +6,14 @@ function PlotObsDiff(x, DIFF, label_x, rgb, str, settings, observed, thresh, lev
 % 	DIFF        matrix, differenced observation to plot
 % 	label_x     label for the x-axis
 %   rgb         colors for plotting
-%   str         string, naming of the plot
+%   C_L         string, naming of the plot
 %   settings    struct, (processing) settings from GUI
 %   observed    matrix, number of epochs satellite is tracked
 %   thresh      threshold to plot
 %   level       degree of difference     
 %   unit        string
 %   print       boolean, true to standard-devation to command window
+%   obs         struct, observation-specific data
 % OUTPUT:
 %   []     
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
@@ -27,7 +28,7 @@ end
 
 ms = 9;         % Marker Size
 str_level = num2str(level);
-fig_mp = figure('Name', [str ', level: ' str_level], 'NumberTitle','off');
+fig_mp = figure('Name', [C_L ' time-difference, level: ' str_level], 'NumberTitle','off');
 
 % set plot colors
 coleurs_default = get(groot,'defaultAxesColorOrder');       % save default colors for reset
@@ -40,7 +41,7 @@ obs_prns = idx(sum(obs_bool(:,idx),1) > 0);	% prns of observed satellites
 
 % prepare printing standard deviation
 if print
-    fprintf(['\n' str ', level ' str_level ', std ' unit '\n'])
+    fprintf(['\n' C_L ' time-difference, level ' str_level ', std ' unit '\n'])
 end
 
 
@@ -48,7 +49,7 @@ n_plot = settings.INPUT.use_GPS+settings.INPUT.use_GLO+settings.INPUT.use_GAL+se
 i_plot = 1;
 % plot enabled GNSS
 if settings.INPUT.use_GPS
-    if print; fprintf('GPS:     '); end
+    print_gnss_signal(print, 'GPS ', obs.GPS.(C_L));
     obs_prns_G = obs_prns(obs_prns < 100);
     prns_string_G = sprintfc('%02.0f', obs_prns_G);        % satellite prns for legend
     plot_code_difference(n_plot, x, DIFF, obs_prns_G, prns_string_G, label_x, thresh, ms, i_plot, print)
@@ -56,7 +57,7 @@ if settings.INPUT.use_GPS
     i_plot = i_plot + 1;
 end
 if settings.INPUT.use_GLO
-    if print; fprintf('GLONASS: '); end
+    print_gnss_signal(print, 'GLO ', obs.GLO.(C_L))
     obs_prns_R = obs_prns(obs_prns > 100 & obs_prns < 200);
     prns_string_R = sprintfc('%02.0f', obs_prns_R);        % satellite prns for legend
     plot_code_difference(n_plot, x, DIFF, obs_prns_R, prns_string_R, label_x, thresh, ms, i_plot, print)
@@ -64,7 +65,7 @@ if settings.INPUT.use_GLO
     i_plot = i_plot + 1;
 end
 if settings.INPUT.use_GAL
-    if print; fprintf('Galileo: '); end
+    print_gnss_signal(print, 'GAL ', obs.GAL.(C_L))
     obs_prns_E = obs_prns(obs_prns > 200 & obs_prns < 300);
     prns_string_E = sprintfc('%02.0f', obs_prns_E);        % satellite prns for legend
     plot_code_difference(n_plot, x, DIFF, obs_prns_E, prns_string_E, label_x, thresh, ms, i_plot, print)
@@ -72,7 +73,7 @@ if settings.INPUT.use_GAL
     i_plot = i_plot + 1;
 end
 if settings.INPUT.use_BDS
-    if print; fprintf('BeiDou:  '); end
+    print_gnss_signal(print, 'BDS ', obs.BDS.(C_L))
     obs_prns_C = obs_prns(obs_prns > 300 & obs_prns < 400);
     prns_string_C = sprintfc('%02.0f', obs_prns_C);        % satellite prns for legend
     plot_code_difference(n_plot, x, DIFF, obs_prns_C, prns_string_C, label_x, thresh, ms, i_plot, print)
@@ -80,7 +81,7 @@ if settings.INPUT.use_BDS
     i_plot = i_plot + 1;
 end
 if settings.INPUT.use_QZSS
-    if print; fprintf('QZSS:     '); end
+    print_gnss_signal(print, 'QZSS', obs.QZSS.(C_L))
     obs_prns_J = obs_prns(obs_prns > 400 & obs_prns < 500);
     prns_string_J = sprintfc('%02.0f', obs_prns_J);        % satellite prns for legend
     plot_code_difference(n_plot, x, DIFF, obs_prns_J, prns_string_J, label_x, thresh, ms, i_plot, print)
@@ -139,7 +140,7 @@ if print; hline(-thresh, 'r--'); end
 if print
     yval = C1_diff(:,obs_prns_gnss);
     stdev = std(yval(:), 'omitnan');
-    fprintf([sprintf('%6.3f', stdev) '\n']);
+    fprintf([sprintf('%7.3f', stdev) '\n']);
 end
 
 % ylim([-3*thresh, 3*thresh])
@@ -148,3 +149,14 @@ legend on
 hleg = legend(prns_string_gnss);
 title(hleg, 'PRN')          % title for legend
 xlim([1 x(end)])
+
+
+function [] = print_gnss_signal(print, gnss, signal)
+% ---- prints GNSS and signal type to command window ----
+if ~print
+    return
+end
+if isempty(signal)
+    signal = '---';
+end
+fprintf([gnss ' (' signal '): ']);

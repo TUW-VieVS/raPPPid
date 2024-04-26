@@ -67,7 +67,9 @@ end
 
 %% obs
 obs.total_epochs = tot_eps;         % total number of epochs
-obs.coordsyst = '';                 % coordinate system of processing
+if ~isfield(obs, 'coordsyst')
+    obs.coordsyst = '';             % coordinate system of processing (detected in readAllInputFiles)
+end      
 
 %% Epoch
 % time

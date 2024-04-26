@@ -139,7 +139,6 @@ while i <= numel(files)
 end
 
 % download all files
-% download all files
 if host ~= 2
     file_status = ftp_download_multi(URL_host, URL_folders, files, targets, true);
 else    % download from cddis

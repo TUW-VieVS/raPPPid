@@ -50,7 +50,7 @@ set(gca, 'Units', 'pixels', 'Position', [18 516 900 80])
 axis off
 
 % Set Copyright and Version in the lower right
-set(handles.text_version, 'String', ['Version 2.5 ', char(169), ' TUW 2023']);
+set(handles.text_version, 'String', ['Version 2.6 ', char(169), ' TUW 2023']);
 
 % load default filter settings for selected filter
 handles = LoadDefaultFilterSettings(handles);
@@ -4423,6 +4423,7 @@ if handles.checkbox_batch_proc.Value
         end
         path_obs_file = [TABLE{i,1} TABLE{i,2}];
         rheader = anheader_GUI(path_obs_file);
+        rheader = analyzeAndroidRawData_GUI(path_obs_file, rheader);
         yyyymmdd = rheader.first_obs(1:3);
         % download the input files which are currently selected in GUI
         settings.INPUT.bool_parfor = true;      % to avoid unecessary output to command window

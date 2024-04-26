@@ -121,7 +121,6 @@ classdef Const
         
         %% Reference systems
         % WGS84 parameters
-        WGS84 = wgs84Ellipsoid;             % Matlab reference ellisoid object [m]
         WGS84_A = 6378137.0;                % semimajor axis, [m]
         WGS84_E_SQUARE = 6.69437999013 * 10^(-3);
         WGS84_B = Const.WGS84_A*sqrt(1-Const.WGS84_E_SQUARE);

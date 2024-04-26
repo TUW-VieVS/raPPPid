@@ -32,7 +32,7 @@ isnan_dN = isnan(dN); isnan_dE = isnan(dE); isnan_dH = isnan(dH);
 dN(isnan_dN) = 0;     dE(isnan_dE) = 0;     dH(isnan_dH) = 0;
 
 % plot
-ind = find(seconds==0);
+ind = find(seconds==0 | isnan(seconds));        % remove suspicious data
 seconds(ind) = [];
 dN(ind) = []; dE(ind) = []; dH(ind) = [];
 fig_3coord = figure('Name','Three Coordinates Plot', 'NumberTitle','off');

@@ -1,0 +1,26 @@
+% This function write the .netrc-file to connect raPPPid with the CDDIS
+% server and enable data download. An existing netrc-file is deleted
+
+% create paths
+netrc_path = '../CODE/OBSERVATIONS/ObservationDownload/cURL/';
+netrc_file = '.netrc';
+netrc = [netrc_path netrc_file];
+
+% get user name and password
+prompt = "Enter your CDDIS user name in the following format: 'EXAMPLE'):";
+x = input(prompt)
+
+
+
+% remove existing .netrc-file
+delete(netrc)
+
+
+
+
+% write header 
+
+
+fid = fopen([netrc_path'/results_float.txt'],'w+');
+fprintf(fid,'%s\n', line_2nd);
+fclose(fid);

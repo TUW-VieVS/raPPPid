@@ -22,6 +22,9 @@ function x = adjustment(varargin)
 %       x.r:        redundancy
 %       x.vTPv      "Verbesserungsquadratsumme"
 %
+% Revision:
+%   2024/04/02, MFWG: debugging = adding initialization of x.x
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -70,10 +73,13 @@ Qvv = inv(P) - A*Qxx*A';   	% Cofactor Matrix of Residuals
 
 %% save results
 idx = ~zero_columns;        % removed columns have to be considered
+nn = numel(idx);            % number of elements to initalize
+x.x = zeros(nn,1);          % initialize vector of adjusted parameters
+x.Qxx = eye(nn);            % initialize cofactor matrix of parameters
+
 x.x(idx) = x_adj;           % vector of adjusted parameters
 x.l  	 = l_adj;           % vector of adjusted observations
 x.v   	 = v;               % residual vector
-x.Qxx = eye(numel(idx));
 x.Qxx(idx,idx)	= Qxx;          	% Cofactor Matrix of Parameters
 x.Sxx(idx,idx)	= Qxx * sigma2_adj;	% Covariance Matrix of Parameters
 x.Qvv           = Qvv;          	% Cofactor Matrix of Residuals
@@ -86,4 +92,3 @@ x.A = A;
 x.P = P;
 x.omc = omc;
 
-x.x = x.x';

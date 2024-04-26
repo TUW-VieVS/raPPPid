@@ -33,7 +33,7 @@ if ~ntrc_is_valid
     % Windows: If you get the error message "You must type a file name",
     % rename example.netrc to .netrc.
     % Open .netrc and replace XXX with your login credentials
-    errordlg({'Enter login credentials into the .netrc file!', 'Check get_cddis_data.m for details.'}, 'ERROR');
+    errordlg({'Enter login credentials into the .netrc file!', 'Use ConnectCDDIS.m or check', 'get_cddis_data.m for details.'}, 'ERROR');
     return
 end
 

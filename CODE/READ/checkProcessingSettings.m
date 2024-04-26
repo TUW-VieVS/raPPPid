@@ -986,7 +986,7 @@ end
 
 % CODE MGEX PPP-AR for Galileo needs its own ANTEX file
 if GAL_on && settings.ORBCLK.bool_precise && prec_prod_CODE_MGEX && ~strcmp(settings.OTHER.antex, 'Manual choice:') && ~strcmp(settings.BIASES.phase, 'SGG FCBs')
-    msgbox({'Galileo with CODE MGEX performs better with ', 'its own ANTEX File: Please select M14.ATX!'}, windowname);
+    msgbox({'Galileo with CODE MGEX performs better with ', 'its own ANTEX File: Please select M14.ATX, M20.ATX, or I20.ATX!'}, windowname);
 end
 
 % check if RINEX files continues over day boundary
