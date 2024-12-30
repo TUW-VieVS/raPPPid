@@ -14,86 +14,88 @@ function [settings] = DownloadBiases(settings, gpsweek, dow, yyyy, mm, doy)
 %
 % Revision:
 %   2024/03/12, MFWG: download CAS biases improved according to IGSMAIL-8399
-%
+%   2024/12/02, MFWG: change to https://data.bdsmart.cn/pub/ [IGS-RTWG-359] 
+%   2024/12/10, MFWG: decompressed file name from function unzip_and_delete
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-% ||| could be solved more elegant (much code is repeated)
+% ||| could be solved more elegant (a lot of source code is repeated)
 
 bool_archive = true;        % true if archive is downloaded
-
+decompressed = {''};
 
 switch settings.BIASES.code
     case 'CAS Multi-GNSS DCBs'      % ||| implement weekly and daily
         % create folder and prepare the download
-        target = {[Path.DATA, 'BIASES/', yyyy, '/', doy '/']};
-        [~, ~] = mkdir(target{1});
-        URL_host = 'ftp.gipp.org.cn:21';
-        URL_folder = {['/product/dcb/mgex/' yyyy '/']};
+        target = [Path.DATA, 'BIASES/', yyyy, '/', doy '/'];
+        [~, ~] = mkdir(target);
+        httpserver = ['https://data.bdsmart.cn/pub/product/bias/' yyyy];
         % 'CAS1' considers the latest IGS antenna model in the DCB
         % determination for full compatibility with PPP models
-        file3 = {['CAS1OPSRAP_' yyyy doy '0000_01D_01D_DCB.BIA.gz']};   % tried first
-        file2 = {['CAS1MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz']};
-        file1 = {['CAS0OPSRAP_' yyyy doy '0000_01D_01D_DCB.BIA.gz']};
-        file0 = {['CAS0MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz']};
+        file_3 = ['CAS1OPSRAP_' yyyy doy '0000_01D_01D_DCB.BIA.gz'];   % tried first
+        file_2 = ['CAS1MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz'];
+        file_1 = ['CAS0OPSRAP_' yyyy doy '0000_01D_01D_DCB.BIA.gz'];
+        file_0 = ['CAS0MGXRAP_' yyyy doy '0000_01D_01D_DCB.BSX.gz'];
         % try different files until one is successfully downloaded
-        file = file3;
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
-        if file_status == 0
-            file = file2;
-            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+        file = file_3;                      % try first file
+        [~, decompr, ~] = fileparts(file);  % remove the zip file extension
+        if ~isfile([target file]) && ~isfile([target decompr])
+            try websave([target file], [httpserver '/' file]); end      %#ok<*TRYNC>
         end
-        if file_status == 0
-            file = file1;
-            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+        if ~isfile([target file]) && ~isfile([target decompr])
+            file = file_2;      [~, decompr, ~] = fileparts(file);
+            try websave([target file], [httpserver '/' file]); end
         end
-        if file_status == 0
-            file = file0;
-            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        if ~isfile([target file]) && ~isfile([target decompr])
+            file = file_1;      [~, decompr, ~] = fileparts(file);
+            try websave([target file], [httpserver '/' file]); end
         end
+        if ~isfile([target file]) && ~isfile([target decompr])
+            file = file_0;      [~, decompr, ~] = fileparts(file);
+            try websave([target file], [httpserver '/' file]); end
+        end       
         % unzip if download was successful
-        if file_status == 1   ||   file_status == 2
-            unzip_and_delete(file, target);
-        elseif file_status == 0
+        decompressed = unzip_and_delete({file}, {target});
+        if ~isfile([target decompr])
             errordlg('No CAS Multi-GNSS DCBs found on server. Please specify different source!', 'Error');
         end
         % save file-path
-        [~,file,~] = fileparts(file{1});   % remove the zip file extension
-        settings.BIASES.code_file = [target{1} '/' file];
+        settings.BIASES.code_file = decompressed{1};
 
     case 'CAS Multi-GNSS OSBs'       
-        target = {[Path.DATA, 'BIASES/', yyyy, '/', doy '/']};
-        [~, ~] = mkdir(target{1});
-        URL_host = 'ftp.gipp.org.cn:21';
-        URL_folder = {['/product/dcb/mgex/' yyyy '/']};
-        file3 = {['CAS1OPSRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
-        file2 = {['CAS1MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
-        file1 = {['CAS0OPSRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
-        file0 = {['CAS0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+        target = [Path.DATA, 'BIASES/', yyyy, '/', doy '/'];
+        [~, ~] = mkdir(target);
+        httpserver = ['https://data.bdsmart.cn/pub/product/bias/' yyyy];
+        file_3 = ['CAS1OPSRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz'];
+        file_2 = ['CAS1MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz'];
+        file_1 = ['CAS0OPSRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz'];
+        file_0 = ['CAS0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz'];
         % try different files until one is successfully downloaded
-        file = file3;
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
-        if file_status == 0
-            file = file2;
-            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+        file = file_3;                      % try first file
+        [~, decompr, ~] = fileparts(file);  % remove the zip file extension
+        if ~isfile([target file]) && ~isfile([target decompr])
+            try websave([target file], [httpserver '/' file]); end
         end
-        if file_status == 0
-            file = file1;
-            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+        if ~isfile([target file]) && ~isfile([target decompr])
+            file = file_2;      [~, decompr, ~] = fileparts(file);
+            try websave([target file], [httpserver '/' file]); end
         end
-        if file_status == 0
-            file = file0;
-            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        if ~isfile([target file]) && ~isfile([target decompr])
+            file = file_1;      [~, decompr, ~] = fileparts(file);
+            try websave([target file], [httpserver '/' file]); end
         end
-        % unzip
-        if file_status == 1   ||   file_status == 2
-            unzip_and_delete(file, target);
-        elseif file_status == 0
-            errordlg('No CAS Multi-GNSS OSBs found on server. Please specify different source!', 'Error');
+        if ~isfile([target file]) && ~isfile([target decompr])
+            file = file_0;      [~, decompr, ~] = fileparts(file);
+            try websave([target file], [httpserver '/' file]); end
+        end       
+        % unzip if download was successful
+        decompressed = unzip_and_delete({file}, {target});
+        if ~isfile([target decompr])
+            errordlg('No CAS Multi-GNSS DCBs found on server. Please specify different source!', 'Error');
         end
         % save file-path
-        [~,file,~] = fileparts(file{1});   % remove the zip file extension
-        settings.BIASES.code_file = [target{1} '/' file];
+        settings.BIASES.code_file = decompressed{1};
         
     case 'DLR Multi-GNSS DCBs'
         % determine the variable "quart" (also consider leapyears)
@@ -114,13 +116,12 @@ switch settings.BIASES.code
         file = {['DLR0MGXFIN_' yyyy quart '0000_03L_01D_DCB.BSX.gz']};
         % download, unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
-        if file_status == 1   ||   file_status == 2
-            unzip_and_delete(file, target);
-        elseif file_status == 0
+        if file_status == 0
             errordlg({'No DLR Multi-GNSS quarterly DCBs found on server. Please specify different source!';' ';'(DLR Multi-GNSS quarterly DCBs only become available some months in retrospect; perhaps this is the problem.)'}, 'Error');
         end
-        [~,file,~] = fileparts(file{1});   % remove the zip file extension
-        settings.BIASES.code_file = [target{1} '/' file];
+        decompressed = unzip_and_delete(file, target);
+        % save file-path
+        settings.BIASES.code_file = decompressed{1};
         
     case 'CODE DCBs (P1P2, P1C1, P2C2)'           % "old" DCBs
         % create folder and prepare download
@@ -134,13 +135,11 @@ switch settings.BIASES.code
         % download, unzip, save file-path
         for i = 1:length(files)
             file_status = ftp_download(URL_host, URL_folder{i}, files{i}, targets{i}, true);
-            if file_status == 1   ||   file_status == 2
-                unzip_and_delete(files(i), targets(i));
-            elseif file_status == 0
+            if file_status == 0
                 errordlg('No CODE DCBs found on server. Please specify different source!', 'Error');
             end
-            [~,files{i},~] = fileparts(files{i});   % remove the zip file extension
-            settings.BIASES.code_file{i} = [targets{i} '/' files{i}];
+            decompressed{i} = unzip_and_delete(files(i), targets(i));
+            settings.BIASES.code_file{i} = decompressed{i};
         end
 
     case 'WUM MGEX'
@@ -172,15 +171,12 @@ switch settings.BIASES.code
         URL_host = 'igs.ign.fr:21';
         URL_folder = {['/pub/igs/products/mgex/' gpsweek, '/']};
         file = {['GRG0MGXFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
-        file_decompr = {['GRG0MGXFIN_' yyyy doy '0000_01D_01D_OSB.BIA']};
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
-        if file_status == 1   ||   file_status == 2
-            decompressed = unzip_and_delete(file(1), target(1));
-            settings.BIASES.code_file = decompressed{1};     % save name of decompressed file
-        elseif file_status == 0
+        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true); 
+        if file_status == 0
             errordlg('No CNES MGEX Biases found on server. Please specify different source!', 'Error');
         end
-        
+        % save file-path
+        settings.BIASES.code_file = decompressed{1};
 
     case 'GFZ MGEX'
         % create folder and prepare download
@@ -193,14 +189,12 @@ switch settings.BIASES.code
             URL_folder = {['/pub/GNSS/products/mgex/' gpsweek '/']};
         end
         file = {['GBM0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
-        if file_status == 1   ||   file_status == 2
-            unzip_and_delete(file(1), target(1));
-        elseif file_status == 0
+        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true); 
+        if file_status == 0
             errordlg('No GFZ MGEX Biases found on server. Please specify different source!', 'Error');
         end
-        [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
-        settings.BIASES.code_file = [target{1} '/' file{1}];
+        decompressed = unzip_and_delete(file(1), target(1));
+        settings.BIASES.code_file = decompressed{1};
         
     case 'CODE OSBs'
         % create folder and prepare download
@@ -228,11 +222,9 @@ switch settings.BIASES.code
         if ~bool_archive        % pretend archive, otherwise code does not work
             file{1} = [file{1} '.gz'];
         end
-        if file_status == 1   ||   file_status == 2
-            unzip_and_delete(file(1), target(1));
-        end
-        [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
-        settings.BIASES.code_file = [target{1} '/' file{1}];
+        decompressed = unzip_and_delete(file(1), target(1));
+        % save file-path
+        settings.BIASES.code_file = decompressed{1};
 
     case 'CNES OSBs'
         % create folder and prepare download
@@ -243,13 +235,12 @@ switch settings.BIASES.code
         file = {['GRG0OPSFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
         % download, unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
-        if file_status == 1   ||   file_status == 2
-            unzip_and_delete(file(1), target(1));
-        elseif file_status == 0
+        if file_status == 0
             errordlg('No CNES OSBs Biases found on server. Please specify different source!', 'Error');
         end
-        [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
-        settings.BIASES.code_file = [target{1} '/' file{1}];
+        decompressed = unzip_and_delete(file(1), target(1));
+        % save file-path
+        settings.BIASES.code_file = decompressed{1};
 
     case 'CODE MGEX'
         % create folder and prepare download
@@ -264,14 +255,13 @@ switch settings.BIASES.code
         end
         % download and unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
-        if file_status == 1   ||   file_status == 2
-            unzip_and_delete(file(1), target(1));
-        elseif file_status == 0
+        if file_status == 0
             errordlg('No CODE MGEX Biases found on server. Please specify different source!', 'Error');
         end
-        [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
-        settings.BIASES.code_file = [target{1} '/' file{1}];
-
+        decompressed = unzip_and_delete(file(1), target(1));
+        % save file-path
+        settings.BIASES.code_file = decompressed{1};
+        
     case 'CNES postprocessed'
         % create folder and prepare download
         target = [Path.DATA, 'BIASES/', yyyy, '/' doy '/'];
@@ -290,8 +280,8 @@ switch settings.BIASES.code
             catch
                 error('%s%s%s\n','CNES postprocessed ',file_bia,' not found!');
             end
-            unzip_and_delete({file_bia}, {target});
-            [~,file_bia,~] = fileparts(file_bia);   % remove the zip file extension
+            decompressed = unzip_and_delete({file_bia}, {target});
+            [~,file_bia,~] = decompressed{1};   % remove the zip file extension
         end
         settings.BIASES.code_file = [target file_bia];
         % CNES postprocessed also provides a bias file
@@ -306,10 +296,33 @@ switch settings.BIASES.code
                 catch
                     error('%s%s%s\n','CNES postprocessed ',file_obx_gz,' not found!');
                 end
-                unzip_and_delete({file_obx_gz}, {target});
+                decompressed = unzip_and_delete({file_obx_gz}, {target});
             end
-            settings.ORBCLK.file_obx = [target file_obx];	
+            settings.ORBCLK.file_obx = decompressed{1};	
         end
+        
+    case 'HUST MGEX'
+        % create folder and prepare download
+        target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
+        [~, ~] = mkdir(target{1});
+        URL_host = 'ggda.ac.cn:21';
+        URL_folder = {['/pub/mgex/products/' yyyy '/']};
+        switch settings.ORBCLK.prec_prod_type
+            case 'Final'
+                file = {['HUS0MGXFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+            case 'Rapid'
+                file = {['HUS0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+            case 'Ultra-Rapid'
+                file = {['HUS0MGXULT_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+        end
+        % download, unzip, save file-path
+        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        if file_status == 0
+            errordlg('No HUST MGEX Biases found on server. Please specify different source!', 'Error');
+        end
+        decompressed = unzip_and_delete(file(1), target(1));
+        % save file-path
+        settings.BIASES.code_file = decompressed{1};
 
     case 'Correction Stream'
         % nothing to do here, biases are in correction stream file

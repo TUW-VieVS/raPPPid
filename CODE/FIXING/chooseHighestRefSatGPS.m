@@ -17,7 +17,7 @@ if settings.INPUT.use_GPS
     
     % no possible reference satellites
     if isempty(gps_prns) || all(isnan(elev_gps)) || all(cutoff(Epoch.gps))
-        Epoch = resetRefSatGPS(Epoch);
+        Epoch = resetRefSat(Epoch, 'GPS');
         return
     end    
     

@@ -10,6 +10,9 @@ function [Epoch, Adjust] = NL_fixing_2xIF(Epoch, Adjust, elevs, settings)
 % OUTPUT:
 %   Epoch         updated with (integer fixed) NL and EN Ambiguities [struct]
 %
+% Revision:
+%   2024/12/30, MFWG: switching to LAMBDA 4.0
+%
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -100,33 +103,30 @@ Q_NN_SD(rem, :) = [];   Q_NN_SD(:,rem) = [];
 
 %% Fix ambiguities with LAMBDA
 N_float = ([NL_float; EN_float]);
-if ~isempty(NL_float)
-    % fixing
-    try     % requires Matlab Statistic and Machine Learning ToolBox
-        [afixed,sqnorm,Ps,Qzhat,Z,nfixed,mu] = LAMBDA(NL_float, Q_NN_SD, 5, 'P0', DEF.AR_THRES_SUCCESS_RATE);
-    catch
-        afixed = LAMBDA(NL_float, Q_NN_SD, 4);
-    end
-    % take best solution
-    N_best = afixed(:,1);
-    % take only those ambiguities which are integer
-    bool_int = (N_best - floor(N_best) == 0);
-    N_int = NaN(numel(bool_int),1);
-    N_int(bool_int) = N_best(bool_int);
-    NL_EN(~rem) = N_int;
-    NL_EN(rem) = NaN;
-    % save NL ambiguities
-    NL = NL_EN(1:no_sats);
-    NL(refSatsIdx) = 0;
-    Epoch.NL_12(sats) = NL;
-    % save EN ambiguities
-    EN = NL_EN((no_sats+1):(2*no_sats));
-    EN(refSatsIdx) = 0;
-    Epoch.NL_23(sats) = EN;
-    
-else    % no NL and EN can be fixed
+if isempty(NL_float) || numel(NL_float) < 2
+	% NL can be fixed because not enough fixable float ambiguities
     Epoch.NL_12(sats) = NaN;
     Epoch.NL_23(sats) = NaN;
+	return
 end
+
+% integer fixing with LAMBDA 
+[afixed, sqnorm] = LAMBDA(NL_float, Q_NN_SD, 5, 3, DEF.AR_THRES_SUCCESS_RATE);
+% take best solution
+N_best = afixed(:,1);
+% take only those ambiguities which are integer
+bool_int = (N_best - floor(N_best) == 0);
+N_int = NaN(numel(bool_int),1);
+N_int(bool_int) = N_best(bool_int);
+NL_EN(~rem) = N_int;
+NL_EN(rem) = NaN;
+% save NL ambiguities
+NL = NL_EN(1:no_sats);
+NL(refSatsIdx) = 0;
+Epoch.NL_12(sats) = NL;
+% save EN ambiguities
+EN = NL_EN((no_sats+1):(2*no_sats));
+EN(refSatsIdx) = 0;
+Epoch.NL_23(sats) = EN;
 
 

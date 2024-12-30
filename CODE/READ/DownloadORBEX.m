@@ -23,6 +23,7 @@ function [settings] = DownloadORBEX(settings, gpsweek, dow, yyyy, mm, doy)
 target = {[Path.DATA, 'ORBIT/', yyyy, '/', doy]};
 [~, ~] = mkdir(target{1});
 URL_host = 'igs.ign.fr:21';            % default ftp-server
+decompressed = {''};
 
 
 %% switch source of orbits/clocks
@@ -46,6 +47,18 @@ if settings.ORBCLK.MGEX
         case 'GFZ'
             file = {['GFZ0MGXRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
             
+        case 'HUST'
+            URL_host = 'ggda.ac.cn:21';
+            URL_folders = {['/pub/mgex/products/' yyyy '/']};
+            switch settings.ORBCLK.prec_prod_type
+                case 'Final'
+                    file = {['HUS0MGXFIN_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
+                case 'Rapid'
+                    file = {['HUS0MGXRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
+                case 'Ultra-Rapid'
+                    file = {['HUS0MGXULT_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
+            end
+            
         otherwise
             errordlg('No ORBEX file for this institution', 'ORBEX Error');
             return
@@ -64,15 +77,13 @@ end
 
 [file_status] = ftp_download(URL_host, URL_folders{1}, file{1}, target{1}, true);
 % ||| if download failed, try another ftp server
-if file_status == 1   ||   file_status == 2
-    unzip_and_delete(file(1), target(1));
-elseif file_status == 0
+decompressed = unzip_and_delete(file(1), target(1));
+if file_status == 0
     errordlg(['No ORBEX file from ' settings.ORBCLK.prec_prod ' found on server. Disable ORBEX file!'], 'Error');
     return
 end
-[~,file,~] = fileparts(file{1});   % remove the zip file extension
 
 %% save file-path into settings
-settings.ORBCLK.file_obx = [target{1} '/' file];	
+settings.ORBCLK.file_obx = decompressed{1};	
 
 

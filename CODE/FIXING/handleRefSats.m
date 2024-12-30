@@ -1,4 +1,4 @@
-function Epoch = handleRefSats(Epoch, elev, settings, Adjust)
+function [Epoch, Adjust] = handleRefSats(Epoch, elev, settings, Adjust)
 % This function handles the reference satellite for a specific processing
 % epoch. If no reference satellite is chosen yet, a reference satellite is
 % chosen depending the selected option in the GUI. Otherwise, the current
@@ -7,10 +7,11 @@ function Epoch = handleRefSats(Epoch, elev, settings, Adjust)
 %
 % INPUT:
 %   Epoch       struct, epoch-specific data
-%   elev     	[°], elevation of all satellites in this epoch
+%   elev     	[�], elevation of all satellites in this epoch
 %   settings  	struct, processing settings from GUI
 % OUTPUT:
 %   Epoch       struct, updated with reference satellite and index
+%   Adjust      struct, updated
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -18,7 +19,7 @@ function Epoch = handleRefSats(Epoch, elev, settings, Adjust)
 
 %% prepare               	
 elev(Epoch.cs_found) = NaN;         % exclude satellites with cycle slip
-elev(elev == 0) = NaN;              % exclude satellites without elevation (e.g. satellite has no precise orbit or clock)
+elev(elev == 0) = NaN;              % exclude satellites with elevation = 0 (e.g., satellite has no precise orbit or clock)
 
 % extract reference satellites from last epoch
 OldRefSat_G = Epoch.refSatGPS;    % GPS
@@ -45,7 +46,7 @@ if newRefSat(1) || changeRefSat(1)
     elev_gps = elev(Epoch.gps);
     % check if any possible reference satellites for GPS
     if isempty(sats_gps) || all(isnan(elev_gps)) || all(Epoch.exclude(Epoch.gps))
-        Epoch = resetRefSatGPS(Epoch);
+        Epoch = resetRefSat(Epoch, 'GPS');
         return
     end
     % finde suitable GPS reference satellite
@@ -61,7 +62,7 @@ if newRefSat(2) || changeRefSat(2)
     elev_glo = elev(Epoch.glo);
     % check if any possible reference satellites for GLO
     if isempty(sats_glo) || all(isnan(elev_glo)) || all(Epoch.exclude(Epoch.glo))
-        Epoch = resetRefSatGLO(Epoch);
+        Epoch = resetRefSat(Epoch, 'GLO');
         return
     end
     % finde suitable GLO reference satellite
@@ -78,7 +79,7 @@ if newRefSat(3) || changeRefSat(3)
     elev_gal = elev(Epoch.gal);
     % check if any possible reference satellites for GAL
     if isempty(sats_gal) || all(isnan(elev_gal)) || all(Epoch.exclude(Epoch.gal))
-        Epoch = resetRefSatGAL(Epoch);
+        Epoch = resetRefSat(Epoch, 'GAL');
         return
     end
     % finde suitable GAL reference satellite
@@ -94,7 +95,7 @@ if newRefSat(4) || changeRefSat(4)
     elev_bds = elev(Epoch.bds);
     % check if any possible reference satellites for BDS
     if isempty(sats_bds) || all(isnan(elev_bds)) || all(Epoch.exclude(Epoch.bds))
-        Epoch = resetRefSatBDS(Epoch);
+        Epoch = resetRefSat(Epoch, 'BDS');
         return
     end
     % finde suitable BDS reference satellite
@@ -110,7 +111,7 @@ if newRefSat(5) || changeRefSat(5)
     elev_qzs = elev(Epoch.qzss);
     % check if any possible reference satellites for QZSS
     if isempty(sats_qzs) || all(isnan(elev_qzs)) || all(Epoch.exclude(Epoch.qzss))
-        Epoch = resetRefSatQZSS(Epoch);
+        Epoch = resetRefSat(Epoch, 'QZSS');
         return
     end
     % finde suitable QZSS reference satellite

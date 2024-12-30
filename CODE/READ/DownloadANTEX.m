@@ -56,6 +56,9 @@ if strcmp(settings.OTHER.antex, 'Use existing igsXX.atx') && ~exist(path_antex, 
 end
 if strcmp(settings.OTHER.antex, 'Download current igsXX.atx') || download
         delete([target_atx, file_atx]);  	% delete old igsXX.atx file to enable download of new file
-        websave([target_atx file_atx] , ['https://files.igs.org/pub/station/general/' file_atx]);
+        % atx-files are not small and server is slow -> increase timeout
+        woptions = weboptions;
+        woptions.Timeout = 60;      % use 60s (usually 5s is the default value)
+        websave([target_atx file_atx] , ['https://files.igs.org/pub/station/general/' file_atx], woptions);
 end
 

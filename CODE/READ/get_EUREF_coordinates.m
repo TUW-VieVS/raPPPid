@@ -15,6 +15,9 @@ function XYZ = get_EUREF_coordinates(stations, dates, XYZ)
 % *************************************************************************
 
 
+% ||| change to new filename!
+
+
 % necessary for single station input
 if ~iscell(stations)
     stations = {stations};      % convert stations from char-array to cell

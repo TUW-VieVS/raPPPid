@@ -87,20 +87,24 @@ if r_version == 2
             handled_sv = handled_sv + 12;
         end
     end
+    epoch_sats = deblank(epoch_sats);           % remove potential white spaces at the end
     epoch_sats = strrep(epoch_sats,' ','0');  	% replace empty spaces with zero
     % create logical vectors
     sys = epoch_sats(1:3:end);                  % get system identifier
     is_gps = (sys' == 'G');
     is_glo = (sys' == 'R');
-    is_gal = (sys' == 'E');                     % (Galileo does not exist in RINEX 2)
-    is_bds = (sys' == 'C');                     % (BeiDou does not exist in RINEX 2)
-    is_other = ~is_gps&~is_glo&~is_gal&~is_bds; % (other GNSS don´t exist in RINEX 2)
+    is_gal = (sys' == 'E');         % (Galileo does not exist in RINEX 2)
+    is_bds = (sys' == 'C');         % (BeiDou does not exist in RINEX 2)
+    is_qzss= (sys' == 'J');         % (QZSS does not exist in RINEX 2)
+    is_other = ~is_gps & ~is_glo & ...
+        ~is_gal&~is_bds&~is_qzss;   % (other GNSS don´t exist in RINEX 2)
     % get satellite numbers
     sats = [epoch_sats(2:3:end)', epoch_sats(3:3:end)'];
     sats = str2num(sats);                       % str2num is slow but exclusively works here
     sats(is_glo) = sats(is_glo) + 100;
     sats(is_gal) = sats(is_gal) + 200;
     sats(is_bds) = sats(is_bds) + 300;
+    sats(is_qzss)= sats(is_qzss)+ 400;
 
     % check for receiver clock offset is not implemented
     

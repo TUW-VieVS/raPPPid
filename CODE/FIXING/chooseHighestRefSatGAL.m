@@ -17,7 +17,7 @@ if settings.INPUT.use_GAL
     
     % no possible reference satellites
     if isempty(gal_prns) || all(isnan(elev_gal)) || all(cutoff(Epoch.gal))
-        Epoch = resetRefSatGAL(Epoch);
+        Epoch = resetRefSat(Epoch, 'GAL');
         return
     end
     

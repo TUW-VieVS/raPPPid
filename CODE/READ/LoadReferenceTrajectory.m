@@ -68,6 +68,23 @@ switch ext
                 sod_true = DATA{:,4} * 3600 + DATA{:,5}*60 + DATA{:,6};     % already GPS time
                 [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
                 
+            case '%  UTC                      latitude(deg) longitude(deg)  height(m)   Q  ns   sdn(m)   sde(m)   sdu(m)  sdne(m)  sdeu(m)  sdun(m) age(s)  ratio'
+                DATA = textscan(fid,'%f/%f/%f %f:%f:%f %f %f %f %f %f %f %f %f %f %f %f %f %f', 'HeaderLines', 0);
+                fclose(fid);
+                % handle position information
+                lat_wgs84 = DATA{:,7} / 180 * pi;   % convert [°] to [rad]
+                lon_wgs84 = DATA{:,8} / 180 * pi;   % convert [°] to [rad]
+                h_wgs84   = DATA{:,9};
+                [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
+                % handle time information
+                year = DATA{:,1}; month = DATA{:,2}; day = DATA{:,3};
+                jd = cal2jd_GT(year(1), month(1), day(1));
+                % determine leap seconds
+                leap_sec = GetLeapSec_UTC_GPS(jd);
+                % convert UTC to GPS time
+                sod_true = DATA{:,4} * 3600 + DATA{:,5}*60 + DATA{:,6} + leap_sec;
+                
+                
             otherwise
                 [pos_ref_geo, North_ref, East_ref] = LoadingFailed();
                 return

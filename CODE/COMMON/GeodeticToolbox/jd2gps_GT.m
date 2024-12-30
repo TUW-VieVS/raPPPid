@@ -27,7 +27,7 @@ if jd < 0
   return;
 end
 
-if jd == 0 || isnan(jd)
+if any(jd == 0) || any(isnan(jd))
     gpsweek = NaN;   sow = NaN;   rollover = NaN;
     return
 end

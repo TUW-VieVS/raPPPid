@@ -54,7 +54,8 @@ end
 if contains(settings.IONO.model,'Estimate')		% ionosphere is estimated
     storeData.iono_est = sparse(storeData.iono_est);
 end
-storeData.exclude = sparse(storeData.exclude);
+storeData.exclude  = sparse(storeData.cs_found);
+storeData.cs_found = sparse(storeData.exclude);
 
 % cycle slip detection
 if settings.OTHER.CS.l1c1

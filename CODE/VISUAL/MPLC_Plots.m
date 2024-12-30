@@ -22,6 +22,12 @@ function [] = MPLC_Plots(storeData, satellites, cutoff, CN0_thresh, isGPS, isGLO
 % ||| jumps during a satellite arc are not considered and jeopordize plot
 
 
+% check if plot can be created
+if ~isfield(storeData, 'mp1') || ~isfield(storeData, 'mp2')
+    fprintf('MP LC can not be plotted (storeData.mp1/.mp2 are missing).   \n');
+    return
+end
+
 % get Multipath linear combination, built in create_LC_observations.m
 mp1 = full(storeData.mp1);          % 1st frequency    
 mp2 = full(storeData.mp2);          % 2nd frequency

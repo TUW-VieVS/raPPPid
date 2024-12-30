@@ -37,7 +37,7 @@ bool_archive = true;  	% true, if archives are downloaded
 %% switch source of orbits/clocks
 switch settings.ORBCLK.prec_prod
     
-    case 'IGS'
+    case 'IGS'      % International GNSS Service (combination products)
         % http://www.igs.org/products
         switch settings.ORBCLK.prec_prod_type
             case 'Final'
@@ -112,7 +112,7 @@ switch settings.ORBCLK.prec_prod
         end
         
         
-    case 'ESA'
+    case 'ESA'      % European Space Agency
         % http://navigation-office.esa.int/GNSS_based_products.html
         if settings.ORBCLK.MGEX
             if str2double(gpsweek) >= 2238
@@ -215,7 +215,7 @@ switch settings.ORBCLK.prec_prod
         end    
         
         
-    case 'CNES'
+    case 'CNES'     % Centre national d'études spatiales
         % https://igsac-cnes.cls.fr/html/products.html
         if settings.ORBCLK.MGEX
             URL_folders = repmat({['/pub/igs/products/mgex/' gpsweek, '/']},2,1);
@@ -268,7 +268,7 @@ switch settings.ORBCLK.prec_prod
             ftp_download('ftpsedr.cls.fr:21', '/pub/igsac/', 'GRG_ELIMSAT_all.dat', [Path.DATA 'CLOCK/'], true);
         end
         
-    case 'CODE'
+    case 'CODE'     % Center of Orbit Determination Europe
         % no nice overview and no storage for (ultra) rapid products
         URL_host = 'ftp.aiub.unibe.ch:21';
        
@@ -317,7 +317,7 @@ switch settings.ORBCLK.prec_prod
         end
         
         
-    case 'GFZ'
+    case 'GFZ'      % Deutsches GeoForschungsZentrum
         % https://www.gfz-potsdam.de/en/section/space-geodetic-techniques/topics/gnss-igs-analysis-center/
         URL_host = 'ftp.gfz-potsdam.de:21';     % very different structure and naming to cddis 
         if settings.ORBCLK.MGEX
@@ -459,7 +459,7 @@ switch settings.ORBCLK.prec_prod
             errordlg(['Precise Product Type: ' settings.ORBCLK.prec_prod_type ' is not implemented.'], 'Error');
         end
         
-    case 'TUM'
+    case 'TUM'      % Technische Universität München
         if settings.ORBCLK.MGEX
             % tum has no clk-file, only sp3 (?!)
             URL_folders = repmat({['/pub/igs/products/mgex/' gpsweek, '/']},1,1);
@@ -473,7 +473,7 @@ switch settings.ORBCLK.prec_prod
             errordlg(['Precise Product Type: ' settings.ORBCLK.prec_prod_type ' is not implemented.'], 'Error');
         end
         
-    case 'WUM'
+    case 'WUM'      % Wuhan University
         if settings.ORBCLK.MGEX
             % takes forever...
             URL_host = 'igs.gnsswhu.cn:21';
@@ -500,6 +500,29 @@ switch settings.ORBCLK.prec_prod
         else
             errordlg(['Precise Product Type: ' settings.ORBCLK.prec_prod_type ' is not implemented.'], 'Error');
         end
+        
+   case 'HUST'      % Huazhong University of Science and Technology
+        if settings.ORBCLK.MGEX
+            URL_host = 'ggda.ac.cn:21';
+            URL_folders{1} = ['/pub/mgex/products/' yyyy '/'];
+            URL_folders{2} = ['/pub/mgex/products/' yyyy '/'];
+            switch settings.ORBCLK.prec_prod_type
+                case 'Final'
+                    files{1} = ['HUS0MGXFIN_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
+                    files{2} = ['HUS0MGXFIN_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
+                case 'Rapid'
+                    files{1} = ['HUS0MGXRAP_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
+                    files{2} = ['HUS0MGXRAP_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
+                case 'Ultra-Rapid'
+                    files{1} = ['HUS0MGXULT_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
+                    files{2} = ['HUS0MGXULT_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
+                otherwise
+                    errordlg(['Precise Product: "' settings.ORBCLK.prec_prod ', ' settings.ORBCLK.prec_prod_type '" is not implemented.'], 'Error');
+            end
+        else
+            errordlg(['Precise Product Type: ' settings.ORBCLK.prec_prod_type ' is not implemented.'], 'Error');
+        end    
+        
         
     otherwise
         errordlg(['Precise products from ' settings.ORBCLK.prec_prod ' are not implemented. Please specify different source!'], 'Error');

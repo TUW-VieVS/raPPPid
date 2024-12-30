@@ -15,7 +15,7 @@ function [] = settings2txt(settings, obs, input, rec_pco, rec_pcv, tStart)
 %   settings.txt is written to results folder
 % 
 % Revision:
-%   ...
+%   2024/12/16, MFWG: improved the printing of the version
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -679,11 +679,17 @@ fprintf(fileID,'  End: %s\n', datestr(clock));
 try
     [~,git_hash_str] = system('git rev-parse HEAD');
     git_hash_str = strtrim(git_hash_str);
-    fprintf(fileID,'  Version: %s', git_hash_str);
+    if contains(git_hash_str, 'not a git repository') || ...
+            contains(git_hash_str, 'not recognized as an internal or external command') || ...
+            contains(git_hash_str, 'Der Befehl "git" ist entweder falsch geschrieben')
+        fprintf(fileID,'  Git commit detection failed');
+    else
+        fprintf(fileID,'  Git commit: %s', git_hash_str);
+    end
 catch
-    fprintf(fileID,'  Version: %s', 'detection failed');
+    fprintf(fileID,'  Git commit detection failed');
 end
-
+fprintf(fileID,'  raPPPid %s', DEF.version);
 
 
 %% close file

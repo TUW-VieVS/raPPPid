@@ -13,7 +13,7 @@ function [Epoch, Adjust] = adjPrep_DCM(settings, Adjust, Epoch, prns_old, obs_in
 %
 %
 % Revision:
-%   2023/11/03, MFWG: adding QZSS, improving function in several regards
+%   ...
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -38,8 +38,6 @@ QZS = settings.INPUT.use_QZSS;
 % check for processing settings
 bool_code_phase = strcmpi(settings.PROC.method,'Code + Phase');   % true, if code+phase processing
 bool_filter = ~strcmp(FILTER.type, 'No Filter');    % true if filter is enabled
-dcb_12_on = settings.BIASES.estimate_rec_dcbs && num_freq >= 2;
-dcb_13_on = settings.BIASES.estimate_rec_dcbs && num_freq >= 3;
 
 % Get and create some variables
 NO_PARAM = Adjust.NO_PARAM;             % number of estimated parameters

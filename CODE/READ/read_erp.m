@@ -1,15 +1,19 @@
 function ERP_data = read_erp(path_erp)
+% This function reads an ERP file and saves the data into a matrix, used to
+% model the rotational deformation due to polar motion (pole tide) in
+% modelErrorSources.m
 % 
 % INPUT:
-%   ...
+%   path_erp        string, filepath to the ERP file
 % OUTPUT:
-%	...
+%	ERP_data        matrix, n x 3, mjd | X_pole | Y_pole
 %
 % Revision:
-%   ...
+%   2024/12/02, MFWG: improved funtion to read rapid IGS ERP files
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
+
 
 
 % ||| only mjd, xP, and YP are read-in
@@ -25,25 +29,29 @@ fclose(fid);
 % loop over lines
 n = numel(ERP); ii = 1;
 for i = 1:n
+    % get current line
     line = ERP{i};
     
-    if isnan(str2double(line(1:8)))
+    % check if line contains data, otherwise continue to next line
+    if isempty(line) || length(line) < 26 || ...
+            isnan(str2double(line(1:8))) || isnan(str2double(line(12:17))) || isnan(str2double(line(21:26)))
         continue
     end
     
-    mjd(ii) = str2double(line(1:8));
-    xP(ii)  = str2double(line(12:17));
-    yP(ii) = str2double(line(21:26));
+    % read data of current line
+    mjd(ii) = str2double(line(1:8));        % modified Julian day
+    xP(ii)  = str2double(line(12:17));      % X_pole  [10**-6 arcsec]
+    yP(ii)  = str2double(line(21:26));      % Y_pole  [10**-6 arcsec]
     
     ii = ii + 1;
-    
 end
 
+% convert X_pole and Y_pole from [10**-6 arcsec] to [radiant]
 as2rad_const  = (pi/180) * (1/3600);        % arcsecond to radiant
-
 xP = xP * 1e-6 * as2rad_const;              % convert to [radiant]
 yP = yP * 1e-6 * as2rad_const;
 
+% save data
 ERP_data = [mjd' xP' yP'];
 
 

@@ -11,7 +11,7 @@ function PlotObsDiff(x, DIFF, label_x, rgb, C_L, settings, observed, thresh, lev
 %   observed    matrix, number of epochs satellite is tracked
 %   thresh      threshold to plot
 %   level       degree of difference     
-%   unit        string
+%   unit        string, e.g. [m]
 %   print       boolean, true to standard-devation to command window
 %   obs         struct, observation-specific data
 % OUTPUT:
@@ -41,7 +41,7 @@ obs_prns = idx(sum(obs_bool(:,idx),1) > 0);	% prns of observed satellites
 
 % prepare printing standard deviation
 if print
-    fprintf(['\n' C_L ' time-difference, level ' str_level ', std ' unit '\n'])
+    fprintf(['\n' C_L ' time-diff., level ' str_level ', std dev ' unit ' | std dev (w/o outliers)' unit '\n'])
 end
 
 
@@ -136,11 +136,17 @@ end
 hline( thresh, 'r--')
 if print; hline(-thresh, 'r--'); end
 
-% print standard-deviation to command window
+% print standard-deviation (all observations and without outliers) to command window
 if print
-    yval = C1_diff(:,obs_prns_gnss);
-    stdev = std(yval(:), 'omitnan');
-    fprintf([sprintf('%7.3f', stdev) '\n']);
+    y_val = C1_diff(:,obs_prns_gnss);   % matrix [epochs x #observed]
+    y_val = y_val(:);                   % vector
+    % calculate and print standard deviation for all observations
+    stdev = std(y_val, 'omitnan');
+    fprintf([sprintf('%7.3f', stdev) ' |']);
+    % calculate and print standard devation excluding outliers (> 3x stdev)
+    y_val_ = rmoutliers(y_val, "mean");
+    stdev_ = std(y_val_, 'omitnan');
+    fprintf([sprintf('%7.3f', stdev_) '\n']);
 end
 
 % ylim([-3*thresh, 3*thresh])

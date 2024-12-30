@@ -73,18 +73,7 @@ if contains(settings.PROC.method,'+ Phase')
     idx = (NO_PARAM+1):(NO_PARAM+no_sats*proc_freq);
     ambig = param(idx);
     ambig = reshape(ambig, [length(ambig)/proc_freq , proc_freq, 1]);     % convert from vector to matrix
-    
-    % |||!!!
-%     if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
-%         idx_G = Epoch.refSatGPS_idx;
-%         idx_E = Epoch.refSatGAL_idx;
-%         ambig(idx_G, 1:3) = [Epoch.l1(idx_G) Epoch.l2(idx_G) Epoch.l3(idx_G)];
-%         ambig(idx_E, 1:3) = [Epoch.l1(idx_E) Epoch.l2(idx_E) Epoch.l3(idx_E)];
-%     
-%     end
-    
 
-    
     phase_model = model.rho...                            	% theoretical range
         - Const.C * model.dT_sat_rel...                    	% satellite and receiver clock
         + model.dt_rx_clock - model.dcbs ...                % receiver clock and DCBs

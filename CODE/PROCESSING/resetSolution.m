@@ -80,9 +80,8 @@ if resetnow
         Adjust.fixed = false;
         Adjust.fixed_reset_epochs = [Adjust.fixed_reset_epochs, q];
         Adjust.reset_time = Epoch.gps_time;
-        % reset reference satellites GPS & Galileo and fixed EW/WL/NL
-        Epoch = resetRefSatGPS(Epoch);
-        Epoch = resetRefSatGAL(Epoch);
+        % reset reference satellites and fixed EW/WL/NL ambiguities
+        Epoch = resetRefSat(Epoch, '');
         % restart fixing in [GUI-definded] epochs
         settings.AMBFIX.start_fixing(end+1, :) = ...    % -1 as we are already in epoch where reset is happening
             [q+settings.AMBFIX.start_WL-1, q+settings.AMBFIX.start_NL-1];   

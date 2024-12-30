@@ -66,7 +66,7 @@ settings.INPUT.use_GNSS = settings.INPUT.use_GPS + settings.INPUT.use_GLO + sett
 
 % check which biases are applied
 bool_sinex = strcmp(settings.BIASES.phase(1:3), 'WHU') || ...
-    any(strcmp(settings.BIASES.code, {'CAS Multi-GNSS DCBs','CAS Multi-GNSS OSBs','DLR Multi-GNSS DCBs','CODE OSBs','CNES OSBs','CODE MGEX','WUM MGEX','CNES MGEX','GFZ MGEX','CNES postprocessed'}));
+    any(strcmp(settings.BIASES.code, {'CAS Multi-GNSS DCBs','CAS Multi-GNSS OSBs','DLR Multi-GNSS DCBs','CODE OSBs','CNES OSBs','CODE MGEX','WUM MGEX','CNES MGEX','GFZ MGEX','HUST MGEX','CNES postprocessed'}));
 bool_manual_sinex = strcmp(settings.BIASES.code, 'manually') && settings.BIASES.code_manually_Sinex_bool;
 bool_CODE_dcb = strcmp(settings.BIASES.code, 'CODE DCBs (P1P2, P1C1, P2C2)') || ... 
     (strcmp(settings.BIASES.code, 'manually') && settings.BIASES.code_manually_DCBs_bool);
@@ -164,7 +164,7 @@ if bool_print
     fprintf('%s',estr);
     l_estr = length(estr);
     if ishandle(WBAR)
-        WBAR.Name = ['Processing ' obs.stationname sprintf(' %04.0f', obs.startdate(1)) sprintf('/%03.0f',obs.doy)];
+        WBAR.Name = ['Processing ' obs.stationname sprintf(' %04.0f', obs.startdate(1)) sprintf('/%03.0f',floor(obs.doy))];
     end
 end
 
@@ -190,7 +190,7 @@ for q = q_range         % loop over epochs
             q = q - 1;          %#ok<FXSET>
             Epoch.q = q;
             errordlg({['Epoch: ' sprintf(' %.0f',q)], 'End of Observation File reached!'}, ...
-                [obs.stationname sprintf(' %04.0f', obs.startdate(1)) sprintf('/%03.0f',obs.doy)]);
+                [obs.stationname sprintf(' %04.0f', obs.startdate(1)) sprintf('/%03.0f',floor(obs.doy))]);
             break;
         end
     end

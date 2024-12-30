@@ -187,6 +187,7 @@ storeData.param     = zeros(tot_eps, Adjust.NO_PARAM);
 storeData.param_sigma = cell(tot_eps,1);    % cell as covariance matrix of parameters changes size over time
 storeData.param_var = zeros(tot_eps,Adjust.NO_PARAM);
 storeData.exclude = zeros(tot_eps,nnn);   	% boolean for sat under cutoff angle, 1 = under cutoff
+storeData.cs_found = zeros(tot_eps,nnn);    % boolean, true = phase observation excluded
 % DOPs
 storeData.PDOP = zeros(tot_eps,1);
 storeData.HDOP = zeros(tot_eps,1);

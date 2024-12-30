@@ -29,7 +29,6 @@ Epoch.phase = [];
 Adjust.float = false;
 Adjust.fixed = false;
 if ~Adjust.float 
-    % reset reference satellites GPS & Galileo and fixed EW/WL/NL
-    Epoch = resetRefSatGPS(Epoch);
-    Epoch = resetRefSatGAL(Epoch);
+    % reset reference satellites and fixed EW/WL/NL ambiguities
+    Epoch = resetRefSat(Epoch, '');
 end

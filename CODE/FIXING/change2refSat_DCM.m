@@ -56,9 +56,9 @@ if settings.INPUT.use_GPS && Epoch.refSatGPS ~= 0
         [N, N_pred, Q_NN, Q_NN_pred] = recalc(N, N_pred, Q_NN, Q_NN_pred, Epoch.refSatGPS_idx, isGPS, isGPS_(:), no_sats);
         if bool_print; fprintf('\tChange of Reference Satellite GPS: %03d                           \n', Epoch.refSatGPS); end
     elseif newRefSat(1)
-        % set everything to zero (just to be on the safe side)
-        [N, N_pred, Q_NN, Q_NN_pred] = set_all_zero(N, N_pred, Q_NN, Q_NN_pred, isGPS, isGPS_(:));        
-        if bool_print; fprintf('\tNew Reference Satellite GPS: %03d                 \n', Epoch.refSatGPS); end
+%         % reset everything (just to be on the safe side)
+%         [N, N_pred, Q_NN, Q_NN_pred] = set_all_zero(N, N_pred, Q_NN, Q_NN_pred, isGPS, isGPS_(:), settings.ADJ.filter.var_amb);        
+%         if bool_print; fprintf('\tNew Reference Satellite GPS: %03d                 \n', Epoch.refSatGPS); end
     end
 end
 
@@ -74,9 +74,9 @@ if settings.INPUT.use_GLO && Epoch.refSatGLO ~= 0
         [N, N_pred, Q_NN, Q_NN_pred] = recalc(N, N_pred, Q_NN, Q_NN_pred, Epoch.refSatGLO_idx, isGLO, isGLO_(:), no_sats);
         if bool_print; fprintf('\tChange of Reference Satellite GLONASS: %03d                           \n', Epoch.refSatGLO); end
     elseif newRefSat(1)
-        % set everything to zero (just to be on the safe side)
-        [N, N_pred, Q_NN, Q_NN_pred] = set_all_zero(N, N_pred, Q_NN, Q_NN_pred, isGLO, isGLO_(:));        
-        if bool_print; fprintf('\tNew Reference Satellite GLONASS: %03d                 \n', Epoch.refSatGLO); end
+%         % reset everything(just to be on the safe side)
+%         [N, N_pred, Q_NN, Q_NN_pred] = set_all_zero(N, N_pred, Q_NN, Q_NN_pred, isGLO, isGLO_(:), settings.ADJ.filter.var_amb);          
+%         if bool_print; fprintf('\tNew Reference Satellite GLONASS: %03d                 \n', Epoch.refSatGLO); end
     end
 end
 
@@ -92,9 +92,9 @@ if settings.INPUT.use_GAL && Epoch.refSatGAL ~= 0
         [N, N_pred, Q_NN, Q_NN_pred] = recalc(N, N_pred, Q_NN, Q_NN_pred, Epoch.refSatGAL_idx, isGAL, isGAL_(:), no_sats);
         if bool_print; fprintf('\tChange of Reference Satellite Galileo: %03d                           \n', Epoch.refSatGAL); end
     elseif newRefSat(1)
-        % set everything to zero (just to be on the safe side)
-        [N, N_pred, Q_NN, Q_NN_pred] = set_all_zero(N, N_pred, Q_NN, Q_NN_pred, isGAL, isGAL_(:));        
-        if bool_print; fprintf('\tNew Reference Satellite Galileo: %03d                 \n', Epoch.refSatGAL); end
+%         % reset everything (just to be on the safe side)
+%         [N, N_pred, Q_NN, Q_NN_pred] = set_all_zero(N, N_pred, Q_NN, Q_NN_pred, isGAL, isGAL_(:), settings.ADJ.filter.var_amb);         
+%         if bool_print; fprintf('\tNew Reference Satellite Galileo: %03d                 \n', Epoch.refSatGAL); end
     end
 end
 
@@ -110,9 +110,9 @@ if settings.INPUT.use_BDS && Epoch.refSatBDS ~= 0
         [N, N_pred, Q_NN, Q_NN_pred] = recalc(N, N_pred, Q_NN, Q_NN_pred, Epoch.refSatBDS_idx, isBDS, isBDS_(:), no_sats);
         if bool_print; fprintf('\tChange of Reference Satellite BeiDou: %03d                           \n', Epoch.refSatBDS); end
     elseif newRefSat(1)
-        % set everything to zero (just to be on the safe side)
-        [N, N_pred, Q_NN, Q_NN_pred] = set_all_zero(N, N_pred, Q_NN, Q_NN_pred, isBDS, isBDS_(:));        
-        if bool_print; fprintf('\tNew Reference Satellite BeiDou: %03d                 \n', Epoch.refSatBDS); end
+%         % reset everything (just to be on the safe side)
+%         [N, N_pred, Q_NN, Q_NN_pred] = set_all_zero(N, N_pred, Q_NN, Q_NN_pred, isBDS, isBDS_(:), settings.ADJ.filter.var_amb);        
+%         if bool_print; fprintf('\tNew Reference Satellite BeiDou: %03d                 \n', Epoch.refSatBDS); end
     end
 end
 
@@ -128,9 +128,9 @@ if settings.INPUT.use_QZSS && Epoch.refSatQZS ~= 0
         [N, N_pred, Q_NN, Q_NN_pred] = recalc(N, N_pred, Q_NN, Q_NN_pred, Epoch.refSatQZS_idx, isQZS, isQZS_(:), no_sats);
         if bool_print; fprintf('\tChange of Reference Satellite QZSS: %03d                           \n', Epoch.refSatQZS); end
     elseif newRefSat(1)
-        % set everything to zero (just to be on the safe side)
-        [N, N_pred, Q_NN, Q_NN_pred] = set_all_zero(N, N_pred, Q_NN, Q_NN_pred, isQZS, isQZS_(:));        
-        if bool_print; fprintf('\tNew Reference Satellite QZSS: %03d                 \n', Epoch.refSatQZS); end
+%         % reset everything (just to be on the safe side)
+%         [N, N_pred, Q_NN, Q_NN_pred] = set_all_zero(N, N_pred, Q_NN, Q_NN_pred, isQZS, isQZS_(:), settings.ADJ.filter.var_amb);        
+%         if bool_print; fprintf('\tNew Reference Satellite QZSS: %03d                 \n', Epoch.refSatQZS); end
     end
 end
 
@@ -143,8 +143,8 @@ Adjust.param(idx_N) = N(:);
 Adjust.param_pred(idx_N) = N_pred(:);
 
 % save updated covariance matrices
-Adjust.param_sigma = Q_NN;
-Adjust.param_sigma_pred = Q_NN_pred;
+Adjust.param_sigma(idx_N, idx_N) = Q_NN;
+Adjust.param_sigma_pred(idx_N, idx_N) = Q_NN_pred;
 Adjust.P_pred = inv(Adjust.param_sigma_pred);
 
 
@@ -178,9 +178,10 @@ Q_NN_pred_ = C*Q_NN_pred*C';
 
 
 
-function [N, N_pred, NN, NN_pred] = set_all_zero(N, N_pred, NN, NN_pred, gnss, gnss_)
+function [N, N_pred, NN, NN_pred] = set_all_zero(N, N_pred, NN, NN_pred, gnss, gnss_, var)
 % set all ambiguities and (co)variances to zero
-N(gnss, :) = 0;
-N_pred(gnss, :) = 0;
-NN(gnss_, gnss_) = 0;
-NN_pred(gnss_, gnss_) = 0;
+N(gnss, :) = 0;                 % ambiguities
+N_pred(gnss, :) = 0;         	% predicted ambiguities
+NN = diag(size(NN));            % covariance matrix
+NN_pred = diag(size(NN_pred)); 	% predicted covariance matrix
+

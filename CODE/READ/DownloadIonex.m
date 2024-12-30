@@ -12,7 +12,7 @@ function [settings] = DownloadIonex(settings, gpsweek, dow, yyyy, mm, doy)
 %	settings        updated
 %
 % Revision:
-%   ...
+%   2024/12/02, MFWG: CAS download, https://data.bdsmart.cn/pub/ [IGS-RTWG-359] 
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -28,24 +28,32 @@ switch settings.IONO.file_source
         URL_folder_2 = {['/pub/igs/products/ionosphere/', yyyy, '/', doy, '/']};
         switch settings.IONO.type_ionex
             case 'final'
-                file = {['igsg', doy, '0.', yyyy(3:4), 'i.Z']};
+                file   = {['IGS0OPSFIN_' yyyy doy '0000_01D_02H_GIM.INX.gz']};
+                file_2 = {['igsg' doy '0.' yyyy(3:4) 'i.Z']};
             case 'rapid'
-                file = {['igrg', doy, '0.', yyyy(3:4), 'i.Z']};
+                file   = {['IGS0OPSRAP_' yyyy doy '0000_01D_02H_GIM.INX.gz']};
+                file_2 = {['igrg' doy '0.' yyyy(3:4) 'i.Z']};
             otherwise
                 errordlg(['Selected Ionex-Type: "' settings.IONO.type_ionex '" not found! "Final" is tried.'], 'Error');
-                file = {['igsg', doy, '0.', yyyy(3:4), 'i.Z']};
+                file   = {['IGS0OPSFIN_' yyyy doy '0000_01D_02H_GIM.INX.gz']};
+                file_2 = {['igsg' doy '0.' yyyy(3:4) 'i.Z']};
         end
         % download, unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
-        if file_status == 1   ||   file_status == 2
-            unzip_and_delete(file, target);
-        elseif file_status == 0     % download from GSSC ESA failed, try IGS IGN
+        if file_status == 0     % download from GSSC ESA failed, try IGS IGN
             file_status = ftp_download(URL_host_2, URL_folder_2{1}, file{1}, target{1}, true);
-            if file_status == 1   ||   file_status == 2
-                unzip_and_delete(file, target);
-            elseif file_status == 0
-                errordlg(['No Ionex file from ' settings.IONO.file_source ' found on server. Please specify different source!'], 'Error');
-            end
+        end
+        if file_status == 0     % try GSSC ESA with old filename
+            file_status = ftp_download(URL_host, URL_folder{1}, file_2{1}, target{1}, false);
+        end
+        if file_status == 0     % try IGS IGN with old filename
+            file_status = ftp_download(URL_host_2, URL_folder_2{1}, file_2{1}, target{1}, true);
+        end
+        % decompress if download was successful or file is existing
+        if file_status == 1 || file_status == 2
+            unzip_and_delete(file, target);
+        elseif file_status == 0
+            errordlg(['No Ionex file from ' settings.IONO.file_source ' found on server. Please specify different source!'], 'Error');
         end
         [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
         
@@ -153,30 +161,32 @@ switch settings.IONO.file_source
         end
         
     case 'CAS'
-        URL_host = 'igs.ign.fr:21';
-        URL_folder = {['/pub/igs/products/ionosphere/', yyyy, '/', doy, '/']};
-        URL_host_2 = 'gssc.esa.int:21';
-        URL_folder_2 = {['/gnss/products/ionex/', yyyy, '/', doy, '/']};
+        targeti = target{1};
+        % download server according to [IGS-RTWG-359]
+        httpserver = ['https://data.bdsmart.cn/pub/product/iono/ionex/' yyyy '/' doy '/'];  
+        % IONEX file depending on chosen product type
         switch settings.IONO.type_ionex
             case 'final'
-                file = {['casg', doy, '0.', yyyy(3:4), 'i.Z']};
+                file = ['CAS0OPSFIN_' yyyy doy, '0000_01D_30M_GIM.INX.gz'];
             case 'rapid'
-                file = {['carg', doy, '0.', yyyy(3:4), 'i.Z']};
+                file = ['CAS0OPSRAP_' yyyy doy, '0000_01D_30M_GIM.INX.gz'];
             otherwise
                 errordlg(['Selected Ionex-Type: "' settings.IONO.type_ionex '" not found! "Final" is tried.'], 'Error');
-                file = {['casg', doy, '0.', yyyy(3:4), 'i.Z']};
+                file = ['CAS0OPSFIN_' yyyy doy, '0000_01D_30M_GIM.INX.gz'];
         end
-        % download, unzip, save file-path
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
-        if file_status == 0
-            file_status = ftp_download(URL_host_2, URL_folder_2{1}, file{1}, target{1}, true);
+        [~, decompr, ~] = fileparts(file);      % name of decompressed file
+        % try to download
+        if ~isfile([targeti file]) && ~isfile([targeti decompr])
+            try websave([targeti file], [httpserver '/' file]); end
         end
-        if file_status == 1   ||   file_status == 2
-            unzip_and_delete(file, target);
-        elseif file_status == 0
+        % unzip if download was successful
+        if isfile([targeti file])
+            unzip_and_delete({file}, {targeti});
+        elseif ~isfile([targeti decompr])
             errordlg(['No Ionex file from ' settings.IONO.file_source ' found on server. Please specify different source!'], 'Error');
         end
-        [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
+        % save filename as cell
+        file = {decompr};
         
     case 'JPL'
         URL_host = 'igs.ign.fr:21';
@@ -185,9 +195,11 @@ switch settings.IONO.file_source
         URL_folder_2 = {['/gnss/products/ionex/', yyyy, '/', doy, '/']};
         switch settings.IONO.type_ionex
             case 'final'
-                file = {['jplg', doy, '0.', yyyy(3:4), 'i.Z']};
+                file   = {['jplg', doy, '0.', yyyy(3:4), 'i.Z']};
+                file_2 = {['JPL0OPSFIN_' yyyy doy '0000_01D_02H_GIM.INX.gz']};
             case 'rapid'
-                file = {['jprg', doy, '0.', yyyy(3:4), 'i.Z']};
+                file   = {['jprg', doy, '0.', yyyy(3:4), 'i.Z']};
+                file_2 = {['JPL0OPSRAP_' yyyy doy '0000_01D_02H_GIM.INX.gz']};
             otherwise
                 errordlg(['Selected Ionex-Type: "' settings.IONO.type_ionex '" not found! "Final" is tried.'], 'Error');
                 file = {['jplg', doy, '0.', yyyy(3:4), 'i.Z']};
@@ -196,6 +208,12 @@ switch settings.IONO.file_source
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
         if file_status == 0
             file_status = ftp_download(URL_host_2, URL_folder_2{1}, file{1}, target{1}, true);
+        end
+        if file_status == 0
+            file_status = ftp_download(URL_host, URL_folder{1}, file_2{1}, target{1}, false);
+        end
+        if file_status == 0
+            file_status = ftp_download(URL_host_2, URL_folder_2{1}, file_2{1}, target{1}, true);
         end
         if file_status == 1   ||   file_status == 2
             unzip_and_delete(file, target);

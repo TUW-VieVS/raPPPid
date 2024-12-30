@@ -15,6 +15,9 @@ function [Epoch, Adjust] = ...
 %	Adjust          adjustment data and matrices for current epoch [struct]
 %	Epoch           epoch-specific data for current epoch [struct]
 %
+% Revision:
+%   2024/12/30, MFWG: switching to LAMBDA 4.0
+%
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -167,11 +170,7 @@ if proc_frqs > 1
     end
     
     % fix ambiguities on 1st frequency with LAMBDA
-    try     % requires Matlab Statistic and Machine Learning ToolBox
-        [N1_SD_sub_fixed, sqnorm, Ps, Qz, Z, nfix] = LAMBDA(N1_cy_SD_sub, Q_NN_1_SD_sub, 5, 'P0', DEF.AR_THRES_SUCCESS_RATE);
-    catch
-        N1_SD_sub_fixed = LAMBDA(N1_cy_SD_sub, Q_NN_1_SD_sub, 4);
-    end
+    [N1_SD_sub_fixed, sqnorm] = LAMBDA(N1_cy_SD_sub, Q_NN_1_SD_sub, 5, 3, DEF.AR_THRES_SUCCESS_RATE);
     % get best ambiguity set and keep only integer fixes
     N1_SD_fix_sub = N1_SD_sub_fixed(:,1);
     bool_int = (N1_SD_fix_sub - floor(N1_SD_fix_sub)) == 0;
@@ -182,7 +181,7 @@ if proc_frqs > 1
     N1_SD_fix(~fixit) = NaN;
 
 %     % fix ambiguities on 2nd frequency with LAMBDA
-%     [N2_SD_sub_fixed, sqnorm, Ps, Qz, Z, nfix] = LAMBDA(N2_cy_SD_sub, Q_NN_2_SD_sub, 5, 'P0', 0.99);
+%     [N2_SD_sub_fixed, sqnorm] = LAMBDA(N2_cy_SD_sub, Q_NN_2_SD_sub, 5, 3, 0.99);
 %     % get best ambiguity set and keep only integer fixes
 %     N2_SD_fix_sub = N2_SD_sub_fixed(:,1);
 %     bool_int = (N2_SD_fix_sub - floor(N2_SD_fix_sub)) == 0;
@@ -264,7 +263,7 @@ else
     end
     
     % fix ambiguities on 1st frequency with LAMBDA
-    [N1_SD_sub_fixed, sqnorm, Ps, Qz, Z, nfix] = LAMBDA(N1_cy_SD_sub, Q_NN_1_SD_sub, 1, 'P0', 0.99);
+    [N1_SD_sub_fixed, sqnorm] = LAMBDA(N1_cy_SD_sub, Q_NN_1_SD_sub, 1, 3, 0.99);
     % get best ambiguity set and keep only integer fixes
     N1_SD_fix_sub = N1_SD_sub_fixed(:,1);
     bool_int = (N1_SD_fix_sub - floor(N1_SD_fix_sub)) == 0;

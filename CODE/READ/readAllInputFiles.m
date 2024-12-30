@@ -314,10 +314,13 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmpi
             errordlg('Check Auto-Detection of IONEX-File!', 'No File found');
         end
     end    
-    if strcmpi(settings.IONO.source,'IONEX File')   % Ionex-File
-        input.IONO.ionex = read_ionex_TUW(path_ionex);
-    elseif strcmpi(settings.IONO.source,'CODE Spherical Harmonics')   % CODE ion file
-        input.IONO.ion = read_ion(settings.IONO.file_ion);
+    switch settings.IONO.source
+        case 'IONEX File'               % Ionex-File
+            input.IONO.ionex = read_ionex_TUW(path_ionex);
+        case 'CODE Spherical Harmonics' % CODE ion file
+            input.IONO.ion = read_ion(settings.IONO.file_ion);
+        case 'TOBS File'                % TOBS file (ATom software)
+            input.IONO.TOBS_STEC = read_TOBS('..\DATA\IONO\MyTobsFile.TOBS', obs.leap_sec, obs.stationname, obs.startdate_jd);            
     end
     settings.IONO.file_ionex = path_ionex;
 end
@@ -362,7 +365,7 @@ end
 %   - manually selected SINEX-Bias-File for code biases
 %   - CNES Archive for code and phase biases
 bool_sinex = any(strcmp(settings.BIASES.code, ...
-    {'CAS Multi-GNSS DCBs','CAS Multi-GNSS OSBs','DLR Multi-GNSS DCBs','CODE OSBs','CNES OSBs','CODE MGEX','WUM MGEX','CNES MGEX','GFZ MGEX','CNES postprocessed'}));
+    {'CAS Multi-GNSS DCBs','CAS Multi-GNSS OSBs','DLR Multi-GNSS DCBs','CODE OSBs','CNES OSBs','CODE MGEX','WUM MGEX','CNES MGEX','GFZ MGEX','HUST MGEX','CNES postprocessed'}));
 bool_manually_sinex = strcmp(settings.BIASES.code, 'manually') && settings.BIASES.code_manually_Sinex_bool;
 bool_CNES_archive_biases = strcmp(settings.ORBCLK.CorrectionStream, 'CNES Archive') && (settings.BIASES.code_corr2brdc_bool || settings.BIASES.phase_corr2brdc_bool);
 settings.AMBFIX.APC_MODEL = false;

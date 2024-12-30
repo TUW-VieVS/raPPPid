@@ -56,7 +56,7 @@ for i = 1:no_files
     
     % update waitbar
     if ishandle(WBAR)
-        station_date = [obs.stationname, ' ', sprintf('%4.0f',obs.startdate(1)), '/', sprintf('%03.0f',obs.doy)];
+        station_date = [obs.stationname, ' ', sprintf('%4.0f',obs.startdate(1)), '/', sprintf('%03.0f',floor(obs.doy))];
         mess1 = ['Current File: ' station_date];
         progress = i/no_files;      % 1/100 [%]
         mess2 = sprintf('%02.2f%s', progress*100, '% of data stacking are finished.');

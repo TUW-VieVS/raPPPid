@@ -156,7 +156,7 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
             set(handles.popupmenu_gal_1,                     'Enable', 'Off');
             set(handles.popupmenu_gal_2,                     'Enable', 'Off');
             set(handles.popupmenu_gal_3,                     'Enable', 'Off');
-            set(handles.edit_gal_rank,                       'Enable', 'Off');
+                set(handles.edit_gal_rank,                       'Enable', 'Off');
             handles.edit_filter_galileo_offset_sigma0.Enable = 'Off';
             handles.edit_filter_galileo_offset_Q.Enable = 'Off';
             handles.popupmenu_filter_galileo_offset_dynmodel.Enable = 'Off';

@@ -127,10 +127,10 @@ for i_sat = 1:num_sat
     %% Preparations
     prn = Epoch.sats(i_sat);        % [1-99] GPS, [101-199] GLO, [201-250] GAL, [301-399] BDS, [401-410] QZSS
     sv = mod(prn,100);
-    isGLO  = Epoch.glo(i_sat);   	% is current satellite a glonass sat.?
-    isGPS  = Epoch.gps(i_sat);      % is current satellite a gps sat.?
-    isGAL  = Epoch.gal(i_sat);      % is current satellite a galileo sat.?
-    isBDS  = Epoch.bds(i_sat);      % is current satellite a beidou sat.?
+    isGLO  = Epoch.glo(i_sat);   	% is current satellite a GLONASS sat.?
+    isGPS  = Epoch.gps(i_sat);      % is current satellite a GPS sat.?
+    isGAL  = Epoch.gal(i_sat);      % is current satellite a Galileo sat.?
+    isBDS  = Epoch.bds(i_sat);      % is current satellite a BeiDou sat.?
     isQZSS = Epoch.qzss(i_sat);     % is current satellite a QZSS sat.?
     f1 = Epoch.f1(i_sat);   f2 = Epoch.f2(i_sat);   f3 = Epoch.f3(i_sat);
     if strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
@@ -165,40 +165,40 @@ for i_sat = 1:num_sat
         PCV_rec = input.OTHER.PCV.rec_GPS;      % PCV receiver
         PCV_sat = input.OTHER.PCV.sat_GPS(:,sv);% PCV satellite
         % PCO satellite
-        offset_LL = input.OTHER.PCO.sat_GPS(sv, 2:4, 1:5);
-        offset_LL = reshape(offset_LL,3,5,1);   % each column contains another frequency
+        offset_LL = input.OTHER.PCO.sat_GPS(sv, 2:4, 1:6);
+        offset_LL = reshape(offset_LL,3,6,1);   % each column contains another frequency
     elseif isGLO
         j = idx_frqs_glo;
         PCO_rec = input.OTHER.PCO.rec_GLO;
         PCV_rec = input.OTHER.PCV.rec_GLO;
         PCV_sat = input.OTHER.PCV.sat_GLO(:,sv);
         % PCO satellite
-        offset_LL = input.OTHER.PCO.sat_GLO(sv, 2:4, 1:5);
-        offset_LL = reshape(offset_LL,3,5,1);
+        offset_LL = input.OTHER.PCO.sat_GLO(sv, 2:4, 1:6);
+        offset_LL = reshape(offset_LL,3,6,1);
     elseif isGAL
         j = idx_frqs_gal;
         PCO_rec = input.OTHER.PCO.rec_GAL;
         PCV_rec = input.OTHER.PCV.rec_GAL;
         PCV_sat = input.OTHER.PCV.sat_GAL(:,sv);
         % PCO satellite
-        offset_LL = input.OTHER.PCO.sat_GAL(sv, 2:4, 1:5);
-        offset_LL = reshape(offset_LL,3,5,1);
+        offset_LL = input.OTHER.PCO.sat_GAL(sv, 2:4, 1:6);
+        offset_LL = reshape(offset_LL,3,6,1);
     elseif isBDS
         j = idx_frqs_bds;
         PCO_rec = input.OTHER.PCO.rec_BDS;
         PCV_rec = input.OTHER.PCV.rec_BDS;
         PCV_sat = input.OTHER.PCV.sat_BDS(:,sv);
         % PCO satellite
-        offset_LL = input.OTHER.PCO.sat_BDS(sv, 2:4, 1:5);
-        offset_LL = reshape(offset_LL,3,5,1);
+        offset_LL = input.OTHER.PCO.sat_BDS(sv, 2:4, 1:6);
+        offset_LL = reshape(offset_LL,3,6,1);
     elseif isQZSS
         j = idx_frqs_qzss;
         PCO_rec = input.OTHER.PCO.rec_QZSS;
         PCV_rec = input.OTHER.PCV.rec_QZSS;
         PCV_sat = input.OTHER.PCV.sat_QZSS(:,sv);
         % PCO satellite
-        offset_LL = input.OTHER.PCO.sat_QZSS(sv, 2:4, 1:5);
-        offset_LL = reshape(offset_LL,3,5,1);
+        offset_LL = input.OTHER.PCO.sat_QZSS(sv, 2:4, 1:6);
+        offset_LL = reshape(offset_LL,3,6,1);
     end       
         
     
@@ -510,16 +510,17 @@ for i_sat = 1:num_sat
                 iono(1) = mappingf * 40.3e16/f1^2* vtec;      % delta_iono [m]
                 iono(2) = mappingf * 40.3e16/f2^2* vtec;
                 iono(3) = mappingf * 40.3e16/f3^2* vtec;
+            
             case 'Klobuchar model'
                 iono(1) = iono_klobuchar(pos_WGS84.lat*(180/pi), pos_WGS84.lon*(180/pi), az, elev, Ttr, input.IONO.klob_coeff);
                 iono(2) = iono(1) * ( f1.^2 ./ f2.^2 );     % convert Klobuchar correction from L1 to L2
                 iono(3) = iono(1) * ( f1.^2 ./ f3.^2 );     % convert Klobuchar correction from L2 to L3
+            
             case 'NeQuick model'
                 stec = eval_NeQuick(input, obs.startdate(2), Epoch.gps_time, pos_WGS84, X_rot, input.IONO.nequ_coeff);
                 iono(1) = 40.3/f1^2 * stec;      % delta_iono [m]
                 iono(2) = 40.3/f2^2 * stec;
                 iono(3) = 40.3/f3^2 * stec;
-                
 %                 STEC = NTCM_Galileo(pos_WGS84, el, obs.doy, Ttr, input.nequ_coeff);
 %                 iono(1) = 40.3e16/f1^2 * STEC;      % delta_iono [m]
 %                 iono(2) = 40.3e16/f2^2 * STEC;
@@ -530,6 +531,7 @@ for i_sat = 1:num_sat
                 iono(1) = 40.3/f1^2 * stec;
                 iono(2) = 40.3/f2^2 * stec;
                 iono(3) = 40.3/f3^2 * stec;
+            
             case 'VTEC from Correction Stream'
                 dt_vtec = abs(input.ORBCLK.corr2brdc_vtec.t-Ttr);
                 idx_vtec = find(dt_vtec==min(dt_vtec));         % find nearest vtec correction in stream data
@@ -539,9 +541,20 @@ for i_sat = 1:num_sat
                 iono(1) = 40.3e16/f1^2 * stec;
                 iono(2) = 40.3e16/f2^2 * stec;
                 iono(3) = 40.3e16/f3^2 * stec;
-            % otherwise is handled before switch
+            
+            case 'TOBS File'
+                % get data for current satellite
+                TOBS = input.IONO.TOBS_STEC(input.IONO.TOBS_STEC(:,2) == prn, :);
+                % calculate time difference
+                dt_TOBS = abs(TOBS(:,1) - mod(Epoch.gps_time, 86400));
+                % find temporally nearest STEC for current satellite
+                stec = TOBS(dt_TOBS == min(dt_TOBS),3);
+                % calculate ionospheric delay from STEC
+                iono(1) = 40.3e16/f1^2 * stec; 
+                iono(2) = 40.3e16/f2^2 * stec;
+                iono(3) = 40.3e16/f3^2 * stec;
+                
         end
-        
     end
     
     

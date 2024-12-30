@@ -3,9 +3,9 @@ function input = readAntex(input, settings, jd_start, antenna_type)
 % Offsets (PCO) and satellite and receiver Phase Center Variations (PCV)
 % into an internal format.
 % Format-details: 
-% https://files.igs.org/pub/station/general/antenna_README.pdf
+%   https://files.igs.org/pub/station/general/antenna_README.pdf
 % latest atx-Files: 
-% https://files.igs.org/pub/station/general/
+%   https://files.igs.org/pub/station/general/
 %
 % INPUT:
 %   input           struct, containing all input data for processing

@@ -17,7 +17,7 @@ if settings.INPUT.use_BDS
     
     % no possible reference satellites
     if isempty(bds_prns) || all(isnan(elev_bds)) || all(cutoff(Epoch.bds))
-        Epoch = resetRefSatBDS(Epoch);
+        Epoch = resetRefSat(Epoch, 'BDS');
         return
     end
     

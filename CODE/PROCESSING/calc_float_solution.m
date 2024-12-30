@@ -88,7 +88,7 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
             if ~strcmp(settings.IONO.model, 'Estimate, decoupled clock')
                 Adjust = Designmatrix_ZD(Adjust, Epoch, model, settings);
             else
-                Epoch = handleRefSats(Epoch, model.el, settings, Adjust);
+                [Epoch, Adjust] = handleRefSats(Epoch, model.el, settings, Adjust);
                 Adjust = Designmatrix_DCM(Adjust, Epoch, model, settings);
             end
         case {'Code Only', 'Code (Doppler Smoothing)', 'Code (Phase Smoothing)'}

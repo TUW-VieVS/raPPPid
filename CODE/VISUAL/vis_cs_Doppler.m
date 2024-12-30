@@ -12,6 +12,7 @@ function [] = vis_cs_Doppler(storeData, sys, tresh, n_proc)
 % 
 % Revision:
 %   2023/11/09, MFWG: adding QZSS
+%   2024/12/06, MFWG: create plots only for satellites with data
 % 
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
 %
@@ -42,14 +43,14 @@ ticks = sow2hhmm(vec);
 
 % Plot the Detection of Cycle-Slips with Doppler
 cs_L1D1_diff = full(storeData.cs_L1D1_diff);
-plotit(mod(storeData.gpstime,86400), cs_L1D1_diff, tresh, vec, ticks, [' L1 - ' sys], sys, mod(reset_sow, 86400))
+plotit(mod(storeData.gpstime,86400), cs_L1D1_diff, tresh, vec, ticks, [' L1, ' sys], sys, mod(reset_sow, 86400))
 if n_proc >= 2
     cs_L2D2_diff = full(storeData.cs_L2D2_diff);
-    plotit(mod(storeData.gpstime,86400), cs_L2D2_diff, tresh, vec, ticks, [' L2 - ' sys], sys, mod(reset_sow, 86400))
+    plotit(mod(storeData.gpstime,86400), cs_L2D2_diff, tresh, vec, ticks, [' L2, ' sys], sys, mod(reset_sow, 86400))
 end
 if n_proc >= 3
     cs_L3D3_diff = full(storeData.cs_L3D3_diff);
-    plotit(mod(storeData.gpstime,86400), cs_L3D3_diff, tresh, vec, ticks, [' L3 - ' sys], sys, mod(reset_sow, 86400))
+    plotit(mod(storeData.gpstime,86400), cs_L3D3_diff, tresh, vec, ticks, [' L3, ' sys], sys, mod(reset_sow, 86400))
 end
 
 
@@ -57,43 +58,50 @@ end
 function [] = plotit(x, dL1dL2, thresh, vec, ticks, txt, sys, resets)
 % create loop index
 if sys == 'G'           % GPS
-    loop1 = 1:16;
-    loop2 = 17:32;
+    loop = 1:99;
     col = DEF.COLOR_G;
 elseif sys == 'R'       % GLONASS
-    loop1 = 101:116;
-    loop2 = 117:132;
+    loop = 101:199;
     col = DEF.COLOR_R;
 elseif sys == 'E'      	% Galileo
-    loop1 = 201:216;
-    loop2 = 217:232;
+    loop = 201:299;
     col = DEF.COLOR_E;
 elseif sys == 'C'      	% BeiDou
-    loop1 = 301:316;
-    loop2 = 317:332;
-    col = DEF.COLOR_C;
+    loop = 301:399;
+    col = DEF.COLOR_E;    
 elseif sys == 'C'      	% QZSS
-    loop1 = 401:407;
-    loop2 = [];         % not enough satellites for 2nd loop
+    loop = 401:410;
     col = DEF.COLOR_J;  
 end
     
-%% plot the satellites 01-G16
-fig1 = figure('Name', ['Cycle-Slip-Detection with Doppler', txt, '01-16'], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
+%% plot the satellites
+figur = figure('Name', ['Cycle Slip Detection with Doppler: ' char2gnss(sys)], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
+ii = 1;     % counter of subplot number
 % add customized datatip
-dcm = datacursormode(fig1);
+dcm = datacursormode(figur);
 datacursormode on
 set(dcm, 'updatefcn', @vis_customdatatip_CycleSlip)
 
-for i = loop1       % loop over satellites
+for i = loop       % loop over satellites
     % Plotting
     y = dL1dL2(:,i);                % data of current satellite
     if any(~isnan(y) & y~=0)
+        if ii == 17
+            set(findall(gcf,'type','text'),'fontSize',8)
+            % 16 satellites have been plotted in this window -> it is full
+            % -> create new figure
+            figur = figure('Name', ['Cycle Slip Detection with Doppler: ' char2gnss(sys)], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
+            ii = 1;     % counter of subplot number
+            dcm = datacursormode(figur);
+            datacursormode on
+            set(dcm, 'updatefcn', @vis_customdatatip_CycleSlip)
+        end
         y(y==0) = NaN;
         cs_idx = (y > thresh);   	% indices where cycle-slip is detected
         x_cs = x(cs_idx); y_cs = y(cs_idx);     % get cycle slip data
         prn = mod(i,100);           % satellite prn
-        subplot(4, 4, prn)
+        subplot(4, 4, ii)
+        ii = ii + 1;  	% increase counter of plot number        
         plot(x, y, '.', 'Color', col)
         hold on
         plot(x_cs,  y_cs,  'ro')	% highlight cycle-slips
@@ -116,49 +124,4 @@ for i = loop1       % loop over satellites
     end
 end
 set(findall(gcf,'type','text'),'fontSize',8)
-
-if isempty(loop2)
-    return
-end
-
-
-%% plot the satellites 17-G32
-fig2 = figure('Name', ['Cycle-Slip-Detection with Doppler', txt, '17-32'], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
-% add customized datatip
-dcm = datacursormode(fig2);
-datacursormode on
-set(dcm, 'updatefcn', @vis_customdatatip_CycleSlip)
-
-for i = loop2
-    % Plotting
-    y = dL1dL2(:,i);                % data of current satellite
-    if any(~isnan(y) & y~=0)
-        y(y==0) = NaN;
-        cs_idx = (y > thresh);   	% indices where cycle-slip is detected
-        x_cs = x(cs_idx); y_cs = y(cs_idx);     % get cycle slip data
-        prn = mod(i,100);           % satellite prn
-        subplot(4, 4, prn-16)
-        plot(x, y, '.', 'Color', col)
-        hold on
-        plot(x_cs,  y_cs,  'ro')	% highlight cycle-slips
-        hline(thresh, 'g--')        % plot threshold
-        if ~isempty(resets); vline(resets, 'k:'); end	% plot vertical lines for resets
-        % find those CS which are outside zoom
-        idx = abs(y_cs) > 2*thresh;
-        y = 2*thresh*idx;
-        plot(x_cs(idx),  y(y~=0),  'mo', 'MarkerSize',8)        % highlight CS outside of zoom window
-        hold off
-        % Styling
-        grid off
-        set(gca, 'XTick',vec, 'XTickLabel',ticks)
-        set(gca, 'fontSize',8)
-        title([txt, sprintf('%02d',prn), ': doppler prediction - phase'])
-        xlabel('Time [hh:mm]')
-        ylabel('[cycles]')
-        xlim([min(x(x~=0)) max(x(x~=0))])           % set x-axis                      
-        ylim([0, 2*thresh])                   % set y-axis
-    end
-end
-set(findall(gcf,'type','text'),'fontSize',8)
-
 

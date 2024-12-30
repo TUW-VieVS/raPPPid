@@ -6,9 +6,15 @@ function [] = plotCorrection2BRDC(corr, obs, filename, sys)
 %   filename	string, filename of correction-stream
 %   sys         1-digit-char representing GNSS (G=GPS, R=Glonass, E=Galileo, C=BeiDou)
 % 
-%
+% Revision:
+%   2024/12/06, MFWG: plotting only satellites with data
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
+
+
+% || not tested!
+
 
 % ||| at the moment the whole correction data is plotted maybe implement
 % some slider or only partly plotting?
@@ -128,22 +134,34 @@ function [] = plotit(time, y, filename, y_name, unit_y, gnss, title_str, l_style
 vec = 0:14400:86400;       % 4-h-legend
 ticks = sow2hhmm(vec);
 
-% plot the satellites G01-G16
-fig1 = figure('Name', [y_name, ' ', gnss, '01-16 from ', filename], 'units','normalized', 'outerposition',[0 0 1 1]);
+% plot all satellites
+fig1 = figure('Name', [y_name ' ' gnss ' from ' filename], 'units','normalized', 'outerposition',[0 0 1 1]);
+ii = 1;
 % add customized datatip
 dcm = datacursormode(fig1);
 datacursormode on
 set(dcm, 'updatefcn', @vis_customdatatip)
-% loop for plotting over satellites 1:16
-for i = 1:16
+% loop for plotting over all satellites with data
+for i = 1:99
     try
         if ~all(y(:,i)==0)
-            subplot(4,4,i)
+            if ii == 17
+                set(findall(gcf,'type','text'),'fontSize',8)
+                % 16 satellites have been plotted in this window -> it is full
+                % -> create new figure
+                fig1 = figure('Name', [y_name ' ' gnss ' from ' filename], 'units','normalized', 'outerposition',[0 0 1 1]);
+                ii = 1; % set counter of subplot number to 1
+                dcm = datacursormode(fig1);
+                datacursormode on
+                set(dcm, 'updatefcn', @vis_customdatatip)
+            end
+            subplot(4,4,ii)
+            ii = ii + 1;  	% increase counter of plot number
             plot(time, y(:,i), l_style)
             grid on
             set(gca, 'XTick',vec, 'XTickLabel',ticks)
             set(gca, 'fontSize',8)
-            title([title_str, ' for ', gnss, sprintf('%02d',i)])
+            title([title_str ' for ' gnss sprintf('%02d',i)])
             xlabel('Time [h]')
             ylabel(unit_y)
             xlim([min(time), max(time)])
@@ -151,33 +169,6 @@ for i = 1:16
         end
     catch
         continue        
-    end
-end
-set(findall(gcf,'type','text'),'fontSize',8)
-
-% plot the satellites G17-G32
-fig2 = figure('Name', [y_name, ' ', gnss, '17-32 from ', filename], 'units','normalized', 'outerposition',[0 0 1 1]);
-% add customized datatip
-dcm = datacursormode(fig2);
-datacursormode on
-set(dcm, 'updatefcn', @vis_customdatatip)
-% loop for plotting over satellites 17:32
-for i = 17:32
-    try
-        if ~all(y(:,i)==0)
-            subplot(4,4,i-16)
-            plot(time, y(:,i), l_style)
-            grid on
-            set(gca, 'XTick',vec, 'XTickLabel',ticks)
-            set(gca, 'fontSize',8)
-            title([title_str, ' for ', gnss, sprintf('%02d',i)])
-            xlabel('Time [h]')
-            ylabel(unit_y)
-            xlim([min(time), max(time)])
-            ylim('auto')
-        end
-    catch
-        continue
     end
 end
 set(findall(gcf,'type','text'),'fontSize',8)

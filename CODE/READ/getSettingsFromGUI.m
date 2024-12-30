@@ -169,30 +169,35 @@ settings.TROPO.est_ZWD_from = str2double(get(handles.edit_est_zwd_from, 'String'
 
 %% Models - Ionosphere
 
-
+% PPP / ionosphere Model (e.g., 'Estimate' 'or 2-Frequency-IF-LCs')
 settings.IONO.model = get(handles.buttongroup_models_ionosphere.SelectedObject,'String');
 
+% source of ionosphere model (e.g., IONEX file)
 settings.IONO.source = get(handles.buttongroup_source_ionosphere.SelectedObject,'String');
 
-% Ionex File Source
+% box IONEX file
 settings.IONO.model_ionex = get(handles.buttongroup_models_ionosphere_ionex.SelectedObject,'String');
 settings.IONO.model_ionex_vis = get(handles.buttongroup_models_ionosphere_ionex,'Visible');
 settings.IONO.file_ionex = join_path(path.ionex_1, path.ionex_2);
 
-% Ionex File Type
+% IONEX product type (e.g., final or rapid)
 settings.IONO.type_ionex = get(handles.buttongroup_models_ionosphere_ionex_type.SelectedObject,'String');
 
+% origin of IONEX file (e.g., IGS final)
 value = get(handles.popupmenu_iono_source, 'Value');
 string_all = get(handles.popupmenu_iono_source, 'String');
 settings.IONO.file_source = string_all{value};
 
+% IONEX interpolation method
 value = get(handles.popupmenu_iono_interpol, 'Value');
 string_all = get(handles.popupmenu_iono_interpol, 'String');
 settings.IONO.interpol = string_all{value};
 
+% IONEX interpolation method (GUI visibility)
 settings.IONO.interpol_vis = get(handles.popupmenu_iono_interpol,'Visible');
 settings.IONO.interpol_text_vis = get(handles.text_iono_interpol,'Visible');
 
+% IONEX folder detection (automatic or manual)
 settings.IONO.ionex_autodetect = get(handles.buttongroup_models_ionosphere_autodetect.SelectedObject,'String');
 settings.IONO.ionex_autodetect_vis = get(handles.buttongroup_models_ionosphere_autodetect,'Visible');
 if strcmp(settings.IONO.model_ionex, 'Auto-Detection:')

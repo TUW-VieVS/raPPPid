@@ -290,7 +290,9 @@ storeData.PDOP(q) = sqrt(Qxyz(1,1) + Qxyz(2,2) + Qxyz(3,3));
 storeData.HDOP(q) = sqrt(Qneu(1,1) + Qneu(2,2));
 storeData.VDOP(q) = sqrt(Qneu(3,3));
 
-storeData.exclude(q,prns) = Epoch.exclude(:,1);     	% true for sat under cutoff angle
+% ||| loses information! cs_found and exclude have #columns = processed frqs
+storeData.cs_found(q,prns) = any(Epoch.cs_found, 2); 	% true if cycle slip found on any frequency
+storeData.exclude(q,prns)  = any(Epoch.exclude, 2);     % true if satellite's observation excluded on any frequency
 
 
 

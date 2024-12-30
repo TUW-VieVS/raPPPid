@@ -7,31 +7,32 @@ function [] = vis_res_sats(storeData, sys, num_freq, phase_on, fixed_on)
 %   num_freq        number of processed frequencies
 %   phase_on        boolean, true when phase was processed
 %   fixed_on        boolean, true if fixed solution is plotted
-% 
+%
 % Revision:
 %   2023/11/09, MFWG: adding QZSS
-% 
+%   2024/12/05, MFWG: create plots only for satellites with data
+%
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
 % create loop index
-switch sys 
+switch sys
     case 'G'            % GPS
-    loop1 = 1:16;
-    loop2 = 17:32;
+        loop = 1:99;
+        col = DEF.COLOR_G;
     case 'R'            % GLONASS
-    loop1 = 101:116;
-    loop2 = 117:132;
+        loop = 101:199;
+        col = DEF.COLOR_R;
     case 'E'            % Galileo
-    loop1 = 201:216;
-    loop2 = 217:232;
+        loop = 201:299;
+        col = DEF.COLOR_E;
     case 'C'            % BeiDou
-    loop1 = 301:316;
-    loop2 = 317:332;
+        loop = 301:399;
+        col = DEF.COLOR_C;
     case 'J'            % QZSS
-    loop1 = 401:407;
-    loop2 = [];    
+        loop = 401:410;
+        col = DEF.COLOR_J;
 end
 
 
@@ -46,27 +47,14 @@ for j = 1:num_freq
         field = sprintf('residuals_code_fix_%1.0f', j);
     end
     code_res_j = full(storeData.(field));
-    code_res_j = code_res_j(:, [loop1 loop2]);
+    code_res_j = code_res_j(:, loop);
     code_res_j(code_res_j==0 ) = NaN;
     % CODE
     n_c = round(1 + 3.322*log(numel(code_res_j(:,1))));       % number of bins (Sturge´s Rule)
-    code_str = [sol_str ' Code ', sprintf('%d',j)];
-    % plot the satellites 1-16
-    fig_title = [sol_str ' Code ', sprintf('%d',j), ' Residuals, ', sys, '01-16'];
-    fig_c1 = figure('Name', fig_title, 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
-    plot_sat_histo(code_res_j, mod(loop1,100), n_c, sys, code_str, [0.09 0.72 0.72])
-    % add customized datatip
-    dcm = datacursormode(fig_c1);
-    datacursormode on
-    set(dcm, 'updatefcn', @vis_customdatatip_histo)
-    % plot the satellites 17-32
-    fig_title = [sol_str ' Code ', sprintf('%d',j), ' Residuals, ', sys, '17-32'];
-    fig_c2 = figure('Name', fig_title, 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
-    plot_sat_histo(code_res_j, mod(loop2,100), n_c, sys, code_str, [0.09 0.72 0.72])
-    % add customized datatip
-    dcm = datacursormode(fig_c2);
-    datacursormode on
-    set(dcm, 'updatefcn', @vis_customdatatip_histo)
+    code_str = [sol_str ' code ' sprintf('%d',j) ' residuals'];
+    % plot all satellites
+    fig_title = [sol_str ' Code ' sprintf('%d',j) ' Residuals, ' char2gnss(sys)];
+    plot_sat_histo(code_res_j, mod(loop,100), n_c, sys, code_str, col, fig_title)
     
     if phase_on
         % get phase residuals of current frequency (e.g. storeData.residuals_phase_1)
@@ -76,39 +64,45 @@ for j = 1:num_freq
             field = sprintf('residuals_phase_fix_%1.0f', j);
         end
         phase_res_j = full(storeData.(field));
-        phase_res_j = phase_res_j(:, [loop1 loop2]);
+        phase_res_j = phase_res_j(:, loop);
         phase_res_j(phase_res_j==0 ) = NaN;
         % PHASE
         n_p = round(1 + 3.322*log(numel(phase_res_j(:,1))));      % number of bins (Sturge´s Rule)
-        phase_str = [sol_str ' Phase ', num2str(j)];
-        % plot the satellites 1-16
-        fig_title = [sol_str ' Phase ', sprintf('%d',j), ' Residuals, ', sys, '01-16'];
-        fig_p1 = figure('Name', fig_title, 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
-        plot_sat_histo(phase_res_j, mod(loop1,100), n_p, sys, phase_str, [0.72 0.09 0.72])
-        % add customized datatip
-        dcm = datacursormode(fig_p1);
-        datacursormode on
-        set(dcm, 'updatefcn', @vis_customdatatip_histo)
-        % plot the satellites 17-32
-        fig_title = [sol_str ' Phase ', sprintf('%d',j), ' Residuals, ', sys, '17-32'];
-        fig_p2 = figure('Name', fig_title, 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
-        plot_sat_histo(phase_res_j, mod(loop2,100), n_p, sys, phase_str, [0.72 0.09 0.72])
-        % add customized datatip
-        dcm = datacursormode(fig_p2);
-        datacursormode on
-        set(dcm, 'updatefcn', @vis_customdatatip_histo)
+        phase_str = [sol_str ' phase ' num2str(j) ' residuals'];
+        % plot all satellites
+        fig_title = [sol_str ' Phase ' sprintf('%d',j) ' Residuals, ' char2gnss(sys)];
+        plot_sat_histo(phase_res_j, mod(loop,100), n_p, sys, phase_str, col/2, fig_title)
     end
 end
-end 
+end
 
 
 % Function to plot and style
-function [] = plot_sat_histo(residuals, loop, n, sys, codephase_fr, coleur)
+function [] = plot_sat_histo(residuals, loop, n, sys, codephase_fr, coleur, fig_title)
+
+% create figure
+figur = figure('Name', fig_title, 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
+ii = 1;         % counter of subplot number
+% add customized datatip
+dcm = datacursormode(figur);
+datacursormode on
+set(dcm, 'updatefcn', @vis_customdatatip_histo)
+
 for i = loop
     if any(~isnan(residuals(:,i)))
+        if ii == 17
+            set(findall(gcf,'type','text'),'fontSize',8)
+            % 16 satellites have been plotted in this window -> it is full
+            % -> create new figure
+            figur = figure('Name', fig_title, 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
+            ii = 1; % set counter of subplot number to 1
+            dcm = datacursormode(figur);
+            datacursormode on
+            set(dcm, 'updatefcn', @vis_customdatatip_histo)
+        end
         res = residuals(:,i);           % residuals of current satellite
-        no_plot = i - (i>16)*16;        % number of subplot
-        subplot(4, 4, no_plot)
+        subplot(4, 4, ii)
+        ii = ii + 1;  	% increase counter of plot number
         histogram(res, n, 'Normalization', 'probability', 'FaceColor', coleur)
         title({[codephase_fr ': ' sys sprintf('%02d',i)]}, 'fontsize', 11);
         std_c = std(res, 'omitnan');         	% standard deviation of residuals of current satellite

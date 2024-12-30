@@ -90,14 +90,14 @@ Epoch.WL_23(prns(fix_now)) = MW_round(fix_now);
 % loop to print message to command window
 if any(fix_now) || any(release)
     for i = 1:numel(prns)
-%         if fix_now(i)
-%             fprintf('\tEW Ambiguity for PRN %03d set to %+03d                  \n', prns(i), MW_round(i));
-%         end
+        %         if fix_now(i)
+        %             fprintf('\tEW Ambiguity for PRN %03d set to %+03d                  \n', prns(i), MW_round(i));
+        %         end
         if release(i)
-            fprintf('\tEW Fix for PRN %03d released (THRESHOLD exceeded)...                 \n', prns(i));
+            fprintf('\tEW Fix for PRN %03d released [%.3f > %.3f]          \n', ...
+                prns(i), dist_MW(i), settings.AMBFIX.HMW_release);
             Epoch.WL_23(prns(i)) = NaN;        % reset EW and Extra-Narrow additionally
             Epoch.NL_23(prns(i)) = NaN;
-			fprintf('\tNL Ambiguity for PRN %03d released...                    \n', prns(i));
         end
     end
 end

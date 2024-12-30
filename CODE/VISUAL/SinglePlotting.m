@@ -92,7 +92,7 @@ reset_h = reset_sec / 3600;
 % create string for title of plot with station name and startdate (yyyy, doy)
 station = obs.stationname;
 [doy, yyyy] = jd2doy_GT(obs.startdate_jd(1));
-station_date = [station, ' ', sprintf('%4.0f',yyyy), '/', sprintf('%03.0f',doy)];
+station_date = [station, ' ', sprintf('%4.0f',yyyy), '/', sprintf('%03.0f',floor(doy))];
 
 rgb = createDistinguishableColors(40);      % colors for plot, no GNSS has more than 40 satellites
 

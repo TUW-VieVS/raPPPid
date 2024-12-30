@@ -2,8 +2,10 @@ function [Adjust, Epoch, model, obs, HMW_12, HMW_23, HMW_13] = ...
     ZD_processing(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, input, satellites, obs)
 
 % Processing one epoch using a zero-difference observation model for the
-% float solution. For ambiguity fixing a reference satellite is chosen to
-% calculate satellite SD and eliminate the receiver phase hardware delays.
+% float solution. 
+% Only for ambiguity fixing (2-frequency IF-LC) a reference satellite is 
+% chosen to calculate satellite single-differences and, therefore, eliminate  
+% the receiver phase hardware delays.
 % 
 % INPUT:
 %	HMW_12,...  Hatch-Melbourne-Wübbena LC observables
@@ -56,7 +58,7 @@ if settings.AMBFIX.bool_AMBFIX && ~strcmp(settings.IONO.model, 'Estimate, decoup
         Epoch = CheckSatellitesFixable(Epoch, settings, model, input);
         
         % --- Choose reference satellite for fixing ---
-        Epoch = handleRefSats(Epoch, model.el, settings, Adjust);
+        [Epoch, Adjust] = handleRefSats(Epoch, model.el, settings, Adjust);
         
         % --- Start fixing depending on PPP model ---
         switch settings.IONO.model

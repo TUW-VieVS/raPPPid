@@ -25,7 +25,7 @@ storeData.NO_PARAM = [];
 storeData.obs_interval = [];
 storeData.float = [];
 storeData.param = []; storeData.param_sigma = []; storeData.param_var = [];
-storeData.exclude = [];
+storeData.exclude = [];	storeData.cs_found = [];
 storeData.PDOP = []; storeData.HDOP = []; storeData.VDOP = [];
 storeData.zhd = []; storeData.zwd = [];
 storeData.N_1 = []; storeData.N_var_1 = []; storeData.residuals_code_1 = [];

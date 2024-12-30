@@ -178,7 +178,7 @@ if gps_on
         
         % --- Phase Biases ---
         % Under the assumption that a phase bias can be used for all phase 
-        % observation types on a frequency the highest phase biase (from 
+        % observation types on a frequency, the highest phase biase (from 
         % the observation ranking) is assigned if the phase biases for the
         % processed signal is not existing. If there is no bias found with
         % the observation ranking the first phase bias for this frequency
@@ -616,7 +616,7 @@ end
 
 % This functions checks if biases were assigned
 function [] = CheckBiases4ProcessedSignals(settings, obs, bool_DSB, bool_OSB, bool_ISB)
-windowname = [obs.stationname ' ' sprintf('%04.0f', obs.startdate(1)) '/' sprintf('%03.0f', obs.doy)];
+windowname = [obs.stationname ' ' sprintf('%04.0f', obs.startdate(1)) '/' floor(sprintf('%03.0f', obs.doy))];
 error_str = '';
 idx_G = 001:099;   idx_R = 101:199;   idx_E = 201:299;   idx_C = 301:399;   idx_J = 401:410;
 

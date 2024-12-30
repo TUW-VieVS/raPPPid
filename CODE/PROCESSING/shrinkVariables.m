@@ -96,7 +96,8 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q
         storeData.MP_c              = storeData.MP_c(eps,:);
         storeData.MP_p              = storeData.MP_p(eps,:);
     end
-    storeData.exclude            = storeData.exclude(eps,:);
+    storeData.exclude           = storeData.exclude(eps,:);
+	storeData.cs_found          = storeData.cs_found(eps,:);
     storeData.zwd               = storeData.zwd(eps,:);
     storeData.zhd               = storeData.zhd(eps,:);
     if strcmpi(settings.PROC.method,'Code + Phase')

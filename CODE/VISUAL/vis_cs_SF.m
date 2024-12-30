@@ -12,6 +12,7 @@ function [] = vis_cs_SF(storeData, CS_settings, sys)
 % 
 % Revision:
 %   2023/11/09, MFWG: adding QZSS
+%   2024/12/05, MFWG: create plots only for satellites with data
 % 
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
 %
@@ -48,41 +49,47 @@ plotit(mod(storeData.gpstime,86400), full(storeData.cs_pred_SF), full(storeData.
 function [] = plotit(x, pred, L1C1, thresh, sys, vec, ticks, resets, window)
 % create loop index
 if sys == 'G'           % GPS
-    loop1 = 1:16;
-    loop2 = 17:32;
+    loop = 1:99;
     col = DEF.COLOR_G;
 elseif sys == 'R'       % GLONASS
-    loop1 = 101:116;
-    loop2 = 117:132;
+    loop = 101:199;
     col = DEF.COLOR_R;
 elseif sys == 'E'      	% Galileo
-    loop1 = 201:216;
-    loop2 = 217:232;
+    loop = 201:299;
     col = DEF.COLOR_E;
 elseif sys == 'C'      	% BeiDou
-    loop1 = 301:316;
-    loop2 = 317:332;
+    loop = 301:399;
     col = DEF.COLOR_C;
 elseif sys == 'J'      	% QZSS
-    loop1 = 401:407;
-    loop2 = [];         % not enough satellites for second plot window
+    loop = 401:410;
     col = DEF.COLOR_J;
 end
     
-%% plot the satellites G01-G16
-fig1 = figure('Name', ['Cycle-Slip-Detection Single-Frequency ', sys, '01-16'], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
+%% plot the satellites
+fig1 = figure('Name', ['Cycle Slip Detection L1-C1: ' char2gnss(sys)], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
+ii = 1;         % counter of subplot number
 % add customized datatip
 dcm = datacursormode(fig1);
 datacursormode on
 set(dcm, 'updatefcn', @vis_customdatatip_CycleSlip)
 
-for i = loop1
+for i = loop
     pred_i = pred(:,i);     % prediction of L1-C1 of current satellite
     if any(~isnan(pred_i) & pred_i ~= 0)
+        if ii == 17
+            set(findall(gcf,'type','text'),'fontSize',8)
+            % 16 satellites have been plotted in this window -> it is full
+            % -> create new figure
+            fig1 = figure('Name', ['Cycle-Slip-Detection L1-C1: ' char2gnss(sys)], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
+            ii = 1; % set counter of subplot number to 1
+            dcm = datacursormode(fig1);
+            datacursormode on
+            set(dcm, 'updatefcn', @vis_customdatatip_CycleSlip)
+        end
         % Plotting
         pred_i(pred_i==0) = NaN;
-        prn = mod(i,100);
-        subplot(4, 4, prn)
+        subplot(4, 4, ii)
+        ii = ii + 1;  	% increase counter of plot number
         y = L1C1(:,i)-pred_i;       % plot difference = L1-C1 minus prediction
         plot(x, y, '.', 'Color', col)
         hold on
@@ -94,44 +101,7 @@ for i = loop1
         Grid_Xoff_Yon()
         set(gca, 'XTick',vec, 'XTickLabel',ticks)
         set(gca, 'fontSize',8)
-        title([sys, sprintf('%02d',prn), ': L1-C1 to prediction (with threshold)'])
-        xlabel('Time [hh:mm]')
-        ylabel('[m]')
-    end
-end
-set(findall(gcf,'type','text'),'fontSize',8)
-
-if isempty(loop2)
-    return
-end
-
-
-%% plot the satellites G17-G32
-fig2 = figure('Name', ['Cycle-Slip-Detection Single-Frequency ', sys, '17-32'], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
-% add customized datatip
-dcm = datacursormode(fig2);
-datacursormode on
-set(dcm, 'updatefcn', @vis_customdatatip_CycleSlip)
-
-for i = loop2
-    pred_i = pred(:,i);     % prediction of L1-C1 of current satellite
-    if any(~isnan(pred_i) & pred_i ~= 0)
-        % Plotting
-        pred_i(pred_i==0) = NaN;
-        prn = mod(i,100);
-        subplot(4, 4, prn-16)
-        y = L1C1(:,i)-pred_i;       % plot difference = L1-C1 minus prediction
-        plot(x, y, '.', 'Color', col)
-        hold on
-        plot(x, y+thresh, 'g-')     % plot difference plus threshold
-        plot(x, y-thresh, 'g-') 	% plot difference minus threshold
-        if ~isempty(resets); vline(resets, 'k:'); end	% plot vertical lines for resets
-        hold off
-        % Styling
-        Grid_Xoff_Yon()
-        set(gca, 'XTick',vec, 'XTickLabel',ticks)
-        set(gca, 'fontSize',8)
-        title([sys, sprintf('%02d',prn), ': L1-C1 to prediction (with threshold)'])
+        title([sys, sprintf('%02d', mod(i,100)), ': L1-C1 to prediction (with threshold)'])
         xlabel('Time [hh:mm]')
         ylabel('[m]')
     end

@@ -103,7 +103,7 @@ if ~isempty(cbar1) && ~isempty(cbar2)
     colormap(cm)
 end
 caxis([0,90])
-ylim([1, no_prn+1])
+ylim([1, find(any(~isnan(el), 2), 1, 'last')+1]) 	% max. y-scale to last satellite with elevation
 yticks(1.5:no_prn+0.5)
 yticklabels(cellstr(num2str((1:no_prn)')))
 grid on;

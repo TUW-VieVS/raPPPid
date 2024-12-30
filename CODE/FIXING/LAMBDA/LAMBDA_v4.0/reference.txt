@@ -1,0 +1,7 @@
+Massarweh, L., Verhagen, S., & Teunissen, P. J. G. (2024). 
+New LAMBDA toolbox for mixed-integer models: Estimation and evaluation. 
+GPS Solutions, 29(1), 14. 
+https://doi.org/10.1007/s10291-024-01738-z
+
+direct link:
+https://link.springer.com/article/10.1007/s10291-024-01738-z

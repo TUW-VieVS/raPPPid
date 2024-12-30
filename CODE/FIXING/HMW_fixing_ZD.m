@@ -85,7 +85,8 @@ fixed(prns(fix_now)) = HMW_round(fix_now);
 if any(fix_now) || any(release)
     for i = 1:numel(prns)
         if release(i)
-            fprintf('\tHMW LC Fix for PRN %03d released (THRESHOLD exceeded)...                 \n', prns(i));
+            fprintf('\tHMW LC Fix Fix for PRN %03d released [%.3f > %.3f]          \n', ...
+                prns(i), dist_HMW(i), settings.AMBFIX.HMW_release);
         end
     end
 end

@@ -9,6 +9,6 @@ function [] = empty()
 % Revision:
 %   ...
 %
-% This function belongs to raPPPid, Copyright (c) 2023, M.F. Wareyka-Glaner
+% This function belongs to raPPPid, Copyright (c) 2025, M.F. Wareyka-Glaner
 % *************************************************************************
 

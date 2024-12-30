@@ -12,6 +12,9 @@ function [Epoch, Adjust] = PPPAR_DCM(HMW_12, HMW_23, HMW_13, Adjust, Epoch, sett
 %	Adjust          updated
 %	Epoch           updated
 %
+% Revision:
+%   2024/12/30, MFWG: switching to LAMBDA 4.0
+%
 % This function belongs to raPPPid, Copyright (c) 2024, M.F. Wareyka-Glaner
 % *************************************************************************
 
@@ -84,14 +87,11 @@ if all(~fixit)
     return
 end
 
-% fix ambiguities on 1st frequency with LAMBDA
-try     % requires Matlab Statistic and Machine Learning ToolBox
-    [N_sub_fixed, sqnorm, Ps, Qz, Z, nfix] = LAMBDA(N_sub, Q_NN_sub, 5, 'P0', DEF.AR_THRES_SUCCESS_RATE);
-catch
-    N_sub_fixed = LAMBDA(N_sub, Q_NN_sub, 4);
-end
+% integer fixing with LAMBDA 
+[N_sub_fixed, sqnorm] = LAMBDA(N_sub, Q_NN_sub, 5, 3, DEF.AR_THRES_SUCCESS_RATE);
+
 % get best ambiguity set and keep only integer fixes
-N_fix_sub = N_sub_fixed(:,1);
+N_fix_sub  N_sub_fixed(:,1);
 bool_int = (N_fix_sub - floor(N_fix_sub)) == 0;
 N_fix_sub(~bool_int) = NaN;
 

@@ -15,7 +15,7 @@ function [settings] = DownloadERP(settings, gpsweek, dow, yyyy, mm, doy)
 %	settings        updated
 %
 % Revision:
-%   ...
+%   2024/12/10, MFWG: decompressed file name from function unzip_and_delete
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -39,7 +39,7 @@ yyyy_0    = sprintf('%04d',yyyy_0);
 doy_0 	= sprintf('%03d', floor(doy_0));
 
 % initialize output
-settings.ORBCLK.file_erp = '';
+settings.ORBCLK.file_erp = '';  decompressed = {''};
 
 
 %% switch source of orbits/clocks
@@ -92,7 +92,7 @@ switch settings.ORBCLK.prec_prod
                 websave([target{1}, '/', file_erp] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_erp]);
             end
             % decompress and delete archive
-            unzip_and_delete({file_erp}, target(1));
+            decompressed = unzip_and_delete({file_erp}, target(1));
             download = false;   % orbit download is finished
             
         else
@@ -111,7 +111,7 @@ switch settings.ORBCLK.prec_prod
                         websave([target{1}, '/', file_erp] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_erp]);
                     end
                     % decompress and delete archive
-                    unzip_and_delete({file_erp}, target(1));
+                    decompressed = unzip_and_delete({file_erp}, target(1));
                     download = false;   % orbit download is finished
                     
                 case 'Rapid'
@@ -129,7 +129,7 @@ switch settings.ORBCLK.prec_prod
                         websave([target{1}, '/', file_erp] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_erp]);
                     end
                     % decompress and delete archive
-                    unzip_and_delete({file_erp}, target(1));
+                    decompressed = unzip_and_delete({file_erp}, target(1));
                     download = false;   % orbit download is finished
                     
                 case 'Ultra-Rapid'
@@ -319,6 +319,25 @@ switch settings.ORBCLK.prec_prod
             return
         end
         
+    case 'HUST'
+        if settings.ORBCLK.MGEX
+            URL_host = 'ggda.ac.cn:21';
+            URL_folders = {['/pub/mgex/products/' yyyy '/']};
+            switch settings.ORBCLK.prec_prod_type
+                case 'Final'
+                    file    = {['HUS0MGXFIN_' yyyy doy '0000_01D_01D_ERP.ERP.gz']};
+                case 'Rapid'
+                    file    = {['HUS0MGXRAP_' yyyy doy '0000_01D_01D_ERP.ERP.gz']};
+                case 'Ultra-Rapid'
+                    file    = {['HUS0MGXULT_' yyyy doy '0000_01D_01D_ERP.ERP.gz']};
+            end           
+        else
+            fprintf(2, 'HUST ERP file is not implemented!')
+            return
+        end
+        
+        
+        
     otherwise
        return
         
@@ -327,27 +346,20 @@ end
 
 
 %% download and unzip files, if necessary
-i = 1;
 if isempty(files_2); files_2 = file; end
-while download   &&   i <= length(file)
+if download
     file_status = 0;
     % create target folder
-    [~, ~] = mkdir(target{i});
-    try     %#ok<TRYNC>                             % try to download from igs.ign.fr
-        [file_status] = ftp_download(URL_host, URL_folders{i}, file{i}, target{i}, true);
+    [~, ~] = mkdir(target{1});
+    try     %#ok<TRYNC>                             % try to download (e.g., igs.ign.fr)
+        [file_status] = ftp_download(URL_host, URL_folders{1}, file{1}, target{1}, true);
         if ~bool_archive       % pretend archive, otherwise the following code does not work 
-            file{i} = [file{i} '.gz'];
+            file{1} = [file{1} '.gz'];
         end
     end
-    if bool_archive   &&   (file_status == 1 || file_status == 2)
-        unzip_and_delete(file(i), target(i));
-    end
-    if file_status == 0 && ~isempty(URL_folders_2) 	% try to download from CDDIS
-        file = files_2{i};    target = target{i};
+    if file_status == 0 && ~isempty(URL_folders_2) 	% try alternative download (e.g., CDDIS)
+        file = files_2{1};    target = target{1};
         file_status = get_cddis_data(URL_host_2, URL_folders_2, {file}, {target}, true);
-        if bool_archive   &&   (file_status == 1   ||   file_status == 2)
-            unzip_and_delete(files_2(i), target(i));
-        end
     end
     % other download sources can be added here
     if file_status == 0
@@ -355,11 +367,12 @@ while download   &&   i <= length(file)
         settings.ORBCLK.file_erp = '';
         return
     end
-    [~,file{i},~] = fileparts(file{i});   % remove the zip file extension
-    i = i + 1;
+    if bool_archive
+        decompressed = unzip_and_delete(file(1), target(1));
+    end
 end
 
 
 %% save file-path into settings
-settings.ORBCLK.file_erp = [target{1} '/' file{1}];       % save path to EOPs (erp)
+settings.ORBCLK.file_erp = decompressed{1};       % save path to EOPs (erp)
 

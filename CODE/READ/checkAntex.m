@@ -465,7 +465,7 @@ end
 
 
 %% save variables
-% save PCO and for processed GNSS
+% save PCO and for processed GNSS, all in [m]
 if GPS_on
     input.OTHER.PCO.sat_GPS = PCO_GPS;
     input.OTHER.PCO.rec_GPS = PCO_rec_GPS;

@@ -121,8 +121,8 @@ if any(fix_now) || any(release)
             Epoch.WL_12(prns(i)) = NaN;
             Epoch.NL_12(prns(i)) = NaN;
             if bool_print
-                fprintf('\tWL Fix for PRN %03d released (THRESHOLD exceeded)...                 \n', prns(i));
-                fprintf('\tNL Ambiguity for PRN %03d released...                    \n', prns(i));
+                fprintf('\tWL Fix for PRN %03d released [%.3f > %.3f]          \n', ...
+                    prns(i), dist_MW(i), settings.AMBFIX.HMW_release);
             end
         end
     end

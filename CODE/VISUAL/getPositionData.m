@@ -16,7 +16,7 @@ elseif MultiPlot.fixed
     catch
         pos_cart = NaN(1,3); pos_UTM = NaN(1,3);
         errordlg({'No fixed solution for:', curr_label}, ...
-            sprintf('%s %04.0f/%03.0f', obs.stationname, obs.startdate(1), obs.doy));
+            sprintf('%s %04.0f/%03.0f', obs.stationname, obs.startdate(1), floor(obs.doy)));
         return
     end
 end

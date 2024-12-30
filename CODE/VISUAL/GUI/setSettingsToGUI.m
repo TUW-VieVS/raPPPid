@@ -442,6 +442,10 @@ switch structure.IONO.source
         set(handles.radiobutton_source_ionosphere_NeQuick,         'Value', 1);
     case 'CODE spherical harmonics'
         set(handles.radiobutton_source_ionosphere_CODE,            'Value', 1);
+    case 'VTEC from Correction stream'
+        set(handles.radiobutton_model_ionosphere_CorrectionStream, 'Value', 1);  
+    case 'TOBS File'
+        set(handles.radiobutton_model_ionosphere_TOBS,             'Value', 1);          
 end
 % Constraint until defined epoch
 try
@@ -519,7 +523,9 @@ try
         case 'WUM MGEX'
             handles.radiobutton_models_biases_code_WUM_MGEX.Value = 1;             
         case 'GFZ MGEX'
-            handles.radiobutton_models_biases_code_GFZ_MGEX.Value = 1;   
+            handles.radiobutton_models_biases_code_GFZ_MGEX.Value = 1;
+        case 'HUST MGEX'
+            handles.radiobutton_models_biases_code_HUS_MGEX.Value = 1;
         case 'CNES postprocessed'
             handles.radiobutton_models_biases_code_CNES_post.Value = 1;            
         case 'Correction Stream'

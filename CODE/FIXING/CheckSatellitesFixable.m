@@ -99,7 +99,7 @@ switch settings.BIASES.code
             Epoch.fixable(excl2) = false;
         end
         
-    case {'CNES OSBs', 'CNES MGEX', 'GFZ MGEX', 'WUM MGEX'}
+    case {'CNES OSBs', 'CNES MGEX', 'GFZ MGEX', 'WUM MGEX', 'HUST MGEX'}
         % check code biases in C_bias
         excl1 = (C_bias == 0);
         excl1 = frequency_convert(excl1, settings);

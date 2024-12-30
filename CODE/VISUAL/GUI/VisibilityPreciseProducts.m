@@ -95,6 +95,17 @@ switch prec_prod_source
         handles.radiobutton_prec_prod_ultrarapid.Enable = 'Off';
         handles.checkbox_MGEX.Visible = 'Off';
         
+    case 'HUST'
+        if handles.checkbox_MGEX.Value
+            handles.radiobutton_prec_prod_final.Enable = 'On';
+            handles.radiobutton_prec_prod_rapid.Enable = 'On';
+            handles.radiobutton_prec_prod_ultrarapid.Enable = 'On';
+        else
+            handles.radiobutton_prec_prod_final.Enable = 'Off';
+            handles.radiobutton_prec_prod_rapid.Enable = 'Off';
+            handles.radiobutton_prec_prod_ultrarapid.Enable = 'Off';
+        end
+        
     case 'manually'
         handles.checkbox_MGEX.Visible = 'Off';
         handles.uibuttongroup_prec_prod_type.Visible = 'Off';    
