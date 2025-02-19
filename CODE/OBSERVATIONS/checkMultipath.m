@@ -49,10 +49,10 @@ c3_qzss = use_column{5, 6};
 
 %% detect multipath
 [Epoch, Epoch.mp_C1_diff] = detectMP(Epoch, Epoch.mp_C1_diff, 1, C1_now, settings, obs_int);
-if settings.INPUT.num_freqs >= 2
+if settings.INPUT.proc_freqs >= 2
     [Epoch, Epoch.mp_C2_diff] = detectMP(Epoch, Epoch.mp_C2_diff, 2, C2_now, settings, obs_int);
 end
-if settings.INPUT.num_freqs >= 3
+if settings.INPUT.proc_freqs >= 3
     [Epoch, Epoch.mp_C3_diff] = detectMP(Epoch, Epoch.mp_C3_diff, 3, C3_now, settings, obs_int);
 end
 
