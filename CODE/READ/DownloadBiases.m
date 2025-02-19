@@ -175,6 +175,7 @@ switch settings.BIASES.code
         if file_status == 0
             errordlg('No CNES MGEX Biases found on server. Please specify different source!', 'Error');
         end
+        decompressed = unzip_and_delete(file(1), target(1));
         % save file-path
         settings.BIASES.code_file = decompressed{1};
 
