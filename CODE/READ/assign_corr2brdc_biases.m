@@ -1,5 +1,5 @@
 function obs = assign_corr2brdc_biases(obs, input, settings)
-% finds the correct code and/or phase biases from CNES stream and assigns
+% Finds the correct code and/or phase biases from CNES stream and assigns
 % it to obs.L1/L2/L3/C1/C2/C3_corr
 %
 % INPUT:
@@ -44,10 +44,10 @@ end
 
 
 %% --- CODE BIASES ---
+obs.C_corr_time = corr2brdc.t_code;
 if settings.BIASES.code_corr2brdc_bool && ~isempty(corr2brdc.cbias)
     
     % initialize
-    obs.C_corr_time = corr2brdc.t_code;
     rows = length(obs.C_corr_time);
     obs.C1_corr = zeros(rows,410); obs.C2_corr = zeros(rows,410); obs.C3_corr = zeros(rows,410);
     
@@ -122,9 +122,9 @@ end
 
 
 %% --- PHASE BIASES ---
+obs.L_corr_time = corr2brdc.t_phase;
 if settings.BIASES.phase_corr2brdc_bool && ~isempty(corr2brdc.pbias)
     
-    obs.L_corr_time = corr2brdc.t_phase;
     rows = length(obs.L_corr_time);
     obs.L1_corr = zeros(rows,410); obs.L2_corr = zeros(rows,410); obs.L3_corr = zeros(rows,410);
     

@@ -5,10 +5,10 @@ function [] = OpenResultsFolder()
 %   []
 % OUPUT:
 %   []
-% 
+%
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 if contains(pwd, 'WORK')
-    winopen(Path.RESULTS);
+    OpenFolder(Path.RESULTS);
 end

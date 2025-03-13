@@ -139,11 +139,24 @@ else
     [~, hour, min, sec] = sow2dhms(hours*3600);
     % create string with time of day
     str_time = [sprintf('%02.0f', hour), ':', sprintf('%02.0f', min), ':', sprintf('%02.0f', sec)];
+    % determine GNSS char
+    gnss = '';
+    if contains(event_obj.Target.Parent.Title.String, 'gps', 'IgnoreCase',true)
+        gnss = 'G';
+    elseif contains(event_obj.Target.Parent.Title.String, 'glonass', 'IgnoreCase',true)
+        gnss = 'R';
+    elseif contains(event_obj.Target.Parent.Title.String, 'galileo', 'IgnoreCase',true)
+        gnss = 'E';
+    elseif contains(event_obj.Target.Parent.Title.String, 'beidou', 'IgnoreCase',true)
+        gnss = 'C';
+    elseif contains(event_obj.Target.Parent.Title.String, 'qzss', 'IgnoreCase',true)
+        gnss = 'J';
+    end
     % create cell with strings as output (which will be shown when clicking)
-    output_txt{1} = ['PRN: ', sprintf('%.0f', prn)];        % satellite number
-    output_txt{2} = ['Elevation: ', sprintf('%.3f', elev)]; % elevation
-    output_txt{3} = ['Time: ',  str_time];                  % time of day
-    output_txt{4} = ['Epoch: ',  sprintf('%.0f', ep)];  	% epoch
+    output_txt{1} = ['PRN: ' gnss sprintf('%02.0f', prn)];   	% satellite number
+    output_txt{2} = ['Elevation: ' sprintf('%.3f', elev)];  % elevation
+    output_txt{3} = ['Time: '  str_time];                   % time of day
+    output_txt{4} = ['Epoch: '  sprintf('%.0f', ep)];       % epoch
 end
 
 end

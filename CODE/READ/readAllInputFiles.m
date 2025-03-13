@@ -1,9 +1,17 @@
 function  [input, obs, settings, OBSDATA] = readAllInputFiles(settings)
 
-% Reads in all input files: o-file, navigation-files, correction-stream to
-% broadcast-orbits, precise ephemeris, precise clocks, ionex-file,
-% DCB-files, met-file, antex-file
-%
+% Reads in all input files in an internal raPPPid format: observations, 
+% navigation file, precise satellite orbits, precise clocks, IONEX,
+% DCB-files, SINEX Bias, met-file, antex-file, ...
+% 
+% INPUT:
+%   settings    struct, processing settings from the GUI
+% OUTPUT:
+%	input       struct, contains most input data
+%   obs         struct, contains observation-specific data
+%   settings    struct, updated with some new fields
+%   OBSDATA     cell, contains data of the observation file (e.g., RINEX)
+% 
 % Revision:
 %   ...
 %
@@ -167,7 +175,10 @@ end
 % -) Broadcast products + correction stream
 
 % Read RINEX navigation ephemerides files and convert to internal Matlab format
-if (settings.ORBCLK.bool_brdc || glo_channels) && ~settings.INPUT.bool_realtime
+bool_nav_iono = strcmp(settings.IONO.source, 'Klobuchar model') || ...
+    strcmp(settings.IONO.source, 'NeQuick model') || ...
+    strcmp(settings.IONO.source, 'NTCM-G');
+if (settings.ORBCLK.bool_brdc || glo_channels || bool_nav_iono) && ~settings.INPUT.bool_realtime
     [input] = read_brdc(settings, input, obs.leap_sec, glo_channels);
     if settings.INPUT.use_GLO
         % find out channels of Glonass satellites and save them in input.glo_channel
@@ -335,26 +346,6 @@ if bool_nav_klo || bool_nav_neq
     [input.IONO.klob_coeff, input.IONO.nequ_coeff] = read_nav_iono(settings.ORBCLK.file_nav_multi);
 end
 
-% if NeQuick model is to be applied, then read and save some of its coefficients already here
-if (strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmpi(settings.IONO.model,'Correct with ...')) ...
-        && strcmpi(settings.IONO.source,'NeQuick model')   &&   bool_nav_neq
-    
-    % load ccir-File
-    month_str = num2str(obs.startdate(2)+10);
-    load(['pdF2_',    month_str, '.mat'], 'pdF2_1',    'pdF2_2');
-    input.IONO.pdF2_1 = pdF2_1;
-    input.IONO.pdF2_2 = pdF2_2;
-    load(['pdM3000_', month_str, '.mat'], 'pdM3000_1', 'pdM3000_2');
-    input.IONO.pdM3000_1 = pdM3000_1;
-    input.IONO.pdM3000_2 = pdM3000_2;
-    
-    % load modip-file
-    input.IONO.modip = load('modip.mat', 'modip');
-    input.IONO.modip = input.IONO.modip.modip;
-    
-end
-
-
 
 %% Models - Biases
 
@@ -463,7 +454,7 @@ switch settings.BIASES.phase
         % ||| implement at some point
         
     case 'Correction Stream'
-        
+        % already happened
         
     case 'manually (not implemented)'
         errordlg('Phase bias read-in not implemented.', 'Error');

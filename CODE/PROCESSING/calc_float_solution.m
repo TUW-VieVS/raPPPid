@@ -15,6 +15,7 @@ function [Epoch, Adjust, model] = calc_float_solution(input, obs, Adjust, Epoch,
 %
 % Revision:
 %   2023/09/07, MFG: bug (no adjustment before KalmanFilter); cleaning code
+%   2025/01/09, MFWG: cleaning code (reset of parameters and covariance)
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -55,7 +56,7 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
     end
     
     % --- receiver clock errors and biases
-    model = getReceiverClockBiases(model, Epoch, Adjust, settings);
+    model = getReceiverClockBiases(model, Epoch, Adjust.param, settings);
     
     % --- Line-of-Sight-Vector and Theoretical Range (they might change when iterating)
     los = vecnorm2(model.Rot_X - Adjust.param(1:3));
@@ -115,7 +116,7 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
         fprintf(2, 'Not enough satellites for adjustment (Epoch %d)           \n', Epoch.q)
         Adjust.res = zeros(2*no_sats*settings.INPUT.proc_freqs,1);
         return
-    end    
+    end
     
     
     
@@ -145,6 +146,7 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
                 continue;       % start Kalman-Filter in next iteration
             end
             Adjust = KalmanFilter(Adjust, Epoch, settings, model);
+            Adjust.res = calc_res(settings, input, Epoch, model, Adjust, obs);
             break;              % no inner-epoch iteration
             
         case 'No Filter'      			% perform single-epoch Standard-LSQ-Adjustment
@@ -172,57 +174,75 @@ end
 
 % Code + Phase - Processing AND at least one satellite is excluded:
 % -> set ambiguities to zero
-if strcmpi(settings.PROC.method, 'Code + Phase')   &&   any(Epoch.exclude(:,1))         
+if strcmpi(settings.PROC.method, 'Code + Phase') && any(Epoch.exclude(:))         
     kk = 1:(num_freq*no_sats);
     kk = kk(Epoch.exclude(:));              % index-numbers of satellites and their frequencies under cutoff
     idx_amb = kk+NO_PARAM;                  % indices where to reset
-    Adjust.param(idx_amb) = 0;              % reset ambiguity
-    Adjust.param_sigma(idx_amb,:) = 0;      % reset covariance columns
-    Adjust.param_sigma(:,idx_amb) = 0;      % reset covariance rows
-    for i = 1:length(idx_amb)             	% reset variance
-        Adjust.param_sigma( idx_amb(i), idx_amb(i) ) = settings.ADJ.filter.var_amb;
-    end
+    Adjust = reset_param_sigma(Adjust, idx_amb, settings.ADJ.filter.var_amb); 
 end
 
-% Ionospheric delay is estimated AND at least one satellite is excluded:
-% -> set estimated ionospheric delay to zero
-if any(Epoch.exclude(:,1)) && contains(settings.IONO.model, 'Estimate')      
-    kk = 1:100;
-    kk = kk(Epoch.exclude(:,1));	% index-numbers of satellites and their frequencies under cutoff
-    idx_iono = kk+NO_PARAM;          % indices where to reset
+% Ionospheric delay is estimated AND at first frequency is excluded:
+% -> set estimated ionospheric delay of this satellite to zero
+if contains(settings.IONO.model, 'Estimate') && any(Epoch.exclude(:,1)) 
+    kkk = 1:100;
+    kkk = kkk(Epoch.exclude(:,1));      % index-numbers of satellites and their frequencies under cutoff
+    idx_iono = kkk+NO_PARAM;            % indices where to reset
     if strcmpi(settings.PROC.method, 'Code + Phase')
         idx_iono = idx_iono + num_freq*no_sats;   % change indices because of ambiguities
     end
-    Adjust.param(idx_iono) = 0;                 % reset estimated ionospheric delay
-    Adjust.param_sigma(idx_iono,:) = 0;         % reset covariance columns
-    Adjust.param_sigma(:,idx_iono) = 0;         % reset covariance rows
-    for i = 1:length(idx_iono)                  % reset variance
-        Adjust.param_sigma( idx_iono(i), idx_iono(i) ) = settings.ADJ.filter.var_iono;
-    end
+    Adjust = reset_param_sigma(Adjust, idx_iono, settings.ADJ.filter.var_iono);
 end
 
-% If a cycle slip is found reset the float ambiguities
+% If a cycle slip is found reset the float ambiguities and covariances
 if contains(settings.PROC.method, '+ Phase') && any(Epoch.cs_found(:))
     kkkk = 1:410;
     kkkk = kkkk(Epoch.cs_found(:));     % index-numbers of satellites and their frequencies under cutoff
     idx_cs = kkkk+NO_PARAM;             % indices where to reset
-    Adjust.param(idx_cs) = 0;       	% reset ambiguity
-    Adjust.param_sigma(idx_cs,:) = 0; 	% reset covariance columns
-    Adjust.param_sigma(:,idx_cs) = 0;  	% reset covariance rows
-    for i = 1:length(idx_cs)           	% reset variance
-        Adjust.param_sigma( idx_cs(i), idx_cs(i) ) = settings.ADJ.filter.var_amb;
-    end
+    Adjust = reset_param_sigma(Adjust, idx_cs, settings.ADJ.filter.var_amb);    
 end
 
-end     % ... of calc_float_solution.m
 
 
 
 %% AUXILIARY FUNCTIONS
 function Adjust = stop_iteration(Adjust, dx)
-Adjust.float = true;            % valid float solution
-Adjust.param = Adjust.param + dx.x;   	% save estimated parameters
-Adjust.res   = dx.v;            % save residuals of observations
-Adjust.param_sigma  = dx.Qxx;   % Cofactor Matrix of updated parameters...
+% Saves some variables when stopping the inner-epoch iteration
+Adjust.float = true;               	% valid float solution
+Adjust.param = Adjust.param + dx.x;	% save estimated parameters
+Adjust.res   = dx.v;               	% save residuals of observations
+Adjust.param_sigma  = dx.Qxx;      	% Cofactor Matrix of updated parameters...
 % ... used for filtering in adjustmentPreparation.m and fixing ambiguities
+
+function Adjust = reset_param_sigma(Adjust, idx, initial_var)
+% This function resets the parameter vector and its covariance matrix at
+% defined indices
+Adjust.param(idx) = 0;                  % reset parameter vector
+Adjust.param_sigma(idx,:) = 0;          % reset covariance columns
+Adjust.param_sigma(:,idx) = 0;          % reset covariance rows
+% set diagonal elements to initial variance
+sz = size(Adjust.param_sigma);          % size of covariance matrix
+idx_ = sub2ind(sz, idx, idx);           % convert to linear indices
+Adjust.param_sigma(idx_) = initial_var; % reset variances to initial variance
+
+
+function res = calc_res(settings, input, Epoch, model, Adjust, obs)
+% Calculates the post-fit residuals when using a Kalman Filter
+% recalculate error sources and modeled observations since parameters changed
+[model, Epoch] = modelErrorSources(settings, input, Epoch, model, Adjust, obs);
+[code_model, phase_model] = model_observations(model, Adjust, settings, Epoch);
+% calculate residuals (observation minus modeled observation)
+exclude = Epoch.exclude(:);
+usePhase = ~Epoch.cs_found(:);
+if strcmpi(settings.PROC.method, 'Code + Phase')
+    s_f = numel(Epoch.sats) * settings.INPUT.proc_freqs;    % #sats x # freqs
+    code_row = 1:2:2*s_f;   	% rows for code  obs [1,3,5,7,...]
+    phase_row = 2:2:2*s_f;  	% rows for phase obs [2,4,6,8,...]
+    res(code_row,1)	 = (Epoch.code(:)  - code_model(:))  .*  ~exclude; 	% for code-observations
+    res(phase_row,1) = (Epoch.phase(:) - phase_model(:)) .*  ~exclude .*  usePhase;    % for phase-observations
+else
+    res = (Epoch.code(:)  - code_model(:))  .*  ~exclude;
 end
+
+
+
+

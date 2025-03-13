@@ -1,14 +1,14 @@
-function [Adjust, Epoch] = fixedAdjustment_IF(Epoch, Adjust, model, b_WL, b_NL, wrongFixes)
+function [Adjust, Epoch] = fixedAdjustment_IF(Epoch, Adjust, model, b_WL, b_NL, settings)
 % Adjustment with fixed Ambiguities as a 2nd adjustment with ZD float
 % solution. Uses all available observations and weights the ones with fixed
 % ambiguities accordingly high
 % 
 % INPUT:
-%   Epoch       epoch specific data for current epoch [struct]
-%   Adjust      adjustment data and matrices [struct]
-%   model    	model corrections for all visible satellites [struct]
+%   Epoch       struct, epoch specific data for current epoch
+%   Adjust      struct, adjustment data and matrices
+%   model    	struct, model corrections for all visible satellites 
 %   b_WL,b_NL	WL/NL corrections for satellites of current epoch, SD
-%   wrongFixes  string, setting for detection of wrong fixes from GUI
+%   settings  	struct, processing settings from GUI
 % OUTPUT:
 %   Adjust      updated with results of fixed adjustment
 %   Epoch       updated with results of fixed adjustment
@@ -30,7 +30,7 @@ no_GLO = sum(Epoch.glo);            % number of Glonass satellites
 
 %% Prepare observations
 [model_code_fix, model_phase_fix] = ...
-    model_IF_fixed_observations(model, Epoch, Adjust.param);
+    model_IF_fixed_observations(model, Epoch, Adjust.param, settings);
 
 % calculate observed minus computed; for code and phase as vector alternately
 omc(1:2:2*length(Epoch.sats),1) =  (Epoch.code -  model_code_fix).*(~Epoch.exclude);
@@ -113,7 +113,7 @@ Adjust = saveFixedAdjustment(dx, Adjust, Epoch);
 % ||| maybe do this check only if a satellite was fixed newly
 if numel(idx_fixed) > 3            % 4 Fixes are necessary to detect a wrong fix
     no_sats = Epoch.no_sats;
-    switch wrongFixes
+    switch settings.AMBFIX.wrongFixes
         
         case 'Difference to float solution'
             coord_float = Adjust.param(1:3);            % coordinates from fixed adjustment

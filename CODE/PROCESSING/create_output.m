@@ -38,9 +38,11 @@ if settings.AMBFIX.bool_AMBFIX
     sigma_posFixed = sqrt(storeData.param_var_fix(:,1:3));      % fixed coordinates variances
 end
 
+% get time of calculated epochs (when printing to file with fprintf this is rounded)
+timeCalculated = storeData.gpstime;         % GPS time, seconds of week
 if obs_int >= 1
     % round observation interval to full second
-    timeCalculated = round(storeData.gpstime);
+    
 else
     % round observation interval to 2 decimal places
     timeCalculated = round(100*storeData.gpstime)/100;
@@ -120,15 +122,15 @@ if settings.AMBFIX.bool_AMBFIX && settings.EXP.results_fixed    % only if ambigu
     fprintf(fid,'%s\n',['# This file contains all relevant output data of the fixed solution: ' settings.PROC.output_dir]);
     fprintf(fid,'%s\n',line_2nd);
     fprintf(fid,'%s\n','# Columns:');
-    fprintf(fid,'%s\n','# (1) number of epoch');
-    fprintf(fid,'%s\n','# (2) GPS week number');
-    fprintf(fid,'%s\n','# (3) Seconds of GPS week');
-    fprintf(fid,'%s\n','# (4) receiver position: x [m]');
-    fprintf(fid,'%s\n','# (5) receiver position: y [m]');
-    fprintf(fid,'%s\n','# (6) receiver position: z [m]');
-    fprintf(fid,'%s\n','# (7) sigma receiver position: x [m]');
-    fprintf(fid,'%s\n','# (8) sigma receiver position: y [m]');
-    fprintf(fid,'%s\n','# (9) sigma receiver position: z [m]');
+    fprintf(fid,'%s\n','# (01) number of epoch');
+    fprintf(fid,'%s\n','# (02) GPS week number');
+    fprintf(fid,'%s\n','# (03) Seconds of GPS week');
+    fprintf(fid,'%s\n','# (04) receiver position: x [m]');
+    fprintf(fid,'%s\n','# (05) receiver position: y [m]');
+    fprintf(fid,'%s\n','# (06) receiver position: z [m]');
+    fprintf(fid,'%s\n','# (07) sigma receiver position: x [m]');
+    fprintf(fid,'%s\n','# (08) sigma receiver position: y [m]');
+    fprintf(fid,'%s\n','# (09) sigma receiver position: z [m]');
     fprintf(fid,'%s\n','# (10) receiver position: phi [°]');
     fprintf(fid,'%s\n','# (11) receiver position: lambda [°]');
     fprintf(fid,'%s\n','# (12) receiver position: height [m]');
@@ -210,7 +212,8 @@ end
 
 
 
-function [] = writeFloatResults(settings, storeData, line_2nd, fid, q_end, epochs, obs, timeCalculated)
+function [] = writeFloatResults(settings, storeData, line_2nd, fid, ...
+    q_end, epochs, obs, timeCalculated)
 % settings ... struct, processing settings
 % storeData ... struct, processing results
 % line_2nd ... string, content of second line (e.g., resets)
@@ -252,15 +255,15 @@ zhd_model = storeData.zhd;
 fprintf(fid,'%s\n',['# This file contains all relevant output data of the float solution: ' settings.PROC.output_dir]);
 fprintf(fid,'%s\n', line_2nd);
 fprintf(fid,'%s\n','# Columns:');
-fprintf(fid,'%s\n','# (1) number of epoch');
-fprintf(fid,'%s\n','# (2) GPS week number');
-fprintf(fid,'%s\n','# (3) Seconds of GPS week');
-fprintf(fid,'%s\n','# (4) receiver position: x [m]');
-fprintf(fid,'%s\n','# (5) receiver position: y [m]');
-fprintf(fid,'%s\n','# (6) receiver position: z [m]');
-fprintf(fid,'%s\n','# (7) sigma receiver position: x [m]');
-fprintf(fid,'%s\n','# (8) sigma receiver position: y [m]');
-fprintf(fid,'%s\n','# (9) sigma receiver position: z [m]');
+fprintf(fid,'%s\n','# (01) number of epoch');
+fprintf(fid,'%s\n','# (02) GPS week number');
+fprintf(fid,'%s\n','# (03) Seconds of GPS week');
+fprintf(fid,'%s\n','# (04) receiver position: x [m]');
+fprintf(fid,'%s\n','# (05) receiver position: y [m]');
+fprintf(fid,'%s\n','# (06) receiver position: z [m]');
+fprintf(fid,'%s\n','# (07) sigma receiver position: x [m]');
+fprintf(fid,'%s\n','# (08) sigma receiver position: y [m]');
+fprintf(fid,'%s\n','# (09) sigma receiver position: z [m]');
 fprintf(fid,'%s\n','# (10) receiver position: latitude [°]');
 fprintf(fid,'%s\n','# (11) receiver position: longitude [°]');
 fprintf(fid,'%s\n','# (12) receiver position: height [m]');
@@ -308,7 +311,8 @@ end
 
 
 
-function [] = writeFloatResults_DCM(settings, storeData, line_2nd, fid, q_end, epochs, obs, timeCalculated)
+function [] = writeFloatResults_DCM(settings, storeData, line_2nd, fid, ...
+    q_end, epochs, obs, timeCalculated)
 % settings ... struct, processing settings
 % storeData ... struct, processing results
 % line_2nd ... string, content of second line (e.g., resets)
@@ -332,16 +336,16 @@ zhd_model = storeData.zhd;
 fprintf(fid,'%s\n',['# This file contains all relevant output data of the float solution: ' settings.PROC.output_dir]);
 fprintf(fid,'%s\n', line_2nd);
 fprintf(fid,'%s\n','# Columns:');
-fprintf(fid,'%s\n','# (1) number of epoch');
-fprintf(fid,'%s\n','# (2) GPS week number');
-fprintf(fid,'%s\n','# (3) Seconds of GPS week');
+fprintf(fid,'%s\n','# (01) number of epoch');
+fprintf(fid,'%s\n','# (02) GPS week number');
+fprintf(fid,'%s\n','# (03) Seconds of GPS week');
 % position
-fprintf(fid,'%s\n','# (4) receiver position: x [m]');
-fprintf(fid,'%s\n','# (5) receiver position: y [m]');
-fprintf(fid,'%s\n','# (6) receiver position: z [m]');
-fprintf(fid,'%s\n','# (7) sigma receiver position: x [m]');
-fprintf(fid,'%s\n','# (8) sigma receiver position: y [m]');
-fprintf(fid,'%s\n','# (9) sigma receiver position: z [m]');
+fprintf(fid,'%s\n','# (04) receiver position: x [m]');
+fprintf(fid,'%s\n','# (05) receiver position: y [m]');
+fprintf(fid,'%s\n','# (06) receiver position: z [m]');
+fprintf(fid,'%s\n','# (07) sigma receiver position: x [m]');
+fprintf(fid,'%s\n','# (08) sigma receiver position: y [m]');
+fprintf(fid,'%s\n','# (09) sigma receiver position: z [m]');
 fprintf(fid,'%s\n','# (10) receiver position: latitude [°]');
 fprintf(fid,'%s\n','# (11) receiver position: longitude [°]');
 fprintf(fid,'%s\n','# (12) receiver position: height [m]');

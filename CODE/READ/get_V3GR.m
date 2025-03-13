@@ -6,7 +6,7 @@ function input = get_V3GR(obs, input, settings)
 %   input       struct, holding input data
 %   settings    struct, processing settings from GUI
 % OUTPUT:
-%	input       struct, updated with V3GR data
+%	input       struct, updated with input.TROPO.V3GR.data
 % 
 % Coded:
 %   01 Feb 2019 by D. Landskron

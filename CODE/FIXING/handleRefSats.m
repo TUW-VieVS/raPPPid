@@ -7,7 +7,7 @@ function [Epoch, Adjust] = handleRefSats(Epoch, elev, settings, Adjust)
 %
 % INPUT:
 %   Epoch       struct, epoch-specific data
-%   elev     	[�], elevation of all satellites in this epoch
+%   elev     	[°], elevation of all satellites in this epoch
 %   settings  	struct, processing settings from GUI
 % OUTPUT:
 %   Epoch       struct, updated with reference satellite and index

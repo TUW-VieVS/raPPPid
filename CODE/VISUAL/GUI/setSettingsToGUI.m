@@ -297,8 +297,16 @@ end
 try
     set(handles.edit_corr2brdc_age, 'String', num2str(structure.ORBCLK.CorrectionStream_age));  %#ok<*ST2NM>
 end
+% set reference point of correction stream
+try
+    set(handles.radiobutton_APC, 'Value', structure.ORBCLK.CorrectionStream_APC);
+    set(handles.radiobutton_COM, 'Value', structure.ORBCLK.CorrectionStream_COM);
+catch   % old settings file
+    set(handles.radiobutton_APC, 'Value', 1);
+    set(handles.radiobutton_COM, 'Value', 0);
+end
 
-        
+
 
 %% Models - Troposphere
 
@@ -445,7 +453,9 @@ switch structure.IONO.source
     case 'VTEC from Correction stream'
         set(handles.radiobutton_model_ionosphere_CorrectionStream, 'Value', 1);  
     case 'TOBS File'
-        set(handles.radiobutton_model_ionosphere_TOBS,             'Value', 1);          
+        set(handles.radiobutton_model_ionosphere_TOBS,             'Value', 1);   
+    case 'NTCM-G'
+        set(handles.radiobutton_model_ionosphere_NTCMG,            'Value', 1);        
 end
 % Constraint until defined epoch
 try
@@ -962,6 +972,12 @@ try         % ||| remove at some point
     handles.checkbox_exp_storeData_vtec.Value    = structure.EXP.storeData_vtec;
     handles.checkbox_exp_storeData_iono_mf.Value = structure.EXP.storeData_iono_mf;
     handles.checkbox_exp_storeData_mp_1_2.Value  = structure.EXP.storeData_mp_1_2;
+    try
+        handles.checkbox_exp_storeData_sat_status.Value = structure.EXP.storeData_sat_status;
+    catch
+        handles.checkbox_exp_storeData_sat_status.Value = 0;
+    end
+    
     % Variable satellites
     try
         handles.checkbox_exp_satellites.Value    = structure.EXP.satellites;
@@ -1001,6 +1017,11 @@ if bool_settings == 1   % do this only for the settings structure
         % old version
     end
     set(handles.checkbox_plot_xyz,              'Value', structure.PLOT.coordxyz      );
+	try
+        set(handles.checkbox_plot_xyzplot,      'Value', structure.PLOT.XYZ       	  );
+    catch
+        % old version
+    end	
 	set(handles.checkbox_plot_elev,             'Value', structure.PLOT.elevation     );
 	set(handles.checkbox_plot_sat_visibility,   'Value', structure.PLOT.satvisibility );
 	set(handles.checkbox_plot_float_amb,        'Value', structure.PLOT.float_amb     );

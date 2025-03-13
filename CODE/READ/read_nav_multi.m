@@ -22,6 +22,7 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 %
 %   Revision:
 %       2023/09/22, MFWG: jump over broken epoch entries
+%       2025/02/21, MFWG: slight format change, save nav.message type
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -108,10 +109,10 @@ no_eph_glo = sum(CharGNSS == 'R');
 no_eph_gal = sum(CharGNSS == 'E');
 no_eph_bds = sum(CharGNSS == 'C');
 
-Eph_GPS = zeros(29, no_eph_gps);
-Eph_GLO = zeros(19, no_eph_glo);
-Eph_GAL = zeros(29, no_eph_gal);
-Eph_BDS = zeros(28, no_eph_bds);
+Eph_GPS = zeros(30, no_eph_gps);
+Eph_GLO = zeros(20, no_eph_glo);
+Eph_GAL = zeros(30, no_eph_gal);
+Eph_BDS = zeros(30, no_eph_bds);
 
 
 
@@ -157,15 +158,15 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         IODE   = lData(1);          % Issue of Data (IOD)
-        crs    = lData(2);          % [m]
-        Delta_n= lData(3);      	% [rad/s]
-        M0     = lData(4);          % [rad]
+        crs    = lData(2);          % [m] Amplitude of the Sine Harmonic Correction Term to the Orbit Radius
+        Delta_n= lData(3);      	% [rad/s] Mean Motion Difference from Computed Value
+        M0     = lData(4);          % [rad] Mean Anomaly at Reference Time
         % -+-+- line 2 -+-+-
         i = i+1;
         line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         cuc   = lData(1);           % [rad]
-        ecc   = lData(2);           % Eccentricity
+        ecc   = lData(2);           % [] Eccentricity
         cus   = lData(3);           % [rad]
         roota = lData(4);           % sqrt(a) [sqrt(m)]
         % -+-+- line 3 -+-+-
@@ -211,10 +212,10 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         
         Eph_GPS( 1,i_gps) = prn;        % satellite number
         Eph_GPS( 2,i_gps) = af2;        % [s/s^2], sv clock drift rate
-        Eph_GPS( 3,i_gps) = M0;         % [rad]
+        Eph_GPS( 3,i_gps) = M0;         % Mean Anomaly at Reference Time [rad]
         Eph_GPS( 4,i_gps) = roota;      % [sqrt(m)]
         Eph_GPS( 5,i_gps) = Delta_n;    % [rad/s]
-        Eph_GPS( 6,i_gps) = ecc;        % Eccentricity
+        Eph_GPS( 6,i_gps) = ecc;        % Eccentricity []
         Eph_GPS( 7,i_gps) = omega;      % [rad]
         Eph_GPS( 8,i_gps) = cuc;        % [rad]
         Eph_GPS( 9,i_gps) = cus;        % [rad]
@@ -238,6 +239,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         Eph_GPS(27,i_gps) = weekno;     % gps-week, continuos number
         Eph_GPS(28,i_gps) = accuracy;   % [m], sat in space accuracy
         Eph_GPS(29,i_gps) = tom;        % transmission time of message [sow]
+        Eph_GPS(30,i_gps) = 0;          % type of navigation message (e.g. LNAV)
         i_gps = i_gps + 1;
     end
     
@@ -319,6 +321,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         Eph_GLO(17,i_glo) = woe;         % gps-week, week of ephemerides
         Eph_GLO(18,i_glo) = toe;         % epoch of ephemerides converted into GPS sow
         Eph_GLO(19,i_glo) = IOD;         % Issue of Data
+        Eph_GLO(20,i_glo) = 0;           % type of navigation message
         i_glo = i_glo + 1;
     end
     
@@ -384,7 +387,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         line = NAV{i};
         lData = textscan(line,'%f'); lData = lData{1}; if isempty(lData); continue; end
         idot = lData(1);            % [rad/s]
-        datasource=int64(lData(2));	% for GALILEO data sources (FLOAT->INT)
+        datasource = round(lData(2));	% type of navigation message
         % bit 0 set: I/NAV E1-B
         % bit 1 set: F/NAV E5a-I
         % bit 2 set: I/NAV E5b-I
@@ -436,13 +439,14 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         Eph_GAL(20,i_gal) = af1;        % [s/s], sv clock drift
         Eph_GAL(21,i_gal) = toc;        % [s], seconds of galileo-week
         Eph_GAL(22,i_gal) = bgd_a;   	% Broadcasted Group Delay E5a/E1 [s]
-        Eph_GAL(23,i_gal) = svhealth;   % ????
+        Eph_GAL(23,i_gal) = svhealth;   % SV health
         Eph_GAL(24,i_gal) = IODE;       % Issue of Data Ephemeris
         Eph_GAL(25,i_gal) = bgd_b;    	% Broadcasted Group Delay E5b/E1 [s]
-        Eph_GAL(26,i_gal) = datasource;	% ???????????
+        Eph_GAL(26,i_gal) = 0;          % empty
         Eph_GAL(27,i_gal) = weekno;     % galileo-week
         Eph_GAL(28,i_gal) = sisa;       % signal in space accuracy [m]
         Eph_GAL(29,i_gal) = tom;        % transmission time of message [sow]
+        Eph_GAL(30,i_gal) = datasource;	% type of navigation message, FNAV or INAV
         i_gal = i_gal + 1;
     end
     
@@ -564,6 +568,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
         Eph_BDS(27,i_bds) = bdsweek;   	% bds-week
         Eph_BDS(28,i_bds) = SV_acc;     % [m], sat in space accuracy
         Eph_BDS(29,i_bds) = tom;        % transmission time of message [sow]
+        Eph_BDS(30,i_bds) = 0;          % type of navigation message
         i_bds = i_bds + 1;
     end
     

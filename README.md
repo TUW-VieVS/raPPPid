@@ -37,7 +37,7 @@ Glaner, M. F. (2022). Towards instantaneous PPP convergence using multiple GNSS 
 
 
 ## Getting Started
-You need a recent Matlab installation. raPPPid is tested on Windows. Download or clone the raPPPid repository from GitHub, for example, with the following command:
+You need a recent Matlab installation. raPPPid is extensively tested on Windows and also works on Linux. Download or clone the raPPPid repository from GitHub, for example, with the following command:
 ```
 git clone https://github.com/TUW-VieVS/raPPPid
 ```
@@ -48,7 +48,7 @@ raPPPid
 
 
 ## Processing Examples
-Check the raPPPid wiki: https://vievswiki.geo.tuwien.ac.at/raPPPid/Examples
+Check the raPPPid wiki: https://vievswiki.geo.tuwien.ac.at/en/raPPPid/table_of_content
 
 raPPPid provides functions to download GNSS observation data (e.g., DownloadDaily30sIGS). All other input data is downloaded automatically.
 

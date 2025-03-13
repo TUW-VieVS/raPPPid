@@ -1,11 +1,11 @@
 function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
     read_nav_multi_r4(NAV, leap_sec)
 % Function to read in a RINEX 4 multi GNSS broadcast message file.
-% Different time-systems are converted into GPS time (seconds of week).
+% GLONASS time is converted in GPS time, while BDS time is considered 
+% during the PPP calculations. 
 % 
-% a detailed description can be found in the Rinex v4 or v3 format 
-% specifications, for example, RINEX Version 3.03, p.34, 
-% https://files.igs.org/pub/data/format/rinex304.pdf
+% RINEX v4, format description:
+% https://files.igs.org/pub/data/format/rinex_4.00.pdf
 %
 % INPUT:
 %   fData           cell, containing data of multi-GNSS navigation file
@@ -21,7 +21,7 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 %   Eph_BDS         BeiDou navigation data
 %
 %   Revision:
-%       ...
+%       2025/02/21, MFWG: slight format change, save nav.message type
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -60,10 +60,10 @@ no_eph_glo = sum(contains(NAV, '> EPH R'));
 no_eph_gal = sum(contains(NAV, '> EPH E'));
 no_eph_bds = sum(contains(NAV, '> EPH C'));
 % Initialize navigation messaga variables
-Eph_GPS = zeros(29, no_eph_gps);
+Eph_GPS = zeros(30, no_eph_gps);
 Eph_GLO = zeros(19, no_eph_glo);
-Eph_GAL = zeros(29, no_eph_gal);
-Eph_BDS = zeros(28, no_eph_bds);
+Eph_GAL = zeros(30, no_eph_gal);
+Eph_BDS = zeros(30, no_eph_bds);
 
 
 
@@ -83,26 +83,23 @@ while i < n_NAV         % loop from END OF HEADER to end of file
     
     switch line(1:5)
         case '> EPH'	% Ephemerides data including orbit, clock, biases, accuracy and, status parameters
+            type = line(11:end);    % navigation message type (e.g., LNAV)
             i = i + 1;
             switch line(7)
                 case 'G'        % GPS ephemerides
-                    % ||| consider ephemerides type (e.g., lnav)
-                    [Eph_GPS, i] = save_eph_GPS(Eph_GPS, NAV, i, i_gps);
+                    [Eph_GPS, i] = save_eph_GPS(Eph_GPS, NAV, i, i_gps, type);
                     i_gps = i_gps + 1;
                     
                 case 'R'        % GLONASS ephemerides
-                    % ||| consider ephemerides type (e.g., lnav)
-                    [Eph_GLO, i] = save_eph_GLO(Eph_GLO, NAV, i, i_glo, leap_sec);
+                    [Eph_GLO, i] = save_eph_GLO(Eph_GLO, NAV, i, i_glo, leap_sec, type);
                     i_glo = i_glo + 1;
                     
                 case 'E'        % Galileo ephemerides
-                    % ||| consider ephemerides type (e.g., lnav)
-                    [Eph_GAL, i] = save_eph_GAL(Eph_GAL, NAV, i, i_gal);
+                    [Eph_GAL, i] = save_eph_GAL(Eph_GAL, NAV, i, i_gal, type);
                     i_gal = i_gal + 1;
                     
                 case 'C'        % BeiDou ephemerides
-                    % ||| consider ephemerides type (e.g., lnav)
-                    [Eph_BDS, i] = save_eph_BDS(Eph_BDS, NAV, i, i_bds, leap_sec);
+                    [Eph_BDS, i] = save_eph_BDS(Eph_BDS, NAV, i, i_bds, leap_sec, type);
                     i_bds = i_bds + 1;
                     
                 otherwise
@@ -139,7 +136,7 @@ while i < n_NAV         % loop from END OF HEADER to end of file
 end
 
 
-function [Eph_GPS, i] = save_eph_GPS(Eph_GPS, NAV, i, i_gps)
+function [Eph_GPS, i] = save_eph_GPS(Eph_GPS, NAV, i, i_gps, type)
 % read GPS data record
 % -+-+- line 0 -+-+-
 line = NAV{i};
@@ -200,7 +197,7 @@ idot = lData(1);            % [rad/s]
 codes = int64(lData(2));    % GPS: codes on L2 channel
 weekno = lData(3);          % GPS week
 if size(lData,1) == 4
-    L2flag = lData(4);      % GPS: L2 flag
+    L2flag = lData(4);      % GPS: L2P data flag
 end
 % -+-+- line 6 -+-+-
 i = i+1; line = NAV{i};
@@ -243,11 +240,12 @@ Eph_GPS(26,i_gps) = codes;      % codes on L2 channel
 Eph_GPS(27,i_gps) = weekno;     % gps-week, continuos number
 Eph_GPS(28,i_gps) = accuracy;   % [m], sat in space accuracy
 Eph_GPS(29,i_gps) = tom;        % transmission time of message [sow]
+Eph_GPS(30,i_gps) = sum(type);	% type of navigation message
 
 
 
 
-function [Eph_GLO, i] = save_eph_GLO(Eph_GLO, NAV, i, i_glo, leap_sec)
+function [Eph_GLO, i] = save_eph_GLO(Eph_GLO, NAV, i, i_glo, leap_sec, type)
 % read GLONASS data record
 
 % -+-+- line 0 -+-+-
@@ -324,10 +322,11 @@ Eph_GLO(16,i_glo) = TauC;        % [s], -TauC, Correction system time to UTC (SU
 Eph_GLO(17,i_glo) = woe;         % gps-week, week of ephemerides
 Eph_GLO(18,i_glo) = toe;         % epoch of ephemerides converted into GPS sow
 Eph_GLO(19,i_glo) = IOD;         % Issue of Data
+Eph_GLO(20,i_glo) = sum(type);   % type of navigation message
 
 
 
-function [Eph_GAL, i] = save_eph_GAL(Eph_GAL, NAV, i, i_gal)
+function [Eph_GAL, i] = save_eph_GAL(Eph_GAL, NAV, i, i_gal, type)
 % read Galileo data record
 
 % -+-+- line 0 -+-+-
@@ -386,7 +385,7 @@ Omegadot = lData(4);        % [rad/s]
 i = i+1; line = NAV{i};
 lData = textscan(line,'%f'); lData = lData{1};
 idot = lData(1);            % [rad/s]
-datasource=int64(lData(2));	% for GALILEO data sources (FLOAT->INT)
+datasource = round(lData(2));	% type of navigation message
 % bit 0 set: I/NAV E1-B
 % bit 1 set: F/NAV E5a-I
 % bit 2 set: I/NAV E5b-I
@@ -436,17 +435,17 @@ Eph_GAL(19,i_gal) = af0;        % [s], sv clock bias
 Eph_GAL(20,i_gal) = af1;        % [s/s], sv clock drift
 Eph_GAL(21,i_gal) = toc;        % [s], seconds of galileo-week
 Eph_GAL(22,i_gal) = bgd_a;   	% Broadcasted Group Delay E5a/E1 [s]
-Eph_GAL(23,i_gal) = svhealth;   % ????
+Eph_GAL(23,i_gal) = svhealth;   % SV health
 Eph_GAL(24,i_gal) = IODE;       % Issue of Data Ephemeris
 Eph_GAL(25,i_gal) = bgd_b;    	% Broadcasted Group Delay E5b/E1 [s]
-Eph_GAL(26,i_gal) = datasource;	% ???????????
+Eph_GAL(26,i_gal) = 0;          % empty
 Eph_GAL(27,i_gal) = weekno;     % galileo-week
 Eph_GAL(28,i_gal) = sisa;       % signal in space accuracy [m]
 Eph_GAL(29,i_gal) = tom;        % transmission time of message [sow]
+Eph_GAL(30,i_gal) = datasource; % type of navigation message
 
 
-
-function [Eph_BDS, i] = save_eph_BDS(Eph_BDS, NAV, i, i_bds, leap_sec)
+function [Eph_BDS, i] = save_eph_BDS(Eph_BDS, NAV, i, i_bds, leap_sec, type)
 % read BeiDou data record
 
 % -+-+- line 0 -+-+-
@@ -559,7 +558,7 @@ Eph_BDS(26,i_bds) = tgd2;       % [s], time group delay B2/B3
 Eph_BDS(27,i_bds) = bdsweek;   	% bds-week
 Eph_BDS(28,i_bds) = SV_acc;     % [m], sat in space accuracy
 Eph_BDS(29,i_bds) = tom;        % transmission time of message [sow]
-
+Eph_BDS(30,i_bds) = sum(type);  % type of navigation message
 
 
 function [klob, i] = save_klob_coeff(klob, NAV, i)
@@ -604,3 +603,5 @@ nequ(3) = val_1(9);
 i = i + 1; line = NAV{i};
 val_2 = textscan(line,'%f'); val_2 = val_2{1};    
 disturbance_flag = val_2(1);        % ||| not considered
+
+

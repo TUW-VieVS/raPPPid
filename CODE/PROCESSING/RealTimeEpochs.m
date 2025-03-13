@@ -3,9 +3,12 @@ function [proc_epochs, start_sow, ende_sow]= RealTimeEpochs(settings, obs)
 % for initializing variables)
 %
 % INPUT:
-%   ...
+%   settings        struct, processing settings from the GUI
+%   obs             struct, contains observation-specific data
 % OUTPUT:
-%	...
+%	proc_epochs     approximate number of epochs to process [start, end]
+%   start_sow       start time of real-time processing [sow]
+%   ende_sow        end time of real-time processing [sow]
 %
 % Revision:
 %   ...
@@ -35,8 +38,6 @@ jd = cal2jd_GT(year, month, day_);
 % calculate and save approximate number of epochs to process
 proc_epochs(1) = 1;
 proc_epochs(2) = ceil((ende_sow-start_sow) / obs.interval);
-
-
 
 
 

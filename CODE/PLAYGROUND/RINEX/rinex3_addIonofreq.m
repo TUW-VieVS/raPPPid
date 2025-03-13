@@ -95,5 +95,5 @@ end
 % close and open in explorer
 close(WBAR);
 fclose(fid_out);
-winopen(path_out);
+OpenFolder(path_out);
 end

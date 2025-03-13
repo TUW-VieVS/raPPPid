@@ -41,7 +41,7 @@ isQZSS = settings.INPUT.use_QZSS;
 
 % take position depending on selected solution
 if settings.PLOT.fixed && settings.AMBFIX.bool_AMBFIX
-    try; pos_cart = storeData.xyz_fix(:,1:3); catch; pos_cart = storeData.param_fix(:,1:3); end
+    try pos_cart = storeData.xyz_fix(:,1:3); catch; pos_cart = storeData.param_fix(:,1:3); end
     pos_geo = storeData.posFixed_geo;
     pos_utm = storeData.posFixed_utm;
     floatfix = 'fixed';				% string to indicate in plots which solution
@@ -60,15 +60,15 @@ end
 % get true position
 bool_zero = all(pos_cart == 0,2);   % all three coordinates are zero
 if isa(settings.PLOT.pos_true, 'double') || ~isfile(settings.PLOT.pos_true)
-    pos_true = settings.PLOT.pos_true;          % static reference coordinates
+    xyz_true = settings.PLOT.pos_true;          % reference coordinates
     bool_true_pos = true;
-    if any(isnan(pos_true) | pos_true == 0 | pos_true == 1)     % no valid true position
+    if any(isnan(xyz_true) | xyz_true == 0 | xyz_true == 1)     % no valid true position
         pos_cart(bool_zero, :) = [];        % remove those
-        pos_true = median(pos_cart, 1, 'omitnan'); 	% take median position for coordinate differences
+        xyz_true = median(pos_cart, 1, 'omitnan')'; 	% take median position for coordinate differences
         bool_true_pos = false;
     end
     % transform true positions in phi, lambda, h of WGS84 and into UTM
-    pos_true_geo = cart2geo(pos_true);   % true ellipsoidal coordinates
+    pos_true_geo = cart2geo(xyz_true);   % true ellipsoidal coordinates
     [North_true, East_true] = ell2utm_GT(pos_true_geo.lat, pos_true_geo.lon);   % true UTM North and East coordinates
 else        % reference trajectory
     bool_true_pos = true;
@@ -89,10 +89,11 @@ reset_sow = storeData.gpstime(storeData.float_reset_epochs);
 reset_sec = round(reset_sow - sow(1));
 reset_h = reset_sec / 3600;
 
-% create string for title of plot with station name and startdate (yyyy, doy)
-station = obs.stationname;
-[doy, yyyy] = jd2doy_GT(obs.startdate_jd(1));
-station_date = [station, ' ', sprintf('%4.0f',yyyy), '/', sprintf('%03.0f',floor(doy))];
+% create string for title of plot with station name, startdate (yyyy, doy),
+% and processed GNSS
+station = obs.stationname;                          % get station name
+[doy, yyyy] = jd2doy_GT(obs.startdate_jd(1));       % get year and doy
+station_date = [station ' ' sprintf('%4.0f',yyyy) '/' sprintf('%03.0f',floor(doy))];
 
 rgb = createDistinguishableColors(40);      % colors for plot, no GNSS has more than 40 satellites
 
@@ -102,7 +103,7 @@ rgb = createDistinguishableColors(40);      % colors for plot, no GNSS has more 
 [~, hour, min, sec] = sow2dhms(storeData.gpstime(1));
 label_x_sec = ['[s], 1st Epoch: ', sprintf('%02d',hour),   'h:',   sprintf('%02d',min),   'm:',   sprintf('%02.0f',sec),   's'];
 label_x_h   = ['[h], 1st Epoch: ', sprintf('%02d',hour),   'h:',   sprintf('%02d',min),   'm:',   sprintf('%02.0f',sec),   's'];
-label_x_time =  ['Time, 1st Epoch: ', sprintf('%02d',hour),   'h:',   sprintf('%02d',min),   'm:',   sprintf('%02.0f',sec),   's'];
+label_x_time =  ['GPS Time, 1st Epoch: ', sprintf('%02d',hour),   'h:',   sprintf('%02d',min),   'm:',   sprintf('%02.0f',sec),   's'];
 label_x_epc = 'Epochs';
 
 if settings.PLOT.coordxyz || settings.PLOT.UTM || settings.PLOT.coordinate
@@ -118,6 +119,20 @@ end
 if settings.PLOT.coordinate
     dN(isnan(dN)) = 0;     dE(isnan(dE)) = 0;     dH(isnan(dH)) = 0;
     CoordinatePlot(epochs, dN', dE', dH', sow, label_x_sec, seconds, reset_sec, station_date, floatfix);
+end
+if STOP_CALC; return; end
+
+
+% -+-+-+-+- Figure: XYZ Plot -+-+-+-+-
+% X, Y, Z over time in one plot
+if settings.PLOT.XYZ
+    % calculate differences to true XYZ position
+    if settings.PLOT.fixed && settings.AMBFIX.bool_AMBFIX
+        xyz = storeData.xyz_fix;        % fixed
+    else
+        xyz = storeData.param(:,1:3);   % float
+    end
+    XYZ_Plot(interval, sow, xyz, xyz_true, reset_sow, label_x_time, station_date, floatfix);
 end
 if STOP_CALC; return; end
 
@@ -414,16 +429,19 @@ if settings.PLOT.stream_corr && settings.ORBCLK.bool_brdc && ~isempty(settings.O
     if isfile(filename)
         if isGPS	% Plot for GPS
             load(filename, 'corr2brdc_GPS');
-            plotCorrection2BRDC(corr2brdc_GPS, obs, filename, 'G');
+            plotCorrection2BRDC(corr2brdc_GPS, obs, filename, 'G', storeData.gpstime, satellites.obs);
         end
-        % ||| GLONASS is missing!!!
+        if isGLO	% Plot for GLONASS
+            load(filename, 'corr2brdc_GLO');
+            plotCorrection2BRDC(corr2brdc_GLO, obs, filename, 'R', storeData.gpstime, satellites.obs);
+        end
         if isGAL	% Plot for Galileo
             load(filename, 'corr2brdc_GAL');
-            plotCorrection2BRDC(corr2brdc_GAL, obs, filename, 'E');
+            plotCorrection2BRDC(corr2brdc_GAL, obs, filename, 'E', storeData.gpstime, satellites.obs);
         end
         if isBDS	% Plot for BeiDou
-            load(filename, 'corr2brdc_GAL');
-            plotCorrection2BRDC(corr2brdc_GAL, obs, filename, 'E');
+            load(filename, 'corr2brdc_BDS');
+            plotCorrection2BRDC(corr2brdc_BDS, obs, filename, 'C', storeData.gpstime, satellites.obs);
         end
         % ||| QZSS is missing!!!
     end

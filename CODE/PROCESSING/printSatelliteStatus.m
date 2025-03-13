@@ -67,7 +67,9 @@ for i = 1:n
             case 15
                 str_add = 'no BRDC ephemeris';
             case 16
-                str_add = 'faulty code observations';                
+                str_add = 'faulty code observations';   
+            case 17
+                str_add = 'satellite clock jump';                  
             otherwise
                 str_add = '';
         end

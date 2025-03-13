@@ -53,7 +53,10 @@ switch settings.BIASES.code
         end
         if ~isfile([target file]) && ~isfile([target decompr])
             file = file_0;      [~, decompr, ~] = fileparts(file);
-            try websave([target file], [httpserver '/' file]); end
+            try websave([target file], [httpserver '/' file]); 
+            catch
+                errordlg('No CAS Multi-GNSS DCBs found on server. Please specify different source!', 'Error');
+            end
         end       
         % unzip if download was successful
         decompressed = unzip_and_delete({file}, {target});
@@ -175,6 +178,7 @@ switch settings.BIASES.code
         if file_status == 0
             errordlg('No CNES MGEX Biases found on server. Please specify different source!', 'Error');
         end
+        decompressed = unzip_and_delete(file(1), target(1));
         % save file-path
         settings.BIASES.code_file = decompressed{1};
 

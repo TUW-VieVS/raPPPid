@@ -214,6 +214,10 @@ if PLOT.coordxyz
     l_sto{end+1} = 'posFloat_utm';
     l_sto{end+1} = 'posFixed_utm';
 end
+if PLOT.XYZ
+    l_sto{end+1} = 'param';
+    l_sto{end+1} = 'xyz_fix';
+end
 if PLOT.UTM
     l_sto{end+1} = 'posFloat_utm';
     l_sto{end+1} = 'posFixed_utm';

@@ -1,16 +1,10 @@
-function [value_mf, Lat_IPP, Lon_IPP] = iono_mf(el, mf, pos_geo, az, R, hgt)
+function value_mf = iono_mf(el, mf, az, R, hgt)
 % Calulates the value of the mapping function for ionospheric correction 
 % from an ionex file.
-% The point of interest for which a TEC value has to be estimated is not 
-% the location of the receiver but the location of the sub-ionospheric point. 
-% The geocentric spherical coordinates of the sub-ionospheric point can be 
-% computed from the receiver coordinates and the azimuth- and zenith angles
-% a, z of the receiver
 % 
 % INPUT:
 %   el          elevation of the satellite [°]
 %   mf          mapping function of ionex file [string]
-%   pos_geo     receiver position, struct
 %   az          azimuth of the satellite [°]
 %   R           earth radius from IONEX file [km]
 %   hgt         height of single layer [km]
@@ -19,11 +13,14 @@ function [value_mf, Lat_IPP, Lon_IPP] = iono_mf(el, mf, pos_geo, az, R, hgt)
 %   Lat_IPP     latitude of the ionospheric pierce point [°]
 %   Lon_IPP     longitude of the ionospheric pierce point [°]
 % 
+% Revision:
+%   2025/01/22, MFGW: removed calculation of IPP
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
-H = hgt(1) * 1000;      % height of ionospheric single layer [m]
+H = hgt(1) * 1000;                          % height of ionospheric single layer [m]
 z = (90 - el)/180*pi;                       % zenith angle, convert [°] in [rad]
 zi = asin((Const.RE)/(Const.RE+H)*sin(z));  % zenith angle in the IPP [rad]
 
@@ -45,9 +42,3 @@ switch mf
     otherwise
         fprintf('WARNING: No ionospheric Mapping Function                \n')
 end
-
-% calculate ionospheric pierce point
-[Lat_IPP, Lon_IPP] = calcIPP(pos_geo.lat, pos_geo.lon, az*pi/180, el*pi/180, H);
-% convert at_IPP and Lon_IPP from radiant to degree
-Lat_IPP = Lat_IPP/pi*180;
-Lon_IPP = Lon_IPP/pi*180;

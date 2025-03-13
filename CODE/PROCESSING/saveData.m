@@ -33,6 +33,7 @@ prns = Epoch.sats;              % prn numbers of satellites
 no_sats = numel(prns);        	% number of satellites in current epoch
 s_f = no_sats*proc_frqs;     	% #satellites x #frequencies
 bool_float = Adjust.float;      % true if float position is achieved in current epoch
+decoupled_clock_model = strcmp(settings.IONO.model, 'Estimate, decoupled clock');
 
 
 %% satellite variables
@@ -195,14 +196,19 @@ if settings.OTHER.mp_detection
 end
 
 
-%% PPP-AR variables: save reference satellites, fixed ambiguites and HMW LC
-if settings.AMBFIX.bool_AMBFIX
-    % save reference satellites
+%% save reference satellites
+if settings.AMBFIX.bool_AMBFIX || decoupled_clock_model
     storeData.refSatGPS(q) = Epoch.refSatGPS;
-	storeData.refSatGLO(q) = Epoch.refSatGLO;
+    storeData.refSatGLO(q) = Epoch.refSatGLO;
     storeData.refSatGAL(q) = Epoch.refSatGAL;
     storeData.refSatBDS(q) = Epoch.refSatBDS;
-	storeData.refSatQZS(q) = Epoch.refSatQZS;
+    storeData.refSatQZS(q) = Epoch.refSatQZS;
+end
+
+
+%% PPP-AR variables: save fixed ambiguites and HMW LC
+if settings.AMBFIX.bool_AMBFIX
+
     % save fixed ambiguities
     if contains(settings.IONO.model,'IF-LC')
         storeData.N_WL_12(q,:) = Epoch.WL_12';        % fixed Wide-Lane
@@ -294,6 +300,9 @@ storeData.VDOP(q) = sqrt(Qneu(3,3));
 storeData.cs_found(q,prns) = any(Epoch.cs_found, 2); 	% true if cycle slip found on any frequency
 storeData.exclude(q,prns)  = any(Epoch.exclude, 2);     % true if satellite's observation excluded on any frequency
 
+
+%% save satellite status
+storeData.sat_status(q,prns) = Epoch.sat_status;
 
 
 %% save modelled error-sources (into model_save)

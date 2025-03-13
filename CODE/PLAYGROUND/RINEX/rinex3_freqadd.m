@@ -65,5 +65,5 @@ end
 
 close(WBAR);
 fclose(fid_out);
-winopen(path_out);
+OpenFolder(path_out);
 end

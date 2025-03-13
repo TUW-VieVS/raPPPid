@@ -9,20 +9,17 @@ function [Adjust] = KalmanFilter(Adjust, Epoch, settings, model)
 %   model       struct, containing observation model
 % OUTPUT:
 %   Adjust      struct, contains adjustment relevant data
+%  
+% Revision:
+%   2025/02/18, MFWG: moved calculation of residuals outside this function
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
-% get variables from settings
-num_freq = settings.INPUT.proc_freqs;
 % get variables from Adjust
 omc = Adjust.omc;               % observed minus computed for current epoch
 A = Adjust.A;                   % Design-Matrix for current epoch
-% create some variables
-no_sats = numel(Epoch.sats);    % number of satellites in current epoch
-s_f = no_sats * num_freq;
-
 
 
 %% Preparations
@@ -68,22 +65,5 @@ Q_x_adj = (Q_x_adj + Q_x_adj')/2;       % to ensure that matrix is symmetric (e.
 idx = ~zero_columns;
 Adjust.param(idx) = x_adj;       	% save estimated parameters
 Adjust.param_sigma(idx,idx)  = Q_x_adj;  % for filtering in adjustmentPreparation.m used
-% Adjust.res = omc;                   % ||| check this!!!!!
 Adjust.float = true;                % valid float solution
 
-% calculate residuals
-exclude = Epoch.exclude(:);
-usePhase = ~Epoch.cs_found;
-usePhase(any(Epoch.cs_found,2),:) = 0;
-usePhase = usePhase(:);
-[code_model, phase_model] = model_observations(model, Adjust, settings, Epoch);
-if strcmpi(settings.PROC.method, 'Code + Phase')
-    code_row = 1:2:2*s_f;   	% rows for code  obs [1,3,5,7,...]
-    phase_row = 2:2:2*s_f;  	% rows for phase obs [2,4,6,8,...]
-    res(code_row,1)	 = (Epoch.code(:)  - code_model(:))  .*  ~exclude; 	% for code-observations
-    res(phase_row,1) = (Epoch.phase(:) - phase_model(:)) .*  ~exclude .*  usePhase;    % for phase-observations
-else
-    res = (Epoch.code(:)  - code_model(:))  .*  ~exclude;
-end
-% save residuals
-Adjust.res = res;

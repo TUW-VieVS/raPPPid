@@ -23,7 +23,7 @@ function valid_settings = checkProcessingSettings(settings, prebatch_check)
 %% Preparations
 valid_settings = true;          % set to true in assumption of valid settings
 
-% boolean if GPS or GLONASs or ... is enabled
+% boolean if GPS or GLONASS or ... is enabled
 GPS_on  = settings.INPUT.use_GPS;
 GLO_on  = settings.INPUT.use_GLO;
 GAL_on  = settings.INPUT.use_GAL;
@@ -92,10 +92,10 @@ if (strcmp(settings.IONO.model,'2-Frequency-IF-LCs') || strcmp(settings.IONO.mod
             valid_settings = false; return
         end
     end
-    % Different number of processed frequencies for GPS and Glonass
+    % Different number of processed frequencies for GPS and GLONASS
     if GPS_on && GLO_on
         if no_freq_gps ~= no_freq_glo
-            errordlg({'Different #frequencies for GPS and Glonass.' 'Check settings of processed frequencies!'}, windowname);
+            errordlg({'Different #frequencies for GPS and GLONASS.' 'Check settings of processed frequencies!'}, windowname);
             valid_settings = false; return
         end
     end
@@ -106,17 +106,17 @@ if (strcmp(settings.IONO.model,'2-Frequency-IF-LCs') || strcmp(settings.IONO.mod
             valid_settings = false; return
         end
     end
-    % Different number of processed frequencies for Glonass and Galileo
+    % Different number of processed frequencies for GLONASS and Galileo
     if GLO_on && GAL_on
         if no_freq_glo ~= no_freq_gal
-            errordlg({'Different #frequencies for Glonass and Galileo.' 'Check settings of processed frequencies!'}, windowname);
+            errordlg({'Different #frequencies for GLONASS and Galileo.' 'Check settings of processed frequencies!'}, windowname);
             valid_settings = false; return
         end
     end
-    % Different number of processed frequencies for Glonass and BeiDou
+    % Different number of processed frequencies for GLONASS and BeiDou
     if GLO_on && BDS_on
         if no_freq_glo ~= no_freq_bds
-            errordlg({'Different #frequencies for Glonass and BeiDou.' 'Check settings of processed frequencies!'}, windowname);
+            errordlg({'Different #frequencies for GLONASS and BeiDou.' 'Check settings of processed frequencies!'}, windowname);
             valid_settings = false; return
         end
     end
@@ -147,11 +147,11 @@ if num_freq ~= 3
     if GLO_on
         off_idx_R = strcmpi(proc_frqs_glo, 'OFF');
         if no_freq_glo >= 1 && off_idx_R(1) == 1
-            errordlg({'Check order of processed Glonass frequencies!', 'Disabled frequencies should be at the end.'}, windowname);
+            errordlg({'Check order of processed GLONASS frequencies!', 'Disabled frequencies should be at the end.'}, windowname);
             valid_settings = false; return
         end
         if no_freq_glo >= 2 && off_idx_R(2) == 1
-            errordlg({'Check order of processed Glonass frequencies!', 'Disabled frequencies should be at the end.'}, windowname);
+            errordlg({'Check order of processed GLONASS frequencies!', 'Disabled frequencies should be at the end.'}, windowname);
             valid_settings = false; return
         end
     end
@@ -267,7 +267,7 @@ if (GAL_on || BDS_on) && ~prebatch_check
     end
 end
 
-% Final CODE products are for GPS and Glonass only
+% Final CODE products are for GPS and GLONASS only
 if BDS_on && settings.ORBCLK.bool_precise && prec_prod_CODE
     errordlg({'IGS operational products of CODE are for GPS+GLONASS+Galileo!',  'Please choose CODE MGEX.'}, windowname);
     valid_settings = false;     return;
@@ -324,7 +324,7 @@ if settings.ADJ.filter.dynmodel_rclk_gps == 0 && settings.ADJ.filter.Q_rclk_gps 
     valid_settings = false; return
 end
 if settings.ADJ.filter.dynmodel_rclk_glo == 0 && settings.ADJ.filter.Q_rclk_glo == 0
-    errordlg('When using no dynamic model for Glonass Receiver Clock, the system noise Q must be set!', 'Error: Filter Settings');
+    errordlg('When using no dynamic model for GLONASS Receiver Clock, the system noise Q must be set!', 'Error: Filter Settings');
     valid_settings = false; return
 end
 if settings.ADJ.filter.dynmodel_rclk_gal == 0 && settings.ADJ.filter.Q_rclk_gal == 0
@@ -556,14 +556,6 @@ if settings.PROC.reset_float && isnan(settings.PROC.reset_after)
     valid_settings = false; return
 end
 
-% Calculation of ionospheric delay or VTEC from correction stream is not
-% fully implemented
-if (contains(settings.IONO.model, 'Correct') || contains(settings.IONO.model, 'Estimate')) ...
-        && strcmp(settings.IONO.source, 'VTEC from Correction Stream')
-    errordlg('VTEC from Correction Stream is not implemented (yet)', windowname)
-    valid_settings = false; return
-end
-
 % Observation weighting based on MP LC works only for two input frequencies
 if settings.ADJ.weight_mplc && num_freq ~= 2
     errordlg({'Observation weighting based on MP LC', 'works only for two input frequencies.'}, windowname)
@@ -573,13 +565,6 @@ end
 % Stream Archive IGC01 contains only GPS data
 if (GLO_on || GAL_on || BDS_on) && settings.ORBCLK.bool_brdc && strcmp(settings.ORBCLK.CorrectionStream, 'IGC01 Archive')
     errordlg({'Stream Archive IGC01 contains only GPS data.', 'Process only GPS!'}, windowname)
-    valid_settings = false; return
-end
-
-% NeQuick model is implemented, but absurdly slow and not tested
-if (strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmpi(settings.IONO.model,'Correct with ...')) ...
-        && strcmpi(settings.IONO.source,'NeQuick model')  
-    errordlg({'NeQuick is implemented but absurdly slow.', 'Use another ionosphere model!'}, windowname)
     valid_settings = false; return
 end
 
@@ -598,6 +583,11 @@ end
 % Real-time processing, check if all selected options are real-time capable
 if settings.INPUT.bool_realtime
     bool_RT = true;
+    % GLONASS real-time processing is not finally implemented
+    if settings.INPUT.use_GLO
+        fprintf(2, 'GLONASS can not (yet) be processed in real-time.\n');
+        bool_RT = false;
+    end
     % Orbits/clocks
     if settings.ORBCLK.bool_precise
         fprintf(2, 'Orbit/Clock: Change to broadcast products.\n');
@@ -627,7 +617,7 @@ if settings.INPUT.bool_realtime
         end
     end
     % Troposphere
-    if strcmp(structure.TROPO.vmf_version, 'operational') && (...
+    if strcmp(settings.TROPO.vmf_version, 'operational') && (...
             strcmp(settings.TROPO.zhd, 'VMF3') || strcmp(settings.TROPO.zwd, 'VMF3') || ...
             strcmp(settings.TROPO.mfh, 'VMF3') || strcmp(settings.TROPO.mfw, 'VMF3') || ...
             strcmp(settings.TROPO.Gh, 'GRAD') || strcmp(settings.TROPO.Gw, 'GRAD'))
@@ -639,6 +629,19 @@ if settings.INPUT.bool_realtime
             'Check the command window for details.'}, windowname)
         valid_settings = false; return
     end
+    
+    % check if end is after start of processing
+    if settings.INPUT.bool_realtime
+        % hardcode to call function RealTimeEpochs.m
+        obs.interval = 1;
+        obs.startdate = [2000 1 2];
+        [~, start_sow, ende_sow] = RealTimeEpochs(settings, obs);
+        if start_sow >= ende_sow
+            errordlg('Real-time processing, check start time < end time!', windowname);
+            valid_settings = false; return
+        end
+    end
+    
 end
 
 % Batch-Processing and real-time processing activated
@@ -723,7 +726,8 @@ if ~prebatch_check && (...
     if strcmp(settings.TROPO.vmf_version, 'operational') && ...
             jd_start + 2 > current_jd        % VMF operational data is available with two-day delay
         errordlg({'No operational VMF data available yet (latency: 2 days).', ...
-            'Please change the troposphere model to GPT3!'}, windowname);
+            'Please change the troposphere model (e.g., GPT3)', ...
+            ' or the VMF version to forecast!'}, windowname);
         valid_settings = false; return
     end
 end
@@ -740,6 +744,14 @@ end
 % QZSS is implemented only for precise products 
 if settings.INPUT.use_QZSS && ~settings.ORBCLK.bool_precise
     errordlg({'QZSS is only implemented using precise products.', 'Please change selections of satellite orbits and clocks.'}, windowname);
+    valid_settings = false; return
+end
+
+% Check for negative cycle slip detection thresholds
+if settings.OTHER.CS.l1c1_window <= 0 || settings.OTHER.CS.l1c1_threshold <= 0 || ...
+        settings.OTHER.CS.DF_threshold <= 0 || settings.OTHER.CS.D_threshold <= 0 || ...
+        settings.OTHER.CS.TD_threshold <= 0
+    errordlg({'Please check your cycle slip detection settings!', 'Negative threshold can not be used.'}, windowname);
     valid_settings = false; return
 end
 
@@ -862,9 +874,9 @@ if settings.AMBFIX.bool_AMBFIX
         end
     end
     
-    % PPP-AR is not implemented for Glonass only (just in addition to other GNSS)
+    % PPP-AR is not implemented for GLONASS only (just in addition to other GNSS)
     if GLO_on && ~GPS_on && ~GAL_on && ~BDS_on
-        errordlg({'PPP-AR is not possible for Glonass only!'}, windowname);
+        errordlg({'PPP-AR is not possible for GLONASS only!'}, windowname);
         valid_settings = false; return
     end
     
@@ -898,7 +910,7 @@ elseif settings.ORBCLK.bool_brdc   % broadcast products
             valid_settings = checkFileExistence(settings.ORBCLK.file_nav_GPS, 'GPS Navigation File', valid_settings);
         end
         if GLO_on
-            valid_settings = checkFileExistence(settings.ORBCLK.file_nav_GLO, 'Glonass Navigation File', valid_settings);
+            valid_settings = checkFileExistence(settings.ORBCLK.file_nav_GLO, 'GLONASS Navigation File', valid_settings);
         end
         if GAL_on
             valid_settings = checkFileExistence(settings.ORBCLK.file_nav_GAL, 'Galileo File', valid_settings);
@@ -958,6 +970,39 @@ end
 % Intervall is (maybe?) too long for Cycle-Slip Detection with Doppler
 if ~prebatch_check && ~isempty(rheader.interval) && rheader.interval > 5 && settings.OTHER.CS.Doppler  
     msgbox('Be careful: Observation intervall may be too long for Cycle-Slip-Detection with Doppler!', 'Cycle-Slip-Detection', 'help')
+end
+
+% Threshold of dLi-dLj maybe not suitable
+if ~prebatch_check && ~isempty(rheader.interval) && settings.OTHER.CS.DF
+    good_thresh = true;
+    if rheader.interval < 1.1
+        if settings.OTHER.CS.DF_threshold > 0.05
+            good_thresh = false;
+            val_ = '0.05';
+        end
+    elseif rheader.interval < 20.1
+        if settings.OTHER.CS.DF_threshold < 0.05 || 0.15 < settings.OTHER.CS.DF_threshold
+            good_thresh = false;
+            val_ = sprintf('%.2f', 0.005 * rheader.interval + 0.05);
+        end
+    elseif rheader.interval < 60.1
+        if settings.OTHER.CS.DF_threshold < 0.05 || 0.25 < settings.OTHER.CS.DF_threshold
+            good_thresh = false;
+            val_ = '0.15';
+        end
+    elseif rheader.interval < 100
+        if settings.OTHER.CS.DF_threshold < 0.15 || 0.35 < settings.OTHER.CS.DF_threshold
+            good_thresh = false;
+            val_ = '0.25';
+        end
+    elseif settings.OTHER.CS.DF_threshold < 0.15 || 0.35 < settings.OTHER.CS.DF_threshold
+        val_ = '0.35';
+    end
+    if ~good_thresh
+    % Threshold of dLi-dLj cycle slip detection might not be ideal
+    msgbox({'Threshold of dLi-dLj cycle slip detection might not be ideal.', ...
+        ['Recommended value: ' val_ ' [m]']}, 'Cycle-Slip-Detection', 'help')
+    end
 end
 
 % Reprocessed TUG products need their corresponding antex file

@@ -89,7 +89,7 @@ end
 % create ticks for time
 duration = seconds(end)-seconds(1); 	% processed time-span in [s]
 if duration < 300                   % less than 5min processed
-    take_time = (mod(seconds,30) == 0);  	% all 30sec
+    take_time = (mod(seconds,30) == 0);         % all 30sec
 elseif duration < 1200              % less than 20min processed
     take_time = (mod(seconds,180) == 0);    	% all 3min
 elseif duration < 3600             	% less than 1h processed

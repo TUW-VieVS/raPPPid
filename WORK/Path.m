@@ -12,7 +12,6 @@ classdef Path
     
     properties (Constant = true)
         
-
         % Programm-folder
         CODE = '../CODE/'
         
@@ -22,7 +21,7 @@ classdef Path
         % Directory of results
         RESULTS = '../RESULTS/';
         
-        % Path to folder of 7-zip.exe
+        % Path to 7-zip.exe
         ZIP7 = '../CODE/7ZIP/7za.exe';
         
         % Folder of TUW ionosphere models
@@ -30,6 +29,10 @@ classdef Path
         
         % Path to myAntex.atx
         myAntex = [Path.DATA 'ANTEX/myAntex.atx']
+        
+        % Path to folder of NeQuickG.exe
+        NeQuick_G = '../CODE/ATMOSPHERE/NeQuick_G/';
+        
     end
     
     methods (Access = public)

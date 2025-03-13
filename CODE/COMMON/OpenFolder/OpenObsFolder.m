@@ -17,14 +17,14 @@ end
 
 switch nargin
     case 0      % no input variables
-        winopen([Path.DATA 'OBS'])
+        OpenFolder([Path.DATA 'OBS']);
         
     case 1      % year as input variable
         year = varargin{1};
         yyyy = sprintf('%04d',year);
         try
             path = [Path.DATA 'OBS/' yyyy];
-            winopen(path);
+            OpenFolder(path);
         catch
             fprintf(1,'This Data Folder does not exist!');
         end
@@ -36,7 +36,7 @@ switch nargin
         doy = sprintf('%03d',day);
         try
             path = [Path.DATA 'OBS/' yyyy '/' doy];
-            winopen(path);
+            OpenFolder(path);
         catch
             fprintf(1,'This Data Folder does not exist!');
         end

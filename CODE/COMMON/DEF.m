@@ -11,7 +11,7 @@
 classdef DEF
     
     properties (Constant = true)
-        version = ['Version 2.7 ', char(169), ' TUW 2024'];
+        version = ['Version 3.0 ', char(169), ' TUW 2023'];
         
         % size of many variables due to raPPPid internal satellite numbering
         SATS = 410;

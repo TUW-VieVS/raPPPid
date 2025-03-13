@@ -25,6 +25,7 @@ function [Epoch, satellites, storeData, obs, model_save, Adjust] = ...
 
 nnn = DEF.SATS;     % variable size due to raPPPid internal satellite numbering
 
+decoupled_clock_model = strcmp(settings.IONO.model, 'Estimate, decoupled clock');
 
 proc_frqs = settings.INPUT.proc_freqs;		% number of processed frequencies
 num_frqs = settings.INPUT.num_freqs;        % number of input frequencies
@@ -42,8 +43,7 @@ isBDS = settings.INPUT.use_BDS;
 % determine number of in all epochs estimated parameters (e.g., xyz but not
 % ambiguities)
 Adjust.NO_PARAM = DEF.NO_PARAM_ZD;
-if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
-    % |||!!!
+if decoupled_clock_model
     Adjust.NO_PARAM = DEF.NO_PARAM_DCM;
 end   
 % Initialize Adjust for 1st epoch
@@ -66,10 +66,13 @@ end
 
 
 %% obs
-obs.total_epochs = tot_eps;         % total number of epochs
 if ~isfield(obs, 'coordsyst')
     obs.coordsyst = '';             % coordinate system of processing (detected in readAllInputFiles)
-end      
+end    
+if settings.EXP.obs_epochheader
+    obs.epochheader = repmat({''}, tot_eps, 1);      % to store observation epoch headers
+end
+
 
 %% Epoch
 % time
@@ -195,6 +198,8 @@ storeData.VDOP = zeros(tot_eps,1);
 % modelled zenith hydrostatic and wet delay
 storeData.zhd = zeros(tot_eps,1);
 storeData.zwd = zeros(tot_eps,1);
+% satellite status
+storeData.sat_status = zeros(tot_eps,nnn);
 
 % variables depending on the number of processed frequencies
 storeData.N_1    = zeros(tot_eps,nnn);              % float ambiguities
@@ -214,16 +219,19 @@ if proc_frqs > 2
     if strcmpi(settings.PROC.method,'Code + Phase'); storeData.residuals_phase_3 = zeros(tot_eps,nnn); end
 end
 
+% intialize reference satellites (used for PPP-AR and DCM)
+if settings.AMBFIX.bool_AMBFIX || decoupled_clock_model
+    storeData.refSatGPS = NaN(tot_eps,1);       % GPS
+    storeData.refSatGLO = NaN(tot_eps,1);       % GLONASS
+    storeData.refSatGAL = NaN(tot_eps,1);       % Galileo
+    storeData.refSatBDS = NaN(tot_eps,1);       % BeiDou
+    storeData.refSatQZS = NaN(tot_eps,1);       % QZSS
+end
+
 % Ambiguity Fixing is enabled
 if settings.AMBFIX.bool_AMBFIX
     storeData.fixed = false(tot_eps,1);         % true if fixed solution in this epoch
     storeData.ttff = NaN;                       % time/epoch to first fix
-	% intialize reference satellites
-    storeData.refSatGPS = NaN(tot_eps,1);       % GPS
-	storeData.refSatGLO = NaN(tot_eps,1);       % GLONASS
-    storeData.refSatGAL = NaN(tot_eps,1);       % Galileo
-    storeData.refSatBDS = NaN(tot_eps,1);       % BeiDou
-	storeData.refSatQZS = NaN(tot_eps,1);       % QZSS
     storeData.xyz_fix = zeros(tot_eps,3);    	% fixed coordinates
     storeData.param_var_fix = zeros(tot_eps,3);	% variances of fixed coordinates
     storeData.HMW_12 = zeros(tot_eps,nnn);       % HMW LC between 1st and 2nd frequency
@@ -257,6 +265,7 @@ if settings.AMBFIX.bool_AMBFIX
 		storeData.iono_fixed = zeros(tot_eps,nnn);  % fixed ionospheric delay estimation
     end
 end
+
 % for saving ionosphere correction data
 if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Correct with ...')
     storeData.iono_corr = zeros(tot_eps,nnn);  % iono-range-correction on 1st frequency

@@ -101,11 +101,13 @@ while i <= no_lines         % loop till end of file
                 QZSS = save_velocity(QZSS, idx, prn, sow, X, Y, Z, dT);
             end
         end
-        
-        % - get next line
+
+        % - get next line (if possible)
+        if i > no_lines; break; end
         tline = lines{i};   i = i + 1;
-    end
-end
+        
+    end     % loop over data entry
+end     % loop till end of file
 
 % check read data to prevent errors later-on
 % e.g., size of struct and GPS week rollover 

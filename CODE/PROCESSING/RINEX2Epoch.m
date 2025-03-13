@@ -13,11 +13,11 @@ function [Epoch] = RINEX2Epoch(RINEX, epochheader, Epoch, n, ...
 %   r_version       RINEX-version
 %   settings        struct, processing settings from GUI
 % OUTPUT:
-%   Epoch       struct, epoch-specific data for current epoch
+%   Epoch       	struct, epoch-specific data for current epoch
 %   eof             boolean, true if end of file is reached
 %  
 %   Revision:
-%   2023/11/03, MFWG: adding QZSS
+%   	2023/11/03, MFWG: adding QZSS
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************

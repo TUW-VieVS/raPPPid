@@ -1,9 +1,16 @@
 function [input, obs] = RealTimeEphCorr2Brdc(settings, input, obs, fid_navmess, fid_corr2brdc)
+% This function finds the corrections to the navigation message during a
+% real-time processing with raPPPid
 % 
 % INPUT:
-%   ...
+%   settings        struct, processing settings from the GUI
+%   input           struct, contains input data in internal formats
+%   obs             struct, contains observation-specific data
+%   fid_navmess    	fileID of the navigation message (opened in PPP_main)
+%   fid_corr2brdc   fileID of the correction stream  (opened in PPP_main)
 % OUTPUT:
-%	...
+%	input           updated, new navigation messages and stream corrections
+%   obs             updated with new biases
 %
 % Revision:
 %   ...
@@ -13,6 +20,7 @@ function [input, obs] = RealTimeEphCorr2Brdc(settings, input, obs, fid_navmess, 
 
 
 NAVMESS = {}; CORR2BRDC = {};
+
 
 %% Broadcasted navigation message
 
@@ -104,21 +112,25 @@ if strcmp(settings.ORBCLK.CorrectionStream, 'manually')
         % read new stream data
         [corr_G, corr_R, corr_E, corr_C, corr_vtec] = read_corr2brdc_stream(CORR2BRDC);
         
-        xxx = 60;   % keep only last xxx epochs of data
+        xxx = 120;   % keep only last xxx epochs of data
         
         % Handle new orbit and clock corrections: save only corrections 
         % from used GNSS and delete outdated correction (variable xxx)
         if settings.INPUT.use_GPS   
-            input.ORBCLK.corr2brdc_GPS  = OrbClkAppendDelete(input.ORBCLK.corr2brdc_GPS, corr_G, xxx);            
+            input.ORBCLK.corr2brdc_GPS  = ...
+                OrbClkAppendDelete(input.ORBCLK.corr2brdc_GPS, corr_G, xxx);            
         end
         if settings.INPUT.use_GLO   
-            input.ORBCLK.corr2brdc_GLO  = OrbClkAppendDelete(input.ORBCLK.corr2brdc_GLO, corr_R, xxx);
+            input.ORBCLK.corr2brdc_GLO  = ...
+                OrbClkAppendDelete(input.ORBCLK.corr2brdc_GLO, corr_R, xxx);
         end
         if settings.INPUT.use_GAL
-            input.ORBCLK.corr2brdc_GAL  = OrbClkAppendDelete(input.ORBCLK.corr2brdc_GAL, corr_E, xxx);
+            input.ORBCLK.corr2brdc_GAL  = ...
+                OrbClkAppendDelete(input.ORBCLK.corr2brdc_GAL, corr_E, xxx);
         end
         if settings.INPUT.use_BDS
-            input.ORBCLK.corr2brdc_BDS  = OrbClkAppendDelete(input.ORBCLK.corr2brdc_BDS, corr_C, xxx);
+            input.ORBCLK.corr2brdc_BDS  = ...
+                OrbClkAppendDelete(input.ORBCLK.corr2brdc_BDS, corr_C, xxx);
         end
         
         % Handle new code and phase biases: save biases and delete outdated 
@@ -130,12 +142,12 @@ if strcmp(settings.ORBCLK.CorrectionStream, 'manually')
         if settings.INPUT.use_BDS;   input_.ORBCLK.corr2brdc_BDS  = corr_C;    end
         % assign biases (||| function could be simplified for RT)
         [obs_] = assign_corr2brdc_biases(obs, input_, settings);
-        if settings.BIASES.code_corr2brdc_bool      % code biases
+        if settings.BIASES.code_corr2brdc_bool  && ~isempty(obs_.C_corr_time) 	% code biases
             % new code bias corrections
             [obs, input] = ...
                 HandleCodeBiases(obs, input, obs_.C1_corr, obs_.C2_corr, obs_.C3_corr, obs_.C_corr_time, xxx);
         end
-        if settings.BIASES.phase_corr2brdc_bool     % phase biases
+        if settings.BIASES.phase_corr2brdc_bool && ~isempty(obs_.L_corr_time) 	% phase biases
             % new phase bias corrections
             [obs, input] = ...
                 HandlePhaseBiases(obs, input, obs_.L1_corr, obs_.L2_corr, obs_.L3_corr, obs_.L_corr_time, xxx);
@@ -228,19 +240,20 @@ end
 
 
 
-function [obs, input]= HandleCodeBiases(obs, input, bias_1, bias_2, bias_3, t_code, xxx)
+function [obs, input] = ...
+    HandleCodeBiases(obs, input, bias_1, bias_2, bias_3, t_code, xxx)
 % appends new biases corrections to older biases
 % 
 % INPUT: 
-% obs       [struct]
-% input     [struct]
-% bias_1, bias_2, bias_3
-%           new bias data
-% t_code    new time-stamps
-% xxx       integer, number of epochs to keep
+%   obs       [struct]
+%   input     [struct]
+%   bias_1, bias_2, bias_3
+%             new bias data
+%   t_code    new time-stamps
+%   xxx       integer, number of epochs to keep
 % OUTPUT:
-% obs       [struct], updated with new bias data
-% input     [struct], updated with new timestamps
+%   obs       [struct], updated with new bias data
+%   input     [struct], updated with new timestamps
 
 if ~isfield(obs, 'C_corr_time')
     % no biases saved yet (e.g., first epoch)
@@ -257,8 +270,7 @@ obs.C1_corr = [obs.C1_corr; bias_1];
 obs.C2_corr = [obs.C2_corr; bias_2];
 obs.C3_corr = [obs.C3_corr; bias_3];
 
-% delete outdated corrections: keep only last xxx epochs of data (if 5sec 
-% update rate = last xx minutes)
+% delete outdated corrections: keep only last xxx epochs of data 
 n_cb = length(obs.C_corr_time);
 if n_cb > xxx
     idx = n_cb - xxx : n_cb;
@@ -269,7 +281,8 @@ if n_cb > xxx
 end
 
 
-function [obs, input] = HandlePhaseBiases(obs, input, bias_1, bias_2, bias_3, t_phase, xxx)
+function [obs, input] = ...
+    HandlePhaseBiases(obs, input, bias_1, bias_2, bias_3, t_phase, xxx)
 % appends new biases corrections to older biases
 %
 % INPUT: 
@@ -298,8 +311,7 @@ obs.L1_corr = [obs.L1_corr; bias_1];
 obs.L2_corr = [obs.L2_corr; bias_2];
 obs.L3_corr = [obs.L3_corr; bias_3];
 
-% delete outdated corrections: keep only last xxx epochs of data (if 5sec 
-% update rate = last xx minutes)
+% delete outdated corrections: keep only last xxx epochs of data 
 n_cb = length(obs.L_corr_time);
 if n_cb > xxx
     idx = n_cb - xxx : n_cb;

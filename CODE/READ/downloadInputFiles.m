@@ -73,7 +73,10 @@ end
 %% --- Correction stream
 % before Multi-GNSS broadcast message as this not needed if a sp3 and 
 % clk file from a stream archive are processed (except Glonass channels)
-if settings.ORBCLK.bool_brdc && (strcmp(settings.ORBCLK.CorrectionStream, 'CNES Archive') || strcmp(settings.ORBCLK.CorrectionStream, 'IGC01 Archive'))
+if settings.ORBCLK.bool_brdc && ...
+        (strcmp(settings.ORBCLK.CorrectionStream, 'CNES Archive') || ...
+        strcmp(settings.ORBCLK.CorrectionStream, 'IGC01 Archive') || ...
+        strcmp(settings.ORBCLK.CorrectionStream, 'CAS Archive'))
     settings = DownloadStreamArchive(settings, gpsweek, dow, yyyy, mm, doy);
 end
 
@@ -105,9 +108,11 @@ end
 %% --- Ionosphere
 
 % Check if coefficients from broadcast navigation message are needed for
-% ionospheric correction (e.g. Klobuchar, NeQuick)
+% ionospheric correction (e.g. Klobuchar, NeQuick, NTCM G)
 bool_nav_iono = ~strcmp(settings.ORBCLK.multi_nav, 'manually') && ...
-    (strcmp(settings.IONO.source, 'Klobuchar model') || strcmp(settings.IONO.source, 'NeQuick model'));
+    (strcmp(settings.IONO.source, 'Klobuchar model') || ...
+    strcmp(settings.IONO.source, 'NeQuick model') || ...
+    strcmp(settings.IONO.source, 'NTCM-G'));
 if bool_nav_iono
     if str2double(yyyy) < 2015
         error('There are no Multi-GNSS broadcast messages before 2015! Please choose Single-GNSS Navigation Files instead!')

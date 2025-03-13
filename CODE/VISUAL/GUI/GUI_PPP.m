@@ -2139,7 +2139,6 @@ if ~strcmpi(string_all{value},'off')
     set(handles.radiobutton_models_biases_phase_CorrectionStream,'Value',1)
     msgbox('Code and Phase Biases corrections are changed to correction stream.', 'Settings of Biases changed', 'help')
 end
-    
 end
 
 
@@ -2194,12 +2193,14 @@ if strcmpi(string_all{value},'manually')
 	set(handles.text_corr2brdc_age_1,'Visible','on');
 	set(handles.text_corr2brdc_age_2,'Visible','on');
 	set(handles.edit_corr2brdc_age,'Visible','on');
+    set(handles.uibuttongroup_CorrStreamRef,'Visible','on');
 else
     set(handles.edit_corr2brdc,'Visible','off');
     set(handles.pushbutton_corr2brdc,'Visible','off');
 	set(handles.text_corr2brdc_age_1,'Visible','off');
 	set(handles.text_corr2brdc_age_2,'Visible','off');
 	set(handles.edit_corr2brdc_age,'Visible','off');	
+    set(handles.uibuttongroup_CorrStreamRef,'Visible','off');
 end
 
 if strcmpi(string_all{value},'CNES Archive')
@@ -2639,7 +2640,7 @@ end
 
 function pushbutton_corr2brdc_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/STREAM/'], handles.paths.corr2brdc_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.*c;CLK*.mat'}, 'Select the Correction File', folder);
+[FileName, PathName] = uigetfile({'*.*c;*.ssr;CLK*.mat'}, 'Select the Correction File', folder);
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -2651,6 +2652,22 @@ handles.paths.corr2brdc_2 = FileName;
 if sscanf(get(handles.edit_corr2brdc, 'String'), '%f') == 0
     errordlg('Choose a File.', 'File Error');
 end
+
+% detect and set reference point of stream
+switch FileName(4)
+    case 'C'        % Center of Mass
+        handles.radiobutton_COM.Value = 1;
+        handles.radiobutton_APC.Value = 0;
+    case 'A'        % Antenna Phase Center
+        handles.radiobutton_APC.Value = 1;
+        handles.radiobutton_COM.Value = 0;
+    otherwise       
+        errordlg({'Failed to detect reference point of stream!', ...
+            'Please check by yourself (CoM or APC)!'}, 'Error');
+        handles.radiobutton_APC.Value = 1;
+        handles.radiobutton_COM.Value = 0;
+end
+
 guidata(hObject, handles);
 end
 
@@ -2807,6 +2824,9 @@ function radiobutton_source_ionosphere_NeQuick_Callback(hObject, eventdata, hand
 end
 
 function radiobutton_source_ionosphere_CODE_Callback(hObject, eventdata, handles)
+end
+
+function radiobutton_source_ionosphere_CorrectionStream_Callback(hObject, eventdata, handles)
 end
 
 function buttongroup_models_ionosphere_ionex_SelectionChangeFcn(hObject, eventdata, handles)
@@ -4603,6 +4623,7 @@ PLOT.coordinate    = get(handles.checkbox_plot_coordinate,    'Value');
 PLOT.map       	   = get(handles.checkbox_plot_googlemaps,    'Value');
 PLOT.UTM       	   = get(handles.checkbox_plot_UTM,           'Value');
 PLOT.coordxyz      = get(handles.checkbox_plot_xyz,           'Value');
+PLOT.XYZ      	   = get(handles.checkbox_plot_xyzplot,       'Value');
 PLOT.elevation     = get(handles.checkbox_plot_elev,          'Value');
 PLOT.satvisibility = get(handles.checkbox_plot_sat_visibility,'Value');
 PLOT.float_amb     = get(handles.checkbox_plot_float_amb,     'Value');

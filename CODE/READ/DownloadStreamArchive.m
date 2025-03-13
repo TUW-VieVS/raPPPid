@@ -32,28 +32,28 @@ switch settings.ORBCLK.CorrectionStream
         file_obx = ['cnt' gpsweek dow '.obx'];      % since 2054/2
         targets = repmat({target},4,1);
         if ~( exist([target file_sp3],'file') || exist([target file_sp3 '.mat'],'file') )
-            try
+            try         % orbit file
                 websave([target file_sp3 '.gz'] , ['http://www.ppp-wizard.net/products/REAL_TIME/' file_sp3 '.gz']);
             catch
-                error('%s%s%s\n','Correction stream file ',file_sp3,' not found!');
+                error('%s%s%s\n','Correction stream file ',file_clk,' not found!');
             end
         end
         if ~( exist([target file_clk],'file') || exist([target file_clk '.mat'],'file') )
-            try
+            try         % clock file
                 websave([target file_clk '.gz'] , ['http://www.ppp-wizard.net/products/REAL_TIME/' file_clk '.gz']);
             catch
                 error('%s%s%s\n','Correction stream file ',file_clk,' not found!');
             end
         end
         if ~( exist([target file_bia],'file') || exist([target file_bia '.mat'],'file') )
-            try
+            try         % bias file
                 websave([target file_bia '.gz'] , ['http://www.ppp-wizard.net/products/REAL_TIME/' file_bia '.gz']);
             catch
                 error('%s%s%s\n','Correction stream file ',file_bia,' not found!');
             end
         end
         if ~( exist([target file_obx],'file'))
-            try
+            try          % orbex file
                 websave([target file_obx '.gz'] , ['http://www.ppp-wizard.net/products/REAL_TIME/' file_obx '.gz']);
             catch
                 error('%s%s%s\n','Correction stream file ',file_obx,' not found!');
@@ -92,6 +92,33 @@ switch settings.ORBCLK.CorrectionStream
         % orbit and clock handling like with "Precise Products" (sp3 and clk-file)
         settings.ORBCLK.file_sp3 = [targets{1} '/' files{1}];
         settings.ORBCLK.file_clk = [targets{2} '/' files{2}];
+        
+    case 'CAS Archive'
+        % from the data center of the Chinese Academy of Sciences (CAS)
+        httpserver = ['https://data.bdsmart.cn/pub/product/rts/rtpp/' yyyy];        
+        file_sp3  = ['CAS0MGXRTS_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
+        dcmpr_sp3 = ['CAS0MGXRTS_' yyyy doy '0000_01D_05M_ORB.SP3'];
+        file_clk  = ['CAS0MGXRTS_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
+        dcmpr_clk = ['CAS0MGXRTS_' yyyy doy '0000_01D_30S_CLK.CLK'];
+        % try to download
+        if ~isfile([target file_sp3]) && ~isfile([target dcmpr_sp3])
+            try websave([target file_sp3], [httpserver '/' file_sp3]); end      %#ok<*TRYNC>
+        end           
+        if ~isfile([target file_clk]) && ~isfile([target dcmpr_clk]) && ~isfile([target dcmpr_clk '.mat'])
+            try websave([target file_clk], [httpserver '/' file_clk]); end      %#ok<*TRYNC>
+        end
+        % unzip if download was successful
+        sp3_file_path = unzip_and_delete({file_sp3}, {target});
+        clk_file_path = unzip_and_delete({file_clk}, {target});
+        if ~isfile(sp3_file_path)
+            errordlg({'No CAS real-time orbits found in archive.', 'Please do not use!'}, 'Error');
+        end
+        if ~isfile(clk_file_path) && ~isfile([clk_file_path{1} '.mat'])
+            errordlg({'No CAS real-time clocks found in archive.', 'Please do not use!'}, 'Error');
+        end
+        % orbit and clock handling like with "Precise Products" (sp3 and clk-file)
+        settings.ORBCLK.file_sp3 = sp3_file_path{1};
+        settings.ORBCLK.file_clk = clk_file_path{1};
         
 end
 

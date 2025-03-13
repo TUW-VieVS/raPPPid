@@ -1,0 +1,170 @@
+#!/bin/csh -f
+#
+#         C-shell script : CRZ2RNX
+#             (frontend of CRX2RNX)
+#                 1996-12-19  created by Y. Hatanaka.
+#                 2007-06-10  updated by Y. Hatanaka.
+#                      - replace "compress" with "uncompress"
+#                      - file name extension may be lower and upper case
+#                 2009-07-07  modified extensively by Y. Hatanaka.
+#                      - Ambiguities/bugs in following items are resolved:
+#                          * setting of output directory
+#                          * case of deletion of input files
+#                          * case of overwriting an output file
+#                        Options to control them are added.
+#                      - Handling of more RINEX file types are added.
+#                      - 'gzipped' files can be processed.
+#                 2014-03-24  modified by Y. Hatanaka.
+#                      - Manipulation of file names in the new file naming
+#                        convention (*.rnx/crx) is added.
+#                 2018-11-27  modified by Y. Hatanaka.
+#                      - Fixing a bug that delete original files by the
+#                        option "-d" even if conversions are unsuccessful.
+#                 2019-07-12  modified by Y. Hatanaka.
+#                      - Displaying files in process and a new option
+#                        "-q" to suppress it are added.
+#                 2021-12-22  modified by Y. Hatanaka.
+#                      - use 'gzip -dc' instead of 'zcat'
+#
+#--------------------------------------------------------------------
+set help = 0
+foreach var ($argv[*])
+   if ( "$var" == '-h' ) set help = 1
+end
+
+if($#argv < 1 || $help) then
+more << EOF
+
+CRZ2RNX : C-shell script to decompress multiple RINEX files.
+
+   Usage : CRZ2RNX [-c] [-d] [-f] [-q] [-v] file ...
+
+       -c : output to the current directory
+       -d : delete input files if decompressed successfully
+       -f : force overwriting output files without inquiring
+       -q : quiet mode (suppress display of files in progress)
+       -v : verbose mode
+       -h : show this message and stop
+       file ... : input compressed RINEX (or CRINEX) files. 
+                  Wildcards can be used.
+
+  compressed RINEX/CRINEX -->     CRINEX     -->      RINEX
+                               ????????.??d  -->   ????????.??o
+       ????????.??d.gz(Z) --> (????????.??d) -->   ????????.??o
+       ????????.??o.gz(Z)                    -->   ????????.??o
+       ????????.??n.gz(Z)                    -->   ????????.??n
+       ????????.??g.gz(Z)                    -->   ????????.??g
+       ????????.??l.gz(Z)                    -->   ????????.??l
+       ????????.??p.gz(Z)                    -->   ????????.??p
+       ????????.??h.gz(Z)                    -->   ????????.??h
+       ????????.??b.gz(Z)                    -->   ????????.??b
+       ????????.??m.gz(Z)                    -->   ????????.??m
+       ????????.??c.gz(Z)                    -->   ????????.??c
+       *.?O.crx.gz(Z)                        -->    *.?O.rnx
+       *.rnx.gz(Z)                           -->    *.rnx
+
+Remarks:
+  - Installation of CRX2RNX is necessary to use this tool.
+  - The extensions of the input files must conform to the RINEX convention.
+  - An decompressed file is saved in the same directory as the input file
+    unless the option '-c' is specified.
+  - An input file is deleted only when the option "-d" is specified and
+    the decompression is successful.
+
+   [20211217]
+
+EOF
+
+exit
+endif
+#--------------------------------------------------------------------
+
+# set default mode
+set out_to_current_dir = 0
+set delete_input_files = 0
+set force_overwrite = 0
+set quiet = 0
+unset verbose
+
+set PROGRAM = CRX2RNX
+
+unset noclobber
+
+# check options
+foreach var ($argv[*])
+   switch ($var)
+     case '-c':
+       set out_to_current_dir = 1
+       shift; breaksw
+     case '-d':
+       set delete_input_files = 1
+       shift; breaksw
+     case '-f':
+       set force_overwrite = 1
+       shift; breaksw
+     case '-q':
+       set quiet = 1
+       shift; breaksw
+     case '-v':
+       set verbose = 1
+       shift; breaksw
+     default:
+       break
+   endsw
+end
+
+
+# process files
+foreach file_in ($argv[*])
+    if ( ! $quiet ) echo -n "  $file_in"
+    # compose name of output file (excluding ".gz" or ".Z")
+    set ext  = $file_in:e
+    if ( $file_in =~ *.gz || $file_in =~ *.Z ) then
+        set file = $file_in:r  # remove ".gz" or ".Z"
+        set CAT = 'gzip -dc'
+    else
+        set file = $file_in
+        set CAT = cat;
+    endif
+    if ( $out_to_current_dir ) set file = $file:t
+    if ( $file =~ *.??[dD] ) then
+        set file_out = `echo $file | sed -e 's/d$/o/' -e 's/D$/O/' `
+    else if ( $file =~ *[oO].crx || $file =~ *[oO].CRX ) then
+        set file_out = `echo $file | sed -e 's/crx$/rnx/' -e 's/CRX$/RNX/' `
+    else if ( ($file =~ *.??[dDnNgGlLpPhHbBmMcC] ||     \
+               $file =~ *.rnx || $file =~ *.RNX ) && \
+                    ($ext == gz || $ext == Z) ) then
+        set file_out = $file
+    else
+        if ( ! $quiet ) echo " --- skipped. (already compressed or the file name doesn't fit to the naming convention)"
+        continue
+    endif
+    if ( ! $quiet ) echo -n " --> $file_out"
+
+    # check if the output file is preexisting
+    if ( -e "$file_out" && ! $force_overwrite ) then
+        if ( ! $quiet ) echo
+        echo "The file $file_out already exists. Overwrite?(y/n,default:n)"
+        if ( $< !~ [yY] ) then
+            if ( ! $quiet ) echo "                 --- skipped."
+            continue
+        endif
+    endif
+
+    # issue the command
+    if      ( $file =~ *.??[dD] || $file =~ *[oO].crx || $file =~ *[oO].CRX ) then
+        $CAT $file_in  | CRX2RNX - > $file_out
+        set stat = $status
+    else
+        $CAT $file_in > $file_out
+        set stat = $status
+    endif
+
+    # remove the input file
+    if ( $stat == 0 && $delete_input_files ) then
+        if ( ! $quiet ) echo -n "   --- delete $file_in"
+        rm $file_in
+    endif
+    if ( ! $quiet ) echo
+
+end

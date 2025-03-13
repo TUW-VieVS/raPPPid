@@ -1,4 +1,5 @@
-function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL, isBDS, isQZSS, k, settings, corr_clk)
+function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, ...
+    isGPS, isGLO, isGAL, isBDS, isQZSS, k, settings, corr_clk)
 % Calculate (precise satellite) clock.
 % 
 % INPUT:
@@ -20,7 +21,7 @@ function [dT_clk, noclock] = satelliteClock(sv, Ttr, input, isGPS, isGLO, isGAL,
 % uses lininterp1 (c) 2010, Jeffrey Wu
 % 
 % Revision:
-%   ...
+%   2025/02/12, MFWG: added missing conversion [mm/..] to [m/..] (corr2brdc)
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -122,10 +123,10 @@ else
     if settings.ORBCLK.corr2brdc_clk
         dt = Ttr - corr_clk(1); 	% time difference between transmission time and clock correction from stream
         a0 = corr_clk(2);           % coefficients of corrections polynomial
-        a1 = corr_clk(3);
-        a2 = corr_clk(4);
-        dt_clock = a0 + a1*dt + a2*dt^2; % calculate 2nd degree polynomial clock correction, [m]
-        brdc_clk_corr = dt_clock/Const.C;        % convert from [m] to [s]
+        a1 = corr_clk(3) / 1000; 	% convert [mm/s]   to [m/s]      
+        a2 = corr_clk(4) / 1000; 	% convert [mm/s^2] to [m/s^2]      
+        dt_clock = a0 + a1*dt + a2*dt^2;    % calculate 2nd degree polynomial clock correction, [m]
+        brdc_clk_corr = dt_clock/Const.C; 	% convert from [m] to [s]
         if abs(brdc_clk_corr) >= 2 || brdc_clk_corr == 0 	% no valid corrections available
             brdc_clk_corr = 0;     noclock = true;       	% eliminate satellite
         end

@@ -1,8 +1,9 @@
 function [X, V] = SatPos_brdc_GLO(Ttr, prn, Eph)
 % Calculates the satellite position for a Glonass satellite from the 
 % broadcast navigation message.
-% https://gssc.esa.int/navipedia/index.php/GLONASS_Satellite_Coordinates_Computation
-% https://www.unavco.org/help/glossary/docs/ICD_GLONASS_4.0_(1998)_en.pdf
+% 
+% GLONASS ICD 2008: 
+% A.3.1.2.Simplify of algorithm for re-calculation of ephemeris to current time 
 % 
 % INPUT:
 %   Ttr     time of signal emission in GPS time [sow]
@@ -16,22 +17,22 @@ function [X, V] = SatPos_brdc_GLO(Ttr, prn, Eph)
 % *************************************************************************
 
 
-w = Const.PZ90_WE;      % earth´s rotation rate, [rad/s]
+w = Const.PZ90_WE;      % Earth´s rotation rate, [rad/s]
 
 % For details on variable Eph check read_brdc.m and subfunctions
 Eph_prn = Eph(1,:);                 % prns of navigation data
 bool_prn = (Eph_prn == (prn-100));  % columns of current prn
 % get variables
-x     = Eph(5,bool_prn);            % PZ90, [km]
-y     = Eph(6,bool_prn);
-z     = Eph(7,bool_prn);
-v_x = Eph(8,bool_prn);              % PZ90, [km/s]
+x 	= Eph(5,bool_prn);  	% PZ90, [km]
+y   = Eph(6,bool_prn);
+z   = Eph(7,bool_prn);
+v_x = Eph(8,bool_prn);   	% PZ90, [km/s]
 v_y = Eph(9,bool_prn);
 v_z = Eph(10,bool_prn);
-a_x = Eph(11,bool_prn);         	% PZ90, [km/s^2]
+a_x = Eph(11,bool_prn);  	% PZ90, [km/s^2]
 a_y = Eph(12,bool_prn);
 a_z = Eph(13,bool_prn);
-toe = Eph(18,bool_prn);             % epoch of ephemerides, GPS time [sow]
+toe = Eph(18,bool_prn);   	% epoch of ephemerides, GPS time [sow]
 
 % somehow this works without transforming the coordinates to intertial
 % reference frame???

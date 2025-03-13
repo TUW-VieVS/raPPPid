@@ -1,11 +1,14 @@
 function [satellites, storeData, model_save, obs] = ...
-    shrinkVariables(satellites, storeData, model_save, obs, settings, q)
-% 
-% If processing was finished before the defined end of the timespan (GUI)
-% this function cuts the variables (which where initialized for the wohle
-% timespan) to the actually processed number of epochs.
+    shrinkVariables(satellites, storeData, model_save, obs, settings, q, OBSDATA)
+% If processing was finished before the defined end of the timespan (GUI) 
+% or in the case of real-time processing, this function cuts the variables 
+% (which where initialized with the expected number of epochs) to the 
+% actually processed number of epochs.
 % Additionally this function deletes some fields of structs which are not
-% used in SinglePlotting.m
+% used in SinglePlotting.m or disabled on the Export panel of the GUI
+% 
+% Revision:
+%   2025/02/19, MFWG: adding (missing) export of RINEX epochheaders
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -13,10 +16,11 @@ function [satellites, storeData, model_save, obs] = ...
 
 proc_freqs = settings.INPUT.proc_freqs;		% number of processed frequencies
 num_freqs = settings.INPUT.num_freqs;       % number of input frequencies
+decoupled_clock_model = strcmp(settings.IONO.model, 'Estimate, decoupled clock');
 
 
 %% Shrink Variables
-if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q
+if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q    || settings.INPUT.bool_realtime
     eps = 1:q;      % vector of processed epochs
     % satellites
     satellites.elev = satellites.elev(eps,:);
@@ -39,6 +43,7 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q
 	storeData.dt_last_reset     = storeData.dt_last_reset(eps);
     storeData.param_var         = storeData.param_var(eps,:);
     storeData.N_var_1           = storeData.N_var_1(eps,:);
+    storeData.sat_status        = storeData.sat_status(eps,:);
 	if proc_freqs>1; storeData.N_var_2 = storeData.N_var_2(eps,:); end
 	if proc_freqs>2; storeData.N_var_3 = storeData.N_var_3(eps,:); end
     storeData.PDOP              = storeData.PDOP(eps);
@@ -47,13 +52,15 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q
     storeData.residuals_code_1  = storeData.residuals_code_1(eps,:);
     if proc_freqs>1; storeData.residuals_code_2  = storeData.residuals_code_2(eps,:); end
     if proc_freqs>2; storeData.residuals_code_3  = storeData.residuals_code_3(eps,:); end
+    if settings.AMBFIX.bool_AMBFIX || decoupled_clock_model
+        storeData.refSatGPS         = storeData.refSatGPS(eps);
+        storeData.refSatGLO         = storeData.refSatGLO(eps);
+        storeData.refSatGAL         = storeData.refSatGAL(eps);
+        storeData.refSatBDS         = storeData.refSatBDS(eps);
+        storeData.refSatQZS         = storeData.refSatQZS(eps);
+    end
     if settings.AMBFIX.bool_AMBFIX
         storeData.fixed             = storeData.fixed(eps);
-        storeData.refSatGPS         = storeData.refSatGPS(eps);
-		storeData.refSatGLO         = storeData.refSatGLO(eps);
-        storeData.refSatGAL         = storeData.refSatGAL(eps);
-		storeData.refSatBDS         = storeData.refSatBDS(eps);
-		storeData.refSatQZS         = storeData.refSatQZS(eps);
         if contains(settings.IONO.model,'IF-LC')
             storeData.HMW_12            = storeData.HMW_12(eps,:);
             storeData.N_WL_12           = storeData.N_WL_12(eps,:);
@@ -220,14 +227,19 @@ end
 if ~settings.EXP.storeData_iono_mf && isfield(storeData, 'iono_mf')
     storeData = rmfield(storeData, 'iono_mf');
 end
-
-
-% obs
-% obs.newdataepoch, obs.C1_bias, obs.C2_bias, obs.C3_bias, obs.L1_bias, obs.L2_bias, obs.L3_bias
-if ~settings.EXP.obs_epochheader
-    obs = rmfield(obs, 'newdataepoch');
+% storeData.sat_status
+if ~settings.EXP.storeData_sat_status && isfield(storeData, 'sat_status')
+    storeData = rmfield(storeData, 'sat_status');
 end
-if isfield(obs, 'C1_bias') && ~settings.EXP.obs_epochheader
+
+% save RINEX epochheaders?
+if settings.EXP.obs_epochheader
+    obs.epochheader = obs.epochheader(1:q);
+end
+obs = rmfield(obs, 'newdataepoch');
+
+% obs.newdataepoch, obs.C1_bias, obs.C2_bias, obs.C3_bias, obs.L1_bias, obs.L2_bias, obs.L3_bias
+if isfield(obs, 'C1_bias') && ~settings.EXP.obs_bias
     obs = rmfield(obs, 'C1_bias');
     obs = rmfield(obs, 'C2_bias');
     obs = rmfield(obs, 'C3_bias');

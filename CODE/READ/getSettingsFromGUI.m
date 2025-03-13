@@ -98,6 +98,9 @@ value = get(handles.popupmenu_CorrectionStream, 'Value');
 string_all = get(handles.popupmenu_CorrectionStream, 'String');
 settings.ORBCLK.CorrectionStream = string_all{value};
 settings.ORBCLK.CorrectionStream_age = str2num(get(handles.edit_corr2brdc_age, 'String'));  %#ok<*ST2NM>
+% get reference point of correction stream
+settings.ORBCLK.CorrectionStream_APC = handles.radiobutton_APC.Value;
+settings.ORBCLK.CorrectionStream_COM = handles.radiobutton_COM.Value;
 
 % get file paths, [] if not input
 settings.ORBCLK.file_sp3 = join_path(path.sp3_1, path.sp3_2);
@@ -264,7 +267,7 @@ settings.OTHER.CS.l1c1_window    = str2double(get(handles.edit_CycleSlip_L1C1_wi
 settings.OTHER.CS.l1c1_threshold = str2double(get(handles.edit_CycleSlip_L1C1_threshold, 'String'));
 % cycle-slip detector dL1-dL2
 settings.OTHER.CS.DF = get(handles.checkbox_CycleSlip_DF, 'Value');
-settings.OTHER.CS.DF_threshold = abs(str2double( get(handles.edit_CycleSlip_DF_threshold, 'String') ));
+settings.OTHER.CS.DF_threshold = str2double( get(handles.edit_CycleSlip_DF_threshold, 'String') );
 % cycle-slip detector Doppler-Shift
 settings.OTHER.CS.Doppler = get(handles.checkbox_CycleSlip_Doppler, 'Value');
 settings.OTHER.CS.D_threshold = str2double(get(handles.edit_CycleSlip_Doppler_threshold, 'String'));
@@ -578,6 +581,7 @@ catch
     settings.EXP.storeData_iono_mf = 0;
 end
 settings.EXP.storeData_mp_1_2 = get(handles.checkbox_exp_storeData_mp_1_2, 'Value');
+settings.EXP.storeData_sat_status = get(handles.checkbox_exp_storeData_sat_status, 'Value');
 % Variable satellites
 settings.EXP.satellites = get(handles.checkbox_exp_satellites, 'Value');
 settings.EXP.satellites_D = get(handles.checkbox_exp_satellites_D, 'Value');
@@ -598,6 +602,7 @@ settings.PLOT.coordinate    = get(handles.checkbox_plot_coordinate,     'Value')
 settings.PLOT.map       	= get(handles.checkbox_plot_googlemaps,   	'Value');
 settings.PLOT.UTM       	= get(handles.checkbox_plot_UTM,   			'Value');
 settings.PLOT.coordxyz      = get(handles.checkbox_plot_xyz,            'Value');
+settings.PLOT.XYZ      		= get(handles.checkbox_plot_xyzplot,        'Value');
 settings.PLOT.elevation     = get(handles.checkbox_plot_elev,           'Value');
 settings.PLOT.satvisibility = get(handles.checkbox_plot_sat_visibility, 'Value');
 settings.PLOT.float_amb     = get(handles.checkbox_plot_float_amb,      'Value');

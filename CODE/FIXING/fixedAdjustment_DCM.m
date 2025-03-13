@@ -40,7 +40,7 @@ N3_SD_fix = Adjust.N3_fixed' .* Epoch.l3;
 N_SD_fix = [N1_SD_fix(bool_N1); N2_SD_fix(bool_N2); N3_SD_fix(bool_N3)];
 
 % model observations
-model = getReceiverClockBiases(model, Epoch, Adjust, settings);
+model = getReceiverClockBiases(model, Epoch, Adjust.param, settings);
 [model_code_fix, model_phase_fix] = model_DCM_fixed_observations(model, Epoch, Adjust, settings);
 
 % calculate observed minus computed for code and phase as vector alternately, 

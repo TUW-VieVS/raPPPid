@@ -1,9 +1,9 @@
-function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = read_corr2brdc_stream(lines)
-% Reads in a recorded realtime correction stream from CNES (e.g., CLK92 or
-% CLK93) and saves the data in an internal format. Stream was recorded with 
-% BKG Ntrip and saved in a RINEX-file.
+function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = ...
+    read_corr2brdc_stream(lines)
+% Reads in a recorded realtime correction stream (e.g., from CNES) and 
+% saves the data in an internal format. Stream was recorded with BKG Ntrip.
 % RESTRICTIONS: 
-% - vtec spherical harmonics have only one layer, height of layer is not read in
+% - vtec spherical harmonics have only one layer
 % - one correction type (ephemeris/clock/code-bias/phase-bias-correction) 
 %   is for all 4 GNSS to the same time. 
 % BUT: 
@@ -15,11 +15,32 @@ function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = read_corr2brdc_stream(
 %   lines       cell, data of (recorded) real-time correction stream
 % 
 % OUTPUT: 
-%   4 structs: corr_GPS, corr_GLO, corr_GAL, corr_BDS with same format
-%   struct: vtec...values of spherical harmonics and their timestamp
+%   corr_GPS, corr_GLO, corr_GAL, corr_BDS 
+%        	structs, contain the collowing fields for the specific GNSS:
+%               .t_orb      timestamps of orbit corrections [sow]
+%               .t_clk      timestamps of clock corrections [sow]
+%               .t_code     timestamps of code biases [sow]
+%               .t_phase    timestamps of phase biases [sow]
+%               .radial, .along, .outof
+%                           3 components of orbit corrections [m]
+%               .v_radial, .v_along, .v_outof
+%                           3 components of velocity corrections [mm/s]
+%               .IOD_orb, .IOD_clk
+%                           Issue of Data orbit and clock
+%               .c0, .c1, .c2
+%                           polynomial coefficients for clock Correction  [m, mm/s, and mm/s^2]
+%               .cbias, .pbias
+%                           code/phase biases [m]
+%   vtec    struct, contains the following fields:
+%               .t          timestamps VTEC corrections [sow]
+%               .Cnm        3D matrix, cosine coefficients [TECU]
+%               .Snm        3D matrix, sine coefficients [TECU]
+%               .degree     degree of spherical harmonics
+%               .order      order of spherical harmonics
+%               .height     height of ionospheric shell [m]
 %
-%   Revision:
-%   ...
+% Revision:
+%   2025/02/06, MFWG: save degree, order, and height of VTEC
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -278,8 +299,12 @@ corr_BDS = biases2struct(C_BDS, P_BDS, c_bias_BDS, p_bias_BDS, t_cb, t_pb, corr_
 if bool_vtec
     vtec.t = t_tec(2:end);
     l = vtec_lines/2;           % to divide into Cnm and Snm coefficients
-    vtec.Cnm = vtec_coeff(1:l,:,:);
-    vtec.Snm = vtec_coeff((l+1):vtec_lines,:,:);
+    vtec.Cnm = vtec_coeff(1:l,:,:);     % cosine coefficients for the layer [TECU]        
+    vtec.Snm = vtec_coeff((l+1):vtec_lines,:,:);    % sine coefficients for the layer [TECU] 
+    % save degree, order, and height (assuming that they do not change)
+    vtec.degree = degree;       
+    vtec.order  = order;
+    vtec.height = layer_height; % [m]
 end
 
 end         % end of read_corr2brdc_stream.m

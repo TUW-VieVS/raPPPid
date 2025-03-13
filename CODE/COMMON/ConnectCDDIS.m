@@ -12,13 +12,16 @@ netrc_path = '../CODE/OBSERVATIONS/ObservationDownload/cURL/';
 netrc_file = '.netrc';
 netrc = [netrc_path netrc_file];
 
+fprintf('\nConnecting CDDIS account.\n');
+fprintf(2, 'Please make sure to enter your username and password in the correct format.\n');
+
 % get user name
-fprintf('\nFormat:''user''\n');
+fprintf(2, 'Format:''user''\n');
 prompt = "Enter your user name:";
 usern = input(prompt);
 
 % get password
-fprintf('\nFormat:''password''\n');
+fprintf(2, '\nFormat:''password''\n');
 prompt = "Enter your password:";
 passw = input(prompt);
 

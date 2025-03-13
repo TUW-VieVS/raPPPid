@@ -21,7 +21,8 @@ set(handles.radiobutton_plot_fixed, 	'Enable', onoff)
 set(handles.checkbox_plot_coordinate,	'Enable', onoff);         
 set(handles.checkbox_plot_googlemaps,	'Enable', onoff);
 set(handles.checkbox_plot_UTM,			'Enable', onoff);       
-set(handles.checkbox_plot_xyz,          'Enable', onoff);  
+set(handles.checkbox_plot_xyz,          'Enable', onoff); 
+set(handles.checkbox_plot_xyzplot,      'Enable', onoff);  
 set(handles.checkbox_plot_clock,       	'Enable', onoff);
 set(handles.checkbox_plot_dcb,       	'Enable', onoff);
 set(handles.checkbox_plot_wet_tropo,  	'Enable', onoff);  

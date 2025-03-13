@@ -12,11 +12,18 @@ function file_decompr = unzip_7zip(path_7zip, archive)
 %
 %
 % Revision:
+%   2025/03/11, MFWG: adding decompression for LINUX
 %   2024/01/11, MFWG: adding file/archive name check
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
+if isunix
+    % use gunzip on Linux systems
+    file_decompr = gunzip(archive);
+    file_decompr = file_decompr{:};
+    return
+end
 
 [dir_file, name_file, ~] = fileparts(archive);
 file_decompr = [dir_file '/' name_file];
@@ -28,7 +35,7 @@ path_7zip_ = ['"' path_7zip '"'];
 
 % prepare file/archive name check
 checkcontent = [path_7zip,  ' l ', archive];    % building string for command line
-[status, cmdout] = system(checkcontent);       	% status = 0 = OK
+[status, cmdout] = system(checkcontent);      	% status = 0 = OK
 
 % check if the file compressed in the archive has the same name as the archive
 if status == 0
@@ -49,7 +56,7 @@ end
 decompress = [path_7zip_,  ' x -o', dir_file_, ' ', path_file_];
 
 % writing decompress command to command line to unzip
-[status, cmdout] = system(decompress);      % status = 0 = OK
+[status, cmdout] = system(decompress);     % status = 0 = OK
 
 if status ~= 0          % check if unzipping worked
     fprintf(2, 'Unzipping failed: %s                 \n', path_file_);

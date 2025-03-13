@@ -1,4 +1,4 @@
-function [Adjust, Epoch] = fixedAdjustment_2xIF(Epoch, Adjust, input, model, TUW_corr, wrongFixes)
+function [Adjust, Epoch] = fixedAdjustment_2xIF(Epoch, Adjust, input, model, TUW_corr, settings)
 % ||| EXPERIMENTAL FUNCTION
 % 
 % Adjustment with fixed Ambiguities as a 2nd adjustment with ZD float
@@ -10,7 +10,7 @@ function [Adjust, Epoch] = fixedAdjustment_2xIF(Epoch, Adjust, input, model, TUW
 %   input     	input data e.g. ephemeris [struct]
 %   model       model corrections for all visible satellites [struct]
 %   TUW_corr	boolean, true if TUW-UPD-corrections are enabled
-%   wrongFixes 	string, setting for detection of wrong fixes from GUI
+%   settings 	processing settings from GUI
 % OUTPUT:
 %   Adjust      updated with results of fixed adjustment
 %   Epoch       updated with results of fixed adjustment
@@ -31,7 +31,7 @@ n = size(A_float,2);              	% number of columns of A-Matrix
 
 %% Prepare observations
 [model_code_fix, model_phase_fix] = ...
-    model_IF_fixed_observations(model, Epoch, Adjust.param);
+    model_IF_fixed_observations(model, Epoch, Adjust.param, settings);
 
 % calculate observed minus computed exlude satellites under cutoff-angle
 % for code and phase as vector alternately

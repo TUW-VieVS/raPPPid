@@ -1,16 +1,30 @@
-function [d] = Reshape2ConvergePeriods(storeData, dN, dE, dH, dZTD, reset_epochs, no_epochs, d, PlotStruct)
-% ...
+function [d] = Reshape2ConvergePeriods(storeData, dN, dE, dH, dZTD, ...
+    reset_epochs, no_epochs, d, PlotStruct)
+% This function reshapes the processing results stored in the variable
+% storeData as, for example, vectors to a matrix. In this matrix each row
+% corresponds to a convergence period without reset. The entries of a
+% specific column have the same time passed after the last reset. 
 %
 % INPUT:
-%	...
+%	storeData       struct, saved results from processing    
+%   dN              vector, North coordinate error   (all processed epochs)
+%   dE              vector, East coordinate error    (all processed epochs)    
+%   dH              vector, Height coordinate error  (all processed epochs)
+%   dZTD            vector, Zenith Total Delay error (all processed epochs)
+%   reset_epochs    vector, North coordinate error of current processing
+%   no_epochs       total number of epochs of current processing 
+%   d               struct, collecting all convergence periods
+%   PlotStruct      struct, settings for Multi Plots
+% 
 % OUTPUT:
-%	...
+%	d               struct, updated with new convergence periods
 %
 % Revision:
 %   ...
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
+
 
 % number of resets of current processing
 no_resets = numel(reset_epochs);
@@ -20,7 +34,6 @@ eps_reset = no_epochs;
 if numel(reset_epochs) > 1
     eps_reset = mode(diff(reset_epochs));
 end
-
 
 
 % convert vectors to matrices where each convergence period is a row

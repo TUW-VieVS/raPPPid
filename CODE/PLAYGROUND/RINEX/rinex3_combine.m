@@ -111,5 +111,5 @@ while linr_2 <= lgth_2
 end
 
 close(WBAR)
-winopen(filepath_out)
+OpenFolder(filepath_out)
 end

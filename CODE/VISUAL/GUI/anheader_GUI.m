@@ -251,6 +251,11 @@ ind_gal_freq = sort(ind_gal_freq);
 ind_bds_freq = sort(ind_bds_freq);
 ind_qzss_freq = sort(ind_qzss_freq);
 
+% check if missing observation interval can be extracted from the filename
+if isempty(interval)
+    [~, ~, interval] = analyzeRinexName(file);      % take from filename
+end
+
 
 %% Save into struct
 rheader = save2struct(pos_approx, version_full, interval, first_obs, last_obs, ...

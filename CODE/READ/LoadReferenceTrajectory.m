@@ -8,9 +8,9 @@ function [pos_ref_geo, North_ref, East_ref] = ...
 %   gpstime         vector, gps time (sow) of processing's epochs
 % OUTPUT: reference positions interpolated from the reference trajectory to
 %         the points in time of the PPP solution
-%	pos_ref_geo     struct [.lat, .lon, h], WGS84 reference points, [rad rad m]
-%   North_ref       vector, UTM North reference points, [m]
-%   East_ref        vector, UTM East reference points, [m]
+%	pos_ref_geo     struct [.lat, .lon, h], WGS84 reference points [rad rad m]
+%   North_ref       vector, UTM North reference points [m]
+%   East_ref        vector, UTM East reference points [m]
 %
 % Revision:
 %   2024/02/07, MFWG: added *.csv
@@ -49,6 +49,24 @@ switch ext
             lat_wgs84(i) = temp_geo.lat;
             lon_wgs84(i) = temp_geo.lon;
             h_wgs84(i) = temp_geo.h;
+        end
+        
+    case '.text'
+        % simple text file with columns: 
+        %       gpstime | latitude | longitude | height
+        fid = fopen(filepath);
+        DATA = textscan(fid,'%f %f %f %f');
+        fclose(fid);
+        % save data
+        sod_true  = DATA{:,1}; 
+        lat_wgs84 = DATA{:,2}; 
+        lon_wgs84 = DATA{:,3}; 
+        h_wgs84   = DATA{:,4};
+        % convert coordinates
+        n = numel(sod_true);
+        North_true = NaN(n,1); East_true = NaN(n,1);
+        for i = 1:n
+            [North_true(i), East_true(i)] = ell2utm_GT(lat_wgs84(i), lon_wgs84(i));
         end
         
     case '.pos'

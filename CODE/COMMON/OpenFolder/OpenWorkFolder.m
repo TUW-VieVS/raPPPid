@@ -10,6 +10,6 @@ function [] = OpenWorkFolder()
 % *************************************************************************
 
 if contains(pwd, 'WORK')
-    winopen(pwd);
+    OpenFolder(pwd);
 end
 

@@ -19,6 +19,7 @@ set(handles.checkbox_plot_coordinate,	 'Value', value);
 set(handles.checkbox_plot_googlemaps,	 'Value', value); 
 set(handles.checkbox_plot_UTM,	 		 'Value', value);       
 set(handles.checkbox_plot_xyz,           'Value', value);  
+set(handles.checkbox_plot_xyzplot,       'Value', value);  
 set(handles.checkbox_plot_clock,       	 'Value', value);
 set(handles.checkbox_plot_dcb,       	 'Value', value);
 set(handles.checkbox_plot_wet_tropo,  	 'Value', value);  

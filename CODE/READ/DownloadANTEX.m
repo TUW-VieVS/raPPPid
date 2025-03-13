@@ -27,7 +27,7 @@ coordsyst = GetCoordSystemFromSP3(path_sp3);
 switch coordsyst
     case {'IGb14', 'IGS14'}
         file_atx = 'igs14.atx';
-    case {'IGS20'}
+    case {'IGb20', 'IGS20'}
         file_atx = 'igs20.atx';
     case {'IGS08'}
         file_atx = 'igs08.atx';

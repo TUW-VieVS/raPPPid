@@ -91,7 +91,7 @@ end
 [N_sub_fixed, sqnorm] = LAMBDA(N_sub, Q_NN_sub, 5, 3, DEF.AR_THRES_SUCCESS_RATE);
 
 % get best ambiguity set and keep only integer fixes
-N_fix_sub  N_sub_fixed(:,1);
+N_fix_sub = N_sub_fixed(:,1);
 bool_int = (N_fix_sub - floor(N_fix_sub)) == 0;
 N_fix_sub(~bool_int) = NaN;
 

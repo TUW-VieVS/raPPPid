@@ -1,16 +1,15 @@
 function [PROC_epochs] = sod2epochs(RINEX, epochheader, PROC_epochs, version)
-
 % Settings for the processing epochs are in seconds or hours of day. This 
 % function calculates from which epoch to which epoch of the RINEX file the
 % processing should run.
 % 
 % INPUT:
-%   RINEX           read in RINEX file
-%   epochheader     indices of the epoch-headers in RINEX
-%   PROC_epochs     [sod], start and end epoch of processing
+%   RINEX           cell array, read in RINEX file
+%   epochheader     vector, indices of the epoch-headers in RINEX
+%   PROC_epochs     start and end epoch of processing [sod]
 %   version         version of RINEX file    
 % OUTPUT:
-%   PROC_epochs     [number of epoch], start and end epoch of processing
+%   PROC_epochs     start and end epoch of processing [number of epoch]
 %
 %   Revision:
 %   ...
@@ -19,7 +18,7 @@ function [PROC_epochs] = sod2epochs(RINEX, epochheader, PROC_epochs, version)
 % *************************************************************************
 
 
-
+%% Read time of observation epochs
 no_headers = numel(epochheader);        % number of epoch (headers) in RINEX
 headers = RINEX(epochheader);           % get epoch headers
 time_epochs = NaN(no_headers, 1);       % initialize time vector, [sow]
@@ -42,6 +41,8 @@ for i = 1:no_headers
     [~,time_epochs(i),~] = jd2gps_GT(jd);           % gps-time [sow]
 end
 
+
+%% Determine epochs to process
 % convert time of the RINEX epoch headers from [sow] in [sod]
 time_epochs = mod(time_epochs, 86400);
 

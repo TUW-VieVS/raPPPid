@@ -2,7 +2,6 @@ function [BDGIM, eph] = read_nav_bds(ephemerisfile, leap_sec)
 % Reads a RINEX 3.x BeiDou Navigation Message file and reformats the data 
 % into a matrix with 28 rows and a column for each satellite. This matrix 
 % is returned. Units are either seconds, meters, or radians
-% Time variables are converted into GPS time.
 % For details check the Rinex 3.x specification, there is a description for
 % each row and variable.
 % 
@@ -17,9 +16,6 @@ function [BDGIM, eph] = read_nav_bds(ephemerisfile, leap_sec)
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
-
-
-% ||| conversion BDS time into GPS time
 
 % open and read file
 fide = fopen(ephemerisfile);

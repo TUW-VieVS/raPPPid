@@ -1,7 +1,9 @@
 function  [input] = read_brdc(settings, input, leap_sec, glo_channels)
-% Read RINEX navigation ephemerides for GPS, GLONASS and GALILEO and 
-% convert into internal Matlab format.
-% All time system are converted into GPS time and seconds of week
+% This functions reads the navigation messages (RINEX format) and 
+% converts them into an internal raPPPid format.
+% 
+% Input Format Description:
+% https://vievswiki.geo.tuwien.ac.at/en/raPPPid/General/InputData
 % 
 % INPUT:    
 %   settings        struct, settings for processing from GUI
@@ -15,8 +17,6 @@ function  [input] = read_brdc(settings, input, leap_sec, glo_channels)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-
-% ||| conversion BDS time into GPS time
 
 input.ORBCLK.Eph_GPS = [];     input.ORBCLK.Eph_GLO = [];     
 input.ORBCLK.Eph_GAL = [];     input.ORBCLK.Eph_BDS = [];     

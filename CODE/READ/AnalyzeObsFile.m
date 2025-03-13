@@ -93,6 +93,7 @@ settings.PROC.method = 'Code + Phase + Doppler';
 settings.IONO.model = 'off';
 settings.EXP.satellites_D = 1;
 settings.INPUT.rawDataAndroid = false;
+settings.INPUT.bool_realtime = false;
 
 % Prepare variables
 [Epoch, satellites, storeData, ~, ~, ~] = initProcessing(settings, obs);
@@ -129,7 +130,8 @@ for q = 1:n
     obs.glo_channel(isnan(obs.glo_channel)) = 0;
     % -> frequency of GLONASS satellites is not correct but otherwise
     % GLONASS is not analzed correctly
-    [Epoch, obs] = prepareObservations(settings, obs, Epoch, q);
+    Epoch = RemoveSort(settings, Epoch, q);
+    [Epoch, obs] = prepareObservations(settings, obs, Epoch);
     % save relevant data
     prns = Epoch.sats;
     % increase epoch counter
@@ -251,6 +253,12 @@ if obs.interval <= 15 	% this plots make only sense for high-rate observation da
         PlotObsDiff(epochs, D3_diff, label_x_epc, rgb, 'D3' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std, obs);
     end
 end
+
+
+% %% IGS satellite metadata file
+% SATS = AnalyzeSatelliteMetadataFileIGS(obs.startdate(1), obs.doy);
+% assignin('base', 'SATS', SATS)
+
 
 fprintf('\n--------------------------------------------------------\n\n')
 

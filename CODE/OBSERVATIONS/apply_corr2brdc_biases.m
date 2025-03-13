@@ -20,7 +20,7 @@ function [Epoch] = apply_corr2brdc_biases(Epoch, settings, input, obs)
 age_biases = settings.ORBCLK.CorrectionStream_age(3);
 
 % CODE BIASES
-if settings.BIASES.code_corr2brdc_bool
+if settings.BIASES.code_corr2brdc_bool && isfield(obs, 'C_corr_time')
     dt = Epoch.gps_time - obs.C_corr_time;
     dt(dt < 0) = [];    % remove future data to maintain real-time conditions
     dt(dt > age_biases) = [];   % remove corrections which are too old
@@ -42,7 +42,7 @@ end
 
 
 % PHASE BIASES
-if contains(settings.PROC.method, 'Phase') && settings.BIASES.phase_corr2brdc_bool
+if contains(settings.PROC.method, 'Phase') && settings.BIASES.phase_corr2brdc_bool && isfield(obs, 'L_corr_time')
     dt = Epoch.gps_time - obs.L_corr_time;
     dt(dt < 0) = [];    % remove future data to maintain real-time conditions
     dt(dt > age_biases) = [];   % remove corrections which are too old

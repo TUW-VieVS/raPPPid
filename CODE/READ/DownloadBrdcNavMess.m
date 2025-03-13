@@ -20,7 +20,7 @@ function brdc_file_path = DownloadBrdcNavMess(yyyy, doy, option, bool_print)
 brdc_file_path = '';
 
 % define target for download
-target_nav = {[Path.DATA, 'BROADCAST/', yyyy, '/', doy]};
+target_nav = {[Path.DATA 'BROADCAST/' yyyy '/' doy '/']};
 [~, ~] = mkdir(target_nav{1});
 
 % define FTP host and folder
@@ -44,18 +44,37 @@ switch option
     case 'IGN'
         file = {['BRDC00IGN_R_' yyyy doy '0000_01D_MN.rnx.gz']};
         bool_esa = false; bool_cddis = false;
+        
     case 'DLR, BRD4'
         file = {['BRD400DLR_S_' yyyy doy '0000_01D_MN.rnx.gz']};
         bool_ign = false;
+        
     case 'DLR, BRDM'
         file = {['BRDM00DLR_S_' yyyy doy '0000_01D_MN.rnx.gz']};
         bool_ign = false;
+        
+    case 'CAS, BDRM'        
+        % from the data center of the Chinese Academy of Sciences (CAS)
+        httpserver = ['https://data.bdsmart.cn/pub/product/rts/brdc/' yyyy];
+        file  = ['BRDM00CAS_S_' yyyy doy '0000_01D_MN.rnx.gz'];
+        dcmpr = ['BRDM00CAS_S_' yyyy doy '0000_01D_MN.rnx'];
+        % try to download
+        if ~isfile([target_nav{1} file]) && ~isfile([target_nav{1} dcmpr])
+            try websave([target_nav{1} file], [httpserver '/' file]); end      %#ok<*TRYNC>
+        end
+        % unzip if download was successful
+        brdc_file_path = unzip_and_delete({file}, target_nav);
+        if ~isfile(brdc_file_path)
+            errordlg({'No CAS Multi-GNSS Navigation File found on server.', ' Please specify different source!'}, 'Error');
+        end
+        return
+        
     otherwise
         errordlg({'DownloadBrdcNavMess.m failed. Please', 'specify a different navigation file!'}, 'Error');
 end
 
 % try to download from igs.ign.fr
-if bool_ign
+if bool_ign && file_status == 0
     file_status = ftp_download(FTP_h_ign, FTP_f_ign{1}, file{1}, target_nav{1}, false);
 end
 % try to download from gssc.esa.int

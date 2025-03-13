@@ -7,8 +7,8 @@ function [obs_intv] = extractObsInterval(path_file)
 % OUTPUT:
 %   obs_intv        observation interval
 %
-%   Revision:
-%   ...
+% Revision:
+%  	2025/02/18, MFWG: round interval to 3 fractional digits
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -71,7 +71,9 @@ while 1
     
 end
 
-obs_intv = round(obs_intv);        % somehow necessary
+
+% round to 3 fractional digits (according to RINEX specification and header)
+obs_intv = round(round(obs_intv*1e3)/1e3);        
 
 % %% print result of this function
 % [~, obs_filename, ext] = fileparts(path_file);

@@ -17,12 +17,12 @@ end
 
 switch nargin
     case 0      % no input variables
-        winopen(Path.DATA);
+        OpenFolder(Path.DATA);
         
     case 1      % data-folder as input variable
         folder = varargin{1};
         try
-            winopen([Path.DATA '/' folder]);
+            OpenFolder([Path.DATA '/' folder]);
         catch
             fprintf(1,'This Data Folder does not exist!');
         end
@@ -32,7 +32,7 @@ switch nargin
         year = varargin{2};
         yyyy = sprintf('%04d',year);
         try
-            winopen([Path.DATA '/' folder '/' yyyy]);
+            OpenFolder([Path.DATA '/' folder '/' yyyy]);
         catch
             fprintf(1,'This Data Folder does not exist!');
         end
@@ -44,7 +44,7 @@ switch nargin
         yyyy = sprintf('%04d',year);
         ddd  = sprintf('%03d',doy);
         try
-            winopen([Path.DATA '/' folder '/' yyyy '/' ddd]);
+            OpenFolder([Path.DATA '/' folder '/' yyyy '/' ddd]);
         catch
             fprintf('This Data Folder does not exist!\n');
         end

@@ -3,7 +3,7 @@ function ThreeCoordinatesPlot(interval, seconds, dN, dE, dH, resets, str_xAxis, 
 % coordinates together into one graph
 %
 % INPUT:
-%   interval        observation-interval
+%   interval        observation interval [s]
 %   seconds         Vector time of week [s]
 %   dN              UTM-North-Coordinate as vector
 %   dE              UTM-East-Coordinate  as vector
@@ -22,7 +22,6 @@ function ThreeCoordinatesPlot(interval, seconds, dN, dE, dH, resets, str_xAxis, 
 
 seconds = seconds(1:length(dN));    % if last epochs of processing delivered no results
 
-% RMS_dN = rms(dN(dN~=0), 'omitnan'); RMS_dE = rms(dE(dE~=0), 'omitnan'); RMS_dH = rms(dH(dH~=0), 'omitnan');
 % calculate rms with own implementation to avoid ToolBox Dependency
 RMS_dN = calculate_rms(dN);
 RMS_dE = calculate_rms(dE);
@@ -97,42 +96,3 @@ end
 
 
 
-function [vec, txt] = xLabelling(ival, xAxis, interval)
-% creates vec and txt to xlabel with the time.
-% vec       vector for xaxis
-% txt       cellstr with appropiate times
-if (xAxis(end)-xAxis(1)) > interval
-    idx = mod(round(xAxis)/ival,1) == 0;       % find indices where x-values are multiples of the interval
-    vec = xAxis(idx);
-    if isempty(vec)
-        vec(1) = xAxis(1);
-        vec(2) = xAxis(end);
-    end
-    if interval > 15 && xAxis(end)-xAxis(1) > 300
-        txt = sow2hhmm(vec);    % format hh:mm
-        txt = cellstr(strcat(txt,'h'));
-    else
-        txt = sow2hhmmss(vec);  % format hh:mm:ss
-        txt = cellstr(txt);
-    end
-else        % Processing time shorter than intervall
-    i_1 = 1;
-    vec = [xAxis(i_1), xAxis(end)];
-    txt = [xAxis(i_1), length(xAxis)];
-    if interval > 15 && xAxis(end)-xAxis(1) > 300
-        txt = sow2hhmm(txt);    % format hh:mm
-        txt = cellstr(strcat(txt,'h'));
-    else
-        txt = sow2hhmmss(vec);  % format hh:mm:ss
-        txt = cellstr(txt);
-    end
-end
-end
-
-
-
-function rms_calc = calculate_rms(vec)
-% calculate rms
-vec = vec(vec~=0 & ~isnan(vec));        % ignore zeros and NaNs
-rms_calc = sqrt(mean(vec.*vec));
-end

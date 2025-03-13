@@ -19,8 +19,8 @@ vx = V(1,1);
 vy = V(2,1);
 
 term_1 = -GM/r^3;
-term_2 = 3/2*c20*GM*a^2/r^5;
-term_3 = 5*z^2/r^2;
+term_2 = 3/2 * c20 * GM * a^2/r^5;
+term_3 = 5 * z^2/r^2;
 
 % Formulas according to ICD (Update 1998)
 A(1,1) = term_1 * x + term_2 * x *(1-term_3) + w^2*x + 2*w*vy + A_sl(1,1);

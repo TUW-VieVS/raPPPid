@@ -84,9 +84,9 @@ bool_brdc_TGD = strcmp(settings.BIASES.code, 'Broadcasted TGD');
 fid_obs = []; fid_navmess = []; fid_corr2brdc = [];
 q_update = 17;      % [epochs], update rate of, for example, waitbar 
 if settings.INPUT.bool_realtime
-    % open files for reading in real-time and jump to somewhere at the end of the file
+    % open files for reading in real-time
     fid_obs = fopen(settings.INPUT.file_obs, 'r');              % fseek(fid_obs,-100,'eof');
-    fid_navmess = fopen(settings.ORBCLK.file_nav_multi);    % do not jump
+    fid_navmess = fopen(settings.ORBCLK.file_nav_multi);
     fid_corr2brdc = fopen(settings.ORBCLK.file_corr2brdc, 'r'); % fseek(fid_corr2brdc,-100,'eof');
     input.ORBCLK.Eph_GPS = []; input.ORBCLK.Eph_GLO = []; input.ORBCLK.Eph_GAL = []; input.ORBCLK.Eph_BDS = [];
     q_update = 1; 
@@ -198,11 +198,11 @@ for q = q_range         % loop over epochs
     % ----- real-time processing: get RINEX observation data -----
     if settings.INPUT.bool_realtime
         [OBSDATA, fid_obs, fid_navmess, fid_corr2brdc, input, obs] = ...
-            ReadRinexRealTime(settings, input, obs, start_sow, fid_obs, fid_navmess, fid_corr2brdc);        
-    end
+            ReadRinexRealTime(settings, input, obs, start_sow, q, fid_obs, fid_navmess, fid_corr2brdc);        
+    end   
     
     % ----- read in epoch data -----
-    if ~settings.INPUT.rawDataAndroid       % from RINEX observation file
+    if ~settings.INPUT.rawDataAndroid  	% from RINEX observation file
         [Epoch] = RINEX2Epoch(OBSDATA, obs.newdataepoch, Epoch, n, obs.no_obs_types, obs.rinex_version, settings);
     else                                % from Android raw sensor data
         [Epoch] = RawSensor2Epoch(OBSDATA, obs.newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column, obs.leap_sec);
@@ -221,6 +221,9 @@ for q = q_range         % loop over epochs
     [Adjust, Epoch, settings, HMW_12, HMW_23, HMW_13, storeData, init_ambiguities] = ...
         resetSolution(Adjust, Epoch, settings, HMW_12, HMW_23, HMW_13, storeData, obs.interval, init_ambiguities);
     
+    % ----- sort and remove satellites -----
+    Epoch = RemoveSort(settings, Epoch, q);
+    
     % ----- Find column of broadcast-ephemeris of current satellite -----
     % check if satellites have broadcast ephemerides and are healthy, otherwise satellite is excluded
     if settings.ORBCLK.bool_brdc
@@ -231,7 +234,7 @@ for q = q_range         % loop over epochs
     end 
     
     % ----- prepare observations -----
-    [Epoch, obs] = prepareObservations(settings, obs, Epoch, q);
+    [Epoch, obs] = prepareObservations(settings, obs, Epoch);
     
     % ----- check, if enough satellites -----
     bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, settings.INPUT.use_QZSS, ...
@@ -282,7 +285,7 @@ for q = q_range         % loop over epochs
     % --- insert artificial cycle slip or multipath
     % Epoch = cycleSlip_articifial(Epoch, obs.use_column);
     % Epoch = multipath_articifial(Epoch, obs.use_column);
-    
+
     % --- perform Cycle-Slip detection ---
     if contains(settings.PROC.method,'Phase')   &&   (settings.OTHER.CS.l1c1 || settings.OTHER.CS.DF || settings.OTHER.CS.Doppler || settings.OTHER.CS.TimeDifference || settings.PROC.LLI)
         [Epoch] = cycleSlip(Epoch, settings, obs.use_column);
@@ -336,6 +339,7 @@ for q = q_range         % loop over epochs
     % Save results from epoch-wise processing
     [satellites, storeData, model_save] = ...
         saveData(Epoch, q, satellites, storeData, settings, Adjust, model, model_save, HMW_12, HMW_23, HMW_13);
+    if settings.EXP.obs_epochheader; obs.epochheader(q) = cellstr(Epoch.rinex_header); end
     Epoch.delta_windup = model.delta_windup;        % [cycles], for calculation of Wind-Up correction in next epoch
       
     % update waitbar
@@ -383,9 +387,10 @@ end
 storeData.float_reset_epochs = Adjust.float_reset_epochs;
 storeData.fixed_reset_epochs = Adjust.fixed_reset_epochs;
 
-% if processing was finished before the timespan defined in the GUI -> shrink variables
+% if processing was finished before the timespan defined in the GUI or 
+% real-time processing -> shrink variables
 [satellites, storeData, model_save, obs] = ...
-    shrinkVariables(satellites, storeData, model_save, obs, settings, q);
+    shrinkVariables(satellites, storeData, model_save, obs, settings, q, OBSDATA);
 
 % sparse variables
 [satellites, storeData, model_save, obs] = ...

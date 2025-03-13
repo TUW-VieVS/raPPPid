@@ -25,8 +25,8 @@ v = v * 3.6;
 % remove first epoch and epochs without valid coordinate solution from time vector
 seconds = seconds(2:end);
 
-% delete outliers (velocity over 300km/h)
-outlier = (v > 300);
+% delete outliers (velocity over 10^6 km/h)
+outlier = (v > 1e6);
 
 % % smooth velocity over 30 epochs
 % v = movmean(v, 30);

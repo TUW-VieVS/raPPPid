@@ -6,7 +6,7 @@ function input = get_VMF1(obs, input, settings)
 %   input       struct, holding input data
 %   settings    struct, processing settings from GUI
 % OUTPUT:
-%	input       struct, updated with VMF1 data
+%	input       struct, updated with input.TROPO.VMF1.data
 %
 % Revision:
 %   ...

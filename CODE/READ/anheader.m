@@ -29,6 +29,7 @@ function [obs] = anheader(settings)
 %   Revision:
 %       MFG, 12 Aug 2020: changed input to settings
 %       MFWG, 3 Nov 2023: adding QZSS
+%       MFWG, 13 Mar 2025: observation interval detection from file name
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -62,6 +63,7 @@ glo_cod_phs_bis = [];
 glo_channel = NaN(99,1);
 stationname = ''; stationname_long = '';
 time_system = 'GPS';        % GPS time system is default
+interval = [];
 
 % detect RINEX version
 version = sscanf(line(6), '%f');
@@ -348,10 +350,14 @@ obs.rinex_version = version;
 obs.rinex_version_full = version_full;
 
 % check and save observation interval
-try
+if ~isempty(interval)
+    obs.interval = interval;    % take from RINEX header
+else
+    [~, ~, interval] = analyzeRinexName(path_file);     % take from filename
+    if ~isempty(interval)
+        interval = extractObsInterval(path_file);       % calculate from first two epochs
+    end
     obs.interval = interval;
-catch
-    obs.interval = extractObsInterval(path_file);
 end
 
 % check and save leap seconds

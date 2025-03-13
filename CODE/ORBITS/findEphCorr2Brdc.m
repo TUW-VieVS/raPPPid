@@ -1,17 +1,24 @@
 function Epoch = findEphCorr2Brdc(Epoch, input, settings)
-% Find column of broadcast ephemerides for a all satellites of current
-% epoch
+% This functions finds the column of the currently valid broadcast 
+% ephemerides for a all satellites of the current epoch (-> Epoch.BRDCcolumn)
+% 
+% If a corrections stream is used to apply corrections to the broadcast
+% message, this functions finds this corrections and saves them into Epoch:
+% .corr2brdc_orb (timestamp, radial, along, outof, v_radial, v_along, v_outof, IOD)
+% and 
+% .corr2brdc_clk (timestamp, a0, a1, a2, IOD)
 %
 % INPUT:
 %   Epoch       struct with epoch-specific data
 % 	input       struct with input data
 %	settings	struct with settings from GUI
 % OUTPUT:
-%  	Epoch       updated
+%  	Epoch       updated (.BRDCcolumn, .corr2brdc_orb, .corr2brdc_clk)
 %
 % Revision:
 %   2023/02/15, MFG: removing maintain real-time conditions
 %   2023/02/22, MFG: get corrections from stream here
+%   2025/02/03, MFWG: consider all corrections which are still valid (age)
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -26,7 +33,7 @@ function Epoch = findEphCorr2Brdc(Epoch, input, settings)
 
 t = Epoch.gps_time;                 % GPS time of current epoch
 corr2brdc = settings.ORBCLK.corr2brdc_clk || settings.ORBCLK.corr2brdc_orb;
-
+corr_orb_IOD = NaN;
 
 if corr2brdc
     % delete aged orbit corrections in Epoch
@@ -36,39 +43,17 @@ if corr2brdc
     % delete aged clock corrections in Epoch
     idx_ = Epoch.gps_time - Epoch.corr2brdc_clk(1,:) > settings.ORBCLK.CorrectionStream_age(2);
     Epoch.corr2brdc_clk(:, idx_) = 0;
-    
-    % --- index of current orbit+velocity and clock corrections
-    if settings.INPUT.use_GPS
-        orb_idx_G = getOrbClkIdx(t, input.ORBCLK.corr2brdc_GPS.t_orb, settings.INPUT.bool_realtime);
-        clk_idx_G = getOrbClkIdx(t, input.ORBCLK.corr2brdc_GPS.t_clk, settings.INPUT.bool_realtime);
-    end
-    if settings.INPUT.use_GLO
-        orb_idx_R = getOrbClkIdx(t, input.ORBCLK.corr2brdc_GLO.t_orb, settings.INPUT.bool_realtime);
-        clk_idx_R = getOrbClkIdx(t, input.ORBCLK.corr2brdc_GLO.t_clk, settings.INPUT.bool_realtime);
-    end
-    if settings.INPUT.use_GAL
-        orb_idx_E = getOrbClkIdx(t, input.ORBCLK.corr2brdc_GAL.t_orb, settings.INPUT.bool_realtime);
-        clk_idx_E = getOrbClkIdx(t, input.ORBCLK.corr2brdc_GAL.t_clk, settings.INPUT.bool_realtime);
-    end
-    if settings.INPUT.use_BDS
-        orb_idx_C = getOrbClkIdx(t, input.ORBCLK.corr2brdc_BDS.t_orb, settings.INPUT.bool_realtime);
-        clk_idx_C = getOrbClkIdx(t, input.ORBCLK.corr2brdc_BDS.t_clk, settings.INPUT.bool_realtime);
-    end
 end
 
 
 % loop over satellites to find the column of their broadcast-ephemeris and
 % orbit and clock corrections from the correction stream
-for i = 1:numel(Epoch.sats)         
+n = numel(Epoch.sats);
+for i = 1:n     
     sat = Epoch.sats(i);    % raPPPid satellite number
     sv = mod(sat,100);  	% get current satellite-number
-    k = [];                 % initialize broadcast column
-    
-    % check if satellite is completly excluded from processing, so no need for brdc ephemeris
-    if ~isempty(settings.PROC.exclude_sats) && any( settings.PROC.exclude_sats(:,1) == sat )
-        continue
-    end
-    
+    col = [];              	% initialize broadcast column
+      
     % get data depending on GNSS
     if Epoch.gps(i) && settings.INPUT.use_GPS
         Eph_gnss = input.ORBCLK.Eph_GPS;  	% read-in broadcast ephemerides from navigation file, matrix
@@ -78,8 +63,6 @@ for i = 1:numel(Epoch.sats)
         r_tom = 29;             % row of transmission time of message
         if corr2brdc  
             corr = input.ORBCLK.corr2brdc_GPS;
-            orb_idx = orb_idx_G;
-            clk_idx = clk_idx_G;
         end
         
     elseif Epoch.glo(i) && settings.INPUT.use_GLO
@@ -87,8 +70,6 @@ for i = 1:numel(Epoch.sats)
         r_toc = 18; r_iode = 19; r_health = 14; r_tom = r_toc;  % ||| no tom entry?!
         if corr2brdc
             corr = input.ORBCLK.corr2brdc_GLO;
-            orb_idx = orb_idx_R;
-            clk_idx = clk_idx_R;
         end
         
     elseif Epoch.gal(i) && settings.INPUT.use_GAL
@@ -96,8 +77,6 @@ for i = 1:numel(Epoch.sats)
         r_toc = 21; r_iode = 24; r_health = 23; r_tom = 29;
         if corr2brdc
             corr = input.ORBCLK.corr2brdc_GAL;
-            orb_idx = orb_idx_E;
-            clk_idx = clk_idx_E;
         end
         
     elseif Epoch.bds(i) && settings.INPUT.use_BDS
@@ -105,102 +84,128 @@ for i = 1:numel(Epoch.sats)
         r_toc = 21; r_iode = 22; r_health = 23; r_tom = 29;
         if corr2brdc
             corr = input.ORBCLK.corr2brdc_BDS;
-            orb_idx = orb_idx_C;
-            clk_idx = clk_idx_C;
         end
         t = t - Const.BDST_GPST;            % consider time shift between GPS and BDS time
-    else
+    
+    else        % e.g., other GNSS or GNSS not processed
         continue
         
     end
     
-    if corr2brdc        % get current orbit+velocity and clock corrections
-        corr_orb_IOD  = corr.IOD_orb(orb_idx,sv);
-        corr_clk_IOD  = corr.IOD_clk(clk_idx,sv);
-    end
+    if isempty(Eph_gnss); continue; end    	% no ephemeris for this GNSS
     
-    if isempty(Eph_gnss); continue; end    	% no ephemeris for this satellite
-    
-    % get broadcast data for current satellite
+    % get all avilable navigation message data for current satellite number
     idx_sat = find(Eph_gnss(1,:) == sv);   	 % columns of satellites
     Eph_sat = Eph_gnss(:, idx_sat);          % broadcast data satellite
     
-    % look for column of current satellite in brdc ephemeris
+    % look for current column of current satellite in brdc ephemeris
     if ~isempty(idx_sat)                    % check if satellite is included in Broadcast-Ephemeris
+        
         dt_eph = t - Eph_sat(r_toc,:);      % diff. transmission time to times of satellite ephemeris
         if ~settings.INPUT.bool_realtime
-            dt_eph(dt_eph < 0) = [];         	% do not consider future broadcast ephemeris
+            dt_eph(dt_eph < 0) = [];    	% do not consider future broadcast ephemeris
         end
         
         if corr2brdc
             % -) correction stream is used
-            if corr_orb_IOD == corr_clk_IOD     % orbit IOD isequal to clock IOD (usually the case) 
-                % check which ephemeris IOD are equal to the stream IODs
+            
+            % indices of corrections which are still valid and not out of age
+            orb_idx = getOrbClkIdx(t, corr.t_orb, settings.INPUT.bool_realtime, settings.ORBCLK.CorrectionStream_age(1));
+            clk_idx = getOrbClkIdx(t, corr.t_clk, settings.INPUT.bool_realtime, settings.ORBCLK.CorrectionStream_age(2));
+            
+            % --- ORBIT ---
+            % loop to find the newest usable correction, start with latest
+            for ii = numel(orb_idx):-1:1
+                % orbit index which is currently checked
+                orb_idx_ = orb_idx(ii);
+                % get Issues of Data orbit
+                corr_orb_IOD  = corr.IOD_orb(orb_idx_,sv);
+                % check which navmess IODs are equal to the stream IOD
                 k = idx_sat(corr_orb_IOD == Eph_sat(r_iode, :));
                 if numel(k) > 1
                     % in the case of multiple nav. messages with equal IOD
                     dt_k = t - Eph_gnss(r_tom,k);   % time difference to time of emission
                     dt_k(dt_k < 0) = Inf;           % remove future nav messages
                     k = k(min(dt_k) == dt_k);       % take most recent nav message
-                    k = k(1);           % to be on the safe side
                 end
-                % save orbit corrections
-                orbcorr_sat(1) = corr.t_orb(orb_idx);
-                orbcorr_sat(2:4) = [corr.radial(orb_idx,sv),   corr.along(orb_idx,sv),   corr.outof(orb_idx,sv)];
-                orbcorr_sat(5:7) = [corr.v_radial(orb_idx,sv), corr.v_along(orb_idx,sv), corr.v_outof(orb_idx,sv)];
+                % prepare orbit corrections for saving
+                orbcorr_sat(1) = corr.t_orb(orb_idx_);
+                orbcorr_sat(2:4) = [corr.radial(orb_idx_,sv),   corr.along(orb_idx_,sv),   corr.outof(orb_idx_,sv)];
+                orbcorr_sat(5:7) = [corr.v_radial(orb_idx_,sv), corr.v_along(orb_idx_,sv), corr.v_outof(orb_idx_,sv)];
                 orbcorr_sat(8) = corr_orb_IOD;
-                if any(orbcorr_sat(2:8) ~= 0)
-                    % only save if stream contains orbit corrections
+                if any(orbcorr_sat(2:8) ~= 0) && ~isempty(k)
+                    % only save if orbit corrections carry data and
+                    % navigation message with correct IOD is available
                     Epoch.corr2brdc_orb(:,sat) = orbcorr_sat;
-                end
-                % save clock corrections
-                clkcorr_sat(1) = corr.t_clk(clk_idx);
-                clkcorr_sat(2:4) = [corr.c0(clk_idx,sv), corr.c1(clk_idx,sv), corr.c2(clk_idx,sv)];
-                clkcorr_sat(5) = corr_clk_IOD;
-                if any(clkcorr_sat(2:5) ~= 0)
-                    % only save if stream contains clock corrections
-                    Epoch.corr2brdc_clk(:,sat) = clkcorr_sat;
+                    col = k(1);
+                else
+                    continue
                 end
             end
-
+            
+            % --- CLOCK ---
+            % loop to find the newest usable correction, start with latest
+            for ii = numel(clk_idx):-1:1
+                % clock index which is currently checked
+                clk_idx_ = clk_idx(ii);
+                % get Issues of Data orbit and clock
+                corr_clk_IOD  = corr.IOD_clk(clk_idx_,sv);
+                % prepare clock corrections for saving
+                clkcorr_sat(1) = corr.t_clk(clk_idx_);
+                clkcorr_sat(2:4) = [corr.c0(clk_idx_,sv), corr.c1(clk_idx_,sv), corr.c2(clk_idx_,sv)];
+                clkcorr_sat(5) = corr_clk_IOD;
+                if any(clkcorr_sat(2:5) ~= 0) && (corr_clk_IOD == Epoch.corr2brdc_orb(8,sat))
+                    % only save if clock corrections carry data and have
+                    % the same IOD as the orbit
+                    Epoch.corr2brdc_clk(:,sat) = clkcorr_sat;
+                    break  	% because orbit and clock correction are found
+                end
+            end
+            
         else
             % -) only broadcast message is used
             k = idx_sat(dt_eph == min(dt_eph)); 	% column of ephemeris, take nearest
             if ~isempty(k)
-                k = k(1);                           % in case of multiple suitable datasets take first
+                col = k(1);                           % in case of multiple suitable datasets take first
             end
-            
             % ||| tom is not considered here!
             % tom == 9.999000000000e+08 -> unknown
-
+            
         end
     end
 
-    % check health and save column of brdc ephemeris
-    if ~isempty(k) && Eph_gnss(r_health,k) == 0    % satellite has broadcast-ephemeris and is healthy
-        Epoch.BRDCcolumn(sat) = k(1);       	% save the column of the broadcast-ephemeris, in case of multiple suitable datasets take first
+    % check health and save column of broadcast ephemeris
+    if ~isempty(col) && Eph_gnss(r_health,col) == 0    
+        % satellite has broadcast-ephemeris and is healthy
+        Epoch.BRDCcolumn(sat) = col; 
     end
     
 end     % end of loop over satellites
 
 
 
-function orb_idx_gnss = getOrbClkIdx(gpstime, t_orb, bool_realtime)
-% get index of current orbit correction, future corrections are ignored in
-% the case of post-processing
+function orb_idx = getOrbClkIdx(gpstime, t_orb, bool_realtime, age)
+% Get indices of orbit/clock corrections since the last corrections for 
+% this satellite. Future corrections are ignored in the case of post-
+% processing to maintain real-time conditions
 % 
 % gpstime           [sow], time of current epoch
 % t_orb             vector, [s], time of orbit corrections
 % bool_realtime     boolean, true if real-time processing
+% age               [s], allowed age of corrections
 
-dt_orb = gpstime - t_orb;   	% difference between transmission time and times of orbit correction
+% difference between transmission time and the times of orbit/clock  
+% corrections since the last corrections for this satellite
+dt_orb = gpstime - t_orb;   	
+
+% remove future data to maintain real-time conditions
 if ~bool_realtime
-    dt_orb(dt_orb < 0) = [];  	% remove future data to maintain real-time conditions
-end
-if ~isempty(dt_orb)
-    orb_idx = find(dt_orb == min(dt_orb)); 	% index of timely nearest clock correction in recorded stream
-    orb_idx_gnss = orb_idx(end);            % timeley nearest in the case of multiple fitting datasets
+    dt_orb(dt_orb < 0) = [];  	
 end
 
+% find indices of orbit/clock corrections since the last corrections for
+% this satellite
+orb_idx = 1:numel(dt_orb);
+orb_idx(dt_orb > age) = [];     % remove corrections which are too old
 
 

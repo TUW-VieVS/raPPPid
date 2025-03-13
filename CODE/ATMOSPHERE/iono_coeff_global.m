@@ -98,4 +98,4 @@ end
 
 %% (3) Calculation of delay (see [01]: p.120)
 z_ = asin(RE/(RE + h_SL)*sin(pi/2-el));
-STEC = 1/cos(z_) * VTECU*10^16;             % correct mapping function?
+STEC = 1/cos(z_) * VTECU;             % correct mapping function?

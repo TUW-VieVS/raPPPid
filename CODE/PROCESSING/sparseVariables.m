@@ -57,6 +57,12 @@ end
 storeData.exclude  = sparse(storeData.cs_found);
 storeData.cs_found = sparse(storeData.exclude);
 
+% satellite status
+if settings.EXP.storeData_sat_status && isfield(storeData, 'sat_status')
+    storeData.sat_status = sparse(storeData.sat_status);
+end
+
+
 % cycle slip detection
 if settings.OTHER.CS.l1c1
     storeData.cs_pred_SF  = sparse(storeData.cs_pred_SF);

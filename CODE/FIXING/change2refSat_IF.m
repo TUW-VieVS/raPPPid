@@ -4,11 +4,11 @@ function [Epoch] = change2refSat_IF(settings, Epoch, newRefSat, changeRefSat, ..
 % using the ionosphere-free linear combination for PPP-AR
 % 
 % INPUT:
-%   settings         struct, settings from GUI
+%   settings        struct, settings from GUI
 %   Epoch           struct, epoch-specific data for current epoch
 %   newRefSat       1x5, true if a new reference satellite has to be chosen
 %   changeRefSat    1x5, true if GNSS reference satellite should be changed
-%   refSatGPS_old, refSatGLO_old, ...
+%   refSatGPS_old, refSatGLO_old, refSatGAL_old, ......
 %                   old reference satellite for this GNSS
 % OUTPUT:
 %   Epoch           updated

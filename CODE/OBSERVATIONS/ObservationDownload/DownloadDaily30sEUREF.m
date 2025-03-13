@@ -134,10 +134,20 @@ if ishandle(WBAR)
     waitbar(0, WBAR, 'Decompressing finished. Convert *.crx to *.rnx')
 end
 
-% change path to folder where crx2rnx.exe is stored
+% change path to folder where, for example, crx2rnx.exe (Windows) is stored
 work_path = pwd;
-cd('../CODE/OBSERVATIONS/ObservationDownload/RNXCMP_4.1.0_Windows_mingw_64bit/bin')
+if ispc
+    cd('../CODE/OBSERVATIONS/ObservationDownload/RNXCMP_4.1.0_Windows_mingw_64bit/bin')
+elseif isunix
+    cd('../CODE/OBSERVATIONS/ObservationDownload/RNXCMP_4.1.0_Linux_x86_64bit/bin')
+else
+    st = dbstack;
+    errordlg([st.name ' is not compatible with your operating system!'], 'Error');
+    return
+end
 
+
+% loop over all files to decompress *.crx to *.rnx
 n = numel(files);
 for i = 1:n
     
@@ -146,10 +156,14 @@ for i = 1:n
     full_file_path = [erase(work_path, 'WORK'), file(4:end)];
     
     % prepare string for command window
-    str = ['CRX2RNX "' full_file_path '"'];
+    if ispc         % Windows
+        str = strcat('CRX2RNX "',full_file_path,'"');
+    elseif isunix 	% Linux
+        str = strcat('./CRX2RNX "',full_file_path,'"');
+    end
     
     % writing command to command line to decompress with crx2rnx.exe
-    [status, cmdout] = system(str);      % status = 0 = OK
+    [status, cmdout] = system(str);     % status = 0 = OK
     
     % delete *crx
     delete(full_file_path);    

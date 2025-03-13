@@ -177,25 +177,19 @@ for i_sat = 1:num_sat
                 iono(2) = iono(1) * ( f1.^2 ./ f2.^2 );     % convert Klobuchar correction from L1 to L2
                 iono(3) = iono(1) * ( f1.^2 ./ f3.^2 );     % convert Klobuchar correction from L2 to L3
             case 'NeQuick model'
-                stec = eval_NeQuick(obs.startdate(2), Epoch.gps_time, pos_WGS84, Rot_X, input.IONO.nequ_coeff);
-                iono(1) = 40.3/f1^2 * stec;      % delta_iono [m]
-                iono(2) = 40.3/f2^2 * stec;
-                iono(3) = 40.3/f3^2 * stec;
+				stec = call_NeQuick_G(input.IONO.nequ_coeff, obs.startdate(2), Ttr-obs.leap_sec, pos_WGS84, Rot_X);
+                iono = stec2iono(stec, f1, f2, f3)
             case 'CODE Spherical Harmonics'
                 stec = iono_coeff_global(pos_WGS84.lat, pos_WGS84.lon, az, el, round(Ttr), input.IONO.ion, obs.leap_sec);
                 iono(1) = 40.3/f1^2 * stec;
                 iono(2) = 40.3/f2^2 * stec;
                 iono(3) = 40.3/f3^2 * stec;
             case 'VTEC from Correction Stream'
-                dt_vtec = abs(input.ORBCLK.corr2brdc_vtec.t-Ttr);
-                idx_vtec = find(dt_vtec==min(dt_vtec));         % find nearest vtec correction in stream data
-                C_nm = input.ORBCLK.corr2brdc_vtec.Cnm(:,:,idx_vtec);  % get coefficients
-                S_nm = input.ORBCLK.corr2brdc_vtec.Snm(:,:,idx_vtec);
-                stec = corr2brdc_stec(C_nm, S_nm, az, el, pos_WGS84, mod(Ttr,86400));
-                iono(1) = 40.3e16/f1^2 * stec;
-                iono(2) = 40.3e16/f2^2 * stec;
-                iono(3) = 40.3e16/f3^2 * stec;
+                stec = corr2brdc_stec(input.ORBCLK.corr2brdc_vtec, az, el, pos_WGS84, Ttr);
+                iono = stec2iono(stec, f1, f2, f3); 	% calculate ionospheric delay from STEC
+                
             % otherwise is handled before switch
+            
         end
     end    
     

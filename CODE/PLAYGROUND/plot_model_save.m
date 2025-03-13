@@ -1,46 +1,48 @@
-% Script to plot the modelled error sources from the struct 'model_save '
+% Script to plot the modelled error sources from the struct 'model_save'
 % which has to be in the workspace. Useful for finding bugs.
 % It is possible to plot the modelled values, the difference between two
 % consecutive epochs or the difference of the difference between two
 % consecutive epochs
 
 
-% 0 = simple values; 1 = difference between two epochs; 2 = difference of difference between epochs
-derivation = 0;
+% 0 = simple values
+% 1 = difference between two epochs
+% 2 = difference of difference between epochs
+derivation = 1;
 
 
 
 %% ENABLE PLOTS:
-modelled_code       =   false; 
-modelled_phase      =   false; 
-theoretic_range     =   false; 
-cutoff_plot         =   false; 
-sat_pos             =   false; 
-sat_vel             =   false; 
-code_IFLC_plot       = 	false; 
-phase_IFLC_plot      = 	false; 
-satellite_clock     =   false; 
-relativistic_clock  =   false; 
-signal_runtime      =   false; 
-brdc_ephemeris      =   false; 
-signal_emission     =   false; 
-tropo_plot          =   false; 
-ZTD_plot            =   false; 
-ZHD_plot            =   false; 
-ZWD_plot            =   false; 
-iono_plot           =   false; 
-wmf_plot            =   false; 
-hmf_plot            =   false; 
-windup              =   false; 
-solid_tides         =   false; 
-ocean_loading       =   false;
+modelled_code       =   true; 
+modelled_phase      =   true; 
+theoretic_range     =   true; 
+cutoff_plot         =   true; 
+sat_pos             =   true; 
+sat_vel             =   true; 
+code_IFLC_plot       = 	true; 
+phase_IFLC_plot      = 	true; 
+satellite_clock     =   true; 
+relativistic_clock  =   true; 
+signal_runtime      =   true; 
+brdc_ephemeris      =   true; 
+signal_emission     =   true; 
+tropo_plot          =   true; 
+ZTD_plot            =   true; 
+ZHD_plot            =   true; 
+ZWD_plot            =   true; 
+iono_plot           =   true; 
+wmf_plot            =   true; 
+hmf_plot            =   true; 
+windup              =   true; 
+solid_tides         =   true; 
+ocean_loading       =   true;
 polar_tides         =   true;
 rec_PCOPCV          =   true; 
-rec_ARP             =   false; 
-sat_PCOPCV          =   false; 
-sat_orbs_3d         = 	false;
-code_obs_plot       =   false; 
-phase_obs_plot      =   false; 
+rec_ARP             =   true; 
+sat_PCOPCV          =   true; 
+sat_orbs_3d         = 	true;
+code_obs_plot       =   true; 
+phase_obs_plot      =   true; 
 
 
 %% PLOTS
@@ -88,33 +90,33 @@ end
 
 % coordinates satellite position
 if sat_pos
-    simplePlot(model_save.Rot_X(:,:,1), hsv_color, 'X-Coordinate Satellite Position', derivation)
-    simplePlot(model_save.Rot_X(:,:,2), hsv_color, 'Y-Coordinate Satellite Position', derivation)
-    simplePlot(model_save.Rot_X(:,:,3), hsv_color, 'Z-Coordinate Satellite Position', derivation)
+    simplePlot(model_save.Rot_X(:,:,1), hsv_color, 'X-Coordinate Satellite Position [m]', derivation)
+    simplePlot(model_save.Rot_X(:,:,2), hsv_color, 'Y-Coordinate Satellite Position [m]', derivation)
+    simplePlot(model_save.Rot_X(:,:,3), hsv_color, 'Z-Coordinate Satellite Position [m]', derivation)
 end
 
 % components of satellite velocity
-if sat_pos
-    simplePlot(model_save.Rot_V(:,:,1), hsv_color, 'X-Coordinate Satellite Velocity', derivation)
-    simplePlot(model_save.Rot_V(:,:,2), hsv_color, 'Y-Coordinate Satellite Velocity', derivation)
-    simplePlot(model_save.Rot_V(:,:,3), hsv_color, 'Z-Coordinate Satellite Velocity', derivation)
+if sat_vel
+    simplePlot(model_save.Rot_V(:,:,1), hsv_color, 'X-Coordinate Satellite Velocity [m/s]', derivation)
+    simplePlot(model_save.Rot_V(:,:,2), hsv_color, 'Y-Coordinate Satellite Velocity [m/s]', derivation)
+    simplePlot(model_save.Rot_V(:,:,3), hsv_color, 'Z-Coordinate Satellite Velocity [m/s]', derivation)
 end
 
 
 % satellite clock
 if satellite_clock
-    simplePlot(model_save.dT_sat, hsv_color, 'Modelled Satellite Clock Correction', derivation)
+    simplePlot(model_save.dT_sat, hsv_color, 'Modelled Satellite Clock Correction [s]', derivation)
 end
 
 % relativistic clock
 if relativistic_clock
-    simplePlot(model_save.dTrel, hsv_color, 'Modelled Relativistic Correction', derivation)
+    simplePlot(model_save.dTrel, hsv_color, 'Modelled Relativistic Correction [s]', derivation)
 end
 
 
 % number of column of broadcast ephemeris
 if brdc_ephemeris
-    simplePlot(model_save.k, hsv_color, 'Broadcast Ephemeris', derivation)
+    simplePlot(model_save.k, hsv_color, 'Broadcast Ephemeris Columns []', derivation)
 end
 
 % signal emission time
@@ -122,84 +124,84 @@ if signal_emission
     data = full(model_save.Ttr);
     data(data==0) = NaN;
     data = data - (1:dur)';
-    simplePlot(data, hsv_color, 'Signal Emission Time', derivation)
+    simplePlot(data, hsv_color, 'Signal Emission Time [sow]', derivation)
 end
 
 % troposphere delay
 if tropo_plot
-    simplePlot(model_save.trop, hsv_color, 'Troposphere Delay', derivation)
+    simplePlot(model_save.trop, hsv_color, 'Troposphere Delay [m]', derivation)
 end
 
 % troposphere total zenith delay
 if ZTD_plot
-    simplePlot(model_save.ZTD, hsv_color, 'Troposphere Total Zenith Delay', derivation)
+    simplePlot(model_save.ZTD, hsv_color, 'Troposphere Total Zenith Delay [m]', derivation)
 end
 
 % hydrostatic zenith delay
 if ZHD_plot
-    simplePlot(model_save.zhd, hsv_color, 'Hydrostatic Zenith Delay', derivation)
+    simplePlot(model_save.zhd, hsv_color, 'Hydrostatic Zenith Delay [m]', derivation)
 end
 
 % wet zenith delay
 if ZWD_plot
-    simplePlot(model_save.zwd, hsv_color, 'Wet Zenith Delay', derivation)
+    simplePlot(model_save.zwd, hsv_color, 'Wet Zenith Delay [m]', derivation)
 end
 
 % ionospheric range correction
 if iono_plot
-    simplePlot(model_save.iono, hsv_color, 'Ionospheric Range Correction', derivation)
+    simplePlot(model_save.iono, hsv_color, 'Ionospheric Range Correction [m]', derivation)
 end
 
 % troposphere wet mapping function
 if wmf_plot
-    simplePlot(model_save.mfw, hsv_color, 'Wet Troposphere Mapping Function', derivation)
+    simplePlot(model_save.mfw, hsv_color, 'Wet Troposphere Mapping Function []', derivation)
 end
 
 % troposphere hydrostatic mapping function
 if wmf_plot
-    simplePlot(model_save.mfh, hsv_color, 'Hydrostatic Troposphere Mapping Function', derivation)
+    simplePlot(model_save.mfh, hsv_color, 'Hydrostatic Troposphere Mapping Function []', derivation)
 end
 
 % windup correction
 if windup
-    simplePlot(model_save.windup, hsv_color, 'WindUp Correction', derivation)
+    simplePlot(model_save.windup, hsv_color, 'WindUp Correction [m]', derivation)
 end
 
 % Shapiro effect correction
 if windup
-    simplePlot(model_save.shapiro, hsv_color, 'Shapiro effect', derivation)
+    simplePlot(model_save.shapiro, hsv_color, 'Shapiro effect [m]', derivation)
 end
 
 % solid tides correction
 if solid_tides
-    simplePlot(model_save.solid_tides, hsv_color, 'Solid Tides Correction', derivation)
+    simplePlot(model_save.solid_tides, hsv_color, 'Solid Tides Correction [m]', derivation)
 end
 
 % ocean loading correction
 if ocean_loading
-    simplePlot(model_save.ocean_loading, hsv_color, 'Ocean Loading Correction', derivation)
+    simplePlot(model_save.ocean_loading, hsv_color, 'Ocean Loading Correction [m]', derivation)
 end
 
 % polar motion correction
 if polar_tides
-    simplePlot(model_save.polar_tides, hsv_color, 'Polar Motion Correction', derivation)
+    simplePlot(model_save.polar_tides, hsv_color, 'Polar Motion Correction [m]', derivation)
 end
 
 % receiver phase center offset + variation
 if rec_PCOPCV
-    simplePlot(model_save.PCO_rec, hsv_color, 'Receiver Phase Center Offset', derivation)
-    simplePlot(model_save.PCV_rec, hsv_color, 'Receiver Phase Center Variation', derivation)
+    simplePlot(model_save.PCO_rec, hsv_color, 'Receiver Phase Center Offset [m]', derivation)
+    simplePlot(model_save.PCV_rec, hsv_color, 'Receiver Phase Center Variation [m]', derivation)
 end
 
 % receiver antenna reference point correction
 if rec_ARP
-    simplePlot(model_save.ARP_ECEF, hsv_color, 'Receiver Antenna Reference Point Correction', derivation)
+    simplePlot(model_save.ARP_ECEF, hsv_color, 'Receiver Antenna Reference Point Correction [m]', derivation)
 end
 
 % satellite phase center offset + variation
 if sat_PCOPCV
-    simplePlot(model_save.PCO_sat, hsv_color, 'Satellite Phase Center Offset', derivation)
-    simplePlot(model_save.PCV_sat, hsv_color, 'Satellite Phase Center Varation', derivation)
+    simplePlot(model_save.PCO_sat, hsv_color, 'Satellite Phase Center Offset [m]', derivation)
+    simplePlot(model_save.PCV_sat, hsv_color, 'Satellite Phase Center Variation [m]', derivation)
 end
 
 
@@ -278,12 +280,16 @@ no_col = size(data,2);          % number of columns (sats)
 no_epochs = size(data,1);       % number of epochs
 for i = 1:no_col
     curr_data = data(:,i);      % data of current satellite
-    if any(curr_data~=0)
+    if any(~isnan(curr_data))
         curr_data(curr_data == 0) = NaN;
-        if i < 100          % style of the plotted GPS line
-            l_style = '-';
-        else                % style of the plotted Galileo line
-            l_style = '--';
+        if i < 100          
+            l_style = '-';      % style of the plotted GPS sat
+        elseif i < 200
+            l_style = ':';      % style of the plotted GLONASS sat
+        elseif i < 300
+            l_style = '--';     % style of the plotted Galileo sat
+        elseif i < 400
+            l_style = '.';      % style of the plotted BeiDou sat
         end
         c = mod(i,n); if c==0; c=1; end
         if derivation == 0
@@ -296,7 +302,8 @@ for i = 1:no_col
         prns(length(prns)+1) = i;
     end
 end
-gnss = char('G' .* (prns<100)' + 'E' .* (prns>200)');
+gnss = char('G' .* (prns<100)' + 'R' .* (100<prns&prns<200)' + ...
+    'E' .* (200<prns&prns<300)' + 'C' .* (300<prns&prns<400)');
 leg = strcat(gnss, num2str(mod(prns,100)', '%02.0f'));
 hleg = legend(leg, 'Location', 'EastOutside');
 title(hleg, 'PRN')

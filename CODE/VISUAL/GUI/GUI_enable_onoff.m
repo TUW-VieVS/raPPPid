@@ -16,6 +16,8 @@ function handles = GUI_enable_onoff(handles)
 
 batch_proc = handles.checkbox_batch_proc.Value;
 proc_meth = handles.popupmenu_process.String(handles.popupmenu_process.Value);
+bool_decoupled_clock_model = strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate, decoupled clock');
+
 
 % enable/disable Download button
 set(handles.pushbutton_download,'Enable','Off');
@@ -295,6 +297,23 @@ if strcmp(handles.uipanel_orbitClockData.Visible, 'on')
     set(handles.edit_obx,       'Enable', onoff)
     set(handles.pushbutton_obx, 'Enable', onoff)
     
+    % check if correction stream is manually selected. Then check if to show 
+    % correction age limit and stream reference point
+    set(handles.edit_corr2brdc_age, 'Visible', 'Off');
+    set(handles.text_corr2brdc_age_1, 'Visible', 'Off');
+    set(handles.text_corr2brdc_age_2, 'Visible', 'Off');
+    set(handles.uibuttongroup_CorrStreamRef, 'Visible', 'Off');
+    value = get(handles.popupmenu_CorrectionStream, 'Value');
+    string_all = get(handles.popupmenu_CorrectionStream, 'String');
+    corr_stream = string_all{value};
+    if handles.radiobutton_brdc_corr.Value && strcmp(corr_stream, 'manually')
+        set(handles.edit_corr2brdc_age, 'Visible', 'On');
+        set(handles.text_corr2brdc_age_1, 'Visible', 'On');
+        set(handles.text_corr2brdc_age_2, 'Visible', 'On');
+        set(handles.uibuttongroup_CorrStreamRef, 'Visible', 'On');
+    end
+    
+    
 end
 
 
@@ -442,12 +461,11 @@ end
 %% Other Corrections
 if strcmpi(handles.uipanel_otherCorrections.Visible, 'on')
     
-    % enable satellite PCO and PCV for precise products only
-    if get(handles.radiobutton_prec_prod, 'Value') || ...
-            contains(handles.popupmenu_CorrectionStream.String{handles.popupmenu_CorrectionStream.Value}, 'Archive')
+    % disable satellite PCO and PCV for stream with APC as reference point
         handles.checkbox_sat_pco.Enable = 'on';
-        handles.checkbox_sat_pcv.Enable = 'on';
-    else
+        handles.checkbox_sat_pcv.Enable = 'on';    
+    if handles.radiobutton_brdc_corr.Value && handles.radiobutton_APC.Value && ...
+            contains(handles.popupmenu_CorrectionStream.String{handles.popupmenu_CorrectionStream.Value}, 'manually')
         handles.checkbox_sat_pco.Enable = 'off';
         handles.checkbox_sat_pcv.Enable = 'off';
     end
@@ -474,7 +492,7 @@ if strcmpi(handles.uipanel_otherCorrections.Visible, 'on')
     end
     
     % Cycle-Slip Detection is not relevant for code only processing
-    if contains(proc_meth, 'Phase');   onoff = 'On';   else;   onoff = 'Off';   end
+    if contains(proc_meth, '+ Phase');   onoff = 'On';   else;   onoff = 'Off';   end
     handles.text117.Enable = onoff;
     handles.checkbox_CycleSlip_L1C1.Enable = onoff;
     handles.text116.Enable = onoff;
@@ -568,27 +586,26 @@ if strcmpi(handles.uipanel_ambiguityFixing.Visible, 'on')
     if handles.checkbox_fixing.Value     % PPPAR is on
         onoff = 'On';
     end
-    % Panel "Processing"
-    handles.checkbox_reset_fixed.Enable = onoff;
-    % Panel "PPP with Ambiguity Resolution"
+    
+    
+    handles.checkbox_reset_fixed.Enable = onoff;        % Panel "Processing"
+    
+    % start of fixing
     handles.text_start_WL.Visible = onoff;
     handles.text_start_NL.Visible = onoff;
     handles.edit_start_WL.Visible = onoff;
     handles.edit_start_NL.Visible = onoff;
+    
+    % elevation cutoff for integer fixing
     set(handles.text_pppar_cutoff, 'Visible',onoff);
     set(handles.edit_pppar_cutoff, 'Visible',onoff);
+    
+    % choice of reference satellite
     handles.uibuttongroup_refSat.Visible = onoff;
-    % handles.uibuttongroup_wrongFixes.Visible = onoff;
-    handles.text_pppar_excl_sats.Visible = onoff;
-    handles.edit_pppar_excl_sats.Visible = onoff;
-    % HMW fixing options
-    handles.text_hmw_fixing.Visible = onoff;
-    handles.text_hmw_release.Visible = onoff;
-    handles.text_fixing_window.Visible = onoff;
-    handles.text_hmw_thresh.Visible = onoff;
-    handles.edit_hmw_release.Visible = onoff;
-    handles.edit_fixing_window.Visible = onoff;
-    handles.edit_hmw_thresh.Visible = onoff;
+    if bool_decoupled_clock_model
+        handles.uibuttongroup_refSat.Visible = 'On';
+    end
+    % manual choice of reference satellite
     if strcmp(handles.uibuttongroup_refSat.SelectedObject.String, 'manual choice (list):')
         handles.text_refSatGPS.Enable = 'On';
         handles.text_refSatGAL.Enable = 'On';
@@ -604,6 +621,21 @@ if strcmpi(handles.uipanel_ambiguityFixing.Visible, 'on')
         handles.edit_refSatGAL.Enable = 'Off';
 		handles.edit_refSatBDS.Enable = 'Off';
     end
+    
+    % handles.uibuttongroup_wrongFixes.Visible = onoff;
+    handles.text_pppar_excl_sats.Visible = onoff;
+    handles.edit_pppar_excl_sats.Visible = onoff;
+    
+    % HMW fixing options
+    handles.text_hmw_fixing.Visible = onoff;
+    handles.text_hmw_release.Visible = onoff;
+    handles.text_fixing_window.Visible = onoff;
+    handles.text_hmw_thresh.Visible = onoff;
+    handles.edit_hmw_release.Visible = onoff;
+    handles.edit_fixing_window.Visible = onoff;
+    handles.edit_hmw_thresh.Visible = onoff;
+    
+
     
     
 end
@@ -710,7 +742,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     end
     
     % handle receiver DCBs / receiver biases
-    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate, decoupled clock')
+    if bool_decoupled_clock_model
         % Decoupled clock Model
         handles.text_rec_dcbs.String = 'Receiver Biases:';
         handles.text_rec_dcbs.Enable = 'On';
@@ -761,7 +793,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     % Check ionosphere model
     if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint') || ...
             strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate') || ...
-            strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate, decoupled clock')
+            bool_decoupled_clock_model
         % filter settings
         set(handles.edit_filter_iono_Q,             'Enable', 'On');
         set(handles.edit_filter_iono_sigma0,        'Enable', 'On');
@@ -859,7 +891,8 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
     string_all = get(handles.popupmenu_process,'String');
     proc_meth = lower(string_all{value});       % to be on the safe side
     % activate float ambiguity fields only if code+phase is processed
-    if strcmpi(proc_meth,'code only') || strcmpi(proc_meth,'code (doppler smoothing)') || strcmpi(proc_meth,'code + doppler')
+    if strcmpi(proc_meth,'code only') || strcmpi(proc_meth,'code (doppler smoothing)') ...
+            || strcmpi(proc_meth,'code + doppler') || strcmpi(proc_meth,'code (phase smoothing)')
         set(handles.text_float_ambiguities, 	           'Enable', 'Off');
         set(handles.edit_filter_ambiguities_sigma0,        'Enable', 'Off');
         set(handles.edit_filter_ambiguities_Q, 	           'Enable', 'Off');
@@ -923,7 +956,7 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
     set(handles.edit_omc_thresh_p, 'Enable', onoff);
     set(handles.edit_omc_fac, 'Enable', onoff);
     set(handles.edit_omc_window, 'Enable', onoff);
-    if ~contains(proc_meth, 'phase')
+    if ~contains(proc_meth, '+ phase')
         set(handles.text_omc_thresh_p, 'Enable', 'Off');
         set(handles.edit_omc_thresh_p, 'Enable', 'Off');
     end

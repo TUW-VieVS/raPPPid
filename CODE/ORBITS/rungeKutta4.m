@@ -1,17 +1,17 @@
-function [X,V] = rungeKutta4(toe, pos, vel, acc, Ttr)
+function [X, V] = rungeKutta4(toe, pos, vel, acc, Ttr)
 % Calculates satellite position and velocity with Runge Kutta. This
-% function is used to calculate the Glonass satellite position using the
+% function is used to calculate the GLONASS satellite position using the
 % broadcast message.
 % 
 % INPUT:
-%   toe     time of emission of data for current satellite
-%   pos     positions for current satellite
-%   vel  	velocity for current satellite
-%   acc     acceleration for current satellite
-%   Ttr     time of signal emission in UTC
+%   toe     time of emission of data for current satellite [??]
+%   pos     positions for current satellite [m]
+%   vel  	velocity for current satellite [m/s]
+%   acc     acceleration for current satellite [m/s^2]
+%   Ttr     Signal transmission time, GPST [sow] 
 % OUTPUT:
-%   X       satellite position
-%   V       satellite velocity
+%   X       satellite position [m]
+%   V       satellite velocity [m]
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -30,12 +30,12 @@ if step == 0
 end
 
 % Initialization
-h = step * 10;          % 10s steps
+h = step * 10;          % 10s steps ||| 30 seconds sufficient according to IGS SSR format description
 
 X = pos(index,:)';      % Position
 V = vel(index,:)';      % Velocity
 A_sl = acc(index,:)';   % Luni-solar acceleration (constant for 15 min)
-A = accelerationPZ90(X,V,A_sl); % Acceleration
+A = accelerationPZ90(X, V, A_sl); % Acceleration
 
 t = t_start;
 laststep = 0;
@@ -52,17 +52,17 @@ while 1
     % 2nd tangent
     X2 = X + h/2 * V1;
     V2 = V + h/2*A1;
-    A2 = accelerationPZ90(X2,V2,A_sl);
+    A2 = accelerationPZ90(X2, V2, A_sl);
     
     % 3rd tangent
     X3 = X + h/2 * V2;
     V3 = V + h/2*A2;
-    A3 = accelerationPZ90(X3,V3,A_sl);
+    A3 = accelerationPZ90(X3, V3, A_sl);
     
     % 4th tangent
     X4 = X + h * V3;
     V4 = V + h * A3;
-    A4 = accelerationPZ90(X4,V4,A_sl);
+    A4 = accelerationPZ90(X4, V4, A_sl);
     
     t = t + h;
     X_next = X + h/6*(V1 + 2*V2 +2*V3 + V4);
@@ -70,7 +70,7 @@ while 1
     
     X = X_next;
     V = V_next;
-    A = accelerationPZ90(X,V,A_sl);
+    A = accelerationPZ90(X, V, A_sl);
 
     if laststep
         break

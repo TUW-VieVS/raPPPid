@@ -118,6 +118,7 @@ else
     
     if ~strcmpi(settings.ORBCLK.CorrectionStream,'off')
         fprintf(fileID,'    %s%s%s%s\n','Correction stream file: ',settings.ORBCLK.CorrectionStream,':   ',settings.ORBCLK.file_corr2brdc);
+        fprintf(fileID,'    %s%s\n','Correction stream reference point: ', char(settings.ORBCLK.CorrectionStream_APC * 'APC' + settings.ORBCLK.CorrectionStream_COM * 'COM'));
         fprintf(fileID,'    %s%.0f%s%.0f%s%.0f%s\n','Corrections age limit [s]: ', settings.ORBCLK.CorrectionStream_age(1), ', ', settings.ORBCLK.CorrectionStream_age(2), ', ', settings.ORBCLK.CorrectionStream_age(3), ' (orbit, clock, biases)');
     else
         fprintf(fileID,'    %s\n','No correction stream file');
@@ -651,7 +652,9 @@ end
 if settings.EXP.storeData_mp_1_2
     fprintf(fileID,'    mp1, mp2 is saved to storeData\n');
 end
-
+if settings.EXP.storeData_sat_status
+    fprintf(fileID,'    sat_status is saved to storeData\n');
+end
 
 
 %% Processing end and time
@@ -682,12 +685,12 @@ try
     if contains(git_hash_str, 'not a git repository') || ...
             contains(git_hash_str, 'not recognized as an internal or external command') || ...
             contains(git_hash_str, 'Der Befehl "git" ist entweder falsch geschrieben')
-        fprintf(fileID,'  Git commit detection failed');
+        fprintf(fileID,'  Git commit detection failed\n');
     else
-        fprintf(fileID,'  Git commit: %s', git_hash_str);
+        fprintf(fileID,'  Git commit: %s\n', git_hash_str);
     end
 catch
-    fprintf(fileID,'  Git commit detection failed');
+    fprintf(fileID,'  Git commit detection failed\n');
 end
 fprintf(fileID,'  raPPPid %s', DEF.version);
 

@@ -16,6 +16,8 @@ function storeData = recover_storeData(folderstring)
 % ||| only the following data is read out from the textfiles:
 %     coordinates, troposphere (estimation)
 
+% ||| does not work for output files written from decoupled clock model
+
 % initialize
 storeData = struct;
 storeData.float_reset_epochs = 1;
@@ -82,6 +84,12 @@ if isfile(floatpath)
             header = false;
         end
         
+        % determine number of columns / data entries in each line
+        if contains(line, '# (')
+            iii = str2double(line(4:5));
+        end
+        
+        
     end
     fclose(fid);
     
@@ -94,32 +102,32 @@ if isfile(floatpath)
     % create indizes
     n = numel(D);
     % ...
-    idx_t = 3:33:n;                 % GPS time [s]
-    idx_x = 4:33:n;                 % float xyz coordinates [m]
-    idx_y = 5:33:n;
-    idx_z = 6:33:n;
+    idx_t = 3:iii:n;                 % GPS time [s]
+    idx_x = 4:iii:n;                 % float xyz coordinates [m]
+    idx_y = 5:iii:n;
+    idx_z = 6:iii:n;
     % ...
-    idx_geo_lat = 10:33:n;          % latitude [°]
-    idx_geo_lon = 11:33:n;          % longitude [°]
-    idx_geo_h = 12:33:n;            % ellipsoidal height of float position
-    idx_utm_x = 13:33:n;            % float position in UTM
-    idx_utm_y = 14:33:n;
-    idx_gps_reclk = 15:33:n;        % GPS receiver clock error [m]
-    idx_glo_reclk = 16:33:n;        % GLONASS receiver clock error/offset [m]
-    idx_gal_reclk = 17:33:n;        % Galileo receiver clock error/offset [m]
-    idx_bds_reclk = 18:33:n;        % BeiDou receiver clock error/offset [m]    
+    idx_geo_lat = 10:iii:n;          % latitude [°]
+    idx_geo_lon = 11:iii:n;          % longitude [°]
+    idx_geo_h = 12:iii:n;            % ellipsoidal height of float position
+    idx_utm_x = 13:iii:n;            % float position in UTM
+    idx_utm_y = 14:iii:n;
+    idx_gps_reclk = 15:iii:n;        % GPS receiver clock error [m]
+    idx_glo_reclk = 16:iii:n;        % GLONASS receiver clock error/offset [m]
+    idx_gal_reclk = 17:iii:n;        % Galileo receiver clock error/offset [m]
+    idx_bds_reclk = 18:iii:n;        % BeiDou receiver clock error/offset [m]    
     % ...
-    idx_dzwd = 23:33:n;             % estimated residual zenith wet delay [m]
-    idx_zwd = 24:33:n;            	% zenith wet delay (a priori + estimation) [m]
-    idx_zhd = 25:33:n;             	% zenith hydrostatic delay (modeled) [m]
-    idx_G_dcb1 = 26:33:n;           % GPS DCB between processed f1 and f2 [m]
-    idx_G_dcb2 = 27:33:n;           % GPS DCB between processed f1 and f3 [m]
-    idx_R_dcb1 = 28:33:n;           % ...
-    idx_R_dcb2 = 29:33:n; 
-    idx_E_dcb1 = 30:33:n;         
-    idx_E_dcb2 = 31:33:n;         
-    idx_C_dcb1 = 32:33:n;         
-    idx_C_dcb2 = 33:33:n; 
+    idx_dzwd = 23:iii:n;             % estimated residual zenith wet delay [m]
+    idx_zwd = 24:iii:n;            	% zenith wet delay (a priori + estimation) [m]
+    idx_zhd = 25:iii:n;             	% zenith hydrostatic delay (modeled) [m]
+    idx_G_dcb1 = 26:iii:n;           % GPS DCB between processed f1 and f2 [m]
+    idx_G_dcb2 = 27:iii:n;           % GPS DCB between processed f1 and f3 [m]
+    idx_R_dcb1 = 28:iii:n;           % ...
+    idx_R_dcb2 = 29:iii:n; 
+    idx_E_dcb1 = 30:iii:n;         
+    idx_E_dcb2 = 31:iii:n;         
+    idx_C_dcb1 = 32:iii:n;         
+    idx_C_dcb2 = 33:iii:n; 
     
     % ||| continue at some point
     

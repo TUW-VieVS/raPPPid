@@ -90,7 +90,7 @@ if settings.INPUT.num_freqs == 2
             % --- Start fixed adjustment with fixed SD-ambiguities as additional pseudo-observations ---
             % ||| check condition - beside reference satellites 3+ NL-Ambiguities are fixed
             if 3 <= sum(~isnan(Epoch.NL_12)) - (Epoch.refSatGPS ~= 0) - (Epoch.refSatGAL ~= 0) - (Epoch.refSatBDS ~= 0)    
-                [Adjust, Epoch] = fixedAdjustment_IF(Epoch, Adjust, model, b_WL, b_NL, settings.AMBFIX.wrongFixes);
+                [Adjust, Epoch] = fixedAdjustment_IF(Epoch, Adjust, model, b_WL, b_NL, settings);
             else           	% not enough ambiguities fixed to calcute fixed solution
                 Adjust.xyz_fix(1:3) = NaN;
                 Adjust.fixed = false;
@@ -130,7 +130,7 @@ elseif settings.INPUT.num_freqs == 3
     
     % --- Start fixed adjustment with fixed SD-ambiguities as additional pseudo-observations ---
     if sum(~isnan(Epoch.NL_12)) + sum(~isnan(Epoch.NL_23)) >= 5         % ||| check condition
-        [Adjust, Epoch] = fixedAdjustment_2xIF(Epoch, Adjust, input, model, WLNL_corr, settings.AMBFIX.wrongFixes);
+        [Adjust, Epoch] = fixedAdjustment_2xIF(Epoch, Adjust, input, model, WLNL_corr, settings);
     else           	% not enough ambiguities fixed to calcute fixed solution
         Adjust.xyz_fix(1:3) = NaN;
         Adjust.fixed = false;

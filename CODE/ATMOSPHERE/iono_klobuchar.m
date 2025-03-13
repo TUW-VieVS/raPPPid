@@ -13,7 +13,7 @@ function x = iono_klobuchar(Latu, Lonu, Az, El, Ttr, klob_coeff)
 %               coefficients from navigation message
 % 
 % OUTPUT:
-% 	x:      ionospheric correction [m]
+% 	x           ionospheric correction [m]
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************

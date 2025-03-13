@@ -1,194 +1,312 @@
-function [] = plotCorrection2BRDC(corr, obs, filename, sys)
-% Plots the Code Bias, Phase Bias, Clock and Orbit Corrections from 
+function [] = plotCorrection2BRDC(corr, obs, streamfile, sys, gpstime, sat_obs)
+% Plots the Code Bias, Phase Bias, Clock and Orbit Corrections from
 % a correction stream.
 % INPUT:
 %   corr        struct, read-in corrections from stream for current GNSS
-%   filename	string, filename of correction-stream
+%   streamfile	string, filename of correction-stream
 %   sys         1-digit-char representing GNSS (G=GPS, R=Glonass, E=Galileo, C=BeiDou)
-% 
+%   gpstime     vector, time of processed epochs (sow)
+%   sat_obs     matrix, number of epochs satellite is tracked
+%
 % Revision:
+%   2025/02/04, MFWG: include IOD into plots
+%   2025/01/20, MFWG: plot only processed time period, prepare GLONASS
 %   2024/12/06, MFWG: plotting only satellites with data
-% 
+%
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-
-% || not tested!
-
-
-% ||| at the moment the whole correction data is plotted maybe implement
-% some slider or only partly plotting?
-
-% ||| de-hardcode at some point
-plot_code_biases = 1;       
-plot_phase_biases = 1;
-plot_orb_corr = 1;
-plot_clk_corr = 1;
-plot_time_diff = 0;
 % ||| velocity and clock terms higher degree are completely disabled
 
-if sys == 'G'
-    used_biases = obs.used_biases_GPS;
-    prns = 1:32;
-    l_style = 'r.';
-elseif sys == 'E'
-    used_biases = obs.used_biases_GAL;
-    prns = 201:232;
-    l_style = 'b.';
-elseif sys == 'C'
-    used_biases = obs.used_biases_BDS;
-    prns = 201:232;
-    l_style = 'k.';
+
+%% Preparations
+used_biases = {{} {}; {} {}; {} {}};
+switch sys
+    case 'G'
+        if isfield(obs, 'used_biases_GPS'); used_biases = obs.used_biases_GPS; end
+        prns = 1:32;            sats = prns;
+        col = DEF.COLOR_G;
+    case 'R'
+        if isfield(obs, 'used_biases_GLO'); used_biases = obs.used_biases_GLO; end
+        prns = 1:DEF.SATS_GLO;  sats = prns + 100;
+        col = DEF.COLOR_R;
+    case 'E'
+        if isfield(obs, 'used_biases_GAL'); used_biases = obs.used_biases_GAL; end
+        prns = 1:DEF.SATS_GAL;  sats = prns + 200;
+        col = DEF.COLOR_E;
+    case 'C'
+        if isfield(obs, 'used_biases_BDS'); used_biases = obs.used_biases_BDS; end
+        prns = 1:DEF.SATS_BDS;  sats = prns + 300;
+        col = DEF.COLOR_C;
 end
 
-% Preparations
-filename = filename(max(strfind(filename, '\'))+1:end-4);
-time_clk = mod(corr.t_clk,86400);
-time_orb = mod(corr.t_orb,86400);
-time_dcb = mod(corr.t_code,86400);
-time_upd = mod(corr.t_phase,86400);
+% extract filename
+[~, file, ext] = fileparts(streamfile);
+filename = [file, ext];
 
+% time stamps
+t_clk  = corr.t_clk;          % clock corrections
+t_orb  = corr.t_orb;          % orbit corrections
+t_cbia = corr.t_code;         % code biases
+t_pbia = corr.t_phase;        % phase biases
+
+% cut out processed period
+t1 = gpstime(1);        % start of processing (sow)
+t2 = gpstime(end);      % end of processing
+bool_clk  = (t1 <= t_clk)  & (t_clk  <= t2);
+bool_orb  = (t1 <= t_orb)  & (t_orb  <= t2);
+bool_cbia = (t1 <= t_cbia) & (t_cbia <= t2);
+bool_pbia = (t1 <= t_pbia) & (t_pbia <= t2);
+
+bool = logical(full(sat_obs(:,sats)));
+observ = any(bool);
+
+
+%% Plotting
 % Code Bias Correction Plots
-if plot_code_biases
-    if ~isempty(used_biases{1,2})
-        % C1 Code Bias Corrections
-        plotit(time_dcb, obs.C1_corr(:,prns), filename, 'Used C1 Biases', ...
-            'Code Bias [m]', sys, ['Bias: ', used_biases{1,2}], l_style)
-    end
-    if ~isempty(used_biases{2,2})
-        % C2 Code Bias Corrections
-        plotit(time_dcb, obs.C2_corr(:,prns), filename, 'Used C2 Biases', ...
-            'Code Bias [m]', sys, ['Bias: ', used_biases{2,2}], l_style)
-    end
-    if ~isempty(used_biases{3,2})
-        % C3 Code Bias Corrections
-        plotit(time_dcb, obs.C3_corr(:,prns), filename, 'Used C3 Biases', ...
-            'Code Bias [m]', sys, ['Bias: ', used_biases{3,2}], l_style)
-    end
+if ~isempty(used_biases{1,2})
+    % C1 Code Bias Corrections
+    plotit(t_cbia(bool_cbia), obs.C1_corr(bool_cbia,prns), observ, filename, ...
+        'Code Bias [m]', sys, ['Bias: ', used_biases{1,2}], '-', col, [])
+end
+if ~isempty(used_biases{2,2})
+    % C2 Code Bias Corrections
+    plotit(t_cbia(bool_cbia), obs.C2_corr(bool_cbia,prns), observ, filename, ...
+        'Code Bias [m]', sys, ['Bias: ', used_biases{2,2}], '-', col, [])
+end
+if ~isempty(used_biases{3,2})
+    % C3 Code Bias Corrections
+    plotit(t_cbia(bool_cbia), obs.C3_corr(bool_cbia,prns), observ, filename, ...
+        'Code Bias [m]', sys, ['Bias: ', used_biases{3,2}], '-', col, [])
 end
 
 % Phase Bias Correction Plots
-if plot_phase_biases
-    if ~isempty(used_biases{1,1})
-        % L1 Phase Bias Corrections
-        plotit(time_upd, obs.L1_corr(:,prns), filename, 'Used L1 Biases', ...
-            'Phase Bias [m]', sys, ['Bias: ', used_biases{1,1}], l_style)
-    end
-    if ~isempty(used_biases{2,1})
-        % L2 Phase Bias Corrections
-        plotit(time_upd, obs.L2_corr(:,prns), filename, 'Used L2 Biases', ...
-            'Phase Bias [m]', sys, ['Bias: ', used_biases{2,1}], l_style)
-    end
-    if ~isempty(used_biases{3,1})
-        % L3 Phase Bias Corrections
-        plotit(time_upd, obs.L3_corr(:,prns), filename, 'Used L3 Biases', ...
-            'Phase Bias [m]', sys, ['Bias: ', used_biases{3,1}], l_style)
-    end
+if ~isempty(used_biases{1,1})
+    % L1 Phase Bias Corrections
+    plotit(t_pbia(bool_pbia), obs.L1_corr(bool_pbia,prns), observ, filename, ...
+        'Phase Bias [m]', sys, ['Bias: ', used_biases{1,1}], '-', col, [])
+end
+if ~isempty(used_biases{2,1})
+    % L2 Phase Bias Corrections
+    plotit(t_pbia(bool_pbia), obs.L2_corr(bool_pbia,prns), observ, filename, ...
+        'Phase Bias [m]', sys, ['Bias: ', used_biases{2,1}], '-', col, [])
+end
+if ~isempty(used_biases{3,1})
+    % L3 Phase Bias Corrections
+    plotit(t_pbia(bool_pbia), obs.L3_corr(bool_pbia,prns), observ, filename, ...
+        'Phase Bias [m]', sys, ['Bias: ', used_biases{3,1}], '-', col, [])
 end
 
 % Clock Plots
-if plot_clk_corr
-    % Clock c_0 component correction
-    plotit(time_clk, corr.c0, filename, 'Clock c_0', '[m]', sys, 'Clock c0', l_style)
-%     % Clock c_1 component correction
-%     plotit(time_clk, corr.c1, filename, 'Clock c_1', '[m/s]', sys, 'Clock c1', l_style)
-%     % Clock c_2 component correction
-%     plotit(time_clk, corr.c2, filename, 'Clock c_2', '[m/s^2]', sys, 'Clock c2', l_style)
-end
+% Clock c_0 component correction
+plotit(t_clk(bool_clk), corr.c0(bool_clk,prns), observ, filename, '[m]',     sys, 'Clock c_0', '.', col, corr.IOD_clk(bool_clk,prns))
+% Clock c_1 component correction
+plotit(t_clk(bool_clk), corr.c1(bool_clk,prns), observ, filename, '[m/s]',   sys, 'Clock c_1', '.', col, corr.IOD_clk(bool_clk,prns))
+% Clock c_2 component correction
+plotit(t_clk(bool_clk), corr.c2(bool_clk,prns), observ, filename, '[m/s^2]', sys, 'Clock c_2', '.', col, corr.IOD_clk(bool_clk,prns))
 
 % Orbit Plots
-if plot_orb_corr
-    % along-track component correction
-    plotit(time_orb, corr.along, filename, 'Along-Track', '[m]', sys, 'Along-Track', l_style)
-    % across-track component correction
-    plotit(time_orb, corr.outof, filename, 'Across-Track', '[m]', sys, 'Across-Track', l_style)
-    % radial component correction
-    plotit(time_orb, corr.radial, filename, 'Radial Component', '[m]', sys, 'Radial Component', l_style)
-%     % along-track velocity correction
-%     plotit(time_orb, corr.v_along, filename, 'Along-Track Velocity', '[m/s]', sys, 'Along-Track Velocity', l_style)
-%     % across-track velocity correction
-%     plotit(time_orb, corr.v_outof, filename, 'Across-Track Velocity', '[m/s]', sys, 'Across-Track Velocity', l_style)
-%     % radial velocity correction
-%     plotit(time_orb, corr.v_radial, filename, 'Radial Component Velocity', '[m/s]', sys, 'Radial Component Velocity', l_style)
-end
+% along-track component correction
+plotit(t_orb(bool_orb), corr.along(bool_orb,prns),  observ, filename, '[m]', sys, 'Along-Track', '.',     col, corr.IOD_orb(bool_orb,prns))
+% across-track component correction
+plotit(t_orb(bool_orb), corr.outof(bool_orb,prns),  observ, filename, '[m]', sys, 'Across-Track', '.',    col, corr.IOD_orb(bool_orb,prns))
+% radial component correction
+plotit(t_orb(bool_orb), corr.radial(bool_orb,prns), observ, filename, '[m]', sys, 'Radial Component', '.', col, corr.IOD_orb(bool_orb,prns))
+% along-track velocity correction
+plotit(t_orb(bool_orb), corr.v_along(bool_orb,prns),  observ, filename, '[mm/s]', sys, 'Velocity: Along-Track', '.',      col, corr.IOD_orb(bool_orb,prns))
+% across-track velocity correction
+plotit(t_orb(bool_orb), corr.v_outof(bool_orb,prns),  observ, filename, '[mm/s]', sys, 'Velocity: Across-Track', '.',     col, corr.IOD_orb(bool_orb,prns))
+% radial velocity correction
+plotit(t_orb(bool_orb), corr.v_radial(bool_orb,prns), observ, filename, '[mm/s]', sys, 'Velocity: Radial Component', '.', col, corr.IOD_orb(bool_orb,prns))
 
-% Missing corrections plot
-if plot_time_diff
-    figure('Name', sys)
-    subplot(4,1,1)
-    plot_correction_interval(time_orb, 'Orbit corrections')
-    subplot(4,1,2)
-    plot_correction_interval(time_clk, 'Clock corrections')
-    subplot(4,1,3)
-    plot_correction_interval(time_dcb, 'Code Bias corrections')
-    subplot(4,1,4)
-    plot_correction_interval(time_upd, 'Phase Bias corrections')
-end
+% plot time difference of available corrections
+figure('Name', char2gnss(sys))
+plot_correction_interval(t_orb(bool_orb),   'Orbit corrections',      col, 1)
+plot_correction_interval(t_clk(bool_clk),   'Clock corrections',      col, 2)
+plot_correction_interval(t_cbia(bool_cbia), 'Code Bias corrections',  col, 3)
+plot_correction_interval(t_pbia(bool_pbia), 'Phase Bias corrections', col, 4)
 
-end % end of: plotCorrection2BRDC.m
+
+
 
 
 
 % Plot-Function
-function [] = plotit(time, y, filename, y_name, unit_y, gnss, title_str, l_style)
-vec = 0:14400:86400;       % 4-h-legend
-ticks = sow2hhmm(vec);
+function [] = plotit(t, y, observ, filename, unit_y, gnss, str, lstyle, col, IOD)
+% t ... vector, timestamps of correction (sow)
+% y ... matrix, corrections to plot
+% observ ... boolean, true if prn is observed during processing period
+% filename ... string, filename of stream
+% unit_y ... string, unit of plotted corrections
+% gnss ... char, character indicating GNSS
+% str ... string, indicating what is plotted (e.g., title)
+% lstyle ... string, LineStyle
+% col ... 3x1, color for plotting
+% IOD ... matrix, issue of data (clock/orbit)
+
+if isempty(t) || isempty(y) || all(y(:) == 0)
+    % nothing to plot here (e.g., no corrections/biases during the processed period)
+    return
+end
 
 % plot all satellites
-fig1 = figure('Name', [y_name ' ' gnss ' from ' filename], 'units','normalized', 'outerposition',[0 0 1 1]);
+fig1 = figure('Name', [str ' ' char2gnss('G') ' from ' filename], 'units','normalized', 'outerposition',[0 0 1 1]);
 ii = 1;
 % add customized datatip
 dcm = datacursormode(fig1);
 datacursormode on
-set(dcm, 'updatefcn', @vis_customdatatip)
+if ~isempty(IOD)    % IOD is plotted (orbit, clock)
+    set(dcm, 'updatefcn', @datatip_stream_IOD)
+else                % IOD is not plotted (biases)
+    set(dcm, 'updatefcn', @datatip_stream) 
+end
 % loop for plotting over all satellites with data
 for i = 1:99
-    try
-        if ~all(y(:,i)==0)
+    try         % plot if satellite has been observed and has correction
+        if observ(i) && any(y(:,i)~=0)      
             if ii == 17
                 set(findall(gcf,'type','text'),'fontSize',8)
                 % 16 satellites have been plotted in this window -> it is full
                 % -> create new figure
-                fig1 = figure('Name', [y_name ' ' gnss ' from ' filename], 'units','normalized', 'outerposition',[0 0 1 1]);
+                fig1 = figure('Name', [str ' ' gnss ' from ' filename], 'units','normalized', 'outerposition',[0 0 1 1]);
                 ii = 1; % set counter of subplot number to 1
                 dcm = datacursormode(fig1);
                 datacursormode on
-                set(dcm, 'updatefcn', @vis_customdatatip)
+                set(dcm, 'updatefcn', @datatip_stream_IOD)
             end
             subplot(4,4,ii)
             ii = ii + 1;  	% increase counter of plot number
-            plot(time, y(:,i), l_style)
+            if ~isempty(IOD)
+                % plot issue of data
+                plot(t, IOD(:,i)/100, lstyle, 'Color', col/3)
+                hold on
+            end
+            plot(t, y(:,i), lstyle, 'Color', col)   % plot correction
             grid on
-            set(gca, 'XTick',vec, 'XTickLabel',ticks)
+            % change x-ticks to something useful
+            vec_xticks = get(gca, 'XTick');
+            xtickslabel = sow2hhmmss(vec_xticks);
+            set(gca, 'XTick',vec_xticks, 'XTickLabel',xtickslabel)
+            % style the rest of the plot
             set(gca, 'fontSize',8)
-            title([title_str ' for ' gnss sprintf('%02d',i)])
-            xlabel('Time [h]')
+            title([str ' ' gnss sprintf('%02d',i)])
+            xlabel('Time [hh:mm:ss]')
             ylabel(unit_y)
-            xlim([min(time), max(time)])
-            ylim('auto')
         end
     catch
-        continue        
+        continue
     end
 end
+
 set(findall(gcf,'type','text'),'fontSize',8)
 
-end             % end of plotit
 
 
-function [] = plot_correction_interval(time_vector, title_string)
+function [] = plot_correction_interval(t, title_string, col, idx)
 % plot time-difference of orbit corrections to see if there is data missing
-start_ep = 5;       % skip first epochs because they could be from the day before
-time_x = time_vector(start_ep:(end-1));
-y = diff(time_vector(start_ep:end));
-plot(time_x, y) 
+% t .... vector, timestamps of corrections
+% title_string ... string, title of plot
+% col ... color to plot
+% idx ... number of subplot
+
+if isempty(t)
+    return
+end
+
+subplot(4, 1, idx)
+
+time_x = t(1:(end-1));
+y = diff(t);
+
+% plot
+plot(time_x, y, '.', 'Color', col)
+
+% style plot
 title(title_string)
-vec = 0:7200:86400;       % 4-h-legend
-ticks = sow2hhmm(vec);
-set(gca, 'XTick',vec, 'XTickLabel',ticks)
-set(gca, 'fontSize',8)
+
+% change x-ticks to something useful
+vec_xticks = get(gca, 'XTick');
+xtickslabel = sow2hhmmss(vec_xticks);
+set(gca, 'XTick',vec_xticks, 'XTickLabel',xtickslabel)
+
+% style x and y axis
 xlabel('Time')
 ylabel('Time Diff. [s]')
-xlim([min(time_x), max(time_x)])
-ylim('auto')
+
+
+
+function output_txt = datatip_stream_IOD(obj,event_obj)
+% Display the position of the data cursor with relevant information
+%
+% INPUT:
+%   obj          Currently not used (empty)
+%   event_obj    Handle to event object
+% OUTPUT:
+%   output_txt   Data cursor text string (string or cell array of strings).
+% 
+% *************************************************************************
+
+% get position of click (x-value = time [sod], y-value = depends on plot)
+pos = get(event_obj,'Position');
+sod = pos(1);
+value = pos(2);
+
+% multiply IOD with 100 to get actual value
+if event_obj.Target.SeriesIndex == 1
+    value = value * 100;
 end
+
+% calculate epoch from sod (attention: missing epochs are not considered!)
+epoch = find(event_obj.Target.XData == sod, 1, 'first');
+
+% calculate time of day from sod
+[~, hour, min, sec] = sow2dhms(sod);
+% create string with time of day
+str_time = [sprintf('%02.0f', hour), ':', sprintf('%02.0f', min), ':', sprintf('%02.0f', sec)];
+
+% create cell with strings as output (which will be shown when clicking)
+i = 1;
+output_txt{i} = ['Time: ',  str_time];                  % time of day
+i = i + 1;
+output_txt{i} = ['#: ', sprintf('%.0f', epoch)];        % epoch
+i = i + 1;
+if event_obj.Target.SeriesIndex == 2
+    output_txt{i} = ['Value: ', sprintf('%.3f', value)];	% value
+elseif event_obj.Target.SeriesIndex == 1
+    output_txt{i} = ['IOD: ', sprintf('%.0f', value)];	% value
+end
+
+
+function output_txt = datatip_stream(obj,event_obj)
+% Display the position of the data cursor with relevant information
+%
+% INPUT:
+%   obj          Currently not used (empty)
+%   event_obj    Handle to event object
+% OUTPUT:
+%   output_txt   Data cursor text string (string or cell array of strings).
+% 
+% *************************************************************************
+
+% get position of click (x-value = time [sod], y-value = depends on plot)
+pos = get(event_obj,'Position');
+sod = pos(1);
+value = pos(2);
+
+% calculate epoch from sod (attention: missing epochs are not considered!)
+epoch = find(event_obj.Target.XData == sod, 1, 'first');
+
+% calculate time of day from sod
+[~, hour, min, sec] = sow2dhms(sod);
+% create string with time of day
+str_time = [sprintf('%02.0f', hour), ':', sprintf('%02.0f', min), ':', sprintf('%02.0f', sec)];
+
+% create cell with strings as output (which will be shown when clicking)
+i = 1;
+output_txt{i} = ['Time: ',  str_time];                  % time of day
+i = i + 1;
+output_txt{i} = ['#: ', sprintf('%.0f', epoch)];        % epoch
+i = i + 1;
+output_txt{i} = ['Bias [m]: ', sprintf('%.3f', value)];	% value
+
+

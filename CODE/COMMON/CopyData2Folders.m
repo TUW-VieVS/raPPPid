@@ -80,6 +80,8 @@ for i = 1:n
             if strcmp(file(end-1:end), 'MN')
                 tfolder = 'BROADCAST';
             end
+        case 'ssr'
+            tfolder = 'STREAM';              
         case 'txt'
             tfolder = 'OBS';            
         otherwise
@@ -146,10 +148,10 @@ if n == 34 && strcmp(ext, 'rnx') || ...         % Rinex 3 observatiom file
     subf_1 = file(idx_1:idx_2);
     subf_2 = file(idx_3:idx_4);
     
-elseif strcmp(ext, 'fcb')           % SGG FCB, gps week and dow in file name
+elseif strcmp(ext, 'fcb')               % SGG FCB, gps week and dow in file name
     [subf_1, subf_2] = gps2calendar(file(4:7), file(8));
     
-elseif n == 34                      % Rinex 3 long filename
+elseif n == 34                          % Rinex 3 long filename
     idx = strfind(file, '_');
     idx_1 = idx(1) + 1;
     idx_2 = idx_1  + 3;
@@ -158,31 +160,36 @@ elseif n == 34                      % Rinex 3 long filename
     subf_1 = file(idx_1:idx_2);
     subf_2 = file(idx_3:idx_4);
     
-elseif n == 8                   	% Rinex short filename
+elseif n == 8                           % Rinex short filename
     subf_1 = ['20' ext(1:2)];
     if str2double(ext(1:2)) > 70
         subf_1 = ['19' ext(1:2)];
     end
     subf_2 = file(5:7);
     
-elseif n == 14                      % e.g. correction stream recorded with BNC
+elseif n == 14                          % e.g. correction stream recorded with BNC
     subf_1 = ['20' ext(1:2)];
     subf_2 = file(11:13);
     
 elseif n == 11 && strcmp(ext, 'ssc')    % daily IGS coordinate solution (old short filename)
     [subf_1, subf_2] = gps2calendar(file(7:10), file(11));  
     
-elseif n == 9 && ext(end) == 'c'    % e.g. correction stream recorded with BNC
+elseif n == 9 && ext(end) == 'c'        % e.g. correction stream recorded with BNC
     subf_2 = file(6:8);
     subf_1  = ['20' ext(1:2)];
     
-elseif ext(3) == 'o'            % RINEX observation file
+elseif ext(3) == 'o'                    % RINEX observation file
     % RINEX file and year+doy could not be extracted from filename
     rheader = anheader_GUI(fpath);      % analyze header of RINEX file
     jd = cal2jd_GT(rheader.first_obs(1), rheader.first_obs(2), rheader.first_obs(3));
     [doy, yyyy] = jd2doy_GT(jd);
     subf_1    = sprintf('%04d',yyyy);
-    subf_2 	= sprintf('%03d',doy);  
+    subf_2 	= sprintf('%03d',doy); 
+    
+elseif strcmp(ext, 'ssr') && n == 31    % e.g. correction stream recorded with BNC
+    subf_1 = file(14:17);
+    subf_2 = file(18:20);
+    
 elseif strcmp(ext, 'txt') && contains(file, 'gnss_log')     % Android raw sensor data
     subf_1 = file(10:13);       % year
     year  = str2double(subf_1);
@@ -191,6 +198,7 @@ elseif strcmp(ext, 'txt') && contains(file, 'gnss_log')     % Android raw sensor
     jd = cal2jd_GT(year, month, day);
     [doy, ~] = jd2doy_GT(jd);
     subf_2 	= sprintf('%03d',doy);  
+    
 else
     fprintf([file ': date could not be extracted!\n']);
 end

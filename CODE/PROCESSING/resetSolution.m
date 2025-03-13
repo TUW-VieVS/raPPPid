@@ -80,8 +80,6 @@ if resetnow
         Adjust.fixed = false;
         Adjust.fixed_reset_epochs = [Adjust.fixed_reset_epochs, q];
         Adjust.reset_time = Epoch.gps_time;
-        % reset reference satellites and fixed EW/WL/NL ambiguities
-        Epoch = resetRefSat(Epoch, '');
         % restart fixing in [GUI-definded] epochs
         settings.AMBFIX.start_fixing(end+1, :) = ...    % -1 as we are already in epoch where reset is happening
             [q+settings.AMBFIX.start_WL-1, q+settings.AMBFIX.start_NL-1];   
@@ -92,6 +90,9 @@ if resetnow
         % create new entry in time to first fix
         storeData.ttff(end+1) = NaN;
     end
+    
+    % reset reference satellites and fixed ambiguities
+    Epoch = resetRefSat(Epoch, '');
     
     Epoch.tracked(:) = 0;           % reset number of epochs each satellite is tracked
     

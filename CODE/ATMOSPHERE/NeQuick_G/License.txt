@@ -1,0 +1,10 @@
+Galileo NeQuick G
+
+obtained from 
+https://www.gsc-europa.eu/support-to-developers/ionospheric-correction-algorithms/galileo-nequick-g-source-code
+@copyright European Union, 2019
+
+Licensed under the EUPL, Version 1.2 or – as soon as they will be approved by the European Commission – subsequent versions of the EUPL (the "Licence");
+You may not use this work except in compliance with the Licence.
+You may obtain a copy of the Licence at:
+ttps://urldefense.com/v3/__https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12__;!!D9dNQwwGXtA!TdREWXB7RWU2lPYE0qpaJhfu59bkiABprOfEeXtAtrw2PryfNIZ9wA1J6QV5bEkSbLqq4vOjHYHVB39g7lTQLjLR-P-79nsDXHXuHnK8$">https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12

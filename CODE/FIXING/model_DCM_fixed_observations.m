@@ -13,6 +13,7 @@ function [model_code_fix, model_phase_fix] = model_DCM_fixed_observations(model,
 %
 %   Revision:
 %       ...
+% 
 % This function belongs to raPPPid, Copyright (c) 2024, M.F. Wareyka-Glaner
 % *************************************************************************
 

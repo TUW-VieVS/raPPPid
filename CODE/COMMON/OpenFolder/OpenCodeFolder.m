@@ -12,19 +12,20 @@ function [] = OpenCodeFolder(subf)
 if ~contains(pwd, 'WORK')
     return
 end
+
 switch nargin
     case 0
-        winopen(Path.CODE);
+        OpenFolder(Path.CODE);
         
     case 1
         try
-            winopen([Path.CODE '/' subf]);
+            OpenFolder([Path.CODE '/' subf])
         catch
-            winopen(Path.CODE);
+            OpenFolder(Path.CODE)
         end        
         
     otherwise
-        winopen(Path.CODE);
+        OpenFolder(Path.CODE);
         
 end
 

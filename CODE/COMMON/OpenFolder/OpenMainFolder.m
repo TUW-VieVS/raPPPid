@@ -10,6 +10,6 @@ function [] = OpenMainFolder()
 % *************************************************************************
 
 if contains(pwd, 'WORK')
-    winopen('../')
+    OpenFolder('../')
 end
 
