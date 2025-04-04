@@ -42,7 +42,6 @@ prns = Epoch.sats;                      % satellites of current epoch
 no_sats_old = length(prns_old);      	% number of satellites in last epoch
 no_sats = Epoch.no_sats;                % number of satellites of current epoch
 s_f = no_sats*num_freq;               	% #satellites x #frequencies
-q = Epoch.q;                            % epoch number
 no_ambiguities = s_f * bool_code_phase;	% number of estimated ambiguities
 N_eye = eye(s_f);                       % square unit matrix, size = number of ambiguities
 N_idx = (NO_PARAM+1):(NO_PARAM+s_f);  	% indices of the ambiguities

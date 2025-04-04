@@ -122,10 +122,10 @@ else
     % --- Clock correction with correction stream
     if settings.ORBCLK.corr2brdc_clk
         dt = Ttr - corr_clk(1); 	% time difference between transmission time and clock correction from stream
-        a0 = corr_clk(2);           % coefficients of corrections polynomial
-        a1 = corr_clk(3) / 1000; 	% convert [mm/s]   to [m/s]      
-        a2 = corr_clk(4) / 1000; 	% convert [mm/s^2] to [m/s^2]      
-        dt_clock = a0 + a1*dt + a2*dt^2;    % calculate 2nd degree polynomial clock correction, [m]
+        c0 = corr_clk(2);           % coefficients of corrections polynomial
+        c1 = corr_clk(3) / 1000; 	% convert [mm/s]   to [m/s]      
+        c2 = corr_clk(4) / 1000; 	% convert [mm/s^2] to [m/s^2]      
+        dt_clock = c0 + c1*dt + c2*dt^2;    % calculate 2nd degree polynomial clock correction, [m]
         brdc_clk_corr = dt_clock/Const.C; 	% convert from [m] to [s]
         if abs(brdc_clk_corr) >= 2 || brdc_clk_corr == 0 	% no valid corrections available
             brdc_clk_corr = 0;     noclock = true;       	% eliminate satellite

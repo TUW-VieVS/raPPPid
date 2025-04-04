@@ -43,7 +43,9 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q    || settings.
 	storeData.dt_last_reset     = storeData.dt_last_reset(eps);
     storeData.param_var         = storeData.param_var(eps,:);
     storeData.N_var_1           = storeData.N_var_1(eps,:);
-    storeData.sat_status        = storeData.sat_status(eps,:);
+	if settings.EXP.storeData_sat_status
+		storeData.sat_status        = storeData.sat_status(eps,:);
+	end
 	if proc_freqs>1; storeData.N_var_2 = storeData.N_var_2(eps,:); end
 	if proc_freqs>2; storeData.N_var_3 = storeData.N_var_3(eps,:); end
     storeData.PDOP              = storeData.PDOP(eps);

@@ -43,6 +43,7 @@ function [obs] = assign_sinex_biases(obs, SinexBiases, settings)
 %               of bias has his start/end-date at the same place in start/ende
 %
 % Revision:
+%   2025/04/03, MFWG: always assign phase biases (now also ~AMBFIX)
 %   2023/06/11, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -188,7 +189,7 @@ if gps_on
         % -> a consequence is that different satellites can get a different
         % phase bias type assigned
         % ||| only phase OSBs are implemented and known!
-        if bool_OSB && settings.AMBFIX.bool_AMBFIX
+        if bool_OSB
             % Phase 1, OSB
             if isfield(SinexOSB.(sat_), GPS_obs.L1)
                 L1_ = save_data(SinexOSB.(sat_).(GPS_obs.L1), week, ii, 1, L1_, 1);
@@ -306,7 +307,7 @@ if glo_on
         end
         
         % --- Phase Biases ---
-        if bool_OSB && settings.AMBFIX.bool_AMBFIX
+        if bool_OSB
             if isfield(SinexOSB.(sat_), GLO_obs.L1)   	% Phase 1, OSB
                 L1_ = save_data(SinexOSB.(sat_).(GLO_obs.L1), week, 100+ii, 1, L1_, 1);
             end
@@ -377,7 +378,7 @@ if gal_on
         
         % --- Phase Biases ---
         % see explanation at the assignment of the GPS Phase biases
-        if bool_OSB && settings.AMBFIX.bool_AMBFIX
+        if bool_OSB
             % Phase 1, OSB
             if isfield(SinexOSB.(sat_), GAL_obs.L1)   	
                 L1_ = save_data(SinexOSB.(sat_).(GAL_obs.L1), week, 200+ii, 1, L1_, 1);
@@ -464,7 +465,7 @@ if bds_on
         end
         
         % --- Phase Biases ---
-        if bool_OSB && settings.AMBFIX.bool_AMBFIX 
+        if bool_OSB
             if isfield(SinexOSB.(sat_), BDS_obs.L1)   	% Phase 1, OSB
                 L1_ = save_data(SinexOSB.(sat_).(BDS_obs.L1), week, 300+ii, 1, L1_, 1);
             end
@@ -533,7 +534,7 @@ if qzss_on
         end
         
 %         % --- Phase Biases ---
-%         if bool_OSB && settings.AMBFIX.bool_AMBFIX 
+%         if bool_OSB
 %             if isfield(SinexOSB.(sat_), QZSS_obs.L1)   	% Phase 1, OSB
 %                 L1_ = save_data(SinexOSB.(sat_).(QZSS_obs.L1), week, 400+ii, 1, L1_, 1);
 %             end

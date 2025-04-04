@@ -13,36 +13,36 @@ derivation = 1;
 
 
 %% ENABLE PLOTS:
-modelled_code       =   true; 
-modelled_phase      =   true; 
-theoretic_range     =   true; 
-cutoff_plot         =   true; 
-sat_pos             =   true; 
-sat_vel             =   true; 
-code_IFLC_plot       = 	true; 
-phase_IFLC_plot      = 	true; 
-satellite_clock     =   true; 
-relativistic_clock  =   true; 
-signal_runtime      =   true; 
+modelled_code       =   false; 
+modelled_phase      =   false; 
+theoretic_range     =   false; 
+cutoff_plot         =   false; 
+sat_pos             =   false; 
+sat_vel             =   false; 
+code_IFLC_plot       = 	false; 
+phase_IFLC_plot      = 	false; 
+satellite_clock     =   false; 
+relativistic_clock  =   false; 
+signal_runtime      =   false; 
 brdc_ephemeris      =   true; 
-signal_emission     =   true; 
-tropo_plot          =   true; 
-ZTD_plot            =   true; 
-ZHD_plot            =   true; 
-ZWD_plot            =   true; 
-iono_plot           =   true; 
-wmf_plot            =   true; 
-hmf_plot            =   true; 
-windup              =   true; 
-solid_tides         =   true; 
-ocean_loading       =   true;
-polar_tides         =   true;
-rec_PCOPCV          =   true; 
-rec_ARP             =   true; 
-sat_PCOPCV          =   true; 
-sat_orbs_3d         = 	true;
-code_obs_plot       =   true; 
-phase_obs_plot      =   true; 
+signal_emission     =   false; 
+tropo_plot          =   false; 
+ZTD_plot            =   false; 
+ZHD_plot            =   false; 
+ZWD_plot            =   false; 
+iono_plot           =   false; 
+wmf_plot            =   false; 
+hmf_plot            =   false; 
+windup              =   false; 
+solid_tides         =   false; 
+ocean_loading       =   false;
+polar_tides         =   false;
+rec_PCOPCV          =   false; 
+rec_ARP             =   false; 
+sat_PCOPCV          =   false; 
+sat_orbs_3d         = 	false;
+code_obs_plot       =   false; 
+phase_obs_plot      =   false; 
 
 
 %% PLOTS

@@ -24,16 +24,16 @@ target = {[Path.DATA, 'ORBIT/', yyyy, '/', doy]};
 [~, ~] = mkdir(target{1});
 URL_host = 'igs.ign.fr:21';            % default ftp-server
 decompressed = {''};
-
+URL_host_2 = ''; URL_folder_2 = ''; file_2 = '';
 
 %% switch source of orbits/clocks
 if settings.ORBCLK.MGEX
     % http://www.igs.org/products
-    URL_folders = {['/pub/igs/products/mgex/', gpsweek, '/']};
+    URL_folder = {['/pub/igs/products/mgex/', gpsweek, '/']};
     switch settings.ORBCLK.prec_prod
         case 'CODE'
             URL_host = 'ftp.aiub.unibe.ch:21';
-            URL_folders = {['/CODE_MGEX/CODE/' yyyy, '/']};
+            URL_folder = {['/CODE_MGEX/CODE/' yyyy, '/']};
             file = {['COD0MGXFIN_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
             
         case 'CNES'
@@ -41,15 +41,25 @@ if settings.ORBCLK.MGEX
             
         case 'WUM'
             URL_host = 'igs.gnsswhu.cn:21';
-            URL_folders = {['/pub/whu/phasebias/' yyyy, '/orbit/']};
+            URL_folder = {['/pub/whu/phasebias/' yyyy, '/orbit/']};
             file = {['WUM0MGXRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
                         
         case 'GFZ'
-            file = {['GFZ0MGXRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
+            file = {['GBM0MGXRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
+            URL_host = 'ftp.gfz-potsdam.de:21';
+            if str2double(gpsweek) > 2245
+                URL_folder = {['/pub/GNSS/products/mgex/' gpsweek '_IGS20' '/']};
+            else
+                URL_folder = {['/pub/GNSS/products/mgex/' gpsweek '/']};
+            end
+            % alternative
+            URL_host_2   = 'igs.ign.fr:21';
+            URL_folder_2 = {['/pub/igs/products/mgex/', gpsweek, '/']};
+            file_2   = {['GFZ0MGXRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
             
         case 'HUST'
             URL_host = 'ggda.ac.cn:21';
-            URL_folders = {['/pub/mgex/products/' yyyy '/']};
+            URL_folder = {['/pub/mgex/products/' yyyy '/']};
             switch settings.ORBCLK.prec_prod_type
                 case 'Final'
                     file = {['HUS0MGXFIN_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
@@ -75,8 +85,11 @@ end
 
 %% download and unzip files, if necessary
 
-[file_status] = ftp_download(URL_host, URL_folders{1}, file{1}, target{1}, true);
-% ||| if download failed, try another ftp server
+file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+if file_status == 0 && ~isempty(URL_host_2)
+    % download failed, try another ftp server
+    file_status = ftp_download(URL_host_2, URL_folder_2{1}, file_2{1}, target{1}, true);
+end
 decompressed = unzip_and_delete(file(1), target(1));
 if file_status == 0
     errordlg(['No ORBEX file from ' settings.ORBCLK.prec_prod ' found on server. Disable ORBEX file!'], 'Error');

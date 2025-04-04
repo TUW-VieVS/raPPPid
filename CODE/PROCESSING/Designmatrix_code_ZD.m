@@ -1,5 +1,5 @@
 function Adjust = Designmatrix_code_ZD(Adjust, Epoch, model, settings)
-% creates Design-Matrix and calculates observed minus computed range for 
+% Creates Design-Matrix and calculates observed minus computed range for 
 % code solution and Zero-Difference-Model
 % 
 % INPUT:  

@@ -1,5 +1,6 @@
 function [dcb_GPS, dcb_GLO] = read_dcb(filename, GPS_on, GLO_on)
-% Reads DCB values from CODE *.DCB file for GPS and Glonass
+% Reads DCB values from CODE *.DCB file for GPS and GLONASS
+% 
 % INPUT: 
 %               filename        string with filename and path of .DCB file
 % OUTPUT:
@@ -40,4 +41,3 @@ while 1
 end
 
 fclose(fid);    % close file
-end

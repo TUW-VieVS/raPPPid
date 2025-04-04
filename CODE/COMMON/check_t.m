@@ -22,6 +22,3 @@ if t < -half_week
     tt = t+2*half_week;
 end
 
-
-end
-

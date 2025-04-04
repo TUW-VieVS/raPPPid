@@ -1,6 +1,6 @@
 function [input, obs] = RealTimeEphCorr2Brdc(settings, input, obs, fid_navmess, fid_corr2brdc)
-% This function finds the corrections to the navigation message during a
-% real-time processing with raPPPid
+% This function gets the new data from the navigation message and the
+% real-time correction stream and reads this data in.
 % 
 % INPUT:
 %   settings        struct, processing settings from the GUI
@@ -214,8 +214,8 @@ New.c0      = [ Old.c0;       Update.c0 ];
 New.c1      = [ Old.c1;       Update.c1  ];
 New.c2      = [ Old.c2;       Update.c2 ];
 
-% delete outdated corrections: keep only last xxx epochs of data (if 5sec 
-% update rate = last xx minutes)
+% delete outdated corrections: keep only last xxx epochs of data (does not 
+% take the interval into account)
 n_orb = numel(New.t_orb);
 if n_orb > xxx
     idx = n_orb-60 : n_orb;

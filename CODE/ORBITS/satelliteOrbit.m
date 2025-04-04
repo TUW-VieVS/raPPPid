@@ -89,7 +89,7 @@ else        % calculate satellite position from navigation message
         Ttr_ = Ttr - Const.BDST_GPST;        % convert GPST to BDT
         [X,V] = SatPos_brdc(Ttr_, Eph_brdc(:,k), GM, we_dot);
     elseif isGLO
-        [X,V] = SatPos_brdc_GLO(Ttr, prn, input.ORBCLK.Eph_GLO);
+        [X,V] = SatPos_brdc_GLO(Ttr, Eph_brdc(:,k));
         [X] = PZ90toWGS84(X);   % very small influence
         [V] = PZ90toWGS84(V);
     end

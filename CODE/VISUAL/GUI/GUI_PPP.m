@@ -3536,15 +3536,7 @@ end
 
 % estimate receiver DCBs
 function checkbox_estimate_rec_dcbs_Callback(hObject, eventdata, handles)
-value = 'Off';
-if get(handles.checkbox_estimate_rec_dcbs, 'Value')
-    value = 'On';
-end
-set(handles.text_rec_dcbs, 'Enable', value);
-set(handles.edit_filter_dcbs_sigma0, 'Enable', value);
-set(handles.edit_filter_dcbs_Q, 'Enable', value);
-set(handles.text_dcbs_m, 'Enable', value);
-set(handles.popupmenu_filter_dcbs_dynmodel, 'Enable', value);
+handles = GUI_enable_onoff(handles);
 end
 % Receiver DCBs
 function edit_filter_DCB_sigma0_Callback(hObject, eventdata, handles)
@@ -4482,6 +4474,18 @@ end
 % Delete last processing
 function pushbutton_delete_Callback(hObject, eventdata, handles)
 handles = GUI_delete(handles);
+handles = GUI_enable_onoff(handles);
+guidata(hObject,handles);
+end
+
+% Open results folder of last processing
+function pushbutton_results_Callback(hObject, eventdata, handles)
+if ~isempty(handles.paths.lastproc) && isfolder(handles.paths.lastproc)
+    OpenFolder(handles.paths.lastproc);
+else
+    OpenResultsFolder;
+end
+handles = GUI_enable_onoff(handles);
 guidata(hObject,handles);
 end
 

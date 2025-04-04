@@ -55,6 +55,7 @@ end
 n_col = size(rgb,1);            % number of colors
 
 
+
 %% Code minus Phase Plot
 if contains(settings.PROC.method, 'Phase')
     % Preparations
@@ -114,7 +115,7 @@ if contains(settings.PROC.method, 'Phase')
             set(hLeg,'visible','off')
         end
         title(sprintf('C%d - L%d - 3rd degree polynomial', j, j))           % title of plot
-        xlim([0 hours(end)])
+        try xlim([0 hours(end)]); catch; end
     end
 end
 

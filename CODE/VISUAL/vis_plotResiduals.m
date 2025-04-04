@@ -77,7 +77,7 @@ for j = 1:no_frqs     % loop to plot all processed frequencies
     xlabel('Elevation [°]')
     max_c = max(abs(Code_res_j(:)));
     if isnan(max_c);        max_c = 1;    end
-    xlim([0 90]);
+    xlim([-Inf 90]);
     ylim([-max_c max_c])
     vline(cutoff, 'r--')
     
@@ -99,11 +99,12 @@ for j = 1:no_frqs     % loop to plot all processed frequencies
         xlabel('Elevation [°]')
         max_p = max(abs(Phase_res_j(:)));
         if isnan(max_p);        max_p = 1;    end
-        xlim([0 90]);
+        xlim([-Inf 90]);
         ylim([-max_p max_p])
         vline(cutoff, 'r--')
     end
 end
+
 
 %% RESIDUALS OVER TIME
 fig_res = figure('Name', ['Residuals, ' floatfix ', ', gnss], 'NumberTitle','off');
@@ -171,7 +172,7 @@ set(dcm, 'updatefcn', @vis_customdatatip_res_elev)
 % reset to default colors
 set(groot,'defaultAxesColorOrder',coleurs_default) 
 
-end
+
 
 
 
@@ -202,4 +203,3 @@ output_txt{1} = sat;               % name of clicked line e.g. satellite
 output_txt{2} = ['Elevation: '  sprintf('%.2f', el) '°'];
 output_txt{3} = ['Value: ' sprintf('%.3f', val) 'm'];    % epoch
 
-end

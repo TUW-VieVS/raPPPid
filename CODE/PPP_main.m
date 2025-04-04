@@ -102,6 +102,12 @@ if settings.INPUT.bool_realtime
 elseif settings.PROC.timeSpan_format_epochs
     settings.PROC.epochs(1) = floor(settings.PROC.timeFrame(1));    % round to be on the safe side
     settings.PROC.epochs(2) = ceil (settings.PROC.timeFrame(2));
+elseif settings.PROC.timeSpan_format_time
+    [hh, mm, ss] = getHourMinSec(settings.PROC.timeFrameFrom);
+    settings.PROC.timeFrame(1) = mod(hhmmss2sow(hh, mm, ss, obs.startdate), 86400);
+    [hh, mm, ss] = getHourMinSec(settings.PROC.timeFrameTo);
+    settings.PROC.timeFrame(2) = mod(hhmmss2sow(hh, mm, ss, obs.startdate), 86400);
+    settings.PROC.epochs = sod2epochs(OBSDATA, obs.newdataepoch, settings.PROC.timeFrame, obs.rinex_version);  
 elseif settings.PROC.timeSpan_format_SOD
     settings.PROC.epochs = sod2epochs(OBSDATA, obs.newdataepoch, settings.PROC.timeFrame, obs.rinex_version);  
 elseif settings.PROC.timeSpan_format_HOD
@@ -224,10 +230,11 @@ for q = q_range         % loop over epochs
     % ----- sort and remove satellites -----
     Epoch = RemoveSort(settings, Epoch, q);
     
-    % ----- Find column of broadcast-ephemeris of current satellite -----
+    % ----- Find broadcast ephemeris columns and corrections -----
     % check if satellites have broadcast ephemerides and are healthy, otherwise satellite is excluded
     if settings.ORBCLK.bool_brdc
         if settings.INPUT.bool_realtime
+			% get and read data in real-time
             [input, obs] = RealTimeEphCorr2Brdc(settings, input, obs, fid_navmess, fid_corr2brdc);
         end
         Epoch = findEphCorr2Brdc(Epoch, input, settings);
@@ -445,7 +452,9 @@ if bool_print && ishandle(WBAR);	close(WBAR);	end
 fprintf('%s', datestr(datetime('now')))
 
 % Print final processing time
-tProcessed = toc(tStart); printElapsedTime(tProcessed);
+if ~settings.INPUT.bool_realtime
+    tProcessed = toc(tStart); printElapsedTime(tProcessed);
+end
 
 % Open enabled plots after processing is finished
 SinglePlotting(satellites, storeData, obs, settings)    % open enabled plots

@@ -309,8 +309,12 @@ for i_sat = 1:num_sat
             % get last and next quaternion
             quat_1 = [input.ORBCLK.OBX.ATT.q0(idx1,prn) input.ORBCLK.OBX.ATT.q1(idx1,prn) input.ORBCLK.OBX.ATT.q2(idx1,prn) input.ORBCLK.OBX.ATT.q3(idx1,prn)];
             quat_2 = [input.ORBCLK.OBX.ATT.q0(idx2,prn) input.ORBCLK.OBX.ATT.q1(idx2,prn) input.ORBCLK.OBX.ATT.q2(idx2,prn) input.ORBCLK.OBX.ATT.q3(idx2,prn)];
-            quat = quatinterp(quat_1, quat_2, f, 'slerp');      % interpolate
-            q0 = quat(1); q1 = quat(2); q2 = quat(3); q3 = quat(4);
+            if ~isempty(quat_1) && ~isempty(quat_2)
+                quat = quatinterp(quat_1, quat_2, f, 'slerp');      % interpolate
+                q0 = quat(1); q1 = quat(2); q2 = quat(3); q3 = quat(4);
+            else
+                q0 = []; q1 = []; q2 = []; q3 = [];
+            end
         end
         SatOr_ECEF = NaN(3,3);
         if ~isempty(q0) && ~isempty(q1) && ~isempty(q2) && ~isempty(q3)

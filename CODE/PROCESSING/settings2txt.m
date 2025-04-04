@@ -21,10 +21,11 @@ function [] = settings2txt(settings, obs, input, rec_pco, rec_pcv, tStart)
 % *************************************************************************
 
 
-
 % get the name of the file
 fileID = fopen([settings.PROC.output_dir,'/', 'settings_summary.txt'], 'w');
 
+% check if decoupled clock model was used during processing
+bool_DCM = strcmp(settings.IONO.model, 'Estimate, decoupled clock');
 
 
 %% File - Set input file
@@ -443,7 +444,11 @@ fprintf(fileID,'\n');
 
 fprintf(fileID,'%s\n','Ambiguity Fixing: ');
 if settings.AMBFIX.bool_AMBFIX
-    fprintf(fileID,'  %s%.0f%s%.0f%s\n','Fixing-Start [seconds]: WL = ',settings.AMBFIX.start_WL_sec,', NL = ',settings.AMBFIX.start_NL_sec);
+    if ~bool_DCM
+        fprintf(fileID,'  %s%.0f%s%.0f%s\n','Fixing-Start [s]: WL = ',settings.AMBFIX.start_WL_sec,', NL = ',settings.AMBFIX.start_NL_sec);
+    else
+        fprintf(fileID,'  %s%.0f\n', 'Fixing-Start [s] = ', settings.AMBFIX.start_WL_sec);
+    end
     fprintf(fileID,'  %s%.2f%s%.2f%s%.0f%s\n','HMW fixing: threshold = ', settings.AMBFIX.HMW_thresh, ' [cy], releasing threshold = ', settings.AMBFIX.HMW_release, ' [cy], window = ', settings.AMBFIX.HMW_window, ' [s]');
     fprintf(fileID,'  %s%d\n','Fixing cutoff [°]: ', settings.AMBFIX.cutoff);
     fprintf(fileID,'  %s%s\n','Choice of Reference Satellite: ', settings.AMBFIX.refSatChoice);
@@ -471,6 +476,8 @@ fprintf(fileID,'%s\n','Processing Options:');
 fprintf(fileID,'  %s%s\n','Output: ', settings.PROC.output_dir);
 if settings.PROC.timeSpan_format_epochs
     fprintf(fileID,'  %s%d%s%d\n','Epochs: ',settings.PROC.timeFrame(1),' - ',settings.PROC.timeFrame(2));
+elseif settings.PROC.timeSpan_format_time
+    fprintf(fileID,'  %s%d%s%d\n','Time: ',settings.PROC.timeFrameFrom,' - ',settings.PROC.timeFrameTo);
 elseif settings.PROC.timeSpan_format_SOD
     fprintf(fileID,'  %s%d%s%d\n','Seconds of Day: ',settings.PROC.timeFrame(1),' - ',settings.PROC.timeFrame(2));
 elseif settings.PROC.timeSpan_format_HOD
@@ -597,7 +604,7 @@ fprintf(fileID,'\n');
 
 
 %% Station information
-fprintf(fileID,'General Information:\n');
+fprintf(fileID,'General Information (Observation File):\n');
 fprintf(fileID,'  Long station name: %s\n', obs.station_long);
 fprintf(fileID,'  Station name: %s\n', obs.stationname);
 fprintf(fileID,'  Observation interval: %02.2f seconds\n', obs.interval);
@@ -605,9 +612,9 @@ fprintf(fileID,'  Antenna:  %s\n', obs.antenna_type);
 fprintf(fileID,'  Receiver: %s\n', obs.receiver_type);
 fprintf(fileID,'  Receiver antenna delta (H/E/N): %02.4f / %02.4f / %02.4f\n', obs.rec_ant_delta(3), obs.rec_ant_delta(2), obs.rec_ant_delta(1));
 
-fprintf(fileID,'  Time of 1st observation (y, m, d, h, min, sec): ');
-fprintf(fileID,'%04.0f %02.0f %02.0f %02.0f %02.0f %02.0f', obs.startdate(1), obs.startdate(2), obs.startdate(3), obs.startdate(4), obs.startdate(5), obs.startdate(6));
-fprintf(fileID,', jd: %13.5f', obs.startdate_jd);
+fprintf(fileID,'  Time of first observation (y, m, d, h, min, sec): ');
+fprintf(fileID,'%04.0f %02.0f %02.0f %02.0f %02.0f %10.7f\n', obs.startdate(1), obs.startdate(2), obs.startdate(3), obs.startdate(4), obs.startdate(5), obs.startdate(6));
+fprintf(fileID,'    jd: %13.5f', obs.startdate_jd);
 fprintf(fileID,', doy: %01.0f', floor(obs.doy));
 fprintf(fileID,', gps-date: %04.0f / %02.0f\n', obs.startGPSWeek, floor(obs.startSow/86400));
 

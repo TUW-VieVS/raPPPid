@@ -113,7 +113,7 @@ title('Number of GNSS Satellites')
 ylabel('# of Satellites')
 xlabel(strXAxis)
 ylim([0 max(noAllGNSS(:)+1)])
-xlim([h(1) h(end)])
+try xlim([h(1) h(end)]); catch; end
 grid off;
 lg = legend(legend_txt, 'Location','SouthEast');
 lg.FontSize = 8;
@@ -168,7 +168,7 @@ hline(DEF.MIN_SATS, 'k--')        % plot horizontal line for minimum number of s
 ylabel('# of Satellites')
 % xlabel(strXAxis)
 ylim([0 max([noAllGPS(:); noAllGLO(:); noAllGAL(:); noAllBDS(:); noAllQZS(:)])+1])
-xlim([h(1) h(end)])
+try xlim([h(1) h(end)]); catch; end
 grid off;
 lg = legend(legend_txt, 'Location','SouthEast');
 lg.FontSize = 8;
@@ -211,7 +211,7 @@ yticks(0:99)
 xlabel(strXAxis)
 ylabel('Satellite')
 ylim([1 Inf])
-xlim([h(1) h(end)])
+try xlim([h(1) h(end)]); catch; end
 
 % add customized datatip
 dcm = datacursormode(fig_sat_vis);

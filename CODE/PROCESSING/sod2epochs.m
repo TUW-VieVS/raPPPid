@@ -47,8 +47,8 @@ end
 time_epochs = mod(time_epochs, 86400);
 
 % find nearest start epoch
-end_dt = abs(PROC_epochs(1) - time_epochs); 
-start_idx = find(end_dt == min(end_dt));
+start_dt = abs(PROC_epochs(1) - time_epochs); 
+start_idx = find(start_dt == min(start_dt));
 % find nearest end epoch
 end_dt = abs(PROC_epochs(2) - time_epochs); 
 end_idx = find(end_dt == min(end_dt));

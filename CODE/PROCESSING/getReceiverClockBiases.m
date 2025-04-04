@@ -27,7 +27,7 @@ num_freq = settings.INPUT.proc_freqs;   % number of processed frequencies
 % get either:
 %     - receiver clock error and receiver clock offset(s) 
 %   OR
-%     - receiver clock errors for code and phase
+%     - receiver clock errors for code and phase (decoupled clock model)
 
 if ~DecoupledClockModel
     % receiver clock error is the same for code and phase observation
@@ -55,9 +55,9 @@ end
 
 %% receiver biases 
 % get either:
-%     - receiver DCB(s)
+%     - receiver DCB(s) (uncombined model)
 %   OR
-%     - receiver IFB, L2 bias, and L3 bias
+%     - receiver IFB, L2 bias, and L3 bias (decoupled clock model)
 
 if settings.BIASES.estimate_rec_dcbs && ~DecoupledClockModel
     % receiver DCB_12 and DCB_13 are estimated

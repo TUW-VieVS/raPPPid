@@ -227,19 +227,19 @@ if strcmpi(settings.PROC.method,'Code + Phase')
     %     -+-+-+-+- Figure: Float Ambiguity Plots -+-+-+-+-
     if settings.PLOT.float_amb
         if isGPS    % GPS processed
-            FloatAmbPlot(hours, storeData, 1:DEF.SATS_GPS,       settings.INPUT.proc_freqs, label_x_h, 'G', reset_h, rgb);
+            FloatAmbPlot(hours, storeData, 1:DEF.SATS_GPS,       settings, label_x_h, 'G', reset_h, rgb);
         end
         if isGLO
-            FloatAmbPlot(hours, storeData, 101:100+DEF.SATS_GLO, settings.INPUT.proc_freqs, label_x_h, 'R', reset_h, rgb)
+            FloatAmbPlot(hours, storeData, 101:100+DEF.SATS_GLO, settings, label_x_h, 'R', reset_h, rgb)
         end
         if isGAL
-            FloatAmbPlot(hours, storeData, 201:200+DEF.SATS_GAL, settings.INPUT.proc_freqs, label_x_h, 'E', reset_h, rgb)
+            FloatAmbPlot(hours, storeData, 201:200+DEF.SATS_GAL, settings, label_x_h, 'E', reset_h, rgb)
         end
         if isBDS
-            FloatAmbPlot(hours, storeData, 301:300+DEF.SATS_BDS, settings.INPUT.proc_freqs, label_x_h, 'C', reset_h, rgb)
+            FloatAmbPlot(hours, storeData, 301:300+DEF.SATS_BDS, settings, label_x_h, 'C', reset_h, rgb)
         end
         if isQZSS
-            FloatAmbPlot(hours, storeData, 401:400+DEF.SATS_QZSS,settings.INPUT.proc_freqs, label_x_h, 'J', reset_h, rgb)
+            FloatAmbPlot(hours, storeData, 401:400+DEF.SATS_QZSS,settings, label_x_h, 'J', reset_h, rgb)
         end
     end    
     %     -+-+-+-+- Figure: Fixed Ambiguity Plots -+-+-+-+-

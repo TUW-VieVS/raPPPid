@@ -53,15 +53,23 @@ switch settings.BIASES.code
         end
         if ~isfile([target file]) && ~isfile([target decompr])
             file = file_0;      [~, decompr, ~] = fileparts(file);
+            try websave([target file], [httpserver '/' file]); end
+        end    
+        if ~isfile([target file]) && ~isfile([target decompr])
+            file = file_0;      [~, decompr, ~] = fileparts(file);
             try websave([target file], [httpserver '/' file]); 
             catch
-                errordlg('No CAS Multi-GNSS DCBs found on server. Please specify different source!', 'Error');
+                % for example 2020/001 (My First PPP Processing)
+                URL_host = 'igs.ign.fr:21';     
+                URL_folder = {['/pub/igs/products/mgex/dcb/' yyyy '/']};
+                file_status = ftp_download(URL_host, URL_folder{1}, file, target, true);
+                [~, decompr, ~] = fileparts(file);
             end
-        end       
+        end           
         % unzip if download was successful
         decompressed = unzip_and_delete({file}, {target});
         if ~isfile([target decompr])
-            errordlg('No CAS Multi-GNSS DCBs found on server. Please specify different source!', 'Error');
+            errordlg('No CAS Multi-GNSS DCBs found on server. Please change source of biases!', 'Error');
         end
         % save file-path
         settings.BIASES.code_file = decompressed{1};
@@ -95,7 +103,7 @@ switch settings.BIASES.code
         % unzip if download was successful
         decompressed = unzip_and_delete({file}, {target});
         if ~isfile([target decompr])
-            errordlg('No CAS Multi-GNSS DCBs found on server. Please specify different source!', 'Error');
+            errordlg('No CAS Multi-GNSS DCBs found on server. Please change source of biases!', 'Error');
         end
         % save file-path
         settings.BIASES.code_file = decompressed{1};
@@ -120,7 +128,7 @@ switch settings.BIASES.code
         % download, unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
         if file_status == 0
-            errordlg({'No DLR Multi-GNSS quarterly DCBs found on server. Please specify different source!';' ';'(DLR Multi-GNSS quarterly DCBs only become available some months in retrospect; perhaps this is the problem.)'}, 'Error');
+            errordlg({'No DLR Multi-GNSS quarterly DCBs found on server. Please change source of biases!';' ';'(DLR Multi-GNSS quarterly DCBs only become available some months in retrospect; perhaps this is the problem.)'}, 'Error');
         end
         decompressed = unzip_and_delete(file, target);
         % save file-path
@@ -139,7 +147,7 @@ switch settings.BIASES.code
         for i = 1:length(files)
             file_status = ftp_download(URL_host, URL_folder{i}, files{i}, targets{i}, true);
             if file_status == 0
-                errordlg('No CODE DCBs found on server. Please specify different source!', 'Error');
+                errordlg('No CODE DCBs found on server. Please change source of biases!', 'Error');
             end
             decompressed{i} = unzip_and_delete(files(i), targets(i));
             settings.BIASES.code_file{i} = decompressed{i};
@@ -151,19 +159,27 @@ switch settings.BIASES.code
         [~, ~] = mkdir(target{1});
         URL_host = 'igs.gnsswhu.cn:21';
         URL_folder = {['/pub/whu/phasebias/' yyyy, '/bias/']};
-        file = {['WUM0MGXRAP_' yyyy doy '0000_01D_01D_ABS.BIA.gz']};
-        % download, unzip, save file-path
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        URL_host_2 = 'igs.ign.fr:21';
+        URL_folder_2 = {['/pub/igs/products/mgex/' gpsweek, '/']};
+        file   = {['WUM0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+        file_2 = {['WUM0MGXRAP_' yyyy doy '0000_01D_01D_ABS.BIA.gz']};
+        % download
+        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+        if file_status == 0
+            file_status = ftp_download(URL_host_2, URL_folder_2{1}, file{1}, target{1}, false);
+        end
+        if file_status == 0
+            file = file_2;
+            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        end
+        if file_status == 0
+            errordlg('No WUM MGEX Biases found on server. Please specify different source!', 'Error');
+        end
+        % unzip 
         if file_status == 1   ||   file_status == 2
             unzip_and_delete(file(1), target(1));
-        elseif file_status == 0
-            URL_host = 'igs.ign.fr:21';
-            URL_folder = {['/pub/igs/products/mgex/' gpsweek, '/']};
-            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
-            if file_status == 0
-                errordlg('No WUM MGEX Biases found on server. Please specify different source!', 'Error');
-            end
         end
+        % save file-path
         [~,file{1},~] = fileparts(file{1});   % remove the zip file extension
         settings.BIASES.code_file = [target{1} '/' file{1}];
         
@@ -176,7 +192,7 @@ switch settings.BIASES.code
         file = {['GRG0MGXFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true); 
         if file_status == 0
-            errordlg('No CNES MGEX Biases found on server. Please specify different source!', 'Error');
+            errordlg('No CNES MGEX Biases found on server. Please change source of biases!', 'Error');
         end
         decompressed = unzip_and_delete(file(1), target(1));
         % save file-path
@@ -195,7 +211,7 @@ switch settings.BIASES.code
         file = {['GBM0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true); 
         if file_status == 0
-            errordlg('No GFZ MGEX Biases found on server. Please specify different source!', 'Error');
+            errordlg('No GFZ MGEX Biases found on server. Please change source of biases!', 'Error');
         end
         decompressed = unzip_and_delete(file(1), target(1));
         settings.BIASES.code_file = decompressed{1};
@@ -240,7 +256,7 @@ switch settings.BIASES.code
         % download, unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
         if file_status == 0
-            errordlg('No CNES OSBs Biases found on server. Please specify different source!', 'Error');
+            errordlg('No CNES OSBs Biases found on server. Please change source of biases!', 'Error');
         end
         decompressed = unzip_and_delete(file(1), target(1));
         % save file-path
@@ -260,7 +276,7 @@ switch settings.BIASES.code
         % download and unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
         if file_status == 0
-            errordlg('No CODE MGEX Biases found on server. Please specify different source!', 'Error');
+            errordlg('No CODE MGEX Biases found on server. Please change source of biases!', 'Error');
         end
         decompressed = unzip_and_delete(file(1), target(1));
         % save file-path
@@ -322,7 +338,7 @@ switch settings.BIASES.code
         % download, unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
         if file_status == 0
-            errordlg('No HUST MGEX Biases found on server. Please specify different source!', 'Error');
+            errordlg('No HUST MGEX Biases found on server. Please change source of biases!', 'Error');
         end
         decompressed = unzip_and_delete(file(1), target(1));
         % save file-path

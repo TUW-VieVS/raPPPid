@@ -199,7 +199,9 @@ storeData.VDOP = zeros(tot_eps,1);
 storeData.zhd = zeros(tot_eps,1);
 storeData.zwd = zeros(tot_eps,1);
 % satellite status
-storeData.sat_status = zeros(tot_eps,nnn);
+if settings.EXP.storeData_sat_status
+	storeData.sat_status = zeros(tot_eps,nnn);
+end
 
 % variables depending on the number of processed frequencies
 storeData.N_1    = zeros(tot_eps,nnn);              % float ambiguities

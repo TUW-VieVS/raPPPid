@@ -484,7 +484,7 @@ switch settings.ORBCLK.prec_prod
             else
                 URL_folders_2 = repmat({['/archive/gnss/products/mgex/' gpsweek]},2,1);
             end
-            files{1} = ['WUM0MGXRAP_' yyyy doy '0000_01D_01M_ORB.SP3.gz'];
+            files{1} = ['WUM0MGXRAP_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
             files{2} = ['WUM0MGXRAP_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
             files_2{1} = ['WUM0MGXFIN_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
             files_2{2} = ['WUM0MGXFIN_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];

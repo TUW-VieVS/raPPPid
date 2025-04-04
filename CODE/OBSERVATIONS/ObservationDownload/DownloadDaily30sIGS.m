@@ -24,7 +24,7 @@ function [] = DownloadDaily30sIGS(stations, doys, year)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-host = 3;
+host = 2;
 
 switch host
     case 1
@@ -91,7 +91,12 @@ for d = 1:no_days
             case 3
                 URL_folder = {['/pub/igs/data/' year '/' doy '/']};       % igs.ign.fr
         end 
-        file = [station '_R_' year doy '0000_01D_30S_MO.crx.gz'];
+        
+        % file name
+        file = [station '_R_' year doy '0000_01D_30S_MO.crx.gz'];   % RINEX 3
+        % file = [lower(station(1:4)) doy '0.' year(3:4) 'o.Z']       % RINEX 2
+        
+        % target folder
         target = ['../DATA/OBS/' year '/' doy];
         
         % save

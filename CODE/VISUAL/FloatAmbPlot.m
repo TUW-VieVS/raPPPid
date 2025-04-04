@@ -1,20 +1,23 @@
-function FloatAmbPlot(hours, storeData, idx_gnss, no_frqs, label_x, gnss, resets, rgb)
-% creates Ambiguity Plot for GPS, Glonass or Galileo
+function FloatAmbPlot(hours, storeData, idx_gnss, settings, label_x, gnss, resets, rgb)
+% Plots the estimated float ambiguities of a specific GNSS over time.
 %
 % INPUT:
 % 	hours       hours from beginning of processing
 % 	storeData   struct, data of processing
 %   idx_gnss    satellite indices of GNSS to plot
-%   no_frqs     number of processed frequencies
+%   settings    struct, processing settings from GUI
 % 	label_x     label for the x-axis
 % 	gnss        string with G, R, E, C
 %   no_freq     number of processed frequencíes
 %   resets      time of resets [hours]
-%   rgb         colors for plotting
+%   rgb         matrix, n x 3, colors for plotting
 % OUTPUT:
 %   []     
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
-%
+% 
+% Revision:
+%   2025/03/27, MFWG: input changed, plot ref sat as zero in the DCM 
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -24,6 +27,7 @@ function FloatAmbPlot(hours, storeData, idx_gnss, no_frqs, label_x, gnss, resets
 sys = char2gnss(gnss);
 fig_amb = figure('Name', [sys ,' Float Ambiguities'], 'NumberTitle','off');
 no_sats = numel(idx_gnss);
+no_frqs = settings.INPUT.proc_freqs;
 
 
 for j = 1:no_frqs
@@ -32,6 +36,18 @@ for j = 1:no_frqs
     field = sprintf('N_%1.0f', j);
     N_j = full(storeData.(field)(:,idx_gnss));
     N_j(N_j==0) = NaN;              % replace zeros with NaN
+    
+    % in the case of the decoupled clock model the float ambiguity of the
+    % reference satellite is not estimated and set to zero
+    if contains(settings.IONO.model, 'Estimate, decoupled clock')
+        % get reference satellite of current GNSS for all epochs
+        refSat = mod(storeData.(['refSat' char2gnss3(gnss)]), 100);
+        [rows, cols] = size(N_j);
+        % convert epochs and reference satellite to linear indices
+        ind = sub2ind([rows, cols], 1:rows, refSat');
+        % set the float ambiguities of the reference satellite to zero for plotting
+        N_j(ind) = 0;       
+    end
 
     % prepare plotting
     prn_idx = (sum(~isnan(N_j)) > 0);   % satellites which have data, logical vector
@@ -68,4 +84,3 @@ for j = 1:no_frqs
     set(dcm, 'updatefcn', @vis_customdatatip_h)
 end
 
-end

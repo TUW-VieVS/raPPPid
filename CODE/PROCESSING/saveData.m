@@ -302,8 +302,9 @@ storeData.exclude(q,prns)  = any(Epoch.exclude, 2);     % true if satellite's ob
 
 
 %% save satellite status
-storeData.sat_status(q,prns) = Epoch.sat_status;
-
+if settings.EXP.storeData_sat_status
+	storeData.sat_status(q,prns) = Epoch.sat_status(:,1);
+end
 
 %% save modelled error-sources (into model_save)
 

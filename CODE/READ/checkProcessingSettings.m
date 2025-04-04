@@ -80,6 +80,7 @@ end
 % create some variables to make code more readable in the following
 prec_prod_CODE_MGEX = strcmpi(settings.ORBCLK.prec_prod,'CODE') && settings.ORBCLK.MGEX;
 prec_prod_CODE = strcmpi(settings.ORBCLK.prec_prod,'CODE') && ~settings.ORBCLK.MGEX;
+DecoupledClockModel = strcmp(settings.IONO.model, 'Estimate, decoupled clock');
 
 
 
@@ -223,12 +224,23 @@ if settings.PROC.timeFrame(1) >= settings.PROC.timeFrame(2)
 end
 
 
-% Start or end of processing is not valid
-if (settings.PROC.timeSpan_format_epochs && settings.PROC.timeFrame(1) == 0)...
-        || settings.PROC.timeFrame(1) < 0 || settings.PROC.timeFrame(2) < 0 || ...
-        isnan(settings.PROC.timeFrame(1)) || isnan(settings.PROC.timeFrame(2))
-    errordlg('Check settings of epochs!', windowname);
-    valid_settings = false; return
+% Check if start or end of processing is valid
+if settings.PROC.timeSpan_format_epochs || settings.PROC.timeSpan_format_SOD || settings.PROC.timeSpan_format_HOD
+    if (settings.PROC.timeSpan_format_epochs && settings.PROC.timeFrame(1) == 0)...
+            || settings.PROC.timeFrame(1) < 0 || settings.PROC.timeFrame(2) < 0 || ...
+            isnan(settings.PROC.timeFrame(1)) || isnan(settings.PROC.timeFrame(2))
+        errordlg('Check settings of epochs!', windowname);
+        valid_settings = false; return
+    end
+end
+
+% Timespan defined by time, check format (hh:mm:ss)
+if settings.PROC.timeSpan_format_time
+    if numel(strfind(settings.PROC.timeFrameFrom, ':')) ~= 2 || ...
+            numel(strfind(settings.PROC.timeFrameTo, ':')) ~= 2
+        errordlg('Check format of processing time span (hh:mm:ss)!', windowname);
+        valid_settings = false; return
+    end
 end
 
 
@@ -370,15 +382,15 @@ end
 % check for errors related to estimation of receiver DCBs
 if settings.BIASES.estimate_rec_dcbs && ~prebatch_check
     if num_freq == 1
-        errordlg({'Only 1-Frequency is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation -> Adjustment'}, windowname);
+        errordlg({'Only 1-Frequency is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation / Adjustment)'}, windowname);
         valid_settings = false; return
     end
     if num_freq == 2 && strcmp(settings.IONO.model,'2-Frequency-IF-LCs')
-        errordlg({'Only one 2-Frequency-IF-LC is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation -> Adjustment'}, windowname);
+        errordlg({'2-Frequency IF-LC is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation / Adjustment)'}, windowname);
         valid_settings = false; return
     end
     if strcmp(settings.IONO.model,'3-Frequency-IF-LC')
-        errordlg({'3-Frequency-IF-LC is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation -> Adjustment'}, windowname);
+        errordlg({'3-Frequency IF-LC is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation / Adjustment)'}, windowname);
         valid_settings = false; return
     end
 end
@@ -438,7 +450,7 @@ end
 
 % 3-frequencies enabled, 2xIF-LC is processed and receiver DCB estimation is disabled
 if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && num_freq == 3 && ~settings.BIASES.estimate_rec_dcbs && ~prebatch_check
-    errordlg({'Three frequencies and 2-Frequency-IF-LCs selected:', 'Please enable the receiver DCB estimation or deactivate the 3rd frequency!', '(Menu: Estimation -> Adjustment'}, windowname);
+    errordlg({'Three frequencies and 2-Frequency-IF-LCs selected:', 'Please enable the receiver DCB estimation or deactivate the 3rd frequency!', '(Menu: Estimation / Adjustment)'}, windowname);
     valid_settings = false; return
 end
 
@@ -630,6 +642,14 @@ if settings.INPUT.bool_realtime
         valid_settings = false; return
     end
     
+    % check if strings defined start and end of processing are correctly
+    % formatted
+    if numel(strfind(settings.INPUT.realtime_start_GUI, ':')) ~= 2 || ...
+            numel(strfind(settings.INPUT.realtime_ende_GUI, ':')) ~= 2
+        errordlg('Check format of processing time span (hh:mm:ss)!', windowname);
+        valid_settings = false; return
+    end
+    
     % check if end is after start of processing
     if settings.INPUT.bool_realtime
         % hardcode to call function RealTimeEpochs.m
@@ -641,7 +661,6 @@ if settings.INPUT.bool_realtime
             valid_settings = false; return
         end
     end
-    
 end
 
 % Batch-Processing and real-time processing activated
@@ -755,7 +774,10 @@ if settings.OTHER.CS.l1c1_window <= 0 || settings.OTHER.CS.l1c1_threshold <= 0 |
     valid_settings = false; return
 end
 
-
+if DecoupledClockModel && ~settings.BIASES.estimate_rec_dcbs
+    errordlg({'Decoupled Clock Model requires estimation of Receiver Biases.', 'Activate this estimation on the panel Estimation / Adjustment.'}, windowname);
+    valid_settings = false; return
+end
 
 
 
@@ -885,6 +907,13 @@ if settings.AMBFIX.bool_AMBFIX
         errordlg({'The selected code biases are not suitable for PPP-AR:', settings.BIASES.code}, windowname);
         valid_settings = false; return
     end
+    
+    % PPP-AR is only possible with a Filter
+    if strcmp(settings.ADJ.filter.type, 'No Filter')
+        errordlg({'PPP-AR is only possible with a Filter:', 'Please select a suitable parameter estimation ', 'method on Estimation / Adjustment'}, windowname);
+        valid_settings = false; return
+    end
+    
     
 end
 
@@ -1041,7 +1070,10 @@ if ~prebatch_check && ~isempty(rheader.first_obs) && ~isempty(rheader.last_obs)
     end
 end
 
-
+% check if time system if 'GPS'
+if ~prebatch_check && ~strcmpi(rheader.time_system, 'GPS') && ~isempty(strtrim(rheader.time_system))
+    msgbox({'RINEX File is not in GPS Time: Processing should work.', 'BUT inconsistencies in the output might occur!'}, windowname);
+end
 
 
 %%

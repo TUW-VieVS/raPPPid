@@ -88,6 +88,10 @@ if contains(settings.PROC.name, '$')
         end
         proc_name = strrep(proc_name, '$iono', iono_str);
     end
+    % insert real-time or postprocessed
+    rt_pp = 'pp';
+    if settings.INPUT.bool_realtime; rt_pp = 'rt'; end
+    proc_name = strrep(proc_name, '$rt', rt_pp);     
     % save new manipulated version of processing name
     settings.PROC.name = proc_name;
 end

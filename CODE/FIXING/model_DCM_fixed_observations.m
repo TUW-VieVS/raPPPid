@@ -70,7 +70,7 @@ model_phase_fix = model.rho...                      % theoretical range
     + model.dX_PCV_sat_corr ...                     % Phase Center Variation Satellite
     + model.windup;                                 % Phase Wind-Up
 
-% exlude satellites with cutoff-angle or cycle slip true
+% exlude satellites (e.g., under cutoff angle or with cycle slip)
 model_code_fix(Epoch.exclude) = NaN;
 model_phase_fix(Epoch.exclude | Epoch.cs_found) = NaN;
 

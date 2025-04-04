@@ -534,7 +534,7 @@ try
             handles.radiobutton_models_biases_code_WUM_MGEX.Value = 1;             
         case 'GFZ MGEX'
             handles.radiobutton_models_biases_code_GFZ_MGEX.Value = 1;
-        case 'HUST MGEX'
+        case {'HUST MGEX', 'HUS MGEX'}
             handles.radiobutton_models_biases_code_HUS_MGEX.Value = 1;
         case 'CNES postprocessed'
             handles.radiobutton_models_biases_code_CNES_post.Value = 1;            
@@ -918,21 +918,12 @@ if bool_settings == 1   % do this only for the settings structure
         set(handles.edit_output, 'String', structure.PROC.name);
     end
     
-    try         % set processed time span 
-        set(handles.edit_timeFrame_from, 'String', structure.PROC.timeFrameFrom);
-        set(handles.edit_timeFrame_to, 'String', structure.PROC.timeFrameTo);
-    catch
-        set(handles.edit_timeFrame_from, 'String', structure.PROC.timeFrame(1));
-        set(handles.edit_timeFrame_to,   'String', structure.PROC.timeFrame(2));
-    end
-    
-    % overwrite if processing till end of file
-    if structure.PROC.timeFrame(2) == 999999        
-        set(handles.edit_timeFrame_to, 'String', 'end')
-    end
+    set(handles.edit_timeFrame_from, 'String', structure.PROC.timeFrameFrom);
+    set(handles.edit_timeFrame_to, 'String', structure.PROC.timeFrameTo);
     
     % type of defined time span
     set(handles.radiobutton_timeSpan_format_epochs, 'Value', structure.PROC.timeSpan_format_epochs);
+    try set(handles.radiobutton_timeSpan_format_time,   'Value', structure.PROC.timeSpan_format_time); catch; end
     set(handles.radiobutton_timeSpan_format_SOD,    'Value', structure.PROC.timeSpan_format_SOD);
     set(handles.radiobutton_timeSpan_format_HOD,    'Value', structure.PROC.timeSpan_format_HOD);
        
@@ -953,6 +944,11 @@ try         % ||| remove at some point
     % output
     handles.checkbox_exp_data4plot.Value         = structure.EXP.data4plot;
     handles.checkbox_exp_results_float.Value     = structure.EXP.results_float;
+    try
+        handles.edit_exp_digits_time.String      = structure.EXP.epoch_decimals;
+    catch
+        handles.edit_exp_digits_time.String  	 = '1';
+    end
     handles.checkbox_exp_results_fixed.Value     = structure.EXP.results_fixed;
     handles.checkbox_exp_settings.Value          = structure.EXP.settings;
     handles.checkbox_exp_settings_summary.Value  = structure.EXP.settings_summary;

@@ -69,7 +69,7 @@ inputvar = sprintf('%f %f %f %.0f %f %f %f %f %f %f %f %f', ...
 command_string = [prgrm ' ' modip ' ' ccir ' -c ' inputvar];
 [status, cmdout] = jsystem(command_string, 'noshell');  
 if status ~= 0
-	[status, cmdout] = system(command_string, 'noshell');	% try without jsystem
+    [status, cmdout] = system(command_string);      % try without jsystem
 end
 
 % extract STEC from command output

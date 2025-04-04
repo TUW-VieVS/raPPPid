@@ -482,6 +482,7 @@ else        % read end epoch of processing
     settings.PROC.timeFrame(2) = str2double(get(handles.edit_timeFrame_to, 'String'));
 end
 settings.PROC.timeSpan_format_epochs = get(handles.radiobutton_timeSpan_format_epochs, 'Value');
+settings.PROC.timeSpan_format_time   = get(handles.radiobutton_timeSpan_format_time, 'Value');
 settings.PROC.timeSpan_format_SOD    = get(handles.radiobutton_timeSpan_format_SOD, 'Value');
 settings.PROC.timeSpan_format_HOD    = get(handles.radiobutton_timeSpan_format_HOD, 'Value');
 
@@ -558,6 +559,7 @@ settings.PROC.LLI = handles.checkbox_LLI.Value;
 % output
 settings.EXP.data4plot      = handles.checkbox_exp_data4plot.Value;
 settings.EXP.results_float  = handles.checkbox_exp_results_float.Value;
+settings.EXP.epoch_decimals = handles.edit_exp_digits_time.String;
 settings.EXP.results_fixed  = handles.checkbox_exp_results_fixed.Value;
 settings.EXP.settings       = handles.checkbox_exp_settings.Value;
 settings.EXP.settings_summary = handles.checkbox_exp_settings_summary.Value;

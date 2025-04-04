@@ -12,6 +12,7 @@ function [storeData] = create_output(storeData, obs, settings, q_end)
 %   storeData       struct, updated, collected data from all epochs
 %  
 % Revision:
+%   2025/03/20, MFWG: rec clk errot to time of epoch and flexible #digits
 %   2024/12/17, MFWG: slight improvements, writing output for DCM
 %   2024/01/18, MFWG: comments, improve trafos, output to command 
 %   2023/10/09, MFWG: improving layout of results_float/fixed.txt
@@ -20,9 +21,9 @@ function [storeData] = create_output(storeData, obs, settings, q_end)
 % *************************************************************************
 
 
+
 %% Preparations
 
-obs_int = obs.interval;
 epochs = settings.PROC.epochs(1):settings.PROC.epochs(2)+1;   % processed epochs of the rinex observation file
 
 if isempty(epochs)
@@ -38,15 +39,9 @@ if settings.AMBFIX.bool_AMBFIX
     sigma_posFixed = sqrt(storeData.param_var_fix(:,1:3));      % fixed coordinates variances
 end
 
-% get time of calculated epochs (when printing to file with fprintf this is rounded)
-timeCalculated = storeData.gpstime;         % GPS time, seconds of week
-if obs_int >= 1
-    % round observation interval to full second
-    
-else
-    % round observation interval to 2 decimal places
-    timeCalculated = round(100*storeData.gpstime)/100;
-end
+% get time of calculated epochs (when printing to file with fprintf this 
+% time rounded), receiver clock error is subtracted later
+t_epoch = storeData.gpstime;  	% GPS time, seconds of week
 
 % initialize
 n = size(posFloat,1);
@@ -54,6 +49,11 @@ posFloat_geo = NaN(n,3);
 posFloat_utm = NaN(n,3);
 posFixed_geo = NaN(n,3);
 posFixed_utm = NaN(n,3);
+
+% get number of decimals for timestamp of epoch and prepare printing
+nn = settings.EXP.epoch_decimals;           % number of fractional digits
+format = ['%8.' nn 'f'];                	% format for fprintf
+wspace = repmat(' ', 1, str2double(nn)-1); 	% number of whitespaces to add
 
 
 
@@ -99,11 +99,13 @@ if settings.EXP.results_float
         line_2nd = ['# Reset of float solution in the following epochs: ' num2str(storeData.float_reset_epochs)];
     end   
     % write file depending on PPP model
-    if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
-        % Decoupled Clock Model
-        writeFloatResults_DCM(settings, storeData, line_2nd, fid, q_end, epochs, obs, timeCalculated)
+    if ~strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+        t_epoch = writeFloatResults    (settings, storeData, line_2nd, fid, ...
+            q_end, epochs, obs, t_epoch, format, wspace);
     else
-        writeFloatResults(settings, storeData, line_2nd, fid, q_end, epochs, obs, timeCalculated)
+        % Decoupled Clock Model
+        t_epoch = writeFloatResults_DCM(settings, storeData, line_2nd, fid, ...
+            q_end, epochs, obs, t_epoch, format, wspace);
     end
     fclose(fid);
 end
@@ -122,9 +124,9 @@ if settings.AMBFIX.bool_AMBFIX && settings.EXP.results_fixed    % only if ambigu
     fprintf(fid,'%s\n',['# This file contains all relevant output data of the fixed solution: ' settings.PROC.output_dir]);
     fprintf(fid,'%s\n',line_2nd);
     fprintf(fid,'%s\n','# Columns:');
-    fprintf(fid,'%s\n','# (01) number of epoch');
-    fprintf(fid,'%s\n','# (02) GPS week number');
-    fprintf(fid,'%s\n','# (03) Seconds of GPS week');
+    fprintf(fid,'%s\n','# (01) number of epoch []');
+    fprintf(fid,'%s\n','# (02) GPS week number []');
+    fprintf(fid,'%s\n','# (03) Seconds of GPS week [s]');
     fprintf(fid,'%s\n','# (04) receiver position: x [m]');
     fprintf(fid,'%s\n','# (05) receiver position: y [m]');
     fprintf(fid,'%s\n','# (06) receiver position: z [m]');
@@ -137,16 +139,16 @@ if settings.AMBFIX.bool_AMBFIX && settings.EXP.results_fixed    % only if ambigu
     fprintf(fid,'%s\n','# (13) receiver position: x_UTM [m]');
     fprintf(fid,'%s\n','# (14) receiver position: y_UTM [m]');
     fprintf(fid,'%s\n','#************************************************** ');
-    fprintf(fid,'%s\n','# (1)  (2)       (3)        (4)             (5)             (6)        (7)        (8)        (9)        (10)          (11)             (12)          (13)            (14)');
+    fprintf(fid,'%s\n', ['# (1)  (2)       (3)' wspace '        (4)             (5)             (6)        (7)        (8)        (9)        (10)          (11)             (12)          (13)            (14)']);
     
     % print the data with loop over epochs
-    for q = 1:q_end
-        fprintf(fid,'%4.0f  %4.0f  %8.1f  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %12.9f  %13.10f  %9.4f  %14.6f  %14.6f   \n'   ,   ...
-            epochs(q) , obs.startGPSWeek , timeCalculated(q) , ...
-            posFixed(q,1) , posFixed(q,2) , posFixed(q,3) , ...
-            sigma_posFixed(q,1) , sigma_posFixed(q,2) , sigma_posFixed(q,3) , ... 
-            posFixed_geo(q,1)*180/pi , posFixed_geo(q,2)*180/pi , posFixed_geo(q,3) , ...
-            posFixed_utm(q,1) , posFixed_utm(q,2));
+    for q = 1:q_end   % 1     2           3       4       5       6      7      8      9      10      11      12      13      14
+        fprintf(fid, ['%4.0f  %4.0f  ' format '  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %12.9f  %13.10f  %9.4f  %14.6f  %14.6f   \n']   ,   ...
+            epochs(q) , obs.startGPSWeek , t_epoch(q) , ...  % 1, 2, 3
+            posFixed(q,1) , posFixed(q,2) , posFixed(q,3) , ...     % 4, 5, 6
+            sigma_posFixed(q,1) , sigma_posFixed(q,2) , sigma_posFixed(q,3) , ... % 7, 8, 9
+            posFixed_geo(q,1)*180/pi , posFixed_geo(q,2)*180/pi , posFixed_geo(q,3) , ... % 10, 11, 12
+            posFixed_utm(q,1) , posFixed_utm(q,2));     % 13, 14
     end
     fclose(fid);
     
@@ -165,9 +167,9 @@ if settings.EXP.nmea
     elseif settings.INPUT.use_GPS;        str_sol = 'GP';
     elseif settings.INPUT.use_GLO;        str_sol = 'GL';
     elseif settings.INPUT.use_GAL;        str_sol = 'GA';
-    elseif settings.INPUT.use_GAL;        str_sol = 'BD';  
+    elseif settings.INPUT.use_BDS;        str_sol = 'BD';  
     end
-    UTC = timeCalculated - obs.leap_sec;
+    UTC = t_epoch - obs.leap_sec;
     nmea_path = [settings.PROC.output_dir, '/results.nmea'];
     nsats = sum(full(storeData.C1)~=0,2);   % number of satellites (fishy calculation)
     createNMEAOutput(UTC, posTemp, nmea_path, str_sol, storeData.HDOP, nsats, obs.startdate);
@@ -212,15 +214,17 @@ end
 
 
 
-function [] = writeFloatResults(settings, storeData, line_2nd, fid, ...
-    q_end, epochs, obs, timeCalculated)
+function t_epoch = writeFloatResults(settings, storeData, line_2nd, fid, ...
+    q_end, epochs, obs, t_epoch, format, wspace)
 % settings ... struct, processing settings
 % storeData ... struct, processing results
 % line_2nd ... string, content of second line (e.g., resets)
 % fid ... file to write
 % epochs ... vector, processed epochs
 % obs ... struct, observation-specific variables
-% timeCalculated ... vector, GPS time of each epoch
+% t_epoch ... vector, GPS time of each epoch
+% format ... string, output format of epoch time
+% wspace ... string, whitespaces corresponding to format
 
 % get some variables
 posFloat         = storeData.param(:,1:3);  	% float position, x-y-z
@@ -251,13 +255,26 @@ rec_dcb_13_BDS = storeData.param(:,16);        % estimated DCB between BeiDou fr
 zwd_model = storeData.zwd;
 zhd_model = storeData.zhd;
 
+% subtract receiver clock error from time of epoch:
+% receiver clock error is estimated for first processed GNSS, for all other
+% GNSS a receiver clock offset is estimated
+if settings.INPUT.use_GPS
+    t_epoch = t_epoch - rec_dt_GPS/Const.C;
+elseif settings.INPUT.use_GLO
+    t_epoch = t_epoch - rec_dt_GLO/Const.C;
+elseif settings.INPUT.use_GAL
+    t_epoch = t_epoch - rec_dt_GAL/Const.C;
+elseif settings.INPUT.use_BDS
+    t_epoch = t_epoch - rec_dt_BDS/Const.C;
+end
+
 % first print comment section
 fprintf(fid,'%s\n',['# This file contains all relevant output data of the float solution: ' settings.PROC.output_dir]);
 fprintf(fid,'%s\n', line_2nd);
 fprintf(fid,'%s\n','# Columns:');
-fprintf(fid,'%s\n','# (01) number of epoch');
-fprintf(fid,'%s\n','# (02) GPS week number');
-fprintf(fid,'%s\n','# (03) Seconds of GPS week');
+fprintf(fid,'%s\n','# (01) number of epoch []');
+fprintf(fid,'%s\n','# (02) GPS week number []');
+fprintf(fid,'%s\n','# (03) Seconds of GPS week [s]');
 fprintf(fid,'%s\n','# (04) receiver position: x [m]');
 fprintf(fid,'%s\n','# (05) receiver position: y [m]');
 fprintf(fid,'%s\n','# (06) receiver position: z [m]');
@@ -289,13 +306,13 @@ fprintf(fid,'%s\n','# (31) DCB Galileo frequency 1 and 3 [m]');
 fprintf(fid,'%s\n','# (32) DCB BeiDou frequency 1 and 2 [m]');
 fprintf(fid,'%s\n','# (33) DCB BeiDou frequency 1 and 3 [m]');
 fprintf(fid,'%s\n','#************************************************** ');
-fprintf(fid,'%s\n','# (1)  (2)       (3)        (4)             (5)             (6)        (7)        (8)        (9)        (10)          (11)             (12)          (13)            (14)            (15)            (16)            (17)            (18)       (19)       (20)       (21)       (22)       (23)       (24)       (25)      (26)   (27)   (28)   (29)   (30)   (31)   (32)   (33)');
+fprintf(fid,'%s\n',['# (1)  (2)       (3)' wspace '        (4)             (5)             (6)        (7)        (8)        (9)        (10)          (11)             (12)          (13)            (14)            (15)            (16)            (17)            (18)       (19)       (20)       (21)       (22)       (23)       (24)       (25)      (26)   (27)   (28)   (29)   (30)   (31)   (32)   (33)']);
 
 % print the data with loop over epochs
 for q = 1:q_end
-    %              1      2      3       4       5       6        7      8      9       10       11     12       13     14         15      16     17      18     19       20     21     22     23     24     25     26     27     28     29     30     31     32      33
-    fprintf(fid,'%4.0f  %4.0f  %8.1f  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %12.9f  %13.10f  %9.4f  %14.6f  %14.6f  %14.6f  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  \n'   ,   ...
-        epochs(q) , obs.startGPSWeek , timeCalculated(q) , ...  % 1, 2, 3
+    %                1      2        3          4       5       6      7      8      9      10       11     12      13      14      15      16     17       18     19     20     21     22     23     24     25     26     27     28     29     30     31     32      33
+    fprintf(fid, ['%4.0f  %4.0f  ' format '  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %12.9f  %13.10f  %9.4f  %14.6f  %14.6f  %14.6f  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %9.6f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  %2.3f  \n'],   ...
+        epochs(q) , obs.startGPSWeek , t_epoch(q) , ...  % 1, 2, 3
         posFloat(q,1) , posFloat(q,2) , posFloat(q,3) , ...     % 4, 5, 6
         sigma_posFloat(q,1) , sigma_posFloat(q,2) , sigma_posFloat(q,3) , ...
         posFloat_geo(q,1)*180/pi , posFloat_geo(q,2)*180/pi , posFloat_geo(q,3) , ...
@@ -311,15 +328,21 @@ end
 
 
 
-function [] = writeFloatResults_DCM(settings, storeData, line_2nd, fid, ...
-    q_end, epochs, obs, timeCalculated)
+function t_epoch = writeFloatResults_DCM(settings, storeData, line_2nd, fid, ...
+    q_end, epochs, obs, t_epoch, format, wspace)
 % settings ... struct, processing settings
 % storeData ... struct, processing results
 % line_2nd ... string, content of second line (e.g., resets)
 % fid ... file to write
 % epochs ... vector, processed epochs
 % obs ... struct, observation-specific variables
-% timeCalculated ... vector, GPS time of each epoch
+% t_epoch ... vector, GPS time of each epoch
+% format ... string, output format of epoch time
+% wspace ... string, whitespaces corresponding to format
+
+
+% ||| which/how to consider the receiver clock error for t_epoch?
+
 
 % get variables
 posFloat         = storeData.param(:,1:3);  	% float position, x-y-z
@@ -327,18 +350,38 @@ posFloat_geo     = storeData.posFloat_geo;      % float position, lat-lon-height
 posFloat_utm     = storeData.posFloat_utm;      % float position, UTM_x - UTM_y
 sigma_posFloat   = sqrt(storeData.param_var(:,1:3));	% sigma estimated float position
 delta_zwd        = storeData.param(:,4);        % estimated Zenith Wet Delay
-
+% get receiver code clock error
+rec_clk_code_GPS = storeData.param(:,5);     	% GPS code receiver clock error
+rec_clk_code_GLO = storeData.param(:,6);     	% GLONASS code receiver clock error
+rec_clk_code_GAL = storeData.param(:,7);     	% Galileo code receiver clock error
+rec_clk_code_BDS = storeData.param(:,8);     	% BeiDou code receiver clock error
+rec_clk_code_QZS = storeData.param(:,9);     	% QZSS code receiver clock error
 % read the a priori zwd and zhd, those are equal for all satellites
 zwd_model = storeData.zwd;
 zhd_model = storeData.zhd;
+
+% subtract receiver CODE clock error from time of epoch:
+% receiver CODE clock error is estimated for each processed GNSS ->
+% subtract receiver code clock error of first processed GNSS
+if settings.INPUT.use_GPS
+    t_epoch = t_epoch - rec_clk_code_GPS/Const.C;
+elseif settings.INPUT.use_GLO
+    t_epoch = t_epoch - rec_clk_code_GLO/Const.C;
+elseif settings.INPUT.use_GAL
+    t_epoch = t_epoch - rec_clk_code_GAL/Const.C;
+elseif settings.INPUT.use_BDS
+    t_epoch = t_epoch - rec_clk_code_BDS/Const.C;
+elseif settings.INPUT.use_BDS
+    t_epoch = t_epoch - rec_clk_code_QZS/Const.C;
+end
 
 % first print comment section
 fprintf(fid,'%s\n',['# This file contains all relevant output data of the float solution: ' settings.PROC.output_dir]);
 fprintf(fid,'%s\n', line_2nd);
 fprintf(fid,'%s\n','# Columns:');
-fprintf(fid,'%s\n','# (01) number of epoch');
-fprintf(fid,'%s\n','# (02) GPS week number');
-fprintf(fid,'%s\n','# (03) Seconds of GPS week');
+fprintf(fid,'%s\n','# (01) number of epoch []');
+fprintf(fid,'%s\n','# (02) GPS week number []');
+fprintf(fid,'%s\n','# (03) Seconds of GPS week [s]');
 % position
 fprintf(fid,'%s\n','# (04) receiver position: x [m]');
 fprintf(fid,'%s\n','# (05) receiver position: y [m]');
@@ -356,13 +399,13 @@ fprintf(fid,'%s\n','# (15) estimated zwd [m]');
 fprintf(fid,'%s\n','# (16) zwd (a priori + estimate) [m]');
 fprintf(fid,'%s\n','# (17) zhd modelled [m]');
 fprintf(fid,'%s\n','#************************************************** ');
-fprintf(fid,'%s\n','# (1)  (2)       (3)        (4)              (5)             (6)        (7)        (8)        (9)        (10)           (11)             (12)          (13)            (14)       (15)       (16)      (17)');
+fprintf(fid,'%s\n', ['# (1)  (2)       (3)' wspace '        (4)              (5)             (6)        (7)        (8)        (9)        (10)           (11)             (12)          (13)            (14)       (15)       (16)      (17)']);
 
 % print the data with loop over epochs
 for q = 1:q_end
-    %              1      2      3       4       5       6      7      8      9      10      11      12      13      14      15    16     17     
-    fprintf(fid,'%4.0f  %4.0f  %8.1f  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %12.9f  %13.10f  %9.4f  %14.6f  %14.6f  %9.6f  %9.6f  %2.3f  \n'   ,   ...
-        epochs(q) , obs.startGPSWeek , timeCalculated(q) , ...  % 1, 2, 3
+    %               1      2         3         4       5       6      7      8      9      10      11      12      13      14      15    16     17     
+    fprintf(fid, ['%4.0f  %4.0f  ' format '  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %12.9f  %13.10f  %9.4f  %14.6f  %14.6f  %9.6f  %9.6f  %2.3f  \n']   ,   ...
+        epochs(q) , obs.startGPSWeek , t_epoch(q) , ...  % 1, 2, 3
         posFloat(q,1) , posFloat(q,2) , posFloat(q,3) , ...     % 4, 5, 6
         sigma_posFloat(q,1) , sigma_posFloat(q,2) , sigma_posFloat(q,3) , ...
         posFloat_geo(q,1)*180/pi , posFloat_geo(q,2)*180/pi , posFloat_geo(q,3) , ...

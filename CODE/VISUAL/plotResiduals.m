@@ -180,7 +180,7 @@ end
 
 
 
-%% residuals over elevation, frequency 1
+%% residuals over C/N0, frequency 1
 % ||| experimental
 
 % ivall = 3;      % to make plot clearer

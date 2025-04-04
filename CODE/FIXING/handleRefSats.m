@@ -128,10 +128,10 @@ end
 
 %% change to new reference satellites
 if any(newRefSat) || any(changeRefSat)
-    if strcmp(settings.IONO.model, '2-Frequency-IF-LCs')
+    if ~strcmp(settings.IONO.model, 'Estimate, decoupled clock')
         Epoch = change2refSat_IF(settings, Epoch, newRefSat, changeRefSat, ...
             OldRefSat_G, OldRefSat_R, OldRefSat_E, OldRefSat_C, OldRefSat_J);
-    elseif strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+    else    % Decoupled Clock Model
         [Adjust, Epoch] = change2refSat_DCM(Adjust, settings, Epoch, newRefSat, changeRefSat, ...
             OldRefSat_G, OldRefSat_R, OldRefSat_E, OldRefSat_C, OldRefSat_J);
     end    

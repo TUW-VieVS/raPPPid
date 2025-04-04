@@ -34,7 +34,6 @@ isGAL = repmat(Epoch.gal,  num_freq, 1);
 isBDS = repmat(Epoch.bds,  num_freq, 1); 
 isQZS = repmat(Epoch.qzss, num_freq, 1);  	
 
-
 NO_PARAM = Adjust.NO_PARAM;
 s_f = n*num_freq;                   % satellites x frequencies
 exclude = Epoch.exclude(:);         % satellite excluded?
@@ -46,8 +45,6 @@ sat_z = repmat(model.Rot_X(3,:)', 1, num_freq);   % satellite ECEF position z
 
 
 %% Create Design Matrix and observed-minus-computed
-% ||| initialize Design matrix
-% A   = zeros(2*s_f, NO_PARAM+s_f);
 % initialize observed minus computed observation row vector [2 * #sats * #frequencies]
 omc = zeros(2*s_f,1);                  
 code_row = 1:2:2*s_f;   	% rows for code  obs [1,3,5,7,...]
@@ -100,14 +97,25 @@ bias_L3 = [isGPS.*f3rd, isGLO.*f3rd, isGAL.*f3rd, isBDS.*f3rd, isQZS.*f3rd];
 
 % Ambiguities
 amb_p = eye(s_f,s_f);       % ambiguity N expressed in meters
-% ambiguities of reference satellite are not estimated
-amb_p(Epoch.refSatGPS_idx,Epoch.refSatGPS_idx) = 0;
+
+% ambiguities of reference satellite are not estimated -> set entry of 
+% Design Matrix to zero
+amb_p(Epoch.refSatGPS_idx,Epoch.refSatGPS_idx) = 0;     % 1st frequency
+amb_p(Epoch.refSatGLO_idx,Epoch.refSatGLO_idx) = 0;
 amb_p(Epoch.refSatGAL_idx,Epoch.refSatGAL_idx) = 0;
-amb_p(Epoch.refSatGPS_idx+n,Epoch.refSatGPS_idx+n) = 0;
+amb_p(Epoch.refSatBDS_idx,Epoch.refSatBDS_idx) = 0;
+amb_p(Epoch.refSatQZS_idx,Epoch.refSatQZS_idx) = 0;
+amb_p(Epoch.refSatGPS_idx+n,Epoch.refSatGPS_idx+n) = 0; % 2nd frequency
+amb_p(Epoch.refSatGLO_idx+n,Epoch.refSatGLO_idx+n) = 0;
 amb_p(Epoch.refSatGAL_idx+n,Epoch.refSatGAL_idx+n) = 0;
+amb_p(Epoch.refSatBDS_idx+n,Epoch.refSatBDS_idx+n) = 0;
+amb_p(Epoch.refSatQZS_idx+n,Epoch.refSatQZS_idx+n) = 0;
 if num_freq > 2      % 3rd frequency is processed
-    amb_p(Epoch.refSatGPS_idx+2*n,Epoch.refSatGPS_idx+2*n) = 0;
+    amb_p(Epoch.refSatGPS_idx+2*n,Epoch.refSatGPS_idx+2*n) = 0; % 3rd frequency
+    amb_p(Epoch.refSatGLO_idx+2*n,Epoch.refSatGLO_idx+2*n) = 0;
     amb_p(Epoch.refSatGAL_idx+2*n,Epoch.refSatGAL_idx+2*n) = 0;
+    amb_p(Epoch.refSatBDS_idx+2*n,Epoch.refSatBDS_idx+2*n) = 0;
+    amb_p(Epoch.refSatQZS_idx+2*n,Epoch.refSatQZS_idx+2*n) = 0;
 end
 
 % --- Build A-Matrix without ionosphere submatrix
@@ -136,10 +144,6 @@ A_iono(phase_row,:) = -A_iono(phase_row,:); 	% change sign for phase observation
 A = [A, A_iono];
 
 
-
-
 %% save in Adjust
 Adjust.A = A;
 Adjust.omc = omc;
-
-

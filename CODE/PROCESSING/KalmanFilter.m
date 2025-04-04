@@ -63,7 +63,7 @@ Q_x_adj = (Q_x_adj + Q_x_adj')/2;       % to ensure that matrix is symmetric (e.
 
 %% save results
 idx = ~zero_columns;
-Adjust.param(idx) = x_adj;       	% save estimated parameters
-Adjust.param_sigma(idx,idx)  = Q_x_adj;  % for filtering in adjustmentPreparation.m used
-Adjust.float = true;                % valid float solution
+Adjust.param(idx) = x_adj;              % save estimated parameters
+Adjust.param_sigma(idx,idx)  = Q_x_adj; % for filtering in adjustmentPreparation.m used
+Adjust.float = true;                    % valid float solution
 

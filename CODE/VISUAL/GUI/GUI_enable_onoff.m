@@ -3,9 +3,9 @@ function handles = GUI_enable_onoff(handles)
 % activated settings
 %
 % INPUT:
-%	handles         from raPPPid GUI
+%	handles         struct, from raPPPid GUI
 % OUTPUT:
-%	handles         updated
+%	handles         struct, updated (e.g., Visiblity, Enable)
 %
 % Revision:
 %   ...
@@ -16,7 +16,7 @@ function handles = GUI_enable_onoff(handles)
 
 batch_proc = handles.checkbox_batch_proc.Value;
 proc_meth = handles.popupmenu_process.String(handles.popupmenu_process.Value);
-bool_decoupled_clock_model = strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate, decoupled clock');
+bool_DCM = strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate, decoupled clock');
 
 
 % enable/disable Download button
@@ -24,6 +24,16 @@ set(handles.pushbutton_download,'Enable','Off');
 if batch_proc || (isfield(handles, 'paths') && (~isempty(handles.paths.obs_1) || ~isempty(handles.paths.obs_2)))
     set(handles.pushbutton_download,'Enable','On');
 end
+
+% enable/disable Delete and Results button
+set(handles.pushbutton_delete,  'Enable','Off');
+set(handles.pushbutton_results, 'Enable','Off');
+if isfield(handles, 'paths') && ~isempty(handles.paths.lastproc) && ...
+        isfolder(handles.paths.lastproc)
+    set(handles.pushbutton_delete,  'Enable','On');
+    set(handles.pushbutton_results, 'Enable','On');
+end
+
 
 
 
@@ -602,7 +612,7 @@ if strcmpi(handles.uipanel_ambiguityFixing.Visible, 'on')
     
     % choice of reference satellite
     handles.uibuttongroup_refSat.Visible = onoff;
-    if bool_decoupled_clock_model
+    if bool_DCM
         handles.uibuttongroup_refSat.Visible = 'On';
     end
     % manual choice of reference satellite
@@ -635,8 +645,14 @@ if strcmpi(handles.uipanel_ambiguityFixing.Visible, 'on')
     handles.edit_fixing_window.Visible = onoff;
     handles.edit_hmw_thresh.Visible = onoff;
     
-
-    
+    % show fixing start depending on ionosphere processing model
+    if bool_DCM
+        handles.text_start_WL.String = 'Start Fixing after                                seconds';
+        handles.text_start_NL.Visible = 'Off';
+        handles.edit_start_NL.Visible = 'Off';
+    else
+        handles.text_start_WL.String = 'Start WL-Fixing after                        seconds';
+    end
     
 end
 
@@ -734,39 +750,35 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
         set(handles.popupmenu_filter_qzss_offset_dynmodel, 'Enable', 'Off');
     end
     
-    % checkbox: estimate receiver DCBs
-    handles.checkbox_estimate_rec_dcbs.Enable = 'Off';
-    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate') || ...
-            strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint')
-        handles.checkbox_estimate_rec_dcbs.Enable = 'On';
-    end
-    
     % handle receiver DCBs / receiver biases
-    if bool_decoupled_clock_model
+    if bool_DCM
         % Decoupled clock Model
         handles.text_rec_dcbs.String = 'Receiver Biases:';
-        handles.text_rec_dcbs.Enable = 'On';
-        handles.edit_filter_dcbs_sigma0.Enable = 'On';
-        handles.edit_filter_dcbs_Q.Enable = 'On';
-        set(handles.text_dcbs_m, 'Enable', 'On');
-        set(handles.popupmenu_filter_dcbs_dynmodel, 'Enable', 'On');
     else
         % Receiver clocks are not decoupled
         handles.text_rec_dcbs.String = 'Receiver DCBs:';
-        % estimation of receiver DCBs
-        if handles.checkbox_estimate_rec_dcbs.Value
-            handles.text_rec_dcbs.Enable = 'On';
-            handles.edit_filter_dcbs_sigma0.Enable = 'On';
-            handles.edit_filter_dcbs_Q.Enable = 'On';
-            set(handles.text_dcbs_m, 'Enable', 'On');
-            set(handles.popupmenu_filter_dcbs_dynmodel, 'Enable', 'On');
-        else
-            handles.text_rec_dcbs.Enable = 'Off';
-            handles.edit_filter_dcbs_sigma0.Enable = 'Off';
-            handles.edit_filter_dcbs_Q.Enable = 'Off';
-            set(handles.text_dcbs_m, 'Enable', 'Off');
-            set(handles.popupmenu_filter_dcbs_dynmodel, 'Enable', 'Off');
-        end
+    end
+    
+    % check if initial std and system of Receiver Biases/DCBs should be enabled
+    handles.checkbox_estimate_rec_dcbs.Enable = 'On';
+    onoff = 'Off';
+    if bool_DCM || strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate') || ...
+            strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint')
+        onoff = 'On';
+    end
+    set(handles.text_rec_dcbs, 'Enable', onoff);
+    set(handles.edit_filter_dcbs_sigma0, 'Enable', onoff);
+    set(handles.edit_filter_dcbs_Q, 'Enable', onoff);
+    set(handles.text_dcbs_m, 'Enable', onoff);
+    set(handles.popupmenu_filter_dcbs_dynmodel, 'Enable', onoff);
+    
+    % checkbox: estimate receiver DCBs
+    if ~handles.checkbox_estimate_rec_dcbs.Value
+        handles.text_rec_dcbs.Enable = 'Off';
+        handles.edit_filter_dcbs_sigma0.Enable = 'Off';
+        handles.edit_filter_dcbs_Q.Enable = 'Off';
+        set(handles.text_dcbs_m, 'Enable', 'Off');
+        set(handles.popupmenu_filter_dcbs_dynmodel, 'Enable', 'Off');
     end
     
     % Float ambiguities
@@ -793,7 +805,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     % Check ionosphere model
     if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint') || ...
             strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate') || ...
-            bool_decoupled_clock_model
+            bool_DCM
         % filter settings
         set(handles.edit_filter_iono_Q,             'Enable', 'On');
         set(handles.edit_filter_iono_sigma0,        'Enable', 'On');
@@ -943,6 +955,7 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
     set(handles.edit_timeFrame_to, 'Enable', onoff);
     set(handles.text62, 'Enable', onoff);
     set(handles.radiobutton_timeSpan_format_epochs, 'Enable', onoff);
+    set(handles.radiobutton_timeSpan_format_time, 'Enable', onoff);
     set(handles.radiobutton_timeSpan_format_SOD, 'Enable', onoff);
     set(handles.radiobutton_timeSpan_format_HOD, 'Enable', onoff);
     
@@ -973,6 +986,7 @@ if strcmpi(handles.uipanel_export.Visible, 'on')
     else
         handles.checkbox_exp_results_fixed.Enable = 'off';
     end
+    
     
     % Variables - storeData
     if handles.checkbox_exp_storeData.Value

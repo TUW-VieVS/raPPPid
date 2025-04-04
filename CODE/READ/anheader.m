@@ -354,7 +354,7 @@ if ~isempty(interval)
     obs.interval = interval;    % take from RINEX header
 else
     [~, ~, interval] = analyzeRinexName(path_file);     % take from filename
-    if ~isempty(interval)
+    if isempty(interval)
         interval = extractObsInterval(path_file);       % calculate from first two epochs
     end
     obs.interval = interval;

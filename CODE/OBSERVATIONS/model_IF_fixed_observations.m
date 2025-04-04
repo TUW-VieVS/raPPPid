@@ -19,26 +19,11 @@ function [model_code_fix, model_phase_fix] = ...
 
 
 %% Get variables
-isGPS = Epoch.gps;
-isGLO = Epoch.glo;
-isGAL = Epoch.gal;
-isBDS = Epoch.bds;
-isQZS = Epoch.qzss;
-% modelled ionospheric delay
-model_iono = model.iono;
-% wet tropo estimation from float solution (mfw * estimated ZWD)
+% residual sland tropospheric wet delay from float solution =
+% (wet mapping function * estimated residual ZWD)
 r_wet_tropo = model.mfw * param_float(4);
-% estimated value for receiver clock error from float adjustment
-rec_clk_gps = param_float(5);                       % GPS
-rec_clk_glo = param_float(5) + param_float(8);      % GLONASS
-rec_clk_gal = param_float(5) + param_float(11);     % Galileo
-rec_clk_bds = param_float(5) + param_float(14);     % BeiDou
-rec_clk_qzs = param_float(5) + param_float(17);     % QZSS
-
 % build receiver clock error
 model = getReceiverClockBiases(model, Epoch, param_float, settings);
-
-
 
 
 %% Model observations
@@ -48,7 +33,7 @@ model_code_fix = model.rho ...                        	% theoretical range
     + model.dt_rx_clock ...                             % receiver clock error
     - model.dcbs ...                                    % receiver DCBs
     + model.trop + r_wet_tropo ...                    	% troposphere
-    + model_iono ...                                 	% ionosphere
+    + model.iono ...                                 	% ionosphere
     - model.dX_solid_tides_corr ...                 	% solid tides
 	- model.dX_ocean_loading ...                   		% ocean loading	
 	- model.dX_polar_tides ...                   		% pole tide
@@ -65,7 +50,7 @@ model_phase_fix = model.rho ...                         % theoretical range
     + model.dt_rx_clock ...                             % receiver clock
     - model.dcbs ...                                    % receiver DCBs    
     + model.trop + r_wet_tropo ...                   	% troposphere
-    - model_iono ...                                    % ionosphere
+    - model.iono ...                                    % ionosphere
     - model.dX_solid_tides_corr ...                  	% solid tides
 	- model.dX_ocean_loading ...                   		% ocean loading	
 	- model.dX_polar_tides ...                   		% pole tide
