@@ -11,6 +11,7 @@ function brdc_file_path = DownloadBrdcNavMess(yyyy, doy, option, bool_print)
 %	brdc_file_path      string, full relative filepath
 %
 % Revision:
+%   2025/06/02, MFWG    change of CDDIS source
 %   2023/03/15, MFG     download all brdc nav message from here
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -31,7 +32,7 @@ FTP_h_esa = 'gssc.esa.int:21';
 FTP_f_esa = {['/gnss/data/daily/', yyyy, '/brdc/']};
 % define alternative FTP host and folder
 URL_cddis = 'https://cddis.nasa.gov'; 
-folder_cddis = ['/archive/gnss/data/daily/' yyyy '/brdc/'];  
+folder_cddis = ['/archive/gnss/data/daily/' yyyy '/' doy '/' yyyy(3:4) 'p'];  
 
 % booleans for sources
 bool_ign = true; bool_esa = true; bool_cddis = true;
@@ -83,7 +84,11 @@ if bool_esa && file_status == 0
 end
 % try to download from CDDIS 
 if bool_cddis && file_status == 0
-   file_status = get_cddis_data(URL_cddis, {folder_cddis}, file(1), {target_nav}, bool_print);
+   file_status = get_cddis_data(URL_cddis, {folder_cddis}, file(1), target_nav, bool_print);
+end
+if bool_cddis && file_status == 0
+   file = {['BRDM00DLR_R_' yyyy doy '0000_01D_MN.rnx.gz']};   % seems to be reliable
+   file_status = get_cddis_data(URL_cddis, {folder_cddis}, file, target_nav, bool_print);
 end
 
 % unzip downloaded file

@@ -22,15 +22,15 @@ if ~settings.BIASES.estimate_rec_dcbs
     set(handles.checkbox_plot_dcb,      'Enable', 'off');
 end
 if ~contains(settings.PROC.method, 'Phase')       % phase not processed
-    set(handles.checkbox_plot_float_amb,'Enable', 'off'); 
-    set(handles.checkbox_plot_fixed_amb,'Enable', 'off');
+    set(handles.checkbox_plot_amb,'Enable', 'off'); 
+%    set(handles.checkbox_plot_fixed_amb,'Enable', 'off');
     set(handles.checkbox_plot_cov_amb, 	'Enable', 'off');
-    set(handles.checkbox_plot_float_amb,'Value', 0);
-    set(handles.checkbox_plot_fixed_amb,'Value', 0);
+    set(handles.checkbox_plot_amb,'Value', 0);
+%    set(handles.checkbox_plot_fixed_amb,'Value', 0);
     set(handles.checkbox_plot_cov_amb, 	'Value', 0);
 end
 if ~settings.AMBFIX.bool_AMBFIX                     % no Ambiguity Fixing
-    set(handles.checkbox_plot_fixed_amb,    'Enable', 'off');
+%    set(handles.checkbox_plot_fixed_amb,    'Enable', 'off');
     set(handles.radiobutton_plot_fixed,     'Enable', 'off');
     set(handles.radiobutton_plot_fixed,     'Value', 0);
     set(handles.radiobutton_plot_float,     'Value', 1);

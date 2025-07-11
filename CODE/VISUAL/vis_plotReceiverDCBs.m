@@ -1,4 +1,4 @@
-function vis_plotReceiverDCBs(hours, strXAxis, param, reset_h, settings, obs)
+function vis_plotReceiverDCBs(hours, strXAxis, param, reset_h, settings, obs, NO_PARAM)
 % Plots estimated receiver differential code biases
 % 
 % INPUT: 
@@ -8,6 +8,7 @@ function vis_plotReceiverDCBs(hours, strXAxis, param, reset_h, settings, obs)
 %   reset_h     vector, time of resets in hours
 %   settings    struct, processing settings (from GUI)
 %   obs         struct, containing observable specific data
+%   NO_PARAM    number of estimated parameters
 % OUTPUT:
 %   []
 % using vline.m or hline.m (c) 2001, Brandon Kuczenski
@@ -34,27 +35,29 @@ subplot(1+strcmp(settings.BIASES.code, 'CAS Multi-GNSS DCBs'), noGNSS, 1:noGNSS)
 leg_cell = {};
 diff_gps = []; diff_glo = []; diff_gal = [];  diff_bds = []; 
 
+d = NO_PARAM - DEF.NO_PARAM_ZD;	% shift in index due to new parameters
+
 
 
 %% plot estimated receiver DCBs of for GNSS
 if isGPS
-    leg_cell = plot_DCBs(leg_cell, hours, param( 6,:), param( 7,:), ...
+    leg_cell = plot_DCBs(leg_cell, hours, param( 9+d,:), param(10+d,:), ...
         'GPS', 'r', no_dcbs, obs.GPS);       % GPS
 end
 if isGLO
-    leg_cell = plot_DCBs(leg_cell, hours, param( 9,:), param(10,:), ...
+    leg_cell = plot_DCBs(leg_cell, hours, param(12+d,:), param(13+d,:), ...
         'GLO', 'c', no_dcbs, obs.GLO);       % Glonass
 end
 if isGAL
-    leg_cell = plot_DCBs(leg_cell, hours, param(12,:), param(13,:), ...
+    leg_cell = plot_DCBs(leg_cell, hours, param(15+d,:), param(16+d,:), ...
         'GAL', 'b', no_dcbs, obs.GAL);       % Galileo
 end
 if isBDS
-    leg_cell = plot_DCBs(leg_cell, hours, param(15,:), param(16,:), ...
+    leg_cell = plot_DCBs(leg_cell, hours, param(18+d,:), param(19+d,:), ...
         'BDS', 'm', no_dcbs, obs.BDS);       % BeiDou
 end
 if isQZSS
-    leg_cell = plot_DCBs(leg_cell, hours, param(18,:), param(18,:), ...
+    leg_cell = plot_DCBs(leg_cell, hours, param(21+d,:), param(22+d,:), ...
         'QZSS', 'g', no_dcbs, obs.QZSS);     % QZSS
 end
 

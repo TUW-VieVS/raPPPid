@@ -24,6 +24,11 @@ classdef F
         KFI_coord_noise     = 0;
         KFI_coord_model 	= 1;
         
+        % coordinates
+        KFI_velocity_std  	= 1000;
+        KFI_velocity_noise 	= 10;
+        KFI_velocity_model 	= 1;
+        
         % zenith wet delay
         KFI_zwd_std         = 0.10;
         KFI_zwd_noise       = 0.005;
@@ -67,6 +72,11 @@ classdef F
         K_coord_noise       = 0;
         K_coord_model       = 1;
         
+        % coordinates
+        K_velocity_std    	= 100;
+        K_velocity_noise 	= 0;
+        K_velocity_model  	= 1;
+        
         % zenith wet delay
         K_zwd_std           = 0.10;
         K_zwd_noise         = 0.005;
@@ -76,11 +86,19 @@ classdef F
         K_clk_std           = 30000;
         K_clk_noise         = 300;
         K_clk_model         = 1;
+        % receiver clock (decoupled clock model)
+        K_clk_std_dcm       = 300000;
+        K_clk_noise_dcm     = 300000;
+        K_clk_model_dcm     = 1;
         
         % receiver clock offset from GPS to GNSS
         K_clk_offset_std    = 30;
         K_clk_offset_noise  = 5;
         K_clk_offset_model  = 1;
+        % receiver clock offset from GPS to GNSS (decoupled clock model)
+        K_clk_offset_std_dcm    = 300000;
+        K_clk_offset_noise_dcm  = 300000;
+        K_clk_offset_model_dcm  = 1;
         
         % receiver biases
         K_dcb_std           = 10;

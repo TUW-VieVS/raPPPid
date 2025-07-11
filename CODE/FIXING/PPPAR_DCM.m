@@ -1,30 +1,20 @@
-function [Epoch, Adjust] = PPPAR_DCM(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, model)
+function [Epoch, Adjust] = PPPAR_DCM(Adjust, Epoch, settings)
 % Fix ambiguities and calculating fixed position with the decoupled clock
 % model.
 %
 % INPUT:
-%	HMW_12,...      Hatch-Melbourne-Wübbena LC observables
 % 	Adjust          adjustment data and matrices for current epoch [struct]
 %	Epoch           epoch-specific data for current epoch [struct]
 %	settings        settings from GUI [struct]
-%   model           modeled error-sources and observations [struct]
 % OUTPUT:
 %	Adjust          updated
 %	Epoch           updated
 %
 % Revision:
-%   2024/12/30, MFWG: switching to LAMBDA 4.0
+%   ...
 %
 % This function belongs to raPPPid, Copyright (c) 2024, M.F. Wareyka-Glaner
 % *************************************************************************
-
-
-% check if fixing has started
-start_epoch_fixing = settings.AMBFIX.start_fixing(end,:);   % current start epochs for EW, WL, NL
-if Epoch.q < max(start_epoch_fixing)
-    return
-end
-
 
 
 
@@ -38,40 +28,76 @@ idx_N = NO_PARAM+1 : NO_PARAM+s_f;      % indices of float ambiguities
 
 
 
-%% get float ambiguities and convert to cycles
+%% float ambiguities
 
 % indices of frequencies
 idx_N1 = (NO_PARAM +             1):(NO_PARAM +   no_sats);     % 1st frequency
 idx_N2 = (NO_PARAM +   no_sats + 1):(NO_PARAM + 2*no_sats);     % 2nd frequency
 idx_N3 = (NO_PARAM + 2*no_sats + 1):(NO_PARAM + 3*no_sats);     % 3rd frequency
-% get float ambiguities
-N1 = Adjust.param(idx_N1);      % 1st frequency
-N2 = Adjust.param(idx_N2);      % 2nd frequency
-N3 = Adjust.param(idx_N3);      % 3rd frequency
-% convert to cycles
+
+% get float ambiguities and convert from meters to cycles
+N1 = Adjust.param(idx_N1);          % 1st frequency
 N1_cy = N1 ./ Epoch.l1;
-N2_cy = N2 ./ Epoch.l2;
-N3_cy = N3 ./ Epoch.l3;
-N_cy = [N1_cy; N2_cy; N3_cy];
+if proc_frqs >= 2
+    N2 = Adjust.param(idx_N2);      % 2nd frequency
+    N2_cy = N2 ./ Epoch.l2;
+end
+if proc_frqs >= 3
+    N3 = Adjust.param(idx_N3);      % 3rd frequency
+    N3_cy = N3 ./ Epoch.l3;
+end
+
+% stack all ambiguities in one vector
+N_cy = N1_cy;
+if proc_frqs == 2
+    N_cy = [N1_cy; N2_cy];
+elseif proc_frqs == 3
+    N_cy = [N1_cy; N2_cy; N3_cy];
+end
 
 
 
 
-%% get covariance matrix of float ambiguities
 
-Q_NN = Adjust.param_sigma(idx_N, idx_N);      % covariance matrix of float ambiguities
+%% covariance matrix
+
+% covariance matrix of float ambiguities [m]
+Q_NN = Adjust.param_sigma(idx_N, idx_N);  
+
+% wavelength of all observations
+wl = Epoch.l1;
+if proc_frqs == 2
+    wl = [Epoch.l1; Epoch.l2;];
+elseif proc_frqs == 3
+    wl = [Epoch.l1; Epoch.l2; Epoch.l3];
+end
+
+% convert unit of covariance matrix from meters to cycles
+Q_NN = Q_NN ./ wl;          % divide rows by wavelength
+Q_NN = Q_NN ./ wl';         % divide columns by wavelength
+Q_NN = (Q_NN + Q_NN')./2;   % due to numerical reasons after the division
 
 
-%% exclude unfixable satellites
 
-% exclude reference satellites from fixing ||| really?
+%% exclude unfixable ambiguities
 fixit = Epoch.fixable & ~Epoch.exclude; 	% boolean, can phase ambiguity be fixed?
+
+% exclude reference satellites from fixing
 fixit(Epoch.refSatGPS_idx,:) = false;
 fixit(Epoch.refSatGLO_idx,:) = false;
 fixit(Epoch.refSatGAL_idx,:) = false;
 fixit(Epoch.refSatBDS_idx,:) = false;
 fixit(Epoch.refSatQZS_idx,:) = false;
+
+% exclude ambiguities with invalid observations
+fixit(isnan(Epoch.code(:) ) | Epoch.code(:)  == 0) = false;
+fixit(isnan(Epoch.phase(:)) | Epoch.phase(:) == 0) = false;
+
+% exclude GLONASS satellites from fixing
+fixit(Epoch.glo, :) = false;
+
 fixit = fixit(:);
+
 
 
 %% Fixing with LAMBDA 
@@ -83,7 +109,6 @@ Q_NN_sub = Q_NN(fixit, fixit);
 
 % check if any ambiguities can be fixed at all
 if all(~fixit)
-    Adjust = fixing_failed(Adjust);
     return
 end
 
@@ -99,28 +124,21 @@ N_fix_sub(~bool_int) = NaN;
 N_(fixit) = N_fix_sub;
 N_(~fixit) = NaN;
 
-% save fixed N1, N2, N3 to Adjust; they are used in the fixed adjustment
+% convert ambiguity vectors to matrix and set fixed ambiguities of
+% reference satellites to zero
 N_ = reshape(N_, [no_sats proc_frqs]);
+N_(Epoch.refSatGPS_idx,:) = 0;
+% N_(Epoch.refSatGLO_idx,:) = 0;
+N_(Epoch.refSatGAL_idx,:) = 0;
+N_(Epoch.refSatBDS_idx,:) = 0;
+N_(Epoch.refSatQZS_idx,:) = 0;
+
+% save fixed ambiguities in a matrix [n_sats x 3]
 N__ = NaN(no_sats, 3);
 N__(:,1:proc_frqs) = N_;
+
+% save fixed N1, N2, N3 to Adjust for the fixed adjustment
 Adjust.N1_fixed = N__(:, 1);
 Adjust.N2_fixed = N__(:, 2);
 Adjust.N3_fixed = N__(:, 3);
 
-
-%% FIXED POSITION
-if sum( sum(~isnan(N__)) > 1 ) >= 3         % ||| check condition
-
-    [Adjust, Epoch] = fixedAdjustment_DCM(Epoch, Adjust, model, settings);
-else           	% not enough ambiguities fixed to calcute fixed solution
-    Adjust = fixing_failed(Adjust);
-end
-
-
-
-
-function Adjust = fixing_failed(Adjust)
-% This function is called if the fixing is impossible or failed to reset
-% the struct Adjust in the correct way
-Adjust.xyz_fix(1:3) = NaN;
-Adjust.fixed = false;

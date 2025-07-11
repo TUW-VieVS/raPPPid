@@ -46,7 +46,8 @@ q_2 = plot(dT_all, q95_ztd*100,	'LineStyle', '-', 'Color', [0 .0200 .55], 'linew
 
 
 % Style
-title([sprintf('%.0f', n_conv) ' Convergence Periods'])
+if PlotStruct.float; sol='float'; elseif PlotStruct.fixed; sol='fixed'; end
+title([sprintf('%.0f', n_conv) ' Convergence Periods, ' sol])
 ylabel('ZTD Error [cm]')
 xlabel('Time [minutes]')
 legend([q_1 q_2], {'68% Quantile', '95% Quantile'})

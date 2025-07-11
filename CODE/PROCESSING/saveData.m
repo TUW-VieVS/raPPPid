@@ -79,10 +79,14 @@ if strcmpi(settings.PROC.method,'Code + Phase')
     % residuals from adjustment
     code_rows = 1:2:2*s_f;
 	phase_rows = 2:2:2*s_f;
-	temp_code_res  = reshape(Adjust.res(code_rows), 1, no_sats, proc_frqs);
-	temp_phase_res = reshape(Adjust.res(phase_rows), 1, no_sats, proc_frqs);
-    storeData.residuals_code_1(q,prns) = temp_code_res(:,:,1);      
-    storeData.residuals_phase_1(q,prns) = temp_phase_res(:,:,1);
+    if strcmp(settings.IONO.model, 'GRAPHIC')
+        storeData.residuals_code_1(q,prns) = Adjust.res;
+    else
+        temp_code_res  = reshape(Adjust.res(code_rows), 1, no_sats, proc_frqs);
+        temp_phase_res = reshape(Adjust.res(phase_rows), 1, no_sats, proc_frqs);
+        storeData.residuals_code_1(q,prns) = temp_code_res(:,:,1);
+        storeData.residuals_phase_1(q,prns) = temp_phase_res(:,:,1);
+    end
     if proc_frqs > 1
         storeData.residuals_code_2(q,prns) = temp_code_res(:,:,2);
         storeData.residuals_phase_2(q,prns) = temp_phase_res(:,:,2);
@@ -133,7 +137,6 @@ end
 
 
 %% Save ionospheric correction data
-
 switch settings.IONO.model
     % case: OFF, 2 or 3-Frequency-IF-LC has no ionospheric information
     case 'Estimate with ... as constraint'
@@ -272,7 +275,7 @@ storeData.dt_last_reset(q) = Epoch.gps_time-Adjust.reset_time;      % [s], time 
 storeData.param(q,:) = Adjust.param(1:NO_PARAM);
 
 if Adjust.fixed
-    storeData.xyz_fix(q,:)     = Adjust.xyz_fix(1:3);
+    storeData.param_fix(q,:)     = Adjust.param_fix(1:NO_PARAM);
     storeData.param_var_fix(q,:) = diag(Adjust.param_sigma_fix(1:3,1:3));
 end
 
@@ -302,6 +305,7 @@ storeData.exclude(q,prns)  = any(Epoch.exclude, 2);     % true if satellite's ob
 
 
 %% save satellite status
+% ||| loses information! 
 if settings.EXP.storeData_sat_status
 	storeData.sat_status(q,prns) = Epoch.sat_status(:,1);
 end

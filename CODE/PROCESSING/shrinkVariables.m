@@ -7,6 +7,17 @@ function [satellites, storeData, model_save, obs] = ...
 % Additionally this function deletes some fields of structs which are not
 % used in SinglePlotting.m or disabled on the Export panel of the GUI
 % 
+% INPUT:
+%   satellites      struct, satellite-specific data
+%   storeData       struct, collects results and data 
+%   model_save      struct, modeled error sources and observation
+%   obs             struct, observation-specific data
+%   settings        struct, processing settings from GUI
+%   q               number of last processed epoch
+%   OBSDATA         cell, data of RINEX observation file
+% OUTPUT:
+%	satellites, storeData, model_save, obs          updated
+%
 % Revision:
 %   2025/02/19, MFWG: adding (missing) export of RINEX epochheaders
 % 
@@ -20,7 +31,9 @@ decoupled_clock_model = strcmp(settings.IONO.model, 'Estimate, decoupled clock')
 
 
 %% Shrink Variables
-if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q    || settings.INPUT.bool_realtime
+if settings.INPUT.bool_realtime || ...
+        (strcmp(settings.ADJ.filter.direction, 'Forward') && ...
+        settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1) > q)
     eps = 1:q;      % vector of processed epochs
     % satellites
     satellites.elev = satellites.elev(eps,:);
@@ -110,9 +123,15 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q    || settings.
     storeData.zwd               = storeData.zwd(eps,:);
     storeData.zhd               = storeData.zhd(eps,:);
     if strcmpi(settings.PROC.method,'Code + Phase')
-        storeData.residuals_phase_1 = storeData.residuals_phase_1(eps,:);
-		if proc_freqs>1; storeData.residuals_phase_2 = storeData.residuals_phase_2(eps,:); end
-		if proc_freqs>2; storeData.residuals_phase_3 = storeData.residuals_phase_3(eps,:); end
+        if ~strcmp(settings.IONO.model, 'GRAPHIC')
+            storeData.residuals_phase_1 = storeData.residuals_phase_1(eps,:);
+        end
+        if proc_freqs > 1
+            storeData.residuals_phase_2 = storeData.residuals_phase_2(eps,:);
+        end
+        if proc_freqs > 2
+            storeData.residuals_phase_3 = storeData.residuals_phase_3(eps,:);
+        end
     end
     
     % cycle slip detection
@@ -149,7 +168,7 @@ if (settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1)) > q    || settings.
     
     % data from ambiguity fixing
     if settings.AMBFIX.bool_AMBFIX
-        storeData.xyz_fix             = storeData.xyz_fix(eps,:);
+        storeData.param_fix             = storeData.param_fix(eps,:);
         storeData.param_var_fix         = storeData.param_var_fix(eps,:);
         storeData.residuals_code_fix_1  = storeData.residuals_code_fix_1(eps,:);
         storeData.residuals_phase_fix_1 = storeData.residuals_phase_fix_1(eps,:);

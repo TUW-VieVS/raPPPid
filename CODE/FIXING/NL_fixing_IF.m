@@ -1,13 +1,13 @@
 function [Epoch, Adjust] = NL_fixing_IF(Epoch, Adjust, b_WL, b_NL, elevs, settings)
-% Fixes the NL-Ambiguities. The fixing cutoff angle is considered in
-% WL_fixing.m and therefore the WL is not fixed if a satellite is unter the
-% fixing.
+% This function fixes the NL abiguities for the ionosphere-free linear 
+% combination. The WL ambiguities have already been fixed in the function
+% WL_fixing.m (using the HMW LC).
 % 
 % INPUT:
 %   Epoch    	epoch-specific data for current epoch [struct]
 %   Adjust    	adjustment data and matrices for current epoch [struct]
-%   b_WL        WL-UPDs for satellites of current epoch, single-differenced
-%   b_NL        NL-UPDs for satellites of current epoch, single-differenced
+%   b_WL        WL UPDs for satellites of current epoch, single-differenced
+%   b_NL        NL UPDs for satellites of current epoch, single-differenced
 %   elevs   	elevations of all satellites of this epoch [°]
 %   settings 	struct, settings for processing (from GUI)
 % OUTPUT:
@@ -16,6 +16,7 @@ function [Epoch, Adjust] = NL_fixing_IF(Epoch, Adjust, b_WL, b_NL, elevs, settin
 % Revision:
 %   2023/06/11, MFWG: adding QZSS
 %   2024/12/30, MFWG: switching to LAMBDA 4.0
+%   2025/03/31, MFWG: convert Q_NN from meters to cycles
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -24,10 +25,11 @@ function [Epoch, Adjust] = NL_fixing_IF(Epoch, Adjust, b_WL, b_NL, elevs, settin
 
 %% Preparations
 % get some variables
-NO_PARAM = Adjust.NO_PARAM;			% number of estimated parameters
-f1 = Epoch.f1;      % frequency 1st processed frequency
-f2 = Epoch.f2;      % frequency 2nd processed frequency
-l1 = Epoch.l1;      % wavelength 1st processed frequency
+NO_PARAM = Adjust.NO_PARAM;     % number of estimated parameters
+f1 = Epoch.f1;                  % frequency 1st processed frequency
+f2 = Epoch.f2;              	% frequency 2nd processed frequency
+l1 = Epoch.l1;                  % wavelength 1st processed frequency
+l2 = Epoch.l2;                  % wavelength 2nd processed frequency
 sats = Epoch.sats;              % satellites of current epoch
 no_sats = numel(Epoch.sats);    % number of satellites
 % number of GNSS satellites
@@ -43,13 +45,18 @@ refSatC_idx = Epoch.refSatBDS_idx;
 % is satellite fixable?
 fixable = Epoch.fixable;
 
-% get float ambiguities and their covariance matrix
+% get float ambiguities
 idx = (NO_PARAM+1):(NO_PARAM+no_sats);
 param_N = Adjust.param(idx);    % float ambiguities
 param_N_gps = param_N(Epoch.gps);       % GPS float ambiguities
 param_N_gal = param_N(Epoch.gal);       % Galileo float ambiguities
 param_N_bds = param_N(Epoch.bds);       % BeiDou float ambiguities
+
+% get covariance matrix and convert from meters to cycles
 Q_NN = Adjust.param_sigma(idx, idx);    % covariance matrix of float ambiguities
+lam = (f1.^2 .* l1 - f2.^2 .* l2) ./ (f1.^2 - f2.^2);   % wavelength of IF LC ||| check!
+Q_NN = Q_NN ./ lam;      % divide rows by wavelength
+Q_NN = Q_NN ./ lam';     % divide columns by wavelength
 
 % remove Glonass and QZSS (if processed in float solution)
 if settings.INPUT.use_GLO || settings.INPUT.use_QZSS

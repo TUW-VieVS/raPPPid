@@ -1,4 +1,4 @@
-function Epoch = WL_fixing(HMW, Epoch, el, intv, settings)
+function Epoch = WL_fixing(HMW, Epoch, elev, intv, settings)
 % Fixes the WL-Ambiguities with HMW LC and moving average for GPS, Galileo
 % and/or BeiDou using the HMW LC observation of the last 5 minutes
 % ATTENTION: the WL of a satellite is kept fixed until this fixed WL 
@@ -7,7 +7,7 @@ function Epoch = WL_fixing(HMW, Epoch, el, intv, settings)
 % INPUT:
 %   HMW             Hatch Melbourne Wübbena LC from last reset to current epoch q, [cyc]
 %   Epoch           epoch-specific data for current epoch [struct]
-%   el              vector with elevation of all satellites from last epoch[°]
+%   elev            elevation of satellites [°]
 %   intv            interval of observations [sec]
 %   settings        processing settings [struct]
 % OUTPUT:
@@ -33,7 +33,7 @@ end
 if settings.INPUT.use_GPS && any(Epoch.gps) && Epoch.refSatGPS ~= 0
     prns_gps = Epoch.sats(Epoch.gps);           % prns of gps satellites
     refSatGPS = Epoch.refSatGPS;              	% gps reference satellite
-    Epoch = fix_WL_MW(HMW, prns_gps, refSatGPS, Epoch, el, epochs, settings);
+    Epoch = fix_WL_MW(HMW, prns_gps, refSatGPS, Epoch, elev(Epoch.gps), epochs, settings);
 end
 
 
@@ -41,7 +41,7 @@ end
 if settings.INPUT.use_GAL && any(Epoch.gal) && Epoch.refSatGAL ~= 0
     prns_gal = Epoch.sats(Epoch.gal);           % prns of Galileo satellites
     refSatGAL = Epoch.refSatGAL;             	% Galileo reference satellite
-    Epoch = fix_WL_MW(HMW, prns_gal, refSatGAL, Epoch, el, epochs, settings);
+    Epoch = fix_WL_MW(HMW, prns_gal, refSatGAL, Epoch, elev(Epoch.gal), epochs, settings);
 end
 
 
@@ -67,11 +67,11 @@ if settings.INPUT.use_BDS && any(Epoch.bds) && Epoch.refSatBDS ~= 0
 %         end
 %         HMW(q,prns_bds) = HMW(q,prns_bds) + HMW_corr'; 
 %     end
-    Epoch = fix_WL_MW(HMW, prns_bds, refSatBDS, Epoch, el, epochs, settings);
+    Epoch = fix_WL_MW(HMW, prns_bds, refSatBDS, Epoch, elev(Epoch.bds), epochs, settings);
 end
 
 
-function Epoch = fix_WL_MW(HMW, prns, refSat, Epoch, elevation, epochs, settings)
+function Epoch = fix_WL_MW(HMW, prns, refSat, Epoch, elev, epochs, settings)
 % This function fixes the Wide-Lane-Ambiguity with the
 % Hatch-Melbourne-Wübbena LC
 
@@ -90,19 +90,19 @@ MW_gnss(MW_gnss == 0) = NaN;
 sum_nan = sum(isnan(MW_gnss));
 remove = ( sum_nan > epochs/2 );
 % 2) remove satellites which are under fixing cutoff
-remove = remove | ( elevation(prns) < cutoff );
+remove = remove | ( elev' < cutoff );
 % 3) remove satellites where MC-LC of current epoch is NaN
 remove = remove | isnan(MW_gnss(epochs,:));
 % exclude:
 prns(remove) = [];
 MW_gnss(:, remove) = [];
 
-MW_SD = MW_refSat - MW_gnss;                % collected MW LC single differenced to reference satellite
-%     std_MW = std(MW_SD, 'omitnan');               % stdev of collected MW LC, [cycles]
-mean_MW = mean(MW_SD, 'omitnan');                   % mean of collected MW LC, [cycles]
-MW_round = round(mean_MW);                  % rounded mean of collected MW LC
-dist_round = abs(mean_MW - MW_round);   	% distance mean to rounded mean
-dist_MW = abs(mean_MW' - Epoch.WL_12(prns)); 	% distance to current WL fix
+MW_SD = MW_refSat - MW_gnss;               	% collected MW LC single differenced to reference satellite
+%     std_MW = std(MW_SD, 'omitnan');      	% stdev of collected MW LC, [cycles]
+mean_MW = mean(MW_SD, 1, 'omitnan');       	% mean of collected MW LC, [cycles]
+MW_round = round(mean_MW);                 	% rounded mean of collected MW LC
+dist_round = abs(mean_MW - MW_round);      	% distance mean to rounded mean
+dist_MW = abs(mean_MW' - Epoch.WL_12(prns));% distance to current WL fix
 already_fixed = ~isnan(Epoch.WL_12(prns)); 	% prns of already fixed satellites
 
 % look for satellites to fix or release the WL ambiguity

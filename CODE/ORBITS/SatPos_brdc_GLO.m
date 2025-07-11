@@ -9,8 +9,8 @@ function [X, V] = SatPos_brdc_GLO(Ttr, Eph)
 %   Ttr     time of signal emission in GPS time [sow]
 %   Eph     matrix, current broadcast ephemeris for this GLONASS satellite
 % OUTPUT:
-%   X   	satellite position in PZ90 [m]
-%   V   	satellite velocity in PZ90 [m]
+%   X   	satellite position in ECEF [m]
+%   V   	satellite velocity in ECEF [m]
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -33,7 +33,6 @@ acc = [a_x; a_y; a_z];
 
 % Runge Kutta 4 orbit integration
 [X, V] = rungeKutta4(toe, pos*1000, vel*1000, acc*1000, Ttr);
-
 
 
 
@@ -112,6 +111,7 @@ while 1
 end
 
 
+
 function A = accelerationPZ90(X, V, A)
 % ||| very slow
 %
@@ -150,7 +150,4 @@ term_3 = 5 * z^2 / r^2;
 A(1) = term_1* x  + term_2 * x *(1-term_3)  + w^2*x  + 2*w*vy  + A(1);
 A(2) = term_1* y  + term_2 * y *(1-term_3)  + w^2*y  - 2*w*vx  + A(2);
 A(3) = term_1* z  + term_2 * z *(3-term_3)                     + A(3);
-
-
-
 

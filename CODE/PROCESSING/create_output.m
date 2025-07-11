@@ -1,4 +1,4 @@
-function [storeData] = create_output(storeData, obs, settings, q_end)
+function [storeData] = create_output(storeData, obs, settings)
 % create_output.m is run after PPP_main.m when the epoch-wise processing is 
 % finished. Results get exported to files in the result-folder. Furthermore, 
 % some results are printed to the command window and saved into storeData 
@@ -7,12 +7,13 @@ function [storeData] = create_output(storeData, obs, settings, q_end)
 %   storeData       struct, collected data from all epochs
 %   obs             struct, observation corresponding data
 %   settings        struct, settings from GUI
-%   q_end           number of processed epochs, Epoch.q
 % OUTPUT:
-%   storeData       struct, updated, collected data from all epochs
+%   storeData       struct, updated with .posFloat_geo, .posFloat_utm,
+%                                        .posFixed_geo, .posFixed_utm
 %  
 % Revision:
-%   2025/03/20, MFWG: rec clk errot to time of epoch and flexible #digits
+%   2025/06/04, MFWG: replace Epoch.q with number of epochs
+%   2025/03/20, MFWG: rec clk error to time of epoch and flexible #digits
 %   2024/12/17, MFWG: slight improvements, writing output for DCM
 %   2024/01/18, MFWG: comments, improve trafos, output to command 
 %   2023/10/09, MFWG: improving layout of results_float/fixed.txt
@@ -20,6 +21,10 @@ function [storeData] = create_output(storeData, obs, settings, q_end)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
+
+% ||| improve at some point: add velocity, improve format to csv with ,
+% using writematrix, add QZSS, remove sigma (except xyz), header with
+% columns and reset of epochs
 
 
 %% Preparations
@@ -35,7 +40,7 @@ end
 posFloat = storeData.param(:,1:3);      % estimated float position (x, y, z)
 
 if settings.AMBFIX.bool_AMBFIX
-    posFixed = storeData.xyz_fix(:,1:3);                      % estimated fixed position
+    posFixed = storeData.param_fix(:,1:3);                      % estimated fixed position
     sigma_posFixed = sqrt(storeData.param_var_fix(:,1:3));      % fixed coordinates variances
 end
 
@@ -44,7 +49,7 @@ end
 t_epoch = storeData.gpstime;  	% GPS time, seconds of week
 
 % initialize
-n = size(posFloat,1);
+n = size(posFloat,1);           % number of processed epochs
 posFloat_geo = NaN(n,3);
 posFloat_utm = NaN(n,3);
 posFixed_geo = NaN(n,3);
@@ -101,11 +106,11 @@ if settings.EXP.results_float
     % write file depending on PPP model
     if ~strcmp(settings.IONO.model, 'Estimate, decoupled clock')
         t_epoch = writeFloatResults    (settings, storeData, line_2nd, fid, ...
-            q_end, epochs, obs, t_epoch, format, wspace);
+            n, epochs, obs, t_epoch, format, wspace);
     else
         % Decoupled Clock Model
         t_epoch = writeFloatResults_DCM(settings, storeData, line_2nd, fid, ...
-            q_end, epochs, obs, t_epoch, format, wspace);
+            n, epochs, obs, t_epoch, format, wspace);
     end
     fclose(fid);
 end
@@ -142,7 +147,7 @@ if settings.AMBFIX.bool_AMBFIX && settings.EXP.results_fixed    % only if ambigu
     fprintf(fid,'%s\n', ['# (1)  (2)       (3)' wspace '        (4)             (5)             (6)        (7)        (8)        (9)        (10)          (11)             (12)          (13)            (14)']);
     
     % print the data with loop over epochs
-    for q = 1:q_end   % 1     2           3       4       5       6      7      8      9      10      11      12      13      14
+    for q = 1:n   % 1     2           3       4       5       6      7      8      9      10      11      12      13      14
         fprintf(fid, ['%4.0f  %4.0f  ' format '  %14.6f  %14.6f  %14.6f  %9.6f  %9.6f  %9.6f  %12.9f  %13.10f  %9.4f  %14.6f  %14.6f   \n']   ,   ...
             epochs(q) , obs.startGPSWeek , t_epoch(q) , ...  % 1, 2, 3
             posFixed(q,1) , posFixed(q,2) , posFixed(q,3) , ...     % 4, 5, 6
@@ -231,26 +236,26 @@ posFloat         = storeData.param(:,1:3);  	% float position, x-y-z
 posFloat_geo     = storeData.posFloat_geo;      % float position, lat-lon-height
 posFloat_utm     = storeData.posFloat_utm;      % float position, UTM_x - UTM_y
 sigma_posFloat   = sqrt(storeData.param_var(:,1:3));	% sigma estimated float position
-delta_zwd        = storeData.param(:,4);        % estimated Zenith Wet Delay
+delta_zwd        = storeData.param(:,7);        % estimated Zenith Wet Delay
 % estimated receiver clock error / time offsets
-rec_dt_GPS       = storeData.param(:, 5);       % estimated receiver clock error for GPS
-rec_dt_GLO       = storeData.param(:, 8);       % estimated time offset / receiver clock error for Glonass
-rec_dt_GAL       = storeData.param(:,11);    	% estimated time offset / receiver clock error for Galileo
-rec_dt_BDS       = storeData.param(:,14);    	% time offset / estimated receiver clock error for BeiDou
+rec_dt_GPS       = storeData.param(:, 8);       % estimated receiver clock error for GPS
+rec_dt_GLO       = storeData.param(:,11);       % estimated time offset / receiver clock error for Glonass
+rec_dt_GAL       = storeData.param(:,14);    	% estimated time offset / receiver clock error for Galileo
+rec_dt_BDS       = storeData.param(:,17);    	% time offset / estimated receiver clock error for BeiDou
 % variances of time offsets / receiver clock error:
-sigma_rec_dt_GPS = sqrt(storeData.param_var(:, 5));
-sigma_rec_dt_GLO = sqrt(storeData.param_var(:, 8));
-sigma_rec_dt_GAL = sqrt(storeData.param_var(:,11));
-sigma_rec_dt_BDS = sqrt(storeData.param_var(:,14));
+sigma_rec_dt_GPS = sqrt(storeData.param_var(:, 8));
+sigma_rec_dt_GLO = sqrt(storeData.param_var(:,11));
+sigma_rec_dt_GAL = sqrt(storeData.param_var(:,14));
+sigma_rec_dt_BDS = sqrt(storeData.param_var(:,17));
 % estimated DCBs
-rec_dcb_12_GPS = storeData.param(:, 6);        % estimated DCB between GPS frequency 1 and 2
-rec_dcb_13_GPS = storeData.param(:, 7);        % estimated DCB between GPS frequency 1 and 3
-rec_dcb_12_GLO = storeData.param(:, 9);        % estimated DCB between Glonass frequency 1 and 2
-rec_dcb_13_GLO = storeData.param(:,10);        % estimated DCB between Glonass frequency 1 and 3
-rec_dcb_12_GAL = storeData.param(:,12);        % estimated DCB between Galileo frequency 1 and 2
-rec_dcb_13_GAL = storeData.param(:,13);        % estimated DCB between Galileo frequency 1 and 3
-rec_dcb_12_BDS = storeData.param(:,15);        % estimated DCB between BeiDou frequency 1 and 2
-rec_dcb_13_BDS = storeData.param(:,16);        % estimated DCB between BeiDou frequency 1 and 3
+rec_dcb_12_GPS = storeData.param(:, 9);        % estimated DCB between GPS frequency 1 and 2
+rec_dcb_13_GPS = storeData.param(:,10);        % estimated DCB between GPS frequency 1 and 3
+rec_dcb_12_GLO = storeData.param(:,12);        % estimated DCB between Glonass frequency 1 and 2
+rec_dcb_13_GLO = storeData.param(:,13);        % estimated DCB between Glonass frequency 1 and 3
+rec_dcb_12_GAL = storeData.param(:,15);        % estimated DCB between Galileo frequency 1 and 2
+rec_dcb_13_GAL = storeData.param(:,16);        % estimated DCB between Galileo frequency 1 and 3
+rec_dcb_12_BDS = storeData.param(:,18);        % estimated DCB between BeiDou frequency 1 and 2
+rec_dcb_13_BDS = storeData.param(:,19);        % estimated DCB between BeiDou frequency 1 and 3
 % read the a priori zwd and zhd, those are equal for all satellites
 zwd_model = storeData.zwd;
 zhd_model = storeData.zhd;
@@ -349,13 +354,13 @@ posFloat         = storeData.param(:,1:3);  	% float position, x-y-z
 posFloat_geo     = storeData.posFloat_geo;      % float position, lat-lon-height
 posFloat_utm     = storeData.posFloat_utm;      % float position, UTM_x - UTM_y
 sigma_posFloat   = sqrt(storeData.param_var(:,1:3));	% sigma estimated float position
-delta_zwd        = storeData.param(:,4);        % estimated Zenith Wet Delay
+delta_zwd        = storeData.param(:,7);        % estimated Zenith Wet Delay
 % get receiver code clock error
-rec_clk_code_GPS = storeData.param(:,5);     	% GPS code receiver clock error
-rec_clk_code_GLO = storeData.param(:,6);     	% GLONASS code receiver clock error
-rec_clk_code_GAL = storeData.param(:,7);     	% Galileo code receiver clock error
-rec_clk_code_BDS = storeData.param(:,8);     	% BeiDou code receiver clock error
-rec_clk_code_QZS = storeData.param(:,9);     	% QZSS code receiver clock error
+rec_clk_code_GPS = storeData.param(:, 8);     	% GPS code receiver clock error
+rec_clk_code_GLO = storeData.param(:, 9);     	% GLONASS code receiver clock error
+rec_clk_code_GAL = storeData.param(:,10);     	% Galileo code receiver clock error
+rec_clk_code_BDS = storeData.param(:,11);     	% BeiDou code receiver clock error
+rec_clk_code_QZS = storeData.param(:,12);     	% QZSS code receiver clock error
 % read the a priori zwd and zhd, those are equal for all satellites
 zwd_model = storeData.zwd;
 zhd_model = storeData.zhd;

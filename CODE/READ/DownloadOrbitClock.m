@@ -476,32 +476,39 @@ switch settings.ORBCLK.prec_prod
     case 'WUM'      % Wuhan University
         if settings.ORBCLK.MGEX
             % takes forever...
-            URL_host = 'igs.gnsswhu.cn:21';
-            URL_folders{1} = ['/pub/whu/phasebias/' yyyy, '/orbit/'];
-            URL_folders{2} = ['/pub/whu/phasebias/' yyyy, '/clock/'];
             if str2double(gpsweek) > 2230
                 URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
             else
                 URL_folders_2 = repmat({['/archive/gnss/products/mgex/' gpsweek]},2,1);
             end
-            files{1} = ['WUM0MGXRAP_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
-            files{2} = ['WUM0MGXRAP_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
-            files_2{1} = ['WUM0MGXFIN_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
-            files_2{2} = ['WUM0MGXFIN_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
-%             URL_folders = repmat({['/pub/igs/products/mgex/' gpsweek, '/']},2,1);
-%             if str2double(gpsweek) > 1961 	% naming of products changed after week 1961
-%                 files = {...
-%                     ['WUM0MGXFIN_', yyyy, doy, '0000', '_01D_15M_ORB.SP3.gz']       % Wuhan Multi-GNSS precise orbits
-%                     ['WUM0MGXFIN_', yyyy, doy, '0000', '_01D_30S_CLK.CLK.gz']}; 	% Wuhan Multi-GNSS precise clocks
-%             else
-%                 files = {['wum', gpsweek, dow, '.sp3.Z']        % Wuhan Multi-GNSS precise orbits
-%                     ['wum', gpsweek, dow, '.clk.Z']};           % Wuhan Multi-GNSS precise clocks
-%             end
+            switch settings.ORBCLK.prec_prod_type
+                case 'Rapid'
+                    URL_host = 'igs.gnsswhu.cn:21';
+                    URL_folders{1} = ['/pub/whu/phasebias/' yyyy, '/orbit/'];
+                    URL_folders{2} = ['/pub/whu/phasebias/' yyyy, '/clock/'];
+                    URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
+                    files{1} = ['WUM0MGXRAP_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
+                    files{2} = ['WUM0MGXRAP_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
+                case 'Final'
+                    URL_folders   = repmat({['/pub/igs/products/mgex/', gpsweek, '/']},2,1);
+                    URL_folders_2 = repmat({['/archive/gnss/products/' gpsweek]},2,1);
+                    files{1} = ['WUM0MGXFIN_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
+                    files{2} = ['WUM0MGXFIN_' yyyy doy '0000_01D_30S_CLK.CLK.gz'];
+            end
+            %             URL_folders = repmat({['/pub/igs/products/mgex/' gpsweek, '/']},2,1);
+            %             if str2double(gpsweek) > 1961 	% naming of products changed after week 1961
+            %                 files = {...
+            %                     ['WUM0MGXFIN_', yyyy, doy, '0000', '_01D_15M_ORB.SP3.gz']       % Wuhan Multi-GNSS precise orbits
+            %                     ['WUM0MGXFIN_', yyyy, doy, '0000', '_01D_30S_CLK.CLK.gz']}; 	% Wuhan Multi-GNSS precise clocks
+            %             else
+            %                 files = {['wum', gpsweek, dow, '.sp3.Z']        % Wuhan Multi-GNSS precise orbits
+            %                     ['wum', gpsweek, dow, '.clk.Z']};           % Wuhan Multi-GNSS precise clocks
+            %             end
         else
             errordlg(['Precise Product Type: ' settings.ORBCLK.prec_prod_type ' is not implemented.'], 'Error');
         end
         
-   case 'HUST'      % Huazhong University of Science and Technology
+    case 'HUST'      % Huazhong University of Science and Technology
         if settings.ORBCLK.MGEX
             URL_host = 'ggda.ac.cn:21';
             URL_folders{1} = ['/pub/mgex/products/' yyyy '/'];

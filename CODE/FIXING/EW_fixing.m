@@ -1,4 +1,4 @@
-function Epoch = EW_fixing(MW, Epoch, elevation, intv, settings)
+function Epoch = EW_fixing(MW, Epoch, elev, intv, settings)
 % Fixes the EW-Ambiguities with MW LC and moving average for GPS and Galileo
 
 % ATTENTION: the EW of a satellite is kept fixed until this fixed EW 
@@ -7,7 +7,7 @@ function Epoch = EW_fixing(MW, Epoch, elevation, intv, settings)
 % INPUT:
 %   MW        	Melbourne Wübbena LC from 2nd to current epoch q, [cyc]
 %   Epoch       epoch-specific data for current epoch [struct]
-%   elevation	vector 1x32 with elevation of all satellites from last epoch[°]
+%   elev        elevation of satellites [°]
 %   intv    	interval of observations [sec]
 %   settings    processing settings [struct]
 % OUTPUT:
@@ -32,7 +32,7 @@ end
 if settings.INPUT.use_GPS && any(Epoch.gps) && Epoch.refSatGPS ~= 0
     prns_gps = Epoch.sats(Epoch.gps);           % prns of gps satellites
     refSatGPS = Epoch.refSatGPS;               	% gps reference satellite
-    Epoch = fix_EW_MW(MW, prns_gps, refSatGPS, Epoch, elevation, epochs, settings);
+    Epoch = fix_EW_MW(MW, prns_gps, refSatGPS, Epoch, elev(Epoch.gps), epochs, settings);
 end
 
 
@@ -40,7 +40,7 @@ end
 if settings.INPUT.use_GAL && any(Epoch.gal) && Epoch.refSatGAL ~= 0
     prns_gal = Epoch.sats(Epoch.gal);           % prns of Galileo satellites
     refSatGAL = Epoch.refSatGAL;             	% Galileo reference satellite
-    Epoch = fix_EW_MW(MW, prns_gal, refSatGAL, Epoch, elevation, epochs, settings);
+    Epoch = fix_EW_MW(MW, prns_gal, refSatGAL, Epoch, elev(Epoch.gal), epochs, settings);
 end
 
 
@@ -50,7 +50,7 @@ end
 
 
 
-function Epoch = fix_EW_MW(MW, prns, refSat, Epoch, elevation, settings)
+function Epoch = fix_EW_MW(MW, prns, refSat, Epoch, elev, settings)
 cutoff = settings.AMBFIX.cutoff;        % cutoff of ambiguity fixing
 bool_print = ~settings.INPUT.bool_parfor; 
 
@@ -66,7 +66,7 @@ MW_gnss(MW_gnss == 0) = NaN;
 sum_nan = sum(isnan(MW_gnss));
 remove = ( sum_nan > epochs/2 );
 % 2) satellites which are under EW cutoff
-remove = remove | ( elevation(prns) < cutoff );
+remove = remove | ( elev' < cutoff );
 % 3) satellites where MC-LC of current epoch is NaN
 remove = remove | isnan(MW_gnss(epochs,:));
 % exclude:
@@ -74,12 +74,12 @@ prns(remove) = [];
 MW_gnss(:, remove) = [];
 
 MW_SD = MW_refSat - MW_gnss;                % collected MW LC single differenced to reference satellite
-%     std_MW = std(MW_SD, 'omitnan');               % stdev of collected MW LC, [cycles]
-mean_MW = mean(MW_SD, 'omitnan');                   % mean of collected MW LC, [cycles]
+%     std_MW = std(MW_SD, 'omitnan');    	% stdev of collected MW LC, [cycles]
+mean_MW = mean(MW_SD, 1, 'omitnan');       	% mean of collected MW LC, [cycles]
 MW_round = round(mean_MW);                  % rounded mean of collected MW LC
 dist_round = abs(mean_MW - MW_round);   	% distance mean to rounded mean
-dist_MW = abs(mean_MW' - Epoch.WL_23(prns));	% distance to current EW fix
-already_fixed = ~isnan(Epoch.WL_23(prns));  	% prns of already fixed gps satellites
+dist_MW = abs(mean_MW' - Epoch.WL_23(prns));% distance to current EW fix
+already_fixed = ~isnan(Epoch.WL_23(prns)); 	% prns of already fixed gps satellites
 
 % look for satellites to fix or release the EW ambiguity
 release =  already_fixed & dist_MW     > settings.AMBFIX.HMW_release;

@@ -1,4 +1,4 @@
-function [] = plotReceiverBiases(hours, strX, param, resets_h, settings)
+function [] = plotReceiverBiases(hours, strX, param, resets_h, settings, NO_PARAM, ff)
 % Plots the estimated receiver biases in the decoupled clock model for each
 % GNSS (IFB, L2 bias, L3 bias)
 %
@@ -8,6 +8,8 @@ function [] = plotReceiverBiases(hours, strX, param, resets_h, settings)
 %   param       estimated parameters of all processed epochs
 %   reset_h     vector, time of resets in hours
 % 	settings    struct, processing settings from GUI
+%   NO_PARAM    number of estimated parameters
+%   ff          string, 'float' or 'fixed'
 % OUTPUT:
 %   []
 %
@@ -18,6 +20,12 @@ function [] = plotReceiverBiases(hours, strX, param, resets_h, settings)
 %
 % This function belongs to raPPPid, Copyright (c) 2024, M.F. Wareyka-Glaner
 % *************************************************************************
+
+
+if settings.INPUT.proc_freqs == 1
+    fprintf('Single-frequency processing: No receiver biases estimated.          \n')
+    return
+end
 
 
 %% Preparation
@@ -31,50 +39,52 @@ noGNSS = isGPS + isGLO + isGAL + isBDS + isQZSS;
 
 i = 1;      % number of current subplot
 
-m2ns = 1e9 / Const.C;       % convert from [m] to [ns]
+m2ns = 1e9 / Const.C;               % convert from [m] to [ns]
+
+d = NO_PARAM - DEF.NO_PARAM_DCM;	% shift in index due to new parameters
 
 
 %% Get variables to plot
 % get IFB, convert to [ns]
-IFB_G = param(:,15) * m2ns;
-IFB_R = param(:,16) * m2ns;
-IFB_E = param(:,17) * m2ns;
-IFB_C = param(:,18) * m2ns;
-IFB_J = param(:,19) * m2ns;
+IFB_G = param(:,18+d) * m2ns;
+IFB_R = param(:,19+d) * m2ns;
+IFB_E = param(:,20+d) * m2ns;
+IFB_C = param(:,21+d) * m2ns;
+IFB_J = param(:,22+d) * m2ns;
 
 % get L2 biases, convert to [ns]
-L2_bias_G = param(:,20) * m2ns;
-L2_bias_R = param(:,21) * m2ns;
-L2_bias_E = param(:,22) * m2ns;
-L2_bias_C = param(:,23) * m2ns;
-L2_bias_J = param(:,24) * m2ns;
+L2_bias_G = param(:,23+d) * m2ns;
+L2_bias_R = param(:,24+d) * m2ns;
+L2_bias_E = param(:,25+d) * m2ns;
+L2_bias_C = param(:,26+d) * m2ns;
+L2_bias_J = param(:,27+d) * m2ns;
 
 % get L3 biases, convert to [ns]
-L3_bias_G = param(:,25) * m2ns;
-L3_bias_R = param(:,26) * m2ns;
-L3_bias_E = param(:,27) * m2ns;
-L3_bias_C = param(:,28) * m2ns;
-L3_bias_J = param(:,29) * m2ns;
+L3_bias_G = param(:,28+d) * m2ns;
+L3_bias_R = param(:,29+d) * m2ns;
+L3_bias_E = param(:,30+d) * m2ns;
+L3_bias_C = param(:,31+d) * m2ns;
+L3_bias_J = param(:,32+d) * m2ns;
 
 
 
 %% Plot
-figRecBiases = figure('Name','Receiver Biases Plot', 'NumberTitle','off');
+figRecBiases = figure('Name', ['Receiver Biases Plot, ' ff], 'NumberTitle','off');
 
 if isGPS
-    i = plotBiases(hours, IFB_G, L2_bias_G, L3_bias_G, i, noGNSS, DEF.COLOR_G, strX, resets_h, 'GPS');
+    i = plotBiases(hours, IFB_G, L2_bias_G, L3_bias_G, i, noGNSS, DEF.COLOR_G, ff, strX, resets_h, 'GPS');
 end
 if isGLO
-    i = plotBiases(hours, IFB_R, L2_bias_R, L3_bias_R, i, noGNSS, DEF.COLOR_R, strX, resets_h, 'GLO');
+    i = plotBiases(hours, IFB_R, L2_bias_R, L3_bias_R, i, noGNSS, DEF.COLOR_R, ff, strX, resets_h, 'GLO');
 end
 if isGAL
-    i = plotBiases(hours, IFB_E, L2_bias_E, L3_bias_E, i, noGNSS, DEF.COLOR_E, strX, resets_h, 'GAL');
+    i = plotBiases(hours, IFB_E, L2_bias_E, L3_bias_E, i, noGNSS, DEF.COLOR_E, ff, strX, resets_h, 'GAL');
 end
 if isBDS
-    i = plotBiases(hours, IFB_C, L2_bias_C, L3_bias_C, i, noGNSS, DEF.COLOR_C, strX, resets_h, 'BDS');
+    i = plotBiases(hours, IFB_C, L2_bias_C, L3_bias_C, i, noGNSS, DEF.COLOR_C, ff, strX, resets_h, 'BDS');
 end
 if isQZSS
-    i = plotBiases(hours, IFB_J, L2_bias_J, L3_bias_J, i, noGNSS, DEF.COLOR_J, strX, resets_h, 'QZSS');
+    i = plotBiases(hours, IFB_J, L2_bias_J, L3_bias_J, i, noGNSS, DEF.COLOR_J, ff, strX, resets_h, 'QZSS');
 end
 
 
@@ -88,7 +98,7 @@ set(dcm, 'updatefcn', @vis_customdatatip_RecBiases)
 
 
 
-function i = plotBiases(hours, IFB, L2_bias, L3_bias, i, n, coleur, strX, resets_h, GNSS)
+function i = plotBiases(hours, IFB, L2_bias, L3_bias, i, n, coleur, ff, strX, resets_h, GNSS)
 %% Plotting Function
 % hours ... [h], x values to plot
 % IFB ... Inter-Frequency Bias
@@ -97,17 +107,21 @@ function i = plotBiases(hours, IFB, L2_bias, L3_bias, i, n, coleur, strX, resets
 % i ... number of current subplot
 % n ... total number of rows (subplots)
 % coleur ... color to plot
+% ff ... 'float' or 'fixed'
 % strX ... string, label of x-axis
-%GNSS ... string of GNSS
+% GNSS ... string of GNSS
 
 % plot
 subplot(n, 1, i)
 hold on
+L2_bias(L2_bias == 0) = NaN;    % replace 0 with NaN
 plot(hours, L2_bias, 'Color', coleur, 'LineStyle', '--')
 if any(IFB ~= 0)
+    IFB(IFB == 0) = NaN;
     plot(hours, IFB,     'Color', coleur, 'LineStyle', '-')
 end
 if any(L3_bias ~= 0)
+    L3_bias(L3_bias == 0) = NaN;
     plot(hours, L3_bias, 'Color', coleur, 'LineStyle', '-.')
 end
 
@@ -118,7 +132,7 @@ l3 = ['L3 bias^{' GNSS '}'];
 legend(l1 , l2, l3)
 xlabel(strX)
 ylabel('Estimated Bias [ns]')
-if i == 1; title('Estimated Receiver Biases'); end
+if i == 1; title(['Receiver Biases, ' ff]); end
 
 % plot vertical lines for resets
 if ~isempty(resets_h)

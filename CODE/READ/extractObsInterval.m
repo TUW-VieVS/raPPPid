@@ -73,7 +73,7 @@ end
 
 
 % round to 3 fractional digits (according to RINEX specification and header)
-obs_intv = round(round(obs_intv*1e3)/1e3);        
+obs_intv = round(obs_intv*1e3)/1e3;        
 
 % %% print result of this function
 % [~, obs_filename, ext] = fileparts(path_file);

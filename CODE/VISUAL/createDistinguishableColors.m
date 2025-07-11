@@ -14,9 +14,13 @@ function rgb = createDistinguishableColors(n)
 
 % create colors
 try
-    rgb = distinguishable_colors(n);    % best choice, but requires Image Processing Toolbox
-    
+    rgb = distinguishable_colors(n);    % good choice, but requires Image Processing Toolbox
+
 catch
-    rgb = colorcube(n+1);       % create one color more than needed
-    rgb(end,:) = [];         	% remove white color
+    try
+        rgb = linspecer(n);
+    catch
+        rgb = colorcube(n+1);       % create one color more than needed
+        rgb(end,:) = [];         	% remove white color
+    end
 end

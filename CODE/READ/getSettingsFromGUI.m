@@ -275,6 +275,8 @@ settings.OTHER.CS.D_threshold = str2double(get(handles.edit_CycleSlip_Doppler_th
 settings.OTHER.CS.TimeDifference = get(handles.checkbox_cs_td, 'Value');
 settings.OTHER.CS.TD_threshold = str2double(get(handles.edit_cs_td_thresh, 'String'));
 settings.OTHER.CS.TD_degree = str2double(get(handles.edit_cs_td_degree, 'String'));
+% check RINEX Loss of Lock Index (LLI)
+settings.PROC.LLI = handles.checkbox_LLI.Value;
 % multipath detection
 settings.OTHER.mp_detection = get(handles.checkbox_mp_detection, 'Value');
 settings.OTHER.mp_degree = str2double(get(handles.edit_mp_degree, 'String'));
@@ -299,8 +301,10 @@ settings.AMBFIX.wrongFixes = get(handles.uibuttongroup_wrongFixes.SelectedObject
 settings.AMBFIX.refSatChoice = get(handles.uibuttongroup_refSat.SelectedObject,'String');
 % manual reference satellite choice
 settings.AMBFIX.refSatGPS = '';
+settings.AMBFIX.refSatGLO = '';
 settings.AMBFIX.refSatGAL = '';
 settings.AMBFIX.refSatBDS = '';
+settings.AMBFIX.refSatQZS = '';
 if strcmp(settings.AMBFIX.refSatChoice, 'manual choice (list):')
     str_refSatGPS = get(handles.edit_refSatGPS, 'String');
     str_refSatGPS = strrep(str_refSatGPS, ',', ' ');
@@ -308,19 +312,37 @@ if strcmp(settings.AMBFIX.refSatChoice, 'manual choice (list):')
     if ~isempty(str_refSatGPS)
         settings.AMBFIX.refSatGPS = str2num(str_refSatGPS);    
     end
+    str_refSatGLO = get(handles.edit_refSatGLO, 'String');
+    str_refSatGLO = strrep(str_refSatGLO, ',', ' ');
+    str_refSatGLO = strrep(str_refSatGLO, 'R', ' ');
+    if ~isempty(str_refSatGLO)
+        refSat_R = str2num(str_refSatGLO);
+        refSat_R(refSat_R < 100) = refSat_R(refSat_R < 100) + 100;
+        settings.AMBFIX.refSatGLO = refSat_R;
+    end    
     str_refSatGAL = get(handles.edit_refSatGAL, 'String');
     str_refSatGAL = strrep(str_refSatGAL, ',', ' ');
     str_refSatGAL = strrep(str_refSatGAL, 'E', ' ');
     if ~isempty(str_refSatGAL)
-        settings.AMBFIX.refSatGAL = str2num(str_refSatGAL);    
-        settings.AMBFIX.refSatGAL(settings.AMBFIX.refSatGAL < 300) = settings.AMBFIX.refSatGAL(settings.AMBFIX.refSatGAL < 300) + 200;
+        refSat_E = str2num(str_refSatGAL);    
+        refSat_E(refSat_E < 100) = refSat_E(refSat_E < 100) + 200;
+        settings.AMBFIX.refSatGAL = refSat_E;
     end
     str_refSatBDS = get(handles.edit_refSatBDS, 'String');
     str_refSatBDS = strrep(str_refSatBDS, ',', ' ');
     str_refSatBDS = strrep(str_refSatBDS, 'C', ' ');
     if ~isempty(str_refSatBDS)
-        settings.AMBFIX.refSatBDS = str2num(str_refSatBDS);     
-        settings.AMBFIX.refSatBDS(settings.AMBFIX.refSatBDS < 400) = settings.AMBFIX.refSatBDS(settings.AMBFIX.refSatBDS < 400) + 300;
+        refSat_C = str2num(str_refSatBDS);     
+        refSat_C(refSat_C < 100) = refSat_C(refSat_C < 100) + 300;
+        settings.AMBFIX.refSatBDS = refSat_C;
+    end
+    str_refSatQZS = get(handles.edit_refSatQZS, 'String');
+    str_refSatQZS = strrep(str_refSatQZS, ',', ' ');
+    str_refSatQZS = strrep(str_refSatQZS, 'J', ' ');
+    if ~isempty(str_refSatQZS)
+        refSat_J = str2num(str_refSatQZS);
+        refSat_J(refSat_J < 100) = refSat_J(refSat_J < 100) + 400;
+        settings.AMBFIX.refSatQZS = refSat_J;
     end
 end
 % satellites manually excluded from ambiguity fixing
@@ -355,11 +377,21 @@ value = get(handles.popupmenu_filter, 'Value');
 string_all = get(handles.popupmenu_filter, 'String');
 settings.ADJ.filter.type = string_all{value};		% 'No Filter' or 'Kalman Filter' or 'Kalman Filter Iterative'
 
+% Direction of Filter
+value = get(handles.popupmenu_filter_direction, 'Value');
+string_all = get(handles.popupmenu_filter_direction, 'String');
+settings.ADJ.filter.direction = string_all{value};  % e.g. 'Forwards'
+
 % Filter Settings: values of dropdown menus (popupmenus) have to be taken - 1 to have [0;1]
 % Coordinates
 settings.ADJ.filter.var_coord  = str2double( get(handles.edit_filter_coord_sigma0, 'String') )^2;	% a-priori-variance of coordinates
 settings.ADJ.filter.Q_coord   = str2double( get(handles.edit_filter_coord_Q, 'String') )^2;        % system noise of coordinates
 settings.ADJ.filter.dynmodel_coord = get(handles.popupmenu_filter_coord_dynmodel, 'Value') - 1;    % dynamic model of coordinates
+
+% Velocity
+settings.ADJ.filter.var_velocity  = str2double( get(handles.edit_filter_velocity_sigma0, 'String') )^2;	% a-priori-variance of coordinates
+settings.ADJ.filter.Q_velocity   = str2double( get(handles.edit_filter_velocity_Q, 'String') )^2;        % system noise of coordinates
+settings.ADJ.filter.dynmodel_velocity = get(handles.popupmenu_filter_velocity_dynmodel, 'Value') - 1;    % dynamic model of coordinates
 
 % Zenith Wet Delay
 settings.ADJ.filter.var_zwd = str2double( get(handles.edit_filter_zwd_sigma0, 'String') )^2;    % a-priori-variance of zenith wet delay
@@ -407,6 +439,12 @@ settings.ADJ.filter.var_iono = str2double( get(handles.edit_filter_iono_sigma0, 
 settings.ADJ.filter.Q_iono = str2double( get(handles.edit_filter_iono_Q, 'String') )^2;          % system noise of ionosphere
 settings.ADJ.filter.dynmodel_iono = get(handles.popupmenu_filter_iono_dynmodel, 'Value') - 1;
 
+% Satellite PPP
+settings.ADJ.satellite.bool  = get(handles.checkbox_satellite, 'Value');
+settings.ADJ.satellite.mass  = str2double(get(handles.edit_sat_mass, 'String'));
+settings.ADJ.satellite.area  = str2double(get(handles.edit_sat_area, 'String'));
+settings.ADJ.satellite.drag  = str2double(get(handles.edit_sat_drag, 'String'));
+settings.ADJ.satellite.solar = str2double(get(handles.edit_sat_solar, 'String'));
 
 
 %% Estimation - Weighting
@@ -526,30 +564,7 @@ settings.PROC.excl_eps(settings.PROC.excl_eps==0) = [];         % remove zeros
 
 % read exclusion of satellites
 settings.PROC.exclude = handles.uitable_exclude.Data;
-% create settings.PROC.exclude_sats for completely excluded satellites and
-% settings.PROC.excl_partly for partly excluded satellites
-excl_matrix = settings.PROC.exclude(:,1:3);                 % get only first three columns
-for i = 1:size(excl_matrix,1)       % loop to replace GNSS satellites which are char arrays
-    sat = excl_matrix{i,1};
-    if isempty(sat); continue; end
-    if ischar(sat); excl_matrix{i,1} = str2double(sat);     end  % convert to number
-    if isempty(excl_matrix{i,2}); excl_matrix{i,2} = 0;     end  % check start    
-    if isempty(excl_matrix{i,3}); excl_matrix{i,3} = Inf;	end  % check end
-end
-
-bool_empty = cellfun('isempty', excl_matrix);
-excl_matrix = excl_matrix(~all(bool_empty,2), :);           % remove empty rows
-excl_matrix = cell2mat(excl_matrix);                        % convert to matrix
-% true for rows which contain satellites to exclude partly:
-if ~isempty(excl_matrix)
-    bool_excl_partly = (excl_matrix(:,2) ~= 0) & (excl_matrix(:,3) ~= 0);
-    settings.PROC.excl_partly = excl_matrix(bool_excl_partly, :); 	% get matrix for partly excluded satellites
-    settings.PROC.exclude_sats = excl_matrix(~bool_excl_partly, 1); % get prns of completely excluded satellites
-else
-    settings.PROC.excl_partly = [];    settings.PROC.exclude_sats = [];
-end
-% check RINEX Loss of Lock Index (LLI)
-settings.PROC.LLI = handles.checkbox_LLI.Value;
+settings = readExcludeSatellites(settings);
 
 
 
@@ -607,8 +622,8 @@ settings.PLOT.coordxyz      = get(handles.checkbox_plot_xyz,            'Value')
 settings.PLOT.XYZ      		= get(handles.checkbox_plot_xyzplot,        'Value');
 settings.PLOT.elevation     = get(handles.checkbox_plot_elev,           'Value');
 settings.PLOT.satvisibility = get(handles.checkbox_plot_sat_visibility, 'Value');
-settings.PLOT.float_amb     = get(handles.checkbox_plot_float_amb,      'Value');
-settings.PLOT.fixed_amb     = get(handles.checkbox_plot_fixed_amb,      'Value');
+settings.PLOT.amb     		= get(handles.checkbox_plot_amb,      		'Value');
+% settings.PLOT.fixed_amb     = get(handles.checkbox_plot_fixed_amb,      'Value');
 settings.PLOT.clock	        = get(handles.checkbox_plot_clock,          'Value');
 settings.PLOT.dcb     	    = get(handles.checkbox_plot_dcb,            'Value');
 settings.PLOT.wet_tropo     = get(handles.checkbox_plot_wet_tropo,      'Value');
@@ -649,4 +664,59 @@ if ~(path_1(end) == '/' || path_1(end) == '\')
     slash_1 = '/';
 end
 path_full = strcat(path_1, slash_1, path_2);
+end
+
+
+function settings = readExcludeSatellites(settings)
+% create settings.PROC.exclude_sats for completely excluded satellites and
+% settings.PROC.excl_partly for partly excluded satellites
+
+excl_matrix = settings.PROC.exclude(:,1:3);                 % get only first three columns
+
+% loop to replace GNSS satellites which are char arrays
+for i = 1:size(excl_matrix,1)       
+    sat = excl_matrix{i,1};
+    if isempty(sat); continue; end
+    if ischar(sat)                          % convert to number
+        excl_matrix{i,1} = str2num(sat);        % only str2num works here
+    end  
+    if isempty(excl_matrix{i,2})            % check start    
+        excl_matrix{i,2} = 0;     
+    end 
+    if isempty(excl_matrix{i,3})            % check end
+        excl_matrix{i,3} = Inf;	
+    end  
+end
+
+% loop to convert, for example, 301:303 to multiple rows
+for i = 1:size(excl_matrix,1)
+    n = numel(excl_matrix{i,1});
+    if n > 1
+        % prepare
+        sats = excl_matrix{i,1};
+        a = excl_matrix{i,2};
+        e = excl_matrix{i,3};
+        % build parts
+        part1 = excl_matrix(1:i-1, :);
+        part2(:,1) = num2cell(sats');
+        part2(:,2) = {a};
+        part2(:,3) = {e};
+        part3 = excl_matrix(i+1:end, :);
+        % build whole matrix
+        excl_matrix = [part1; part2; part3];
+    end
+end
+
+bool_empty = cellfun('isempty', excl_matrix);
+excl_matrix = excl_matrix(~all(bool_empty,2), :);           % remove empty rows
+excl_matrix = cell2mat(excl_matrix);                        % convert to matrix
+
+% true for rows which contain satellites to exclude partly:
+if ~isempty(excl_matrix)
+    bool_excl_partly = (excl_matrix(:,2) ~= 0) & (excl_matrix(:,3) ~= 0);
+    settings.PROC.excl_partly = excl_matrix(bool_excl_partly, :); 	% get matrix for partly excluded satellites
+    settings.PROC.exclude_sats = excl_matrix(~bool_excl_partly, 1); % get prns of completely excluded satellites
+else
+    settings.PROC.excl_partly = [];    settings.PROC.exclude_sats = [];
+end
 end

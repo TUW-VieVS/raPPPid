@@ -1,4 +1,4 @@
-function Epoch = cycleSlip_TimeDifference(Epoch, use_column, settings)
+function Epoch = cycleSlip_TimeDiff(Epoch, use_column, settings)
 % This function detects cycle slips with differencing the last epochs. For
 % example, triple-differencing might be reasonable. Implemented only for
 % single-frequency processing, use dLi-dLi difference otherwise.
@@ -30,7 +30,6 @@ if ~settings.INPUT.rawDataAndroid
     L1 = L1 .* lambda_1;                % convert from [cy] to [m]
 end
 	
-
 % move phase observations of past epochs "down"
 Epoch.cs_phase_obs(2:end,:) = Epoch.cs_phase_obs(1:end-1,:);  
 % delete old values

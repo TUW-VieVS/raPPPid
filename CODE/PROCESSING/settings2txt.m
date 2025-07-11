@@ -293,7 +293,7 @@ if settings.OTHER.bool_rec_arp || settings.OTHER.bool_rec_pco || settings.OTHER.
         if ~isempty(input.OTHER.OcLoad)
             fprintf(fileID,'    %s\n','o Ocean Loading');
         else
-            fprintf(fileID,'    %s\n','o Ocean Loading (not applied, lacking coefficients');
+            fprintf(fileID,'    %s\n','o Ocean Loading (not applied, lacking coefficients)');
         end
     end
     if settings.OTHER.polar_tides
@@ -406,6 +406,7 @@ end
 % Filter and filter settings
 fprintf(fileID,'  %s\n',settings.ADJ.filter.type);
 if ~strcmp(settings.ADJ.filter.type,'No Filter')
+    fprintf(fileID,'    %s%s\n', 'Filter direction: ', settings.ADJ.filter.direction);
     fprintf(fileID,'    %s\n', 'Filter-Settings (initial standard deviation [m] | system noise standard deviation [m/sqrt(h)] | dynamic model):');
     fprintf(fileID,'    %s%11.3f%s%11.3f%s%d\n','Coordinates:        ',sqrt(settings.ADJ.filter.var_coord),    ' | ',sqrt(settings.ADJ.filter.Q_coord),     ' | ',settings.ADJ.filter.dynmodel_coord);
     if settings.TROPO.estimate_ZWD
@@ -436,6 +437,14 @@ if ~strcmp(settings.ADJ.filter.type,'No Filter')
         fprintf(fileID,'    %s%11.3f%s%11.3f%s%d\n','Ionosphere:         ',sqrt(settings.ADJ.filter.var_iono),     ' | ',sqrt(settings.ADJ.filter.Q_iono),      ' | ', settings.ADJ.filter.dynmodel_iono);
     end
 end
+if settings.ADJ.satellite.bool
+    fprintf(fileID,'  %s\n', 'Satellite, dynamic model is applied');
+    fprintf(fileID,'    %s%.2f\n', 'Mass [kg]: ',  settings.ADJ.satellite.mass);
+    fprintf(fileID,'    %s%.2f\n', 'Area [m^2]: ', settings.ADJ.satellite.area);
+    fprintf(fileID,'    %s%.2f\n', 'Drag coefficient []', settings.ADJ.satellite.drag);
+    fprintf(fileID,'    %s%.2f\n', 'Solar coefficient []', settings.ADJ.satellite.solar);
+end
+fprintf(fileID,'  %s%d','Number of estimated parameters: ', ~bool_DCM*DEF.NO_PARAM_ZD + bool_DCM*DEF.NO_PARAM_DCM);
 fprintf(fileID,'\n');
 
 
@@ -453,9 +462,11 @@ if settings.AMBFIX.bool_AMBFIX
     fprintf(fileID,'  %s%d\n','Fixing cutoff [°]: ', settings.AMBFIX.cutoff);
     fprintf(fileID,'  %s%s\n','Choice of Reference Satellite: ', settings.AMBFIX.refSatChoice);
     if strcmp(settings.AMBFIX.refSatChoice, 'manual choice (list):')
-        fprintf(fileID,'    %s%d\n','Manual reference satellite list for GPS: ', settings.AMBFIX.refSatGPS);
-        fprintf(fileID,'    %s%d\n','Manual reference satellite list for Galileo: ', settings.AMBFIX.refSatGAL);
-		fprintf(fileID,'    %s%d\n','Manual reference satellite list for BeiDou: ', settings.AMBFIX.refSatBDS);
+        fprintf(fileID,'    %s%d\n','GPS: ', settings.AMBFIX.refSatGPS);
+		fprintf(fileID,'    %s%d\n','GLONASS: ', settings.AMBFIX.refSatGLO);
+        fprintf(fileID,'    %s%d\n','Galileo: ', settings.AMBFIX.refSatGAL);
+		fprintf(fileID,'    %s%d\n','BeiDou: ', settings.AMBFIX.refSatBDS);
+		fprintf(fileID,'    %s%d\n','QZSS: ', settings.AMBFIX.refSatQZS);
     end
     if isempty(settings.AMBFIX.exclude_sats_fixing)
         fprintf(fileID,'  %s\n','No satellites excluded from fixing.');
@@ -597,7 +608,7 @@ end
 if settings.PROC.bool_rec_clk_jump
     fprintf(fileID,'  %s\n', 'Receiver clock jumps are detected and compensated.');
 else
-    fprintf(fileID,'  %s\n', 'Receiver clock jumps are NOT detected and compensated.');
+    fprintf(fileID,'  %s\n', 'Receiver clock jumps are NOT detected and NOT compensated.');
 end
 fprintf(fileID,'\n');
 

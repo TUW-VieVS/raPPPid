@@ -23,12 +23,15 @@ epoch = find(event_obj.Target.XData == sod, 1, 'first');
 % create string with time of day
 str_time = [sprintf('%02.0f', hour), ':', sprintf('%02.0f', min), ':', sprintf('%02.0f', sec)];
 
+
 % create cell with strings as output (which will be shown when clicking)
 i = 1;
-output_txt{i} = ['Time: ',  str_time];                  % time of day
-i = i + 1;
-output_txt{i} = ['Epoch: ', sprintf('%.0f', epoch)];    % epoch
-i = i + 1;
-output_txt{i} = ['Value: ', sprintf('%.3f', value)];   % value
+output_txt{i} = ['Time: ',  str_time];      % time of day
 
+if ~strcmp(event_obj.Target.Marker,'o')     % epoch
+    i = i + 1;
+    output_txt{i} = ['Epoch: ', sprintf('%.0f', epoch)];
 end
+
+i = i + 1;                                  % value
+output_txt{i} = ['Value: ', sprintf('%.3f', value)];

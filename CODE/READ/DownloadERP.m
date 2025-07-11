@@ -303,17 +303,20 @@ switch settings.ORBCLK.prec_prod
         
     case 'WUM'
         if settings.ORBCLK.MGEX
-            % takes forever...
-            URL_host = 'igs.gnsswhu.cn:21';
-            URL_folders{1} = ['/pub/whu/phasebias/' yyyy, '/orbit/'];
+            switch settings.ORBCLK.prec_prod_type
+                case 'Rapid'
+                    URL_host = 'igs.gnsswhu.cn:21'; % takes forever...
+                    URL_folders = {['/pub/whu/phasebias/' yyyy, '/orbit/']};
+                    file{1}    = ['WUM0MGXRAP_' yyyy doy '0000_01D_01D_ERP.ERP.gz'];
+                case 'Final'
+                    URL_folders = {['/pub/igs/products/mgex/', gpsweek, '/']};
+                    file{1} = ['WUM0MGXFIN_' yyyy doy '0000_01D_01D_ERP.ERP.gz']; 
+            end
             if str2double(gpsweek) > 2230
                 URL_folders_2 = {['/archive/gnss/products/' gpsweek]};
             else
                 URL_folders_2 = {['/archive/gnss/products/mgex/' gpsweek]};
             end
-            file{1}    = ['WUM0MGXRAP_' yyyy doy '0000_01D_01D_ERP.ERP.gz'];
-            files_2{1} = ['WUM0MGXFIN_' yyyy doy '0000_01D_01D_ERP.ERP.gz'];
-            
         else
             fprintf(2, 'WUM ERP file is not implemented!')
             return

@@ -19,7 +19,7 @@ function Adjust = Designmatrix_code_doppler_ZD(Adjust, Epoch, model, settings)
 
 % --- Preparations
 num_freq = settings.INPUT.proc_freqs;       % number of processed frequencies
-param = Adjust.param;                       % parameter estimations from last epoch
+param_ = Adjust.param_pred;                 % predicted parameters
 obs_code = Epoch.code;                      % code observations [m] of current epoch
 no_sats = numel(Epoch.sats);                % number of satellites in current epoch
 s_f = no_sats * num_freq;
@@ -48,10 +48,15 @@ sat_vel_z = repmat(model.Rot_V(3,:)', 1, num_freq);  	% satellite ECEF velocity 
 omc = (obs_code(:) - model.model_code(:)) .* ~exclude;
 
 % --- Partial derivatives
-% coordinates
-dR_dx    = -( sat_pos_x(:)-param(1) ) ./ rho;         % x
-dR_dy    = -( sat_pos_y(:)-param(2) ) ./ rho;         % y
-dR_dz    = -( sat_pos_z(:)-param(3) ) ./ rho;         % z
+% position
+dR_dx    = -( sat_pos_x(:)-param_(1) ) ./ rho;         % x
+dR_dy    = -( sat_pos_y(:)-param_(2) ) ./ rho;         % y
+dR_dz    = -( sat_pos_z(:)-param_(3) ) ./ rho;         % z
+
+% velocity
+dR_dvx = zeros(s_f, 1);         % velocity x
+dR_dvy = zeros(s_f, 1);         % velocity y
+dR_dvz = zeros(s_f, 1);         % velocity z
 
 % troposphere
 dR_dtrop =  model.mfw(:);       % wet mapping function
@@ -90,7 +95,7 @@ if settings.BIASES.estimate_rec_dcbs
 end
 
 % --- Build A-Matrix
-A = [dR_dx, dR_dy, dR_dz, dR_dtrop, dR_time_dcb] .* ~exclude;
+A = [dR_dx, dR_dy, dR_dz, dR_dvx, dR_dvy, dR_dvz, dR_dtrop, dR_time_dcb] .* ~exclude;
 
 % --- add ionosphere estimation part to A, P and omc
 if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Estimate')
@@ -126,16 +131,20 @@ end
 
 %% Doppler observations
 % Partial derivatives: coordinates
-dD_dx    = ( sat_pos_x(:)-param(1) ) ./ rho .* sat_vel_x;      % x
-dD_dy    = ( sat_pos_y(:)-param(2) ) ./ rho .* sat_vel_y;      % y
-dD_dz    = ( sat_pos_z(:)-param(3) ) ./ rho .* sat_vel_z;      % z
+dD_dx    = ( sat_pos_x(:)-param_(1) ) ./ rho .* sat_vel_x;      % x
+dD_dy    = ( sat_pos_y(:)-param_(2) ) ./ rho .* sat_vel_y;      % y
+dD_dz    = ( sat_pos_z(:)-param_(3) ) ./ rho .* sat_vel_z;      % z
+% Partial derivatives: velocity
+dR_dvx = zeros(s_f, 1);
+dR_dvy = zeros(s_f, 1);
+dR_dvz = zeros(s_f, 1);
 % Partial derivatives: clock drift
 dTime = zeros(s_f, 13); 
 dTime(:,1) = 1;         % |||D: this is the place of the wmf, tropo estimation!
 % ionosphere part
 A_doppler_iono = zeros(no_sats);
 % create Design-Matrix of Doppler observations
-A_doppler = [dD_dx, dD_dy, dD_dz, dTime, A_doppler_iono] .* ~exclude;
+A_doppler = [dD_dx, dD_dy, dD_dz, dR_dvx, dR_dvy, dR_dvz, dTime, A_doppler_iono] .* ~exclude;
 % put Design-Matrix of Doppler together
 A = [A; A_doppler];
 % update observed-minus-computed

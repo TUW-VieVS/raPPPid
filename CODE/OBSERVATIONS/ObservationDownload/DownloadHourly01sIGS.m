@@ -1,4 +1,4 @@
-function [] = DownloadHourly01sIGS(stations, hours, doys, year)
+function [] = DownloadHourly01sIGS(stations, hours, doys, year, host)
 % Function to download, decompress and save highrate RINEX observation data
 % with an observation interval of 1sec from IGS stations for the specific hours.
 % The data is saved automatically in the right folder of raPPPid.
@@ -7,25 +7,39 @@ function [] = DownloadHourly01sIGS(stations, hours, doys, year)
 % open('../CODE/OBSERVATIONS/ObservationDownload/IGS_r3_highrate_stations.txt')
 % 
 % Example call: 
-% DownloadHourly01sIGS('', [], 001, 2020)
-% DownloadHourly01sIGS('BRUX00BEL_S_', [], 160, 2022)
-
+%   DownloadHourly01sIGS('', [], 001, 2020)
+%   DownloadHourly01sIGS('BRUX00BEL_S_', [], 160, 2022)
+%   DownloadHourly01sIGS({'NNOR00AUS_R_', 'NKLG00GAB_R_'}, 00:01, 030, 2025)
+% 
 % INPUT:
 %   stations	cell, station names, 9-digit [4-digit name, '00', 3-digit country]
 %   hours       vector, hour(s) of doy(s) for download
 %   doys        vector, day(s) of year for download
 %   year        number, year
+%   host        string, define source of download (optional)
 % OUTPUT:
 %   []
 %
+% 
+% Revision:
+%   2025/05/30, MFWG: specifiy host or try download from all hosts
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
-host = 3;
-
 % ||| Be careful: CDDIS has changed the storage of high-rate files! (IGSMAIL-8189)
 % ||| Somehow the cddis download does not work inside the GEO-IT on H: and U:
+
+
+%% Prepare
+if nargin == 4
+    % if host is not defined as input variable try do download from all
+    for h = 1:3
+        DownloadHourly01sIGS(stations, hours, doys, year, h)
+    end
+    return
+end
 
 
 switch host
@@ -148,7 +162,8 @@ while i <= numel(files)
 
 end
 
-% download all files
+
+%% download all files
 if host ~= 2
     file_status = ftp_download_multi(URL_host, URL_folders, files, targets, true);
 else    % download from cddis
@@ -160,7 +175,8 @@ if ishandle(WBAR)
     waitbar(0, WBAR, 'Download finished. Decompressing.')
 end
 
-% unzip all files and delete archives
+
+%% unzip all files and delete archives
 unzipped = unzip_and_delete(files, targets);
 
 % update waitbar
@@ -168,6 +184,8 @@ if ishandle(WBAR)
     waitbar(0, WBAR, 'Decompressing finished. Convert *.crx to *.rnx')
 end
 
+
+%% *.crx to *.rnx
 % change path to folder where, for example, crx2rnx.exe (Windows) is stored
 work_path = pwd;
 if ispc
@@ -185,6 +203,11 @@ end
 n = numel(files);
 for i = 1:n
     
+    if file_status(i) == 0 || file_status(i) == 3
+        % skip files which could not be downloaded or are existing
+        continue
+    end
+    
     % create absolute path
     file = unzipped{i};
     full_file_path = [erase(work_path, 'WORK'), file(4:end)];
@@ -193,6 +216,7 @@ for i = 1:n
     if ispc         % Windows
         str = strcat('CRX2RNX "',full_file_path,'"');
     elseif isunix 	% Linux
+		system('chmod u+x ./*');
         str = strcat('./CRX2RNX "',full_file_path,'"');
     end
     
@@ -230,9 +254,11 @@ path_info = what([pwd, '/../CODE/7ZIP/']);      % canonical path of 7-zip is nee
 path_7zip = [path_info.path, '/7za.exe'];
 for i = 1:num_files
     curr_archive = [targets{i}, '/', files{i}];
-    file_unzipped = unzip_7zip(path_7zip, curr_archive);
-    unzipped{i} = file_unzipped;
-    delete(curr_archive);
+    if isfile(curr_archive)
+        file_unzipped = unzip_7zip(path_7zip, curr_archive);
+        unzipped{i} = file_unzipped;
+        delete(curr_archive);
+    end
 end
 
 

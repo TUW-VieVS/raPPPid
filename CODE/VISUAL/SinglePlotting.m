@@ -39,22 +39,28 @@ isGAL  = settings.INPUT.use_GAL;
 isBDS  = settings.INPUT.use_BDS;
 isQZSS = settings.INPUT.use_QZSS;
 
-% take position depending on selected solution
+% get position depending on selected solution
 if settings.PLOT.fixed && settings.AMBFIX.bool_AMBFIX
-    try pos_cart = storeData.xyz_fix(:,1:3); catch; pos_cart = storeData.param_fix(:,1:3); end
+    try pos_cart = storeData.param_fix(:,1:3); catch; pos_cart = storeData.xyz_fix(:,1:3); end
     pos_geo = storeData.posFixed_geo;
     pos_utm = storeData.posFixed_utm;
-    floatfix = 'fixed';				% string to indicate in plots which solution
+    ff = 'fixed';				% string to indicate in plots which solution
 else 
     pos_cart = storeData.param(:,1:3);
     pos_geo = storeData.posFloat_geo;
     pos_utm = storeData.posFloat_utm;
-    floatfix = 'float';
+    ff = 'float';
     if strcmp(settings.PROC.method, 'Code Only')
-        floatfix = 'Code Only';
+        ff = 'Code Only';
     elseif strcmp(settings.PROC.method, 'Code (Doppler Smoothing)')
-        floatfix = 'Code smoothed';
+        ff = 'Code smoothed';
     end
+end
+
+% get float or fixed parameter vector depending on selected solution
+param_ = storeData.param; ff_p = 'float';
+if settings.PLOT.fixed && settings.AMBFIX.bool_AMBFIX && isfield(storeData, 'param_fix')
+    param_ = storeData.param_fix; ff_p = 'fixed';
 end
 
 % get true position
@@ -74,6 +80,10 @@ else        % reference trajectory
     bool_true_pos = true;
     [pos_true_geo, North_true, East_true] = ...
         LoadReferenceTrajectory(settings.PLOT.pos_true, obs.leap_sec, storeData.gpstime);
+    if settings.PLOT.coordxyz
+        [x, y, z] = ell2xyz_GT(pos_true_geo.lat, pos_true_geo.lon, pos_true_geo.h, Const.WGS84_A, Const.WGS84_E_SQUARE);
+        xyz_true = [x, y, z]; 
+    end
 end    
 
 % time-related stuff
@@ -118,7 +128,7 @@ end
 % implemented as GUI
 if settings.PLOT.coordinate
     dN(isnan(dN)) = 0;     dE(isnan(dE)) = 0;     dH(isnan(dH)) = 0;
-    CoordinatePlot(epochs, dN', dE', dH', sow, label_x_sec, seconds, reset_sec, station_date, floatfix);
+    CoordinatePlot(epochs, dN', dE', dH', sow, label_x_sec, seconds, reset_sec, station_date, ff);
 end
 if STOP_CALC; return; end
 
@@ -126,13 +136,7 @@ if STOP_CALC; return; end
 % -+-+-+-+- Figure: XYZ Plot -+-+-+-+-
 % X, Y, Z over time in one plot
 if settings.PLOT.XYZ
-    % calculate differences to true XYZ position
-    if settings.PLOT.fixed && settings.AMBFIX.bool_AMBFIX
-        xyz = storeData.xyz_fix;        % fixed
-    else
-        xyz = storeData.param(:,1:3);   % float
-    end
-    XYZ_Plot(interval, sow, xyz, xyz_true, reset_sow, label_x_time, station_date, floatfix);
+    XYZ_Plot(interval, sow, pos_cart, xyz_true, reset_sow, label_x_time, station_date, ff);
 end
 if STOP_CALC; return; end
 
@@ -141,7 +145,7 @@ if STOP_CALC; return; end
 % Coordinates over Time, dU & dN & dE in ONE Plot
 if settings.PLOT.coordxyz
     % calculate differences to true UTM position
-    ThreeCoordinatesPlot(interval, sow, dN, dE, dH, reset_sow, label_x_time, station_date, floatfix);
+    ThreeCoordinatesPlot(interval, sow, dN, dE, dH, reset_sow, label_x_time, station_date, ff);
 end
 if STOP_CALC; return; end
 
@@ -152,14 +156,14 @@ if settings.PLOT.map
         velocityPlot(pos_cart, seconds, label_x_sec)
     end
     vis_MaPlot(pos_geo(:,1)*180/pi, pos_geo(:,2)*180/pi, bool_true_pos, ...
-        pos_true_geo.lat*180/pi, pos_true_geo.lon*180/pi, station_date, floatfix)
+        pos_true_geo.lat*180/pi, pos_true_geo.lon*180/pi, station_date, ff)
 end
 if STOP_CALC; return; end
 
 
 % -+-+-+-+- Figure: UTM Plot -+-+-+-+-
 if settings.PLOT.UTM
-    vis_plotCoordinateAccuracy(dN, dE, station_date, floatfix)
+    vis_plotCoordinateAccuracy(dN, dE, station_date, ff)
 end
 if STOP_CALC; return; end
 
@@ -175,19 +179,19 @@ if STOP_CALC; return; end   %#ok<*UNRCH>
 
 % -+-+-+-+- Figure: Clock Plot -+-+-+-+-
 if settings.PLOT.clock
-    vis_plotReceiverClock(hours, label_x_h, storeData.param', reset_h, ...
-        settings, settings.ORBCLK.file_clk, station, obs.startdate(1:3));
+    vis_plotReceiverClock(hours, label_x_h, param_', reset_h, ff_p, ...
+        settings, settings.ORBCLK.file_clk, station, obs.startdate(1:3), storeData.NO_PARAM);
 end
 if STOP_CALC; return; end
 
 
-% -+-+-+-+- Figure: DCB Plot -+-+-+-+- 
+% -+-+-+-+- Figure: Receiver Biases Plot -+-+-+-+- 
 if settings.PLOT.dcb
     if settings.BIASES.estimate_rec_dcbs
         if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
-            plotReceiverBiases(hours, label_x_h, storeData.param, reset_h, settings)
+            plotReceiverBiases(hours, label_x_h, param_, reset_h, settings, storeData.NO_PARAM, ff_p)
         else
-            vis_plotReceiverDCBs(hours, label_x_h, storeData.param', reset_h, settings, obs);
+            vis_plotReceiverDCBs(hours, label_x_h, param_', reset_h, settings, obs, storeData.NO_PARAM);
         end
     else
         fprintf('No DCBs estimated.\n');
@@ -196,9 +200,9 @@ end
 if STOP_CALC; return; end
 
 
-% -+-+-+-+- Figure: Wet Troposphere Plot -+-+-+-+-
+% -+-+-+-+- Figure: Troposphere Plot -+-+-+-+-
 if settings.PLOT.wet_tropo && settings.TROPO.estimate_ZWD
-    TropoPlot(hours, label_x_h, storeData, reset_h, obs.startdate, obs.station_long)
+    TropoPlot(hours, label_x_h, storeData, reset_h, obs.startdate, obs.station_long, param_, ff_p)
 end
 if STOP_CALC; return; end
 
@@ -223,9 +227,9 @@ end
 if STOP_CALC; return; end
 
 
-if strcmpi(settings.PROC.method,'Code + Phase')
+if strcmpi(settings.PROC.method,'Code + Phase') && settings.PLOT.amb
     %     -+-+-+-+- Figure: Float Ambiguity Plots -+-+-+-+-
-    if settings.PLOT.float_amb
+    if settings.PLOT.float
         if isGPS    % GPS processed
             FloatAmbPlot(hours, storeData, 1:DEF.SATS_GPS,       settings, label_x_h, 'G', reset_h, rgb);
         end
@@ -241,9 +245,8 @@ if strcmpi(settings.PROC.method,'Code + Phase')
         if isQZSS
             FloatAmbPlot(hours, storeData, 401:400+DEF.SATS_QZSS,settings, label_x_h, 'J', reset_h, rgb)
         end
-    end    
-    %     -+-+-+-+- Figure: Fixed Ambiguity Plots -+-+-+-+-
-    if settings.PLOT.fixed_amb && settings.AMBFIX.bool_AMBFIX
+    elseif settings.PLOT.fixed
+        %     -+-+-+-+- Figure: Fixed Ambiguity Plots -+-+-+-+-
         printAmbiguityFixingRates(storeData, settings, satellites)
         vis_plotFixedAmbiguities(settings, isGPS, isGAL, isBDS, storeData, label_x_epc, satellites)
     end
@@ -392,19 +395,19 @@ if STOP_CALC; return; end
 % ||| check division in float and fixed
 if settings.PLOT.res_sats
     if isGPS
-        vis_res_sats(storeData, 'G', settings.INPUT.proc_freqs, strcmp(settings.PROC.method, 'Code + Phase')', settings.PLOT.fixed);
+        vis_res_sats(storeData, 'G', settings);
     end
     if isGLO
-        vis_res_sats(storeData, 'R', settings.INPUT.proc_freqs, strcmp(settings.PROC.method, 'Code + Phase')', settings.PLOT.fixed);
+        vis_res_sats(storeData, 'R', settings);
     end
     if isGAL
-        vis_res_sats(storeData, 'E', settings.INPUT.proc_freqs, strcmp(settings.PROC.method, 'Code + Phase')', settings.PLOT.fixed);
+        vis_res_sats(storeData, 'E', settings);
     end
     if isBDS
-        vis_res_sats(storeData, 'C', settings.INPUT.proc_freqs, strcmp(settings.PROC.method, 'Code + Phase')', settings.PLOT.fixed);
+        vis_res_sats(storeData, 'C', settings);
     end
     if isQZSS
-        vis_res_sats(storeData, 'J', settings.INPUT.proc_freqs, strcmp(settings.PROC.method, 'Code + Phase')', settings.PLOT.fixed);
+        vis_res_sats(storeData, 'J', settings);
     end    
 end
 if STOP_CALC; return; end

@@ -19,7 +19,7 @@ function Adjust = Designmatrix_code_ZD(Adjust, Epoch, model, settings)
 
 % --- Preparations
 num_freq = settings.INPUT.proc_freqs;
-param = Adjust.param;       % parameter estimations from last epoch
+param_ = Adjust.param_pred;	% predicted parameters
 obs_code = Epoch.code;      % code observations [m] of current epoch
 no_sats = numel(Epoch.sats);% number of satellites in current epoch
 s_f = no_sats * num_freq;
@@ -31,20 +31,26 @@ isGAL  = repmat(Epoch.gal,  num_freq, 1);
 isBDS  = repmat(Epoch.bds,  num_freq, 1); 
 isQZSS = repmat(Epoch.qzss, num_freq, 1);  
 
+% position
 exclude = Epoch.exclude(:);         % true = satellite excluded
 rho = model.rho(:);                 % geometric distance
 sat_pos_x = repmat(model.Rot_X(1,:)', 1, num_freq);  	% satellite ECEF position x
 sat_pos_y = repmat(model.Rot_X(2,:)', 1, num_freq);  	% satellite ECEF position y
 sat_pos_z = repmat(model.Rot_X(3,:)', 1, num_freq);  	% satellite ECEF position z
 
+% velocity
+dR_dvx = zeros(s_f, 1);
+dR_dvy = zeros(s_f, 1);
+dR_dvz = zeros(s_f, 1);
+
 % --- observed minus computed
 omc = (obs_code(:) - model.model_code(:)) .* ~exclude;
 
 % --- Partial derivatives
 % coordinates
-dR_dx    = -( sat_pos_x(:)-param(1) ) ./ rho;         % x
-dR_dy    = -( sat_pos_y(:)-param(2) ) ./ rho;         % y
-dR_dz    = -( sat_pos_z(:)-param(3) ) ./ rho;         % z
+dR_dx    = -( sat_pos_x(:)-param_(1) ) ./ rho;         % x
+dR_dy    = -( sat_pos_y(:)-param_(2) ) ./ rho;         % y
+dR_dz    = -( sat_pos_z(:)-param_(3) ) ./ rho;         % z
 
 % troposphere
 dR_dtrop =  model.mfw(:);       % wet mapping function
@@ -83,7 +89,7 @@ if settings.BIASES.estimate_rec_dcbs
 end
 
 % --- Build A-Matrix
-A = [dR_dx, dR_dy, dR_dz, dR_dtrop, dR_time_dcb] .* ~exclude;
+A = [dR_dx, dR_dy, dR_dz, dR_dvx, dR_dvy, dR_dvz, dR_dtrop, dR_time_dcb] .*  ~exclude;
 
 % --- add ionosphere estimation part to A and omc
 if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Estimate')

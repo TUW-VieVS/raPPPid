@@ -37,10 +37,11 @@ bool_m = settings.INPUT.rawDataAndroid;         % already in [m]
 % check processed PPP model
 code_only = strcmpi(settings.PROC.method,'Code Only');
 doppler = contains(settings.PROC.method, 'Doppler');
+GRAPHIC = strcmpi(settings.IONO.model,'GRAPHIC');
 IF_LC_2fr_1x = strcmpi(settings.IONO.model,'2-Frequency-IF-LCs') & settings.INPUT.num_freqs == 2;
 IF_LC_2fr_2x = strcmpi(settings.IONO.model,'2-Frequency-IF-LCs') & settings.INPUT.num_freqs == 3;
 IF_LC_3fr = strcmpi(settings.IONO.model,'3-Frequency-IF-LC');
-no_LC = ~IF_LC_2fr_1x   &&   ~IF_LC_2fr_2x   &&   ~IF_LC_3fr;
+no_LC = ~IF_LC_2fr_1x   &&   ~IF_LC_2fr_2x   &&   ~IF_LC_3fr &&   ~GRAPHIC;
 
 
 %% GPS
@@ -54,7 +55,7 @@ if settings.INPUT.use_GPS
     % perform check and get observations
     lambda_G = Const.GPS_L(idx_frqs_gps);
     [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, bool_m,...
-    Epoch.gps, lambda_G, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, num_freq);
+    Epoch.gps, lambda_G, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, GRAPHIC, num_freq);
 end
 
 
@@ -108,6 +109,9 @@ if settings.INPUT.use_GLO
         
     elseif IF_LC_3fr        % three frequencies are needed
         remove_sat = no_C1 | no_C2 | no_C3;
+        
+    elseif GRAPHIC          % code and phase on first frequency are necessary
+        remove_sat = no_C1 | no_L1;
         
     end
     
@@ -215,7 +219,7 @@ if settings.INPUT.use_GAL
     % perform check and get observations
     lambda_E = Const.GAL_L(idx_frqs_gal);
     [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, bool_m, ...
-    Epoch.gal, lambda_E, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, num_freq);
+    Epoch.gal, lambda_E, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, GRAPHIC, num_freq);
 end
 
 
@@ -231,7 +235,7 @@ if settings.INPUT.use_BDS
     % perform check and get observations
     lambda_C = Const.BDS_L(idx_frqs_bds);
     [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, bool_m, ...
-    Epoch.bds, lambda_C, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, num_freq);
+    Epoch.bds, lambda_C, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, GRAPHIC, num_freq);
 end
 
 
@@ -247,14 +251,14 @@ if settings.INPUT.use_QZSS
     % perform check and get observations
     lambda_C = Const.QZSS_L(idx_frqs_qzss);
     [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, bool_m, ...
-    Epoch.qzss, lambda_C, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, num_freq);
+    Epoch.qzss, lambda_C, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, GRAPHIC, num_freq);
 end
 
 
 
 %% ------------------ AUXILIARY FUNCTIONS ------------------
 function [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1, D2, D3, convert_cy2m, ...
-    bool_gnss, lambda, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, n)
+    bool_gnss, lambda, code_only, doppler, IF_LC_2fr_1x, IF_LC_2fr_2x, IF_LC_3fr, no_LC, GRAPHIC, n)
 % This function checks which satellites have to be removed and removes
 % them. It is used for each GNSS except Glonass (FDMA...).
 
@@ -287,7 +291,9 @@ elseif IF_LC_2fr_2x     % at least two frequencies are needed
     
 elseif IF_LC_3fr        % three frequencies are needed to build LC
     remove_sat = no_C1 | no_C2 | no_C3;
-    
+
+elseif GRAPHIC          % code and phase on first frequency are necessary
+    remove_sat = no_C1 | no_L1;
 end
 
 

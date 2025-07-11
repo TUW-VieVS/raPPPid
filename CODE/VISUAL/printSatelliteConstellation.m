@@ -12,7 +12,7 @@
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-[FileName, PathName] = uigetfile({'*.mat'}, 'Select data4plot.mat', [Path.RESULTS]);
+[FileName, PathName] = uigetfile({'*.mat'}, 'Select data4plot.mat', GetFullPath([Path.RESULTS]));
 path_mat = [PathName FileName];
 
 if ~ischar(FileName) || ~ischar(PathName)

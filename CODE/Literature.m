@@ -54,8 +54,12 @@ Literature
 [22]: Petrovski, Ivan (2014). GPS, GLONASS, Galileo, and BeiDou for Mobile 
       Devices: From Instant to Precise Positioning. Cambridge: Cambridge 
       University Press. doi:10.1017/CBO9781139565455
-
-
+[22]: Petrovski, Ivan (2014). GPS, GLONASS, Galileo, and BeiDou for Mobile 
+      Devices: From Instant to Precise Positioning. Cambridge: Cambridge 
+      University Press. doi:10.1017/CBO9781139565455
+[23]: Pan Li & Xiaohong Zhang (2015). Precise Point Positioning with 
+      Partial Ambiguity Fixing. Sensors 2015, 15, 13627-13643.
+      https://doi.org/10.3390/s150613627
 
 
 

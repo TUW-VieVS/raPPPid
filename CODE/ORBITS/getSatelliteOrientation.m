@@ -1,4 +1,4 @@
-function orientation = getSatelliteOrientation(satECEF,sunECEF)
+function orientation = getSatelliteOrientation(satECEF, sunECEF)
 % Calculates axes of satellite-frame in ECEF:
 % z-axis: Nadir (pointing to Earth Center)
 % y-axis: Vertical to Z in the plane Sun-Satellite-Earth (solar panels),

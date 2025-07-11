@@ -22,6 +22,11 @@ filtersetts.ADJ.filter.var_coord  = str2double( get(handles.edit_filter_coord_si
 filtersetts.ADJ.filter.Q_coord   = str2double( get(handles.edit_filter_coord_Q, 'String') )^2;        % system noise of coordinates
 filtersetts.ADJ.filter.dynmodel_coord = get(handles.popupmenu_filter_coord_dynmodel, 'Value') - 1;    % dynamic model of coordinates
 
+% Velocity
+filtersetts.ADJ.filter.var_velocity  = str2double( get(handles.edit_filter_velocity_sigma0, 'String') )^2;	% a-priori-variance of velocity
+filtersetts.ADJ.filter.Q_velocity   = str2double( get(handles.edit_filter_velocity_Q, 'String') )^2;        % system noise of velocity
+filtersetts.ADJ.filter.dynmodel_velocity = get(handles.popupmenu_filter_velocity_dynmodel, 'Value') - 1;    % dynamic model of velocity
+
 % Zenith Wet Delay
 filtersetts.ADJ.filter.var_zwd = str2double( get(handles.edit_filter_zwd_sigma0, 'String') )^2;    % a-priori-variance of zenith wet delay
 filtersetts.ADJ.filter.Q_zwd = str2double( get(handles.edit_filter_zwd_Q, 'String') )^2;          % system noise of zenith wet delay

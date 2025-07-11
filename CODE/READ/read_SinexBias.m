@@ -19,46 +19,11 @@ function [BIAS] = read_SinexBias(BIAS, path, glo_channels)
 % constraint: header is not read at all
 %
 %   Revision:
+%   2025/06/02, MFWG: detect columns with header line (instead of version)
 %   2023/06/11, MFWG: adding QZSS 
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
-
-
-
-%% Check the SINEX version
-% because the file format is anything but consistent
-
-% for default if consecutive entries in the Sinex-Bias file have the same
-% value the validity is extended but for certain products this might not
-% working later-on as the number of entries is manipulated in this way
-bool_extend = true;
-
-version = 'Bias-SINEX';         % initialization
-[~,name,~] = fileparts(path); 
-if contains(name,'CAS0MGXRAP')   % if CAS
-    
-    if str2num(name(12:18)) > 2016262   % starting in Sep 19, 2016, the file are in Bias-SINEX format (before the format was simply SINEX) 
-        version = 'Bias-SINEX';
-    else
-        version = 'SINEX';
-    end
-    
-elseif contains(name,'DLR0MGXFIN')   % if DLR
-    
-    bool_extend = false;
-    if strcmpi(name,'DLR0MGXFIN_20160010000_03L_01D_DCB')   % the first seasonal file exists in 2016, which is in SINEX format
-        version = 'SINEX';
-    elseif str2num(name(12:15)) < 2017   % after that, the Bias-SINEX file was invented, however with some format errors, which is why it is referred to as temporary
-        version = 'Bias-SINEX_temp';
-    else   % starting in 2017, the files are in normal Bias_SINEX format
-        version = 'Bias-SINEX';
-    end
-    
-elseif contains(name, 'com')
-    version = 'SINEX';
-    
-end
 
 
 %% Preparation
@@ -144,6 +109,22 @@ while bool
 end             % i is now the number of the line with the header for biases (*BIAS...)
 
 
+
+%% Detect columns of data
+headerline = lines{i};      % line indicating the columns of data entries
+c_spaces = find(isspace(headerline));   % columns of whitespaces
+
+% get start and end column of relevant data entries
+c_prn   = getColumn(headerline, c_spaces, 'PRN');
+c_obs1  = getColumn(headerline, c_spaces, 'OBS1');
+c_obs2  = getColumn(headerline, c_spaces, 'OBS2');
+c_start = getColumn(headerline, c_spaces, 'BIAS_START');
+c_ende  = getColumn(headerline, c_spaces, 'BIAS_END');
+c_value = getColumn(headerline, c_spaces, 'ESTIMATED_VALUE');
+c_unit  = getColumn(headerline, c_spaces, 'UNIT');
+
+
+
 %% Handle data
 
 while i < no_lines          % loop over data lines
@@ -164,7 +145,7 @@ while i < no_lines          % loop over data lines
     
     station = strtrim(curr_line(16:19));
     [prn, obs_1, obs_2, sow_start, sow_ende, value, gpsweek_start, gpsweek_ende] = ...
-        read_line(curr_line, version, glo_channels);        % get entries
+        read_line(curr_line, glo_channels, c_prn, c_obs1, c_obs2, c_start, c_ende, c_value, c_unit);        % get entries
     
     if contains(obs_1, '?') || contains(obs_2, '?') || (~isempty(station) && ~isvarname(station))
         % jump over lines which contains an unknown bias observable or
@@ -186,7 +167,7 @@ while i < no_lines          % loop over data lines
                 BIAS.(bias_type).(prn).(bias_field) = [];         % create field for this bias
             end
             BIAS.(bias_type).(prn).(bias_field) = ...
-                save_data_line(BIAS.(bias_type).(prn).(bias_field), value, round(sow_start), round(sow_ende), gpsweek_start, gpsweek_ende, bool_extend);
+                save_data_line(BIAS.(bias_type).(prn).(bias_field), value, round(sow_start), round(sow_ende), gpsweek_start, gpsweek_ende);
         else
             % -) station entries:
             bias_field = [prn(1), obs_1, obs_2];  	% create field-name
@@ -198,7 +179,7 @@ while i < no_lines          % loop over data lines
                 BIAS.(bias_type).(station).(bias_field) = []; 	% create field for this bias
             end
             BIAS.(bias_type).(station).(bias_field) = ...
-                save_data_line(BIAS.(bias_type).(station).(bias_field), value, round(sow_start), round(sow_ende), gpsweek_start, gpsweek_ende, bool_extend);
+                save_data_line(BIAS.(bias_type).(station).(bias_field), value, round(sow_start), round(sow_ende), gpsweek_start, gpsweek_ende);
         end
     end
     
@@ -209,8 +190,18 @@ end         % end of read_SinexBias
 
 
 %% Auxialiary Functions
+function [col] = getColumn(headerline, c_spaces, keyword)
+% Detects the start and end column of a specific entry in the data block
+pos = strfind(headerline, keyword);
+a = c_spaces(c_spaces <= pos);
+e = c_spaces(c_spaces >= pos);
+col(1) = a(end);
+col(2) = e(1);
+end
 
-function [BiaStruct] = save_data_line(BiaStruct, value, sow_start, sow_ende, gpsweek_start, gpsweek_ende, extend_validity)
+
+
+function [BiaStruct] = save_data_line(BiaStruct, value, sow_start, sow_ende, gpsweek_start, gpsweek_ende)
 % save values from one data line if there is a difference in bias value to
 % the last entry in the struct
 
@@ -222,7 +213,7 @@ if isempty(BiaStruct)                       % first call
     BiaStruct.ende_gpsweek(1)  = gpsweek_ende;
     return
 end
-if extend_validity && BiaStruct.value(end) == value  	
+if BiaStruct.value(end) == value  	
     % bias value is the same as last entry
     BiaStruct.ende(end) = sow_ende;         % extend validity
     if BiaStruct.ende_gpsweek(end) ~= gpsweek_ende      
@@ -240,40 +231,27 @@ end
 
 
 function [prn, obs_1, obs_2, sow_start, sow_ende, value, week_start, week_ende] = ...
-    read_line(curr_line, version, glo_channels)
+    read_line(curr_line, glo_channels, c_prn, c_obs1, c_obs_2, c_start, c_ende, c_value, c_unit)
 % function to read data from one line and convert date
 
-prn = curr_line(12:14);   % prn of current line
+prn = strtrim(curr_line(c_prn(1):c_prn(2)));   % prn of current line
 
-if strcmpi(version,'Bias-SINEX')
-    
-    obs_1 = curr_line(26:28);           % observation type 1, string
-    obs_2 = curr_line(31:33);           % observation type 2, string
-    start = curr_line(36:49);
-    ende  = curr_line(51:64);
-    value = sscanf(curr_line(70:91),'%f');
-    unit  = strtrim(curr_line(65:69));
-    
-elseif strcmpi(version,'Bias-SINEX_temp')
-    
-    obs_1 = curr_line(26:28);           % observation type 1, string
-    obs_2 = curr_line(31:33);           % observation type 2, string
-    start = ['20' curr_line(36:47)];    % prepend '20' as the year is specified only by yy in the Bias-SINEX_temp file
-    ende  = ['20' curr_line(49:60)];    % prepend '20' as the year is specified only by yy in the Bias_SINEX_temp file
-    value = sscanf(curr_line(67:87),'%f');
-    % ||| unit!
-    
-elseif strcmpi(version,'SINEX')
-    
-    obs_1 = curr_line(31:33);           % observation type 1, string
-    obs_2 = curr_line(36:38);           % observation type 2, string
-    start = ['20' curr_line(41:52)];    % prepend '20' as the year is specified only by yy in the SINEX file
-    ende  = ['20' curr_line(54:65)];    % prepend '20' as the year is specified only by yy in the SINEX file
-    value = sscanf(curr_line(72:92),'%f');
-    unit  = strtrim(curr_line(67:69));
-    
+% extract data of current line
+obs_1 = strtrim(curr_line(c_obs1(1) :c_obs1 (2))); 	% observation type 1, string
+obs_2 = strtrim(curr_line(c_obs_2(1):c_obs_2(2))); 	% observation type 2, string
+start = strtrim(curr_line(c_start(1):c_start(2)));  % start time of bias correction
+ende  = strtrim(curr_line(c_ende(1) :c_ende (2)));  % end time of bias correction
+value = sscanf(strtrim(curr_line(c_value(1):c_value(2))),'%f');     % value of bias
+unit  = strtrim(curr_line(c_unit(1):c_unit(2)));          % unit of bias
+
+
+% check and correct if year is only in 2-digit format
+if ~strcmp(start(1:2), '20')
+    start = ['20' start];
 end
-
+if ~strcmp(ende(1:2), '20')
+    ende = ['20' ende];
+end
 
 % convert from [cycles] to [ns]
 % ||| implemented only for OSB!!!!

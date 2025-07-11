@@ -14,16 +14,23 @@ function refSat = chooseRefSatManual(refSatList, Epoch, gnss, elev_gnss, setting
 % OUTPUT:
 %   refSat       	number of selected reference satellite
 %
+% Revision:
+%   2025/05/20, MFWG: ignore satellites with cycle slips
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
 % preparations
-exclude = any(Epoch.exclude(gnss, :), 2);   % to check which satellites are healthy
 sats_gnss = Epoch.sats(gnss);       % satellite numbers of current GNSS
 
+% check which satellites are healthy
+exclude = any(Epoch.exclude(gnss, :), 2);   
+cs_found = any(Epoch.cs_found(gnss, :), 2);
+take = ~exclude & ~cs_found;
+
 % find manually defined reference satellites which are observed and healthy
-idx = ismember(refSatList, sats_gnss(~exclude));
+idx = ismember(refSatList, sats_gnss(take));
 refSat = refSatList(idx);
 
 if ~isempty(refSat)

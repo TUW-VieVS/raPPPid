@@ -20,7 +20,7 @@ function Epoch = cycleSlip_dL(settings, Epoch, use_column)
 
 %% Preparations
 thresh = settings.OTHER.CS.DF_threshold;
-num_freq = settings.INPUT.proc_freqs;
+proc_freq = settings.INPUT.proc_freqs;
 
 % get columns of observations for GPS
 l1_gps = use_column{1, 1};      % column of L1-observations in observation-matrix (Epoch.obs)
@@ -163,9 +163,9 @@ cs_found_23(isnan(diff_23)) = true;
 % build matrix with detected cycle slips depending on the number of 
 % processed frequencies
 new_cs = cs_found_12';      % e.g. IF LC
-if num_freq == 2
+if proc_freq == 2
     new_cs = [cs_found_12', cs_found_12'];
-elseif num_freq == 3
+elseif proc_freq == 3
     % check on which frequency cycle-slip occured and try to exclude only this
     % frequency
     cs_found_L1 = cs_found_12 & cs_found_13 & (~isnan(diff_12) | ~isnan(diff_13));

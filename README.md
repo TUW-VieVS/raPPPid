@@ -1,4 +1,4 @@
-# raPPPid
+
 Software for Precise Point Positioning (PPP) based on the signals of Global Navigation Satellite Systems (GNSS)
 
 Written by Marcus Franz Glaner (TU Wien, Higher Geodesy)

@@ -18,7 +18,8 @@ function plotZTDHisto(dZTD, PlotStruct, label, i)
 if isempty(dZTD) || all(isnan(dZTD(:))); return; end
 
 % create plot figure
-fig_histo =  figure('Name', 'Histogram of ZTD Difference', 'NumberTitle','off');
+if PlotStruct.float; sol='float'; elseif PlotStruct.fixed; sol='fixed'; end
+fig_histo =  figure('Name', ['Histogram of ZTD Difference, ' sol], 'NumberTitle','off');
 
 % add customized datatip
 dcm = datacursormode(fig_histo);

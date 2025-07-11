@@ -20,7 +20,7 @@ function Adjust = Designmatrix_ZD(Adjust, Epoch, model, settings)
 % get variables from settings
 num_freq = settings.INPUT.proc_freqs;   % number of processed frequencies
 % get variables from Adjust
-param   = Adjust.param;         % parameter estimation from last epoch
+param_ = Adjust.param_pred;     % predicted parameters
 % get variables from Epoch
 obs_code  = Epoch.code;         % code observations
 obs_phase = Epoch.phase;        % phase observations
@@ -57,16 +57,21 @@ omc(code_row,1)	 = (obs_code(:)  - model.model_code(:))  .*  ~exclude;          
 omc(phase_row,1) = (obs_phase(:) - model.model_phase(:)) .*  ~exclude .*  usePhase;     % phase observations
 
 % --- Partial derivatives
-% coordinates
-dR_dx    = -(sat_x(:)-param(1)) ./ rho; 	% x
-dR_dy    = -(sat_y(:)-param(2)) ./ rho; 	% y
-dR_dz    = -(sat_z(:)-param(3)) ./ rho; 	% z
+% position
+dR_dx    = -(sat_x(:)-param_(1)) ./ rho; 	% x
+dR_dy    = -(sat_y(:)-param_(2)) ./ rho; 	% y
+dR_dz    = -(sat_z(:)-param_(3)) ./ rho; 	% z
+
+% velocity
+dR_dvx = zeros(s_f, 1);
+dR_dvy = zeros(s_f, 1);
+dR_dvz = zeros(s_f, 1);
 
 % zenith wet delay
 dR_dtrop = model.mfw(:); 	% get wet troposphere mapping-function
 
 % initialize matrices for receiver clock error, time offsets and DCBs
-dR_time_dcb = zeros(s_f, NO_PARAM-4);
+dR_time_dcb = zeros(s_f, NO_PARAM-7);
 % receiver clock error
 if settings.INPUT.use_GPS
     dR_time_dcb(:, 1) = isGPS + isGLO + isGAL + isBDS + isQZSS;       % GPS receiver clock error
@@ -103,8 +108,8 @@ amb_c = zeros(s_f,s_f);     % ambiguity-part of A-Matrix for code
 amb_p = eye(s_f,s_f);       % ambiguity N expressed in meters
 
 % --- Build A-Matrix
-A(code_row,:)  = [dR_dx, dR_dy, dR_dz, dR_dtrop, dR_time_dcb, amb_c] .*  ~exclude;
-A(phase_row,:) = [dR_dx, dR_dy, dR_dz, dR_dtrop, dR_time_dcb, amb_p] .*  ~exclude .* usePhase;
+A(code_row,:)  = [dR_dx, dR_dy, dR_dz, dR_dvx, dR_dvy, dR_dvz, dR_dtrop, dR_time_dcb, amb_c] .*  ~exclude;
+A(phase_row,:) = [dR_dx, dR_dy, dR_dz, dR_dvx, dR_dvy, dR_dvz, dR_dtrop, dR_time_dcb, amb_p] .*  ~exclude .* usePhase;
 
 
 %% add ionosphere estimation part to A and omc
@@ -139,6 +144,15 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(set
         omc_iono = model.iono(:,1) - iono_est;
         omc = [omc(:); omc_iono(:)];
     end
+end
+
+
+
+%% GRAPHIC: manipulate A and omc
+% remove code rows because Epoch.code and Epoch.phase are identical
+if strcmp(settings.IONO.model, 'GRAPHIC')
+    A(code_row, :) = [];
+    omc(code_row, :) = [];
 end
 
 

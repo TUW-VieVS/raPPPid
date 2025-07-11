@@ -14,9 +14,7 @@ function [] = printSatelliteStatus(Epoch)
 % *************************************************************************
 
 
-
-sats = Epoch.sats;      % prn numbers of satellites
-n = numel(sats);        % number of satellites in current epoch
+n = numel(Epoch.sats);        % number of satellites in current epoch
 frq = size(Epoch.sat_status,2);   % number of frequencies
 
 % print current epoch
@@ -30,7 +28,7 @@ for i = 1:n
     for j = 1:frq
         % get status and prn of current satellite
         status = Epoch.sat_status(i,j);
-        prn = sats(i);
+        prn = Epoch.sats(i);
         
         % determine status of current satellite
         switch status
@@ -41,15 +39,15 @@ for i = 1:n
             case 2
                 str_add = 'below cutoff angle';
             case 3
-                str_add = 'cycle slip detected';
+                str_add = 'cycle slip';
             case 4
-                str_add = 'multipath detected';
+                str_add = 'multipath';
             case 5
                 str_add = 'no satellite clock';
             case 6
                 str_add = 'no satellite orbit';
             case 7
-                str_add = 'below C/N0 threshold';
+                str_add = 'C/N0 too low';
             case 8
                 str_add = 'SSR digit too low';
             case 9
@@ -77,6 +75,12 @@ for i = 1:n
         string_status = [string_status str_add ' | '];
         
     end
+    
+    % check if the current satellite is used as reference satellite
+    if any(prn == [Epoch.refSatGPS Epoch.refSatGLO Epoch.refSatGAL Epoch.refSatBDS Epoch.refSatQZS])
+        string_status = [string_status ' <- RefSat'];
+    end
+    
     % get char of gnss from prn number
     if prn < 100
         gnsschar = 'G';

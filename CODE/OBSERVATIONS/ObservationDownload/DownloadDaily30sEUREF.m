@@ -159,6 +159,7 @@ for i = 1:n
     if ispc         % Windows
         str = strcat('CRX2RNX "',full_file_path,'"');
     elseif isunix 	% Linux
+		system('chmod u+x ./*');
         str = strcat('./CRX2RNX "',full_file_path,'"');
     end
     

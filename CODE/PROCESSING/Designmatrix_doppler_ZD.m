@@ -21,8 +21,8 @@ function Adjust = Designmatrix_doppler_ZD(Adjust, Epoch, model, settings)
 
 % --- Preparations
 num_freq = settings.INPUT.proc_freqs;
-param = Adjust.param;                       % parameter estimations from last epoch
-no_sats = numel(Epoch.sats);                % number of satellites in current epoch
+param_ = Adjust.param_pred;         % predicted parameters
+no_sats = numel(Epoch.sats);        % number of satellites in current epoch
 s_f = no_sats * num_freq;
 cutoff = Epoch.exclude(:);
 rho = model.rho(:);
@@ -35,15 +35,19 @@ sat_vel_z = repmat(model.Rot_V(3,:)', 1, num_freq);  	% satellite ECEF velocity 
 
 
 %% Doppler observations
-% Partial derivatives: coordinates
-dD_dx    = ( sat_pos_x(:)-param(1) ) ./ rho .* sat_vel_x;      % x
-dD_dy    = ( sat_pos_y(:)-param(2) ) ./ rho .* sat_vel_y;      % y
-dD_dz    = ( sat_pos_z(:)-param(3) ) ./ rho .* sat_vel_z;      % z
+% Partial derivatives: position
+dD_dx    = ( sat_pos_x(:)-param_(1) ) ./ rho .* sat_vel_x;      % x
+dD_dy    = ( sat_pos_y(:)-param_(2) ) ./ rho .* sat_vel_y;      % y
+dD_dz    = ( sat_pos_z(:)-param_(3) ) ./ rho .* sat_vel_z;      % z
+% Partial derivatives: velocity
+dD_dvx = zeros(s_f, 1);     % ||| change this! add derivation
+dD_dvy = zeros(s_f, 1);
+dD_dvz = zeros(s_f, 1);
 % Partial derivatives: clock drift
 dTime = zeros(s_f, 13); 
 dTime(:,1) = 1;         % |||D: this is the place of the wmf, tropo estimation!
 % create Design-Matrix of Doppler observations
-A = [dD_dx, dD_dy, dD_dz, dTime] .* ~cutoff;
+A = [dD_dx, dD_dy, dD_dz, dD_dvx, dD_dvy, dD_dvz, dTime] .* ~cutoff;
 % put Design-Matrix of Doppler together
 % update observed-minus-computed
 omc  = (model.model_doppler + Epoch.D1) .* ~cutoff;

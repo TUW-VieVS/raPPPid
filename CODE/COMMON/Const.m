@@ -9,6 +9,7 @@
 %       2023/11/03, MFWG: adding QZSS
 %       2024/01/04, MFWG: adding additional BeiDou frequencies
 %       2025/02/24, MFWG: correcting physical constant, clearing
+%       2025/05/16, MFWG: adding some new constants
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -17,15 +18,21 @@ classdef Const
       
     properties (Constant = true)
         %% Physical Constants
-        C = 299792458;           % Speed of light [m/s]
-        RE = 6.371e6             % mean earth radius [m]        
+        C = 299792458;      	% Speed of light [m/s]
+        RE     = 6.371e6      	% mean earth radius [m]   
+        RE_equ = 6.378137e6;	% Earth's equatorial radius [m]
+        J2 = 1.0826267e-3;   	% J2 coefficient for Earth's oblateness [] 
+        P_srp = 4.56e-6;        % coefficient of solar radiation pressure [N/m^2] 
+        AU = 1.496e11;          % Astronomical Unit [m] 
+        Moon_muM = 4.905e12;    % Moon's gravitational parameter [m^3/s^2]
+        Sun_muS = 1.3271e20;    % Sun's gravitational parameter [m^3/s^2] 
         % Earths geocentric gravitational constant [m^3/s^2]
         GM = 3.986005e14;   
         GM_GAL = 3.986004418e14;
         GM_GLO = Const.GM_GAL;
         GM_BDS = 3.986004418e14;
         % Earth rotation rate [rad/s]
-        WE = 7.2921151467e-5; 
+        WE = 7.2921151467e-5;
         WE_GLO = 7.2921150e-5; 
         WE_GAL = Const.WE;
         WE_BDS = 7.2921150e-5;

@@ -118,6 +118,11 @@ if gps_on
     for ii = 1:DEF.SATS_GPS        % loop over GPS satellites
         sat_ = ['G', sprintf('%02d', ii)];
         
+        if ~isfield(SinexOSB, sat_)
+            % no biases for this satellite
+            continue
+        end        
+        
         % -+-+- check and create the needed biases -+-+-
         % check if C1WC2W Bias is existing otherwise create it
         if bool_DSB && ~isfield(SinexDSB.(sat_), C1W_to_C2W)        % check for C1WC2W Bias
@@ -246,6 +251,11 @@ if glo_on
     for ii = 1:DEF.SATS_GLO        % loop over Glonass satellites
         sat_ = ['R', sprintf('%02d', ii)];
         
+        if ~isfield(SinexOSB, sat_)
+            % no biases for this satellite
+            continue
+        end
+        
         % -+-+- check and create the needed biases -+-+-
         % check if C1PC2P Bias is existing otherwise create it
         if bool_DSB && ~isfield(SinexDSB.(sat_), C1P_to_C2P)        % check for C1WC2W Bias
@@ -335,6 +345,11 @@ if gal_on
     for ii = 1:DEF.SATS_GAL        % loop over Galileo satellites
         sat_ = ['E', sprintf('%02d', ii)];
         
+        if ~isfield(SinexOSB, sat_)
+            % no biases for this satellite
+            continue
+        end       
+        
         % --- Observable-specific Signal Biases ---
         if bool_OSB
             if isfield(SinexOSB.(sat_), GAL_obs.C1)     % OSB for code 1
@@ -423,6 +438,11 @@ if bds_on
     for ii = 1:DEF.SATS_BDS        % loop over BeiDou satellites
         sat_ = ['C', sprintf('%02d', ii)];
         
+        if ~isfield(SinexOSB, sat_)
+            % no biases for this satellite
+            continue
+        end
+        
         % --- Observable-specific Signal Biases ---
         if bool_OSB         
             if isfield(SinexOSB.(sat_), BDS_obs.C1)     % OSB for code 1
@@ -491,6 +511,11 @@ if qzss_on
 
     for ii = 1:DEF.SATS_QZSS        % loop over QZSS satellites
         sat_ = ['J', sprintf('%02d', ii)];
+
+        if ~isfield(SinexOSB, sat_)
+            % no biases for this satellite
+            continue
+        end
         
         % --- Observable-specific Signal Biases ---
         if bool_OSB         

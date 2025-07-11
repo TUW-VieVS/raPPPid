@@ -11,7 +11,7 @@ if MultiPlot.float
     pos_UTM  = storeData.posFloat_utm;
 elseif MultiPlot.fixed
     try
-		try; pos_cart = storeData.xyz_fix(:,1:3); catch; pos_cart = storeData.param_fix(:,1:3); end
+		try; pos_cart = storeData.param_fix(:,1:3); catch; pos_cart = storeData.xyz_fix(:,1:3); end
         pos_UTM  = storeData.posFixed_utm;
     catch
         pos_cart = NaN(1,3); pos_UTM = NaN(1,3);
