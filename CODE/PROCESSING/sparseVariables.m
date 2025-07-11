@@ -172,7 +172,9 @@ storeData.residuals_code_1  = sparse(storeData.residuals_code_1);
 if strcmpi(settings.PROC.method,'Code + Phase')
     storeData.N_1               = sparse(storeData.N_1);
     storeData.N_var_1           = sparse(storeData.N_var_1);
-    storeData.residuals_phase_1 = sparse(storeData.residuals_phase_1);
+	if ~strcmp(settings.IONO.model, 'GRAPHIC')
+		storeData.residuals_phase_1 = sparse(storeData.residuals_phase_1);
+	end
     if settings.AMBFIX.bool_AMBFIX
         storeData.residuals_code_fix_1  = sparse(storeData.residuals_code_fix_1);
         storeData.residuals_phase_fix_1 = sparse(storeData.residuals_phase_fix_1);

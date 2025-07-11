@@ -90,8 +90,6 @@ else        % calculate satellite position from navigation message
         [X,V] = SatPos_brdc(Ttr_, Eph_brdc(:,k), GM, we_dot);
     elseif isGLO
         [X,V] = SatPos_brdc_GLO(Ttr, Eph_brdc(:,k));
-        [X] = PZ90toWGS84(X);   % very small influence
-        [V] = PZ90toWGS84(V);
     end
     if settings.ORBCLK.corr2brdc_orb        % apply corrections to BRDC orbits
         dt = Ttr - corr_orb(1); 	% time difference between signal transmission time and orbit correction

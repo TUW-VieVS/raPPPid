@@ -16,7 +16,15 @@ function handles = GUI_enable_onoff(handles)
 
 batch_proc = handles.checkbox_batch_proc.Value;
 proc_meth = handles.popupmenu_process.String(handles.popupmenu_process.Value);
-bool_DCM = strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate, decoupled clock');
+bool_satellite = handles.checkbox_satellite.Value;
+iono_model = handles.buttongroup_models_ionosphere.SelectedObject.String;
+bool_DCM = strcmp(iono_model, 'Estimate, decoupled clock');
+
+GPS_on = handles.checkbox_GPS.Value;
+GLO_on = handles.checkbox_GLO.Value;
+GAL_on = handles.checkbox_GAL.Value;
+BDS_on = handles.checkbox_BDS.Value;
+QZS_on = handles.checkbox_QZSS.Value;
 
 
 % enable/disable Download button
@@ -108,7 +116,7 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
     if ~batch_proc
         % Checkbox GPS
         handles.checkbox_GPS.Enable = 'On';
-        if handles.checkbox_GPS.Value       % GPS processing enabled
+        if GPS_on       % GPS processing enabled
             set(handles.popupmenu_gps_1,                     'Enable', 'On');
             set(handles.popupmenu_gps_2,                     'Enable', 'On');
             set(handles.popupmenu_gps_3,                     'Enable', 'On');
@@ -131,7 +139,7 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
         end
         % Checkbox Glonass
         handles.checkbox_GLO.Enable = 'On';
-        if handles.checkbox_GLO.Value       % GLONASS processing enabled
+        if GLO_on       % GLONASS processing enabled
             set(handles.popupmenu_glo_1,                     'Enable', 'On');
             set(handles.popupmenu_glo_2,                     'Enable', 'On');
             set(handles.popupmenu_glo_3,                     'Enable', 'On');
@@ -154,7 +162,7 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
         end
         % Checkbox Galileo
         handles.checkbox_GAL.Enable = 'On';
-        if handles.checkbox_GAL.Value       % Galileo processing enabled
+        if GAL_on       % Galileo processing enabled
             set(handles.popupmenu_gal_1,                     'Enable', 'On');
             set(handles.popupmenu_gal_2,                     'Enable', 'On');
             set(handles.popupmenu_gal_3,                     'Enable', 'On');
@@ -177,7 +185,7 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
         end
         % Checkbox BeiDou
         handles.checkbox_BDS.Enable = 'On';
-        if handles.checkbox_BDS.Value       % BeiDou processing enabled
+        if BDS_on       % BeiDou processing enabled
             set(handles.popupmenu_bds_1,                     'Enable', 'On');
             set(handles.popupmenu_bds_2,                     'Enable', 'On');
             set(handles.popupmenu_bds_3,                     'Enable', 'On');
@@ -332,8 +340,8 @@ end
 if strcmpi(handles.uipanel_ionosphere.Visible, 'on')
     set(handles.buttongroup_models_ionosphere_autodetect,'Visible','Off');
     set(handles.buttongroup_models_ionosphere_ionex_type,'Visible','Off');
-    switch handles.buttongroup_models_ionosphere.SelectedObject.String
-        case {'2-Frequency-IF-LCs', '3-Frequency-IF-LC', 'Estimate', 'off'}
+    switch iono_model
+        case {'2-Frequency-IF-LCs', '3-Frequency-IF-LC', 'Estimate', 'GRAPHIC', 'off'}
             set(handles.buttongroup_source_ionosphere,'Visible','Off');
             set(handles.buttongroup_models_ionosphere_ionex,'Visible','Off');
             set(handles.buttongroup_models_ionosphere_autodetect,'Visible','Off');
@@ -612,24 +620,41 @@ if strcmpi(handles.uipanel_ambiguityFixing.Visible, 'on')
     
     % choice of reference satellite
     handles.uibuttongroup_refSat.Visible = onoff;
-    if bool_DCM
+    if bool_DCM && handles.checkbox_fixing.Value
         handles.uibuttongroup_refSat.Visible = 'On';
     end
     % manual choice of reference satellite
+    handles.text_refSatGPS.Enable = 'Off';
+    handles.text_refSatGLO.Enable = 'Off';
+    handles.text_refSatGAL.Enable = 'Off';
+    handles.text_refSatBDS.Enable = 'Off';
+    handles.text_refSatQZS.Enable = 'Off';
+    handles.edit_refSatGPS.Enable = 'Off';
+    handles.edit_refSatGLO.Enable = 'Off';
+    handles.edit_refSatGAL.Enable = 'Off';
+    handles.edit_refSatBDS.Enable = 'Off';
+    handles.edit_refSatQZS.Enable = 'Off';
     if strcmp(handles.uibuttongroup_refSat.SelectedObject.String, 'manual choice (list):')
-        handles.text_refSatGPS.Enable = 'On';
-        handles.text_refSatGAL.Enable = 'On';
-		handles.text_refSatBDS.Enable = 'On';
-        handles.edit_refSatGPS.Enable = 'On';
-        handles.edit_refSatGAL.Enable = 'On';
-		handles.edit_refSatBDS.Enable = 'On';
-    else
-        handles.text_refSatGPS.Enable = 'Off';
-        handles.text_refSatGAL.Enable = 'Off';
-		handles.text_refSatBDS.Enable = 'Off';
-        handles.edit_refSatGPS.Enable = 'Off';
-        handles.edit_refSatGAL.Enable = 'Off';
-		handles.edit_refSatBDS.Enable = 'Off';
+        if GPS_on
+            handles.text_refSatGPS.Enable = 'On';
+            handles.edit_refSatGPS.Enable = 'On';
+        end
+        if GLO_on
+            handles.text_refSatGLO.Enable = 'On';
+            handles.edit_refSatGLO.Enable = 'On';
+        end
+        if GAL_on
+            handles.text_refSatGAL.Enable = 'On';
+            handles.edit_refSatGAL.Enable = 'On';
+        end
+        if BDS_on
+            handles.text_refSatBDS.Enable = 'On';
+            handles.edit_refSatBDS.Enable = 'On';
+        end
+        if QZS_on
+            handles.text_refSatQZS.Enable = 'On';
+            handles.edit_refSatQZS.Enable = 'On';
+        end
     end
     
     % handles.uibuttongroup_wrongFixes.Visible = onoff;
@@ -654,6 +679,18 @@ if strcmpi(handles.uipanel_ambiguityFixing.Visible, 'on')
         handles.text_start_WL.String = 'Start WL-Fixing after                        seconds';
     end
     
+    % do not show options of HMW Fixing for decoupled clock model
+    if bool_DCM
+        OnOff = 'Off';
+        handles.text_hmw_fixing.Visible    = OnOff;
+        handles.edit_hmw_thresh.Visible    = OnOff;
+        handles.text_hmw_thresh.Visible    = OnOff;
+        handles.edit_hmw_release.Visible   = OnOff;
+        handles.text_hmw_release.Visible   = OnOff;
+        handles.edit_fixing_window.Visible = OnOff;
+        handles.text_fixing_window.Visible = OnOff;
+    end
+
 end
 
 
@@ -666,6 +703,21 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
         set(handles.uipanel_filter, 'Visible', 'off');
     else
         set(handles.uipanel_filter, 'Visible', 'on');
+    end
+
+    % estimation of velocity
+    if bool_satellite
+        handles.text_velocity.Enable = 'On';
+        handles.edit_filter_velocity_sigma0.Enable = 'On';
+        handles.edit_filter_velocity_Q.Enable = 'On';
+        handles.text_velocity_m.Enable = 'On';
+        handles.popupmenu_filter_velocity_dynmodel.Enable = 'On';
+    else
+        handles.text_velocity.Enable = 'Off';
+        handles.edit_filter_velocity_sigma0.Enable = 'Off';
+        handles.edit_filter_velocity_Q.Enable = 'Off';
+        handles.text_velocity_m.Enable = 'Off';
+        handles.popupmenu_filter_velocity_dynmodel.Enable = 'Off';
     end
     
     % estimation of ZWD
@@ -691,7 +743,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     set(handles.popupmenu_filter_rec_clock_dynmodel, 'Enable', 'On');
     
     % Receiver Clock Glonass
-    if handles.checkbox_GLO.Value
+    if GLO_on
         set(handles.edit_filter_glonass_offset_Q,             'Enable', 'On');
         set(handles.edit_filter_glonass_offset_sigma0,        'Enable', 'On');
         set(handles.text_glo_time_offset,                	 'Enable', 'On');
@@ -706,7 +758,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     end
     
     % Receiver Clock Galileo
-    if handles.checkbox_GAL.Value
+    if GAL_on
         set(handles.edit_filter_galileo_offset_Q,             'Enable', 'On');
         set(handles.edit_filter_galileo_offset_sigma0,        'Enable', 'On');
         set(handles.text_gal_time_offset,                	 'Enable', 'On');
@@ -721,7 +773,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     end
     
     % Receiver Clock BeiDou
-    if handles.checkbox_BDS.Value
+    if BDS_on
         set(handles.edit_filter_beidou_offset_Q,             'Enable', 'On');
         set(handles.edit_filter_beidou_offset_sigma0,        'Enable', 'On');
         set(handles.text_bds_time_offset,                	 'Enable', 'On');
@@ -762,8 +814,9 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     % check if initial std and system of Receiver Biases/DCBs should be enabled
     handles.checkbox_estimate_rec_dcbs.Enable = 'On';
     onoff = 'Off';
-    if bool_DCM || strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate') || ...
-            strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint')
+    if bool_DCM || strcmp(iono_model, 'Estimate') || ...
+            strcmp(iono_model, 'Estimate with ... as constraint') || ...
+            strcmp(iono_model, 'Correct with ...')
         onoff = 'On';
     end
     set(handles.text_rec_dcbs, 'Enable', onoff);
@@ -803,8 +856,8 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     end
     
     % Check ionosphere model
-    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint') || ...
-            strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate') || ...
+    if strcmp(iono_model, 'Estimate with ... as constraint') || ...
+            strcmp(iono_model, 'Estimate') || ...
             bool_DCM
         % filter settings
         set(handles.edit_filter_iono_Q,             'Enable', 'On');
@@ -819,7 +872,29 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
         set(handles.popupmenu_filter_iono_dynmodel, 'Enable', 'Off');
         set(handles.text_iono,                      'Enable', 'Off');
         set(handles.text_iono_m,                    'Enable', 'Off');
-    end    
+    end
+    
+    % Satellite PPP
+    if bool_satellite
+        handles.text_sat_mass.Visible  = 'On';
+        handles.edit_sat_mass.Visible  = 'On';
+        handles.text_sat_area.Visible  = 'On';
+        handles.edit_sat_area.Visible  = 'On';
+        handles.text_sat_drag.Visible  = 'On';
+        handles.edit_sat_drag.Visible  = 'On'; 
+        handles.text_sat_solar.Visible = 'On';
+        handles.edit_sat_solar.Visible = 'On';        
+    else
+        handles.text_sat_mass.Visible  = 'Off';
+        handles.edit_sat_mass.Visible  = 'Off';
+        handles.text_sat_area.Visible  = 'Off';
+        handles.edit_sat_area.Visible  = 'Off';
+        handles.text_sat_drag.Visible  = 'Off';
+        handles.edit_sat_drag.Visible  = 'Off'; 
+        handles.text_sat_solar.Visible = 'Off';
+        handles.edit_sat_solar.Visible = 'Off';   
+    end
+
 end
 
 
@@ -835,7 +910,7 @@ if strcmpi(handles.uipanel_weighting.Visible, 'on')
     set(handles.edit_constraint_until,          'Visible','Off');
     set(handles.text_constraint_decrease,       'Visible','Off');
     set(handles.edit_constraint_decrease,       'Visible','Off');
-    if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint')
+    if strcmp(iono_model, 'Estimate with ... as constraint')
         % Ionospheric constraint
         set(handles.text_std_iono,                  'Enable', 'On');
         set(handles.edit_Std_Iono,                  'Enable', 'On');
@@ -859,16 +934,16 @@ if strcmpi(handles.uipanel_weighting.Visible, 'on')
         handles.edit_weight_BDS.Enable = 'On'; handles.text_weight_BDS.Enable = 'On';
         handles.edit_weight_QZSS.Enable = 'On';handles.text_weight_QZSS.Enable = 'On';
     else
-        if handles.checkbox_GPS.Value
+        if GPS_on
             handles.edit_weight_GPS.Enable = 'On'; handles.text_weight_GPS.Enable = 'On';
         end
-        if handles.checkbox_GLO.Value
+        if GLO_on
             handles.edit_weight_GLO.Enable = 'On'; handles.text_weight_GLO.Enable = 'On';
         end
-        if handles.checkbox_GAL.Value
+        if GAL_on
             handles.edit_weight_GAL.Enable = 'On'; handles.text_weight_GAL.Enable = 'On';
         end
-        if handles.checkbox_BDS.Value
+        if BDS_on
             handles.edit_weight_BDS.Enable = 'On'; handles.text_weight_BDS.Enable = 'On';
         end
         if handles.checkbox_QZSS.Value
@@ -993,8 +1068,8 @@ if strcmpi(handles.uipanel_export.Visible, 'on')
         handles.checkbox_exp_storeData_vtec.Enable    = 'on';
         handles.checkbox_exp_storeData_iono_mf.Enable = 'on';
         handles.checkbox_exp_storeData_mp_1_2.Enable  = 'on';
-        if strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate with ... as constraint') ...
-                || strcmp(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Correct with ...')
+        if strcmp(iono_model, 'Estimate with ... as constraint') ...
+                || strcmp(iono_model, 'Correct with ...')
             handles.checkbox_exp_storeData_vtec.Enable = 'on';
             handles.checkbox_exp_storeData_iono_mf.Enable = 'on';
         else

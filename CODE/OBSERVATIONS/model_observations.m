@@ -23,9 +23,9 @@ f2 = Epoch.f2;
 f3 = Epoch.f3;
 exclude = Epoch.exclude;
 proc_freq = settings.INPUT.proc_freqs;      % number of processed frequencies
-param = Adjust.param;                       % vector with unknowns
+param_ = Adjust.param_pred;               	% vector with unknowns, predictions
 NO_PARAM = Adjust.NO_PARAM;
-zwd = param(4);                 % float zenith wet delay
+zwd = param_(7);              	% float zenith wet delay
 no_sats = numel(Epoch.sats);   	% number of satellites
 
 
@@ -33,9 +33,9 @@ no_sats = numel(Epoch.sats);   	% number of satellites
 % modelled ionospheric delay to model the observation
 iono = model.iono;
 if contains(settings.IONO.model,'Estimate')
-    n = numel(param);
+    n = numel(param_);
     idx = (n-no_sats+1):n;
-    iono = param(idx);   % estimated ionospheric delay on 1st frequency
+    iono = param_(idx);   % estimated ionospheric delay on 1st frequency
     if proc_freq > 1
         k_2 = f1.^2 ./ f2.^2;       % to convert estimated ionospheric delay to 2nd frequency
         iono(:,2) = iono(:,1) .* k_2;   
@@ -70,10 +70,11 @@ code_model = code_model .* ~exclude;
 %% PHASE
 phase_model = [];
 if contains(settings.PROC.method,'+ Phase')
+    % get current float ambiguities
     idx = (NO_PARAM+1):(NO_PARAM+no_sats*proc_freq);
-    ambig = param(idx);
+    ambig = param_(idx);
     ambig = reshape(ambig, [length(ambig)/proc_freq , proc_freq, 1]);     % convert from vector to matrix
-
+    
     phase_model = model.rho...                            	% theoretical range
         - Const.C * model.dT_sat_rel...                    	% satellite and receiver clock
         + model.dt_rx_clock - model.dcbs ...                % receiver clock and DCBs
@@ -98,9 +99,9 @@ end
 doppler_model = [];
 if contains(settings.PROC.method, 'Doppler') && ~strcmp(settings.PROC.method, 'Code (Doppler Smoothing)')
     % get receiver and satellite position and velocity (in ECEF)
-    rec_p = param(1:3);
+    rec_p = param_(1:3);
     sat_p = model.ECEF_X;
-    rec_v = [0;0;0];
+    rec_v = param(4:6);
     sat_v = model.ECEF_V;
     
     % calculate velocity and position part for observation equation, check

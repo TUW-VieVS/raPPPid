@@ -27,7 +27,8 @@ end
 n = numel(labels);                      % number of labels
 
 % create figure to plot
-fig_quant_conv = figure('Name', 'ZTD Quantile Convergence Plot', 'NumberTitle','off');
+if PlotStruct.float; sol='float'; elseif PlotStruct.fixed; sol='fixed'; end
+fig_quant_conv = figure('Name', ['ZTD Quantile Convergence Plot, ' sol], 'NumberTitle','off');
 splot_11 = subplot(2,1,1); 
 splot_11 = style_before(splot_11, '68% Quantile ZTD');
 splot_12 = subplot(2,1,2); 
@@ -66,7 +67,7 @@ hold(ax, 'on')
 
 function ax = style_after(ax, labels, thresh)
 % style after plotting
-ylim(ax, [0 15]);           % [cm]
+% ylim(ax, [0 15]);           % [cm]
 % % plot vertical line for threshold
 % plot(ax, ax.XLim, [thresh thresh], 'k-');
 % add legend

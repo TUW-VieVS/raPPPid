@@ -1,6 +1,6 @@
 function [] = vis_cs_time_difference(storeData, sys, degree, thresh)
 % Plots the cycle slip detection based on the time difference (check 
-% cycleSlip_TimeDifference.m).
+% cycleSlip_TimeDiff.m).
 %
 % INPUT:
 %   storeData       struct, collected data from all processed epochs

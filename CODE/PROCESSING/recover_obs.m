@@ -33,10 +33,11 @@ TXT = TXT{1};
 fclose(fid);
 
 % detect start date
-bool_start = contains(TXT, 'Time of 1st observation');
+bool_start = contains(TXT, 'Time of 1st observation') | contains(TXT, 'Time of first observation');
 if any(bool_start)
     line_start = TXT{bool_start};
-    obs.startdate = str2num(line_start(51:69));     %#ok<ST2NM>, only str2num works
+    idx = strfind(line_start, '):');
+    obs.startdate = str2num(line_start(idx+2:end));     %#ok<ST2NM>, only str2num works
 end
 
 % detect 4-digit station name

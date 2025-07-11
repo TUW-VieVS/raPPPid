@@ -21,8 +21,8 @@ function [model, Epoch] = modelErrorSources(settings, input, Epoch, model, Adjus
 % *************************************************************************
 
 
-param = Adjust.param;
-pos_XYZ = param(1:3);       % current estimation of receiver position [XYZ]
+param_ = Adjust.param_pred;
+pos_XYZ = param_(1:3);   	% current estimation of receiver position [XYZ]
 % ellipsoidal coordinates of WGS84 ellipsoid
 % .lat = phi = latitude [rad]; .lon = lambda = longitude [rad]; .h = height [m]
 pos_WGS84 = cart2geo(pos_XYZ);	
@@ -61,7 +61,7 @@ if isempty(model)
     model = init_struct_model(num_sat, n_proc_frq, n_num_frq);  	% Init struct model
     
     % --- Calculate hour and approximate sun and moon position for epoch ---
-    h = mod(Epoch.gps_time,86400)/3600;
+    h = mod(Epoch.gps_time,86400)/3600;     % [hours]
     model.sunECEF  = sunPositionECEF (obs.startdate(1), obs.startdate(2), obs.startdate(3), h);
     model.moonECEF = moonPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h);
     
@@ -149,8 +149,12 @@ for i_sat = 1:num_sat
     dT_rel = 0;     mfw_VMF3 = [];     mfw_VMF1 = [];     mfw_GPT3 = [];
     % get cutoff (could be already set!) and satellite status
     exclude = Epoch.exclude(i_sat);	status = Epoch.sat_status(i_sat,:);
-    % receiver clock error [s]
-	dt_rx = (param(5) + isGLO*param(8) + isGAL*param(11) + isBDS*param(14) + isQZSS*param(17))/Const.C;      
+    % determine receiver clock error
+	dt_rx = param_(8) + isGLO*param_(11) + isGAL*param_(14) + isBDS*param_(17) + isQZSS*param_(20);      
+    if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+        dt_rx = isGPS*param_(7) + isGLO*param_(8) + isGAL*param_(9) + isBDS*param_(10) + isQZSS*param_(11);      
+    end
+    dt_rx = dt_rx / Const.C;    % convert from [m] to [s]
     
     % check if satellite has valid code observations
     if all(isnan(Epoch.code(i_sat,:)))
@@ -582,7 +586,7 @@ for i_sat = 1:num_sat
     % --- Rotational deformation due to polar motion (pole tide) ---
     dX_polar_tides= 0;
     if settings.OTHER.polar_tides         % [17]: p733
-        dX_polar_tides= dot2(los0, model.polar_tides_ECEF); 
+        dX_polar_tides = dot2(los0, model.polar_tides_ECEF); 
     end   
     
     % --- Correction for earth rotation ---

@@ -27,8 +27,8 @@ switch ext
     case '.nmea'
         [utc, lat_wgs84, lon_wgs84, h_wgs84] = ReadNMEAFile(filepath);
         sod_true = utc + leap_sec;          % convert utc to gps time
-        lat_wgs84 = lat_wgs84 / 180 * pi;   % convert [Â°] to [rad]
-        lon_wgs84 = lon_wgs84 / 180 * pi;   % convert [Â°] to [rad]
+        lat_wgs84 = lat_wgs84 / 180 * pi;   % convert [°] to [rad]
+        lon_wgs84 = lon_wgs84 / 180 * pi;   % convert [°] to [rad]
         [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
         
     case '.txt'
@@ -71,7 +71,7 @@ switch ext
         
     case '.pos'
         % text file with columns:
-        % yyyy/mm/dd | hh:mm:ss.sss | lat [Â°] | lon [Â°] | height [m] | ignore
+        % yyyy/mm/dd | hh:mm:ss.sss | lat [°] | lon [°] | height [m] | ignore
         % time is already GPS time
         fid = fopen(filepath);
         header = fgetl(fid);
@@ -80,8 +80,8 @@ switch ext
             case '%  GPST                   lat(deg)      lon(deg)         h(m)      OK' 
                 DATA = textscan(fid,'%f/%f/%f %f:%f:%f %f %f %f %f', 'HeaderLines', 0);
                 fclose(fid);
-                lat_wgs84 = DATA{:,7} / 180 * pi;   % convert [Â°] to [rad]
-                lon_wgs84 = DATA{:,8} / 180 * pi;   % convert [Â°] to [rad]
+                lat_wgs84 = DATA{:,7} / 180 * pi;   % convert [°] to [rad]
+                lon_wgs84 = DATA{:,8} / 180 * pi;   % convert [°] to [rad]
                 h_wgs84   = DATA{:,9};
                 sod_true = DATA{:,4} * 3600 + DATA{:,5}*60 + DATA{:,6};     % already GPS time
                 [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
@@ -90,8 +90,8 @@ switch ext
                 DATA = textscan(fid,'%f/%f/%f %f:%f:%f %f %f %f %f %f %f %f %f %f %f %f %f %f', 'HeaderLines', 0);
                 fclose(fid);
                 % handle position information
-                lat_wgs84 = DATA{:,7} / 180 * pi;   % convert [Â°] to [rad]
-                lon_wgs84 = DATA{:,8} / 180 * pi;   % convert [Â°] to [rad]
+                lat_wgs84 = DATA{:,7} / 180 * pi;   % convert [°] to [rad]
+                lon_wgs84 = DATA{:,8} / 180 * pi;   % convert [°] to [rad]
                 h_wgs84   = DATA{:,9};
                 [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
                 % handle time information
@@ -111,7 +111,7 @@ switch ext
     case '.gpx'
         gpx_data = gpxread(filepath);       % read gpx file
         % get latitude, longitude, and height
-        lat_wgs84 = gpx_data.Latitude' / 180 * pi;       % convert [Â°] to [rad]
+        lat_wgs84 = gpx_data.Latitude' / 180 * pi;       % convert [°] to [rad]
         lon_wgs84 = gpx_data.Longitude' / 180 * pi;
         h_wgs84 = gpx_data.Elevation';
         % convert to UTM coordinates
@@ -146,7 +146,7 @@ switch ext
         % check if variables could be detected
         if any(bool_lat) && any(bool_lon) && any(bool_alt)
             % get latitude, longitude, height columns
-            lat_wgs84 = table2array(csv_data(:, bool_lat)) / 180 * pi;   	% convert [Â°] to [rad]
+            lat_wgs84 = table2array(csv_data(:, bool_lat)) / 180 * pi;   	% convert [°] to [rad]
             lon_wgs84 = table2array(csv_data(:, bool_lon)) / 180 * pi;
             h_wgs84   = table2array(csv_data(:, bool_alt));
             pos_ref_geo.lat = lat_wgs84;

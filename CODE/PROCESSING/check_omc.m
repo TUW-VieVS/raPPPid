@@ -1,8 +1,9 @@
 function [Epoch, Adjust] = check_omc(Epoch, model, Adjust, settings, obs_intval)
-% Check observed minus computed for extreme outliers which could be
-% multipath (code observations) or undetected cycle slips (phase
-% observations). Satellites with too large omc are assumed as outliers and
-% excluded from the parameter estimation.
+% This function performs a simple check of the pre-fit residuals using the
+% predicted parameters and checks the observed minus computed, for example,
+% for extreme outliers which could be multipath (code observations) or 
+% undetected cycle slips (phase observations). Satellites with too large 
+% omc are assumed as outliers and excluded from the parameter estimation.
 %
 % INPUT:
 %   Epoch       struct, contains epoch-specific data

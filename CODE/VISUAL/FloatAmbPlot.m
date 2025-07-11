@@ -69,12 +69,14 @@ for j = 1:no_frqs
     % create legend (otherwise datatip is not working)  
     hleg = legend(strcat(gnss, sprintfc('%02.0f', prns)));
     title(hleg, 'PRN')          % title for legend
-%     legend off    
+%     if j ~= 1
+%         legend off              % show legend only on first frequency
+%     end
     
     % styling
     Grid_Xoff_Yon()
-    frequ = [ 'Frequency ', sprintf('%d',j)];
-    title(['Estimated ', sys,' Ambiguities for ', frequ],'fontsize', 11);
+    frequ = [ 'frequency ', sprintf('%d',j)];
+    title(['Estimated ', sys,' float ambiguities on ', frequ],'fontsize', 11);
     ylabel('Ambiguities [m] (not absolute)')
     xlabel(label_x)
     

@@ -162,6 +162,12 @@ if ~contains(settings.PROC.method, 'Phase') || strcmp(settings.PROC.method, 'Cod
     P(2:2:end,:)=[];     P(:,2:2:end)=[];
 end
 
+% remove part of matrices in case of GRAPHIC
+if strcmp(settings.IONO.model, 'GRAPHIC')
+    Q(2:2:end,:)=[];     Q(:,2:2:end)=[];
+    P(2:2:end,:)=[];     P(:,2:2:end)=[];
+end
+
 
 
 %% add ionosphere constraint part

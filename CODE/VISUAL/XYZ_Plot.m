@@ -90,7 +90,7 @@ elseif tick_int > 900           % tick interval is more than 15min
 elseif tick_int > 600           % tick interval is more than 10min
     tick_int = tick_int - mod(tick_int, 600);   % round to 10min
 end
-[vec, txt] = xLabelling(tick_int, seconds, interval);
+[vec, txt] = xLabelling(tick_int, unique(seconds, 'stable'), interval);
 ax1 = gca;                      % current axes
 set(ax1,'XTick',vec,'XTickLabel',txt)
 

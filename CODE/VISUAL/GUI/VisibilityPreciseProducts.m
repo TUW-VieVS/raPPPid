@@ -86,7 +86,10 @@ switch prec_prod_source
         handles.checkbox_MGEX.Value = 1;
         
     case 'WUM'
-        handles.uibuttongroup_prec_prod_type.Visible = 'Off';
+        handles.uibuttongroup_prec_prod_type.Visible = 'On';
+        handles.radiobutton_prec_prod_final.Enable = 'On';
+        handles.radiobutton_prec_prod_rapid.Enable = 'On';
+        handles.radiobutton_prec_prod_ultrarapid.Enable = 'Off';
         handles.checkbox_MGEX.Value = 1;
         
     case 'JGX'

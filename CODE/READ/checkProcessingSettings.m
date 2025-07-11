@@ -81,11 +81,11 @@ end
 prec_prod_CODE_MGEX = strcmpi(settings.ORBCLK.prec_prod,'CODE') && settings.ORBCLK.MGEX;
 prec_prod_CODE = strcmpi(settings.ORBCLK.prec_prod,'CODE') && ~settings.ORBCLK.MGEX;
 DecoupledClockModel = strcmp(settings.IONO.model, 'Estimate, decoupled clock');
-
+IF_LC = strcmp(settings.IONO.model,'2-Frequency-IF-LCs');
 
 
 %% Check different number of processed frequencies (only for IF LC PPP models)
-if (strcmp(settings.IONO.model,'2-Frequency-IF-LCs') || strcmp(settings.IONO.model,'3-Frequency-IF-LC')) && ~prebatch_check
+if (IF_LC || strcmp(settings.IONO.model,'3-Frequency-IF-LC')) && ~prebatch_check
     % Different number of processed frequencies for GPS and Galileo
     if GPS_on && GAL_on
         if no_freq_gps ~= no_freq_gal
@@ -381,11 +381,11 @@ end
 
 % check for errors related to estimation of receiver DCBs
 if settings.BIASES.estimate_rec_dcbs && ~prebatch_check
-    if num_freq == 1
-        errordlg({'Only 1-Frequency is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation / Adjustment)'}, windowname);
+    if num_freq == 1 && ~DecoupledClockModel
+        errordlg({'Only one frequency is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation / Adjustment)'}, windowname);
         valid_settings = false; return
     end
-    if num_freq == 2 && strcmp(settings.IONO.model,'2-Frequency-IF-LCs')
+    if num_freq == 2 && IF_LC
         errordlg({'2-Frequency IF-LC is processed:', 'Please disable estimation of Receiver DCBs!', '(Menu: Estimation / Adjustment)'}, windowname);
         valid_settings = false; return
     end
@@ -455,7 +455,7 @@ if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && num_freq == 3 && ~settin
 end
 
 % WL Fixing needs at least two epochs
-if ~prebatch_check && settings.AMBFIX.bool_AMBFIX && ~isempty(rheader.interval) && (settings.AMBFIX.start_WL_sec/rheader.interval < 2)
+if ~prebatch_check && ~DecoupledClockModel && settings.AMBFIX.bool_AMBFIX && ~isempty(rheader.interval) && (settings.AMBFIX.start_WL_sec/rheader.interval < 2)
     errordlg({'Check start of Fixing!', 'For WL-Fixing at least 2 epochs are needed.'}, windowname);
     valid_settings = false; return
 end
@@ -470,7 +470,7 @@ end
 % broadcasted TGDs also
 if ~settings.ORBCLK.bool_precise && strcmp(settings.ORBCLK.CorrectionStream, 'off') && ~strcmp(settings.BIASES.code, 'off')
     % For IF-LC it does not matter if TGDs are used or not
-    if ~strcmp(settings.IONO.model,'2-Frequency-IF-LCs') && ~strcmp(settings.BIASES.code, 'Broadcasted TGD')
+    if ~IF_LC && ~strcmp(settings.BIASES.code, 'Broadcasted TGD')
         errordlg({'Processing with navigation message:', 'Please use "Broadcasted TGD" as Code Biases.'}, windowname);
         valid_settings = false; return
     end
@@ -779,11 +779,40 @@ if DecoupledClockModel && ~settings.BIASES.estimate_rec_dcbs
     valid_settings = false; return
 end
 
+% GRAPHIC is only implemented and reasonable for single-frequency
+% processing
+if strcmp(settings.IONO.model, 'GRAPHIC') && num_freq ~= 1
+    errordlg({'GRAPHIC is only reasonable for single-frequency processing.', 'Please deactivate all other frequencies.'}, windowname);
+    valid_settings = false; return
+end
+
+% PPP-AR is not implemented for GRAPHIC
+if strcmp(settings.IONO.model, 'GRAPHIC') && settings.AMBFIX.bool_AMBFIX
+    errordlg({'PPP-AR is not implemented with GRAPHIC.', 'Please deactivate ambiguity fixing.'}, windowname);
+    valid_settings = false; return
+end
+
+% GRAPHIC is only possible for code + phase processing
+if strcmp(settings.IONO.model, 'GRAPHIC') && ~contains(settings.PROC.method, 'Code + Phase')
+    errordlg({'Code + Phase processing is necessary for GRAPHIC.', 'Please change processing method to "Code + Phase".'}, windowname);
+    valid_settings = false; return
+end
+
+% Only forward filtering in possible in real-time
+if settings.INPUT.bool_realtime && ~strcmp(settings.ADJ.filter.direction, 'Forwards')
+    errordlg({'In real-time only forwards filtering is possible.', 'Please change filter direction to "Forwards".'}, windowname);
+    valid_settings = false; return
+end
+
+% Resets of the PPP solution make only sense for forwards filtering
+if settings.INPUT.bool_realtime && ~strcmp(settings.ADJ.filter.direction, 'Forwards')
+    errordlg({['Filter direction is "' settings.ADJ.filter.direction '".'], 'Please disable resets of the solution or', 'change filter direction to "Forwards".'}, windowname);
+    valid_settings = false; return
+end
 
 
 
 % ||| to be continued
-
 
 
 
@@ -797,15 +826,15 @@ end
 if num_freq == 1 && ~prebatch_check
     % Cycle Slip Detection with dL1-dL2-difference is not possible
     if settings.OTHER.CS.DF && contains(settings.PROC.method, 'Phase')
-        errordlg({'Only 1-Frequency is processed:', 'Cycle-Slip Detection dL1-dL2 is not possible!'}, windowname);
+        errordlg({'Only one frequency is processed:', 'Cycle-Slip Detection dL1-dL2 is not possible!'}, windowname);
         valid_settings = false; return
     end
-    if strcmp(settings.IONO.model,'2-Frequency-IF-LCs')
-        errordlg({'Only 1-Frequency is processed:', 'Processing with 2-Frequency-IF-LC is not possible!'}, windowname);
+    if IF_LC
+        errordlg({'Only one frequency is processed:', 'Processing with 2-Frequency-IF-LC is not possible!'}, windowname);
         valid_settings = false; return
     end    
     % 2-Frequency-IF-LC is not possible with only one frequency
-    if strcmp(settings.IONO.model,'2-Frequency-IF-LCs')
+    if IF_LC
         errordlg('Not enough frequencies selected for building the 2-Frequency-IF-LC!', windowname);
         valid_settings = false; return
     end
@@ -1010,21 +1039,21 @@ if ~prebatch_check && ~isempty(rheader.interval) && settings.OTHER.CS.DF
             val_ = '0.05';
         end
     elseif rheader.interval < 20.1
-        if settings.OTHER.CS.DF_threshold < 0.05 || 0.15 < settings.OTHER.CS.DF_threshold
+        if settings.OTHER.CS.DF_threshold <= 0.05 || 0.15 <= settings.OTHER.CS.DF_threshold
             good_thresh = false;
             val_ = sprintf('%.2f', 0.005 * rheader.interval + 0.05);
         end
     elseif rheader.interval < 60.1
-        if settings.OTHER.CS.DF_threshold < 0.05 || 0.25 < settings.OTHER.CS.DF_threshold
+        if settings.OTHER.CS.DF_threshold <= 0.05 || 0.25 <= settings.OTHER.CS.DF_threshold
             good_thresh = false;
             val_ = '0.15';
         end
     elseif rheader.interval < 100
-        if settings.OTHER.CS.DF_threshold < 0.15 || 0.35 < settings.OTHER.CS.DF_threshold
+        if settings.OTHER.CS.DF_threshold <= 0.15 || 0.35 <= settings.OTHER.CS.DF_threshold
             good_thresh = false;
             val_ = '0.25';
         end
-    elseif settings.OTHER.CS.DF_threshold < 0.15 || 0.35 < settings.OTHER.CS.DF_threshold
+    elseif settings.OTHER.CS.DF_threshold <= 0.15 || 0.35 <= settings.OTHER.CS.DF_threshold
         val_ = '0.35';
     end
     if ~good_thresh

@@ -28,7 +28,7 @@ FILEPATHS = {};
 
 startfolder = datafolder;
 while true      % loop to allow to add multiple times
-    [files, folderpath] = uigetfile({'*.*'}, 'Select files to copy.', startfolder, 'MultiSelect', 'on');
+    [files, folderpath] = uigetfile({'*.*'}, 'Select files to copy.', GetFullPath(startfolder), 'MultiSelect', 'on');
     if isempty(files) || isnumeric(files)
         break       % no files selected, stopp adding files in table
     end   
@@ -45,14 +45,31 @@ end
 % remove twice entries
 FILEPATHS = unique(FILEPATHS);
 
-n = numel(FILEPATHS);
+n = numel(FILEPATHS);       % number of files
+
 for i = 1:n
     curr_path = FILEPATHS{i};
     curr_path_ = curr_path;
+    
     if strcmp(curr_path(end-3:end), '.mat')
         curr_path_ = curr_path(1:end-4);
     end
     [~, file, ext] = fileparts(curr_path_);    % disassemble filepath
+    
+    % check for compressed files
+    if strcmp(ext, '.gz') || strcmp(ext, '.zip')
+        % create absolute (! necessary !) path to 7zip.exe
+        path_info = what([pwd, '/../CODE/7ZIP/']);      % canonical path of 7-zip is needed
+        path_7zip = [path_info.path, '/7za.exe'];
+        curr_path = unzip_7zip(path_7zip, curr_path_);  
+        [~, file, ext] = fileparts(curr_path);    % disassemble filepath
+    end
+    
+    % check for *.crx files
+    if strcmp(ext, '.crx')
+        [curr_path, ext] = crx2rnx(curr_path, ext);
+    end
+    
     ext = lower(ext(2:end));           % convert to lowercase and remove '.'
     if ~(numel(ext) == 3 || numel(ext) == 5)
         fprintf(2, [file '.' ext ' is not copied (unknown data type).\n'])
@@ -75,7 +92,7 @@ for i = 1:n
             tfolder = 'COORDS';
         case 'inx'
             tfolder = 'IONO';
-        case 'rnx'
+        case {'rnx', 'obs'}
             tfolder = 'OBS';
             if strcmp(file(end-1:end), 'MN')
                 tfolder = 'BROADCAST';
@@ -83,7 +100,11 @@ for i = 1:n
         case 'ssr'
             tfolder = 'STREAM';              
         case 'txt'
-            tfolder = 'OBS';            
+            tfolder = 'OBS';  
+        case 'erp'
+            tfolder = 'ERP'; 
+        case 'tro'
+            tfolder = 'TROPO'; 
         otherwise
             switch ext(3)
                 case 'o'
@@ -176,7 +197,11 @@ elseif n == 11 && strcmp(ext, 'ssc')    % daily IGS coordinate solution (old sho
     
 elseif n == 9 && ext(end) == 'c'        % e.g. correction stream recorded with BNC
     subf_2 = file(6:8);
-    subf_1  = ['20' ext(1:2)];
+    subf_1 = ['20' ext(1:2)];
+    
+elseif n == 44 && strcmp(ext, 'tro')    % IGS troposphere file, long filename
+    subf_1 = file(12:15);
+    subf_2 = file(16:18);
     
 elseif ext(3) == 'o'                    % RINEX observation file
     % RINEX file and year+doy could not be extracted from filename
@@ -215,3 +240,34 @@ yyyy   = sprintf('%04d',yyyy);
 doy    = sprintf('%03d',doy);
 
 
+function [curr_path, ext] = crx2rnx(curr_path, ext)
+% Convert file from crx to rnx format
+work_path = pwd;
+if ispc
+    cd('../CODE/OBSERVATIONS/ObservationDownload/RNXCMP_4.1.0_Windows_mingw_64bit/bin')
+elseif isunix
+    cd('../CODE/OBSERVATIONS/ObservationDownload/RNXCMP_4.1.0_Linux_x86_64bit/bin')
+else
+    st = dbstack;
+    errordlg([st.name ' is not compatible with your operating system!'], 'Error');
+    return
+end
+
+% prepare string for command window
+if ispc         % Windows
+    str = strcat('CRX2RNX "',curr_path,'"');
+elseif isunix 	% Linux
+    % To run the RNXCMP bash script, make them executable
+    system('chmod u+x ./*');
+    str = strcat('./CRX2RNX "',full_file_path,'"');
+end
+
+% writing command to command line to decompress with crx2rnx.exe
+[status, cmdout] = system(str);     % status = 0 = OK
+% delete *crx
+delete(curr_path);
+% change extension
+ext = '.rnx';
+curr_path = strrep(curr_path, '.crx', ext);
+% go back to WORK folder
+cd(work_path)

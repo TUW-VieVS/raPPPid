@@ -12,6 +12,8 @@ function plotCovarianceAdjustment(storeData, satellites, settings, q)
 %   2023/11/09, MFWG: adding QZSS
 %   2025/01/02, MFWG: adding decoupled clock model
 %
+%   2025/05/26, MFWG: velocity in parameters (not backward compatible!)
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
@@ -81,52 +83,58 @@ if ~decoupled_clock_model
     ticks{ 1} = 'dX';
     ticks{ 2} = 'dY';
     ticks{ 3} = 'dZ';
-    ticks{ 4} = 'd_{tro}';
-    ticks{ 5} = 'dt_{GPS}';
-    ticks{ 6} = 'dcb_{12}^{GPS}';
-    ticks{ 7} = 'dcb_{23}^{GPS}';
-    ticks{ 8} = 'dt_{GLO}';
-    ticks{ 9} = 'dcb_{12}^{GLO}';
-    ticks{10} = 'dcb_{23}^{GLO}';
-    ticks{11} = 'dt_{GAL}';
-    ticks{12} = 'dcb_{12}^{GAL}';
-    ticks{13} = 'dcb_{23}^{GAL}';
-    ticks{14} = 'dt_{BDS}';
-    ticks{15} = 'dcb_{12}^{BDS}';
-    ticks{16} = 'dcb_{23}^{BDS}';
-    ticks{17} = 'dt_{QZSS}';
-    ticks{18} = 'dcb_{12}^{QZSS}';
-    ticks{19} = 'dcb_{23}^{QZSS}';
+    ticks{ 4} = 'dv_X';
+    ticks{ 5} = 'dv_Y';
+    ticks{ 6} = 'dv_Z';    
+    ticks{ 7} = 'd_{tro}';
+    ticks{ 8} = 'dt_{GPS}';
+    ticks{ 9} = 'dcb_{12}^{GPS}';
+    ticks{10} = 'dcb_{23}^{GPS}';
+    ticks{11} = 'dt_{GLO}';
+    ticks{12} = 'dcb_{12}^{GLO}';
+    ticks{13} = 'dcb_{23}^{GLO}';
+    ticks{14} = 'dt_{GAL}';
+    ticks{15} = 'dcb_{12}^{GAL}';
+    ticks{16} = 'dcb_{23}^{GAL}';
+    ticks{17} = 'dt_{BDS}';
+    ticks{18} = 'dcb_{12}^{BDS}';
+    ticks{19} = 'dcb_{23}^{BDS}';
+    ticks{20} = 'dt_{QZSS}';
+    ticks{21} = 'dcb_{12}^{QZSS}';
+    ticks{22} = 'dcb_{23}^{QZSS}';
 else
     % decoupled clock model
     ticks = cell(1, NO_PARAM + s_f + bool_iono*noSats);
     ticks{ 1} = 'dX';
     ticks{ 2} = 'dY';
     ticks{ 3} = 'dZ';
-    ticks{ 4} = 'd_{tro}';
-    ticks{ 5} = 'dt_{code}^{GPS}';
-    ticks{ 6} = 'dt_{code}^{GLO}';
-    ticks{ 7} = 'dt_{code}^{GAL}';
-    ticks{ 8} = 'dt_{code}^{BDS}';
-    ticks{ 9} = 'dt_{code}^{QZSS}';
-    ticks{10} = 'dt_{phase}^{GPS}';
-    ticks{11} = 'dt_{phase}^{GLO}';
-    ticks{12} = 'dt_{phase}^{GAL}';
-    ticks{13} = 'dt_{phase}^{BDS}';
-    ticks{14} = 'dt_{phase}^{QZSS}';
-    ticks{15} = 'IFB^{GPS}';
-    ticks{16} = 'IFB^{GLO}';
-    ticks{17} = 'IFB^{GAL}';
-    ticks{18} = 'IFB^{BDS}';
-    ticks{19} = 'IFB^{QZSS}';
-    ticks{20} = 'L2_{bias}^{GPS}';
-    ticks{21} = 'L2_{bias}^{GLO}';
-    ticks{22} = 'L2_{bias}^{GAL}';
-    ticks{23} = 'L2_{bias}^{BDS}';
-    ticks{24} = 'L2_{bias}^{QZSS}';
-    ticks{25} = 'L3_{bias}^{GPS}';
-    ticks{26} = 'L3_{bias}^{GLO}';
-    ticks{27} = 'L3_{bias}^{GAL}';
+    ticks{ 4} = 'dv_X';
+    ticks{ 5} = 'dv_Y';
+    ticks{ 6} = 'dv_Z';        
+    ticks{ 7} = 'd_{tro}';
+    ticks{ 8} = 'dt_{code}^{GPS}';
+    ticks{ 9} = 'dt_{code}^{GLO}';
+    ticks{10} = 'dt_{code}^{GAL}';
+    ticks{11} = 'dt_{code}^{BDS}';
+    ticks{12} = 'dt_{code}^{QZSS}';
+    ticks{13} = 'dt_{phase}^{GPS}';
+    ticks{14} = 'dt_{phase}^{GLO}';
+    ticks{15} = 'dt_{phase}^{GAL}';
+    ticks{16} = 'dt_{phase}^{BDS}';
+    ticks{17} = 'dt_{phase}^{QZSS}';
+    ticks{18} = 'IFB^{GPS}';
+    ticks{19} = 'IFB^{GLO}';
+    ticks{20} = 'IFB^{GAL}';
+    ticks{21} = 'IFB^{BDS}';
+    ticks{22} = 'IFB^{QZSS}';
+    ticks{23} = 'L2_{bias}^{GPS}';
+    ticks{24} = 'L2_{bias}^{GLO}';
+    ticks{25} = 'L2_{bias}^{GAL}';
+    ticks{26} = 'L2_{bias}^{BDS}';
+    ticks{27} = 'L2_{bias}^{QZSS}';
+    ticks{28} = 'L3_{bias}^{GPS}';
+    ticks{29} = 'L3_{bias}^{GLO}';
+    ticks{30} = 'L3_{bias}^{GAL}';
     ticks{28} = 'L3_{bias}^{BDS}';
     ticks{29} = 'L3_{bias}^{QZSS}';
 end
@@ -165,46 +173,46 @@ idx_remove = [];
 if ~decoupled_clock_model
     % e.g., IC LC or uncombined model
     if ~isGPS
-        idx_remove = [idx_remove, 5, 6, 7];
-    elseif ~settings.BIASES.estimate_rec_dcbs
-        idx_remove = [idx_remove, 6, 7];
-    end
-    if ~isGLO
         idx_remove = [idx_remove, 8, 9, 10];
     elseif ~settings.BIASES.estimate_rec_dcbs
         idx_remove = [idx_remove, 9, 10];
     end
-    if ~isGAL
+    if ~isGLO
         idx_remove = [idx_remove, 11, 12, 13];
     elseif ~settings.BIASES.estimate_rec_dcbs
         idx_remove = [idx_remove, 12, 13];
     end
-    if ~isBDS
+    if ~isGAL
         idx_remove = [idx_remove, 14, 15, 16];
     elseif ~settings.BIASES.estimate_rec_dcbs
         idx_remove = [idx_remove, 15, 16];
     end
-    if ~isQZSS
+    if ~isBDS
         idx_remove = [idx_remove, 17, 18, 19];
     elseif ~settings.BIASES.estimate_rec_dcbs
         idx_remove = [idx_remove, 18, 19];
     end
+    if ~isQZSS
+        idx_remove = [idx_remove, 20, 21, 22];
+    elseif ~settings.BIASES.estimate_rec_dcbs
+        idx_remove = [idx_remove, 21, 22];
+    end
 else
     % decoupled clock model
     if ~isGPS
-        idx_remove = [idx_remove, 5, 10, 15, 20, 25];
+        idx_remove = [idx_remove,  8, 13, 18, 23, 28];
     end
     if ~isGLO
-        idx_remove = [idx_remove, 6, 11, 16, 21, 26];
+        idx_remove = [idx_remove,  9, 14, 19, 24, 29];
     end
     if ~isGAL
-        idx_remove = [idx_remove, 7, 12, 17, 22, 27];
+        idx_remove = [idx_remove, 10, 15, 20, 25, 30];
     end
     if ~isBDS
-        idx_remove = [idx_remove, 8, 13, 18, 23, 28];
+        idx_remove = [idx_remove, 11, 16, 21, 26, 31];
     end
     if ~isQZSS
-        idx_remove = [idx_remove, 9, 14, 19, 24, 29];
+        idx_remove = [idx_remove, 12, 17, 22, 27, 32];
     end
 end
 ticks(idx_remove) = [];         % remove ticks

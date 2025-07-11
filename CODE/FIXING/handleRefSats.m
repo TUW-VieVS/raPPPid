@@ -18,6 +18,7 @@ function [Epoch, Adjust] = handleRefSats(Epoch, elev, settings, Adjust)
 
 
 %% prepare               	
+elev(Epoch.exclude)  = NaN;         % exclude satellites 
 elev(Epoch.cs_found) = NaN;         % exclude satellites with cycle slip
 elev(elev == 0) = NaN;              % exclude satellites with elevation = 0 (e.g., satellite has no precise orbit or clock)
 
@@ -69,8 +70,7 @@ if newRefSat(2) || changeRefSat(2)
     if strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite')
         Epoch.refSatGLO = chooseHighestRefSat(Epoch, sats_glo, elev_glo, Epoch.glo, settings, false);
     elseif strcmp(settings.AMBFIX.refSatChoice, 'manual choice (list):')
-        % ||| list is missing in GUI
-        Epoch.refSatGLO = chooseRefSatManual([], Epoch, Epoch.glo, elev_glo, settings, true);
+        Epoch.refSatGLO = chooseRefSatManual(settings.AMBFIX.refSatGLO', Epoch, Epoch.glo, elev_glo, settings, true);
     end
 end
 
@@ -118,8 +118,7 @@ if newRefSat(5) || changeRefSat(5)
     if strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite')
         Epoch.refSatQZS = chooseHighestRefSat(Epoch, sats_qzs, elev_qzs, Epoch.qzss, settings, true);
     elseif strcmp(settings.AMBFIX.refSatChoice, 'manual choice (list):')
-        % ||| list is missing in GUI
-        Epoch.refSatQZS = chooseRefSatManual([], Epoch, Epoch.qzss, elev_qzs, settings, true);
+        Epoch.refSatQZS = chooseRefSatManual(settings.AMBFIX.refSatQZS', Epoch, Epoch.qzss, elev_qzs, settings, true);
     end
 end
 
@@ -132,7 +131,6 @@ if any(newRefSat) || any(changeRefSat)
         Epoch = change2refSat_IF(settings, Epoch, newRefSat, changeRefSat, ...
             OldRefSat_G, OldRefSat_R, OldRefSat_E, OldRefSat_C, OldRefSat_J);
     else    % Decoupled Clock Model
-        [Adjust, Epoch] = change2refSat_DCM(Adjust, settings, Epoch, newRefSat, changeRefSat, ...
-            OldRefSat_G, OldRefSat_R, OldRefSat_E, OldRefSat_C, OldRefSat_J);
+        [Adjust, Epoch] = change2refSat_DCM(Adjust, settings, Epoch, newRefSat, changeRefSat);
     end    
 end

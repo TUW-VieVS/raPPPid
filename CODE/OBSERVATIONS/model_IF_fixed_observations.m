@@ -11,6 +11,7 @@ function [model_code_fix, model_phase_fix] = ...
 %   model_code_fix/_phase_fix     modelled observation for fixed adjustment
 % 
 % Revision:
+%   2025/07/02, MFWG: debugging (phase: + model.dX_PCV_rec_corr)
 %   2025/01/16, MFWG: cleaning code
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -21,7 +22,7 @@ function [model_code_fix, model_phase_fix] = ...
 %% Get variables
 % residual sland tropospheric wet delay from float solution =
 % (wet mapping function * estimated residual ZWD)
-r_wet_tropo = model.mfw * param_float(4);
+r_wet_tropo = model.mfw * param_float(7);
 % build receiver clock error
 model = getReceiverClockBiases(model, Epoch, param_float, settings);
 
@@ -56,7 +57,7 @@ model_phase_fix = model.rho ...                         % theoretical range
 	- model.dX_polar_tides ...                   		% pole tide
 	+ model.shapiro ... 								% Shapiro effect
     - model.dX_PCO_rec_corr ...                      	% Phase Center Offset Receiver
-	- model.dX_PCV_rec_corr ...                      	% Phase Center Variation Receiver
+	+ model.dX_PCV_rec_corr ...                      	% Phase Center Variation Receiver
     - model.dX_ARP_ECEF_corr ...                        % Antenna Reference Point Receiver
     + model.dX_PCO_sat_corr ...                         % Phase Center Offset Satellite
     + model.dX_PCV_sat_corr ...                         % Phase Center Variation Satellite

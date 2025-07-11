@@ -38,7 +38,7 @@ function settings = PPP_main(settings)
 if exist('settings', 'var')     % PPP_main.m started from GUI or with settings as input
     settings.PROC.output_dir = createResultsFolder(settings.INPUT.file_obs, settings.PROC.name);
 else                            % PPP_main.m started without settings as input
-    [FileName, PathName] = uigetfile('*.mat', 'Select a Settings File', Path.RESULTS');
+    [FileName, PathName] = uigetfile('*.mat', 'Select a Settings File', GetFullPath(Path.RESULTS));
     if ~FileName;       return;         end         % stop if no file selected
     PathName = relativepath(PathName);              % convert absolute path to relative path
     load([PathName, '/', FileName], 'settings');    % load selected settings.mat-file
@@ -142,6 +142,18 @@ end
 % Creating q for loop of epoch calculations, q is used for indexing the epochs
 q_range = 1:settings.PROC.epochs(2)-settings.PROC.epochs(1)+1; % one epoch more than the settings in GUI
 
+% manipulate the loop depending on the filter's direction
+if strcmp(settings.ADJ.filter.direction, 'Fwd-Bwd')
+    % add reversed epochs for backwards run
+    q_range = [q_range(1:end-1) fliplr(q_range)];
+elseif strcmp(settings.ADJ.filter.direction, 'Bwd-Fwd')
+    % add reversed before the forwards run
+    q_range = [fliplr(q_range) q_range(2:end)];
+elseif strcmp(settings.ADJ.filter.direction, 'Backwards')
+    % reverse the loop for backwards filtering
+    q_range = fliplr(q_range);
+end
+
 % time which is needed for reading all input data and going to start-epoch
 read_time = toc(tStart);
 
@@ -170,6 +182,7 @@ if bool_print
     fprintf('%s',estr);
     l_estr = length(estr);
     if ishandle(WBAR)
+        q_n = numel(q_range); q_counter = 1;
         WBAR.Name = ['Processing ' obs.stationname sprintf(' %04.0f', obs.startdate(1)) sprintf('/%03.0f',floor(obs.doy))];
     end
 end
@@ -219,7 +232,7 @@ for q = q_range         % loop over epochs
         if bool_print
             fprintf('Epoch %d is skipped (not usable based on RINEX header)            \n', q)
         end
-        [Epoch, storeData, Adjust] = SkipEpoch(Epoch, storeData, Adjust);
+        [Epoch, storeData, Adjust] = SkipEpoch(Epoch, storeData, Adjust, false);
         continue
     end
     
@@ -246,11 +259,11 @@ for q = q_range         % loop over epochs
     % ----- check, if enough satellites -----
     bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, settings.INPUT.use_QZSS, ...
         sum(Epoch.gps), sum(Epoch.glo), sum(Epoch.gal), sum(Epoch.bds), sum(Epoch.qzss), settings.INPUT.use_GNSS);
-    if ~bool_enough_sats 
+    if ~bool_enough_sats 	% ||| better check the number of available observations
         if bool_print
             fprintf('Less than %d usable satellites in epoch %d (%s)        \n', DEF.MIN_SATS, q, Epoch.rinex_header);
         end
-        [Epoch, storeData, Adjust] = SkipEpoch(Epoch, storeData, Adjust);
+        [Epoch, storeData, Adjust] = SkipEpoch(Epoch, storeData, Adjust, false);
         continue
     end
 
@@ -351,12 +364,13 @@ for q = q_range         % loop over epochs
       
     % update waitbar
     if bool_print && mod(q,q_update) == 0 && ishandle(WBAR)
-        progress = q/q_range(end);
+        q_counter = q_counter + q_update;
+        progress = q_counter/q_n;
         if ~settings.INPUT.bool_realtime
-            remains = (toc(tStart)-read_time)/q*q_range(end) - ...
+            remains = (toc(tStart)-read_time)/q_counter*q_n - ...
                 (toc(tStart)-read_time); 	% estimated remaining time for epoch-wise processing in seconds
             mess = sprintf('%s%s\n%02.0f%s%d%s%d',...
-                'Estimated remaining time: ',datestr(remains/(24*60*60), 'HH:MM:SS'), progress*100, '% processed, current epoch: ', q, ' of ', q_range(end));
+                'Estimated remaining time: ',datestr(remains/(24*60*60), 'HH:MM:SS'), progress*100, '% processed, current epoch: ', q_counter, ' of ', q_n);
         else        % real-time processing
             remains = ende_sow - Epoch.gps_time;
             mess = sprintf('%s%s%s%s', 'Real-time processing until ', settings.INPUT.realtime_ende_GUI, ' (remaining ', datestr(remains/(24*60*60), 'HH:MM:SS'), ')');
@@ -416,7 +430,7 @@ if settings.EXP.settings
 end
 
 % Create Output Files
-[storeData] = create_output(storeData, obs, settings, Epoch.q ); 
+[storeData] = create_output(storeData, obs, settings); 
 
 % write data4plot.mat
 if settings.EXP.data4plot

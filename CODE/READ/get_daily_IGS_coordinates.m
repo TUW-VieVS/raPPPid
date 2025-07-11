@@ -75,7 +75,7 @@ for i = 1:n
     URL_folder2  = ['/gnss/products/' gpsweek_str '/'];
     cddis_folder = ['/archive/gnss/products/' gpsweek_str];
     switch sys
-        case {'IGS14', 'IGb14', ''}													  
+        case {'IGS14', 'IGb14', 'IGS08', 'IGb08', ''}													  
             URL_file = ['igs' yyyy_str(3:4) 'P' gpsweek_str dow_str '.ssc.Z'];
             if gpsweek > 2237
                 % starting with GPS week 2238: only long filename avaible

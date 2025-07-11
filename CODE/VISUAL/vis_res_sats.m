@@ -1,12 +1,10 @@
-function [] = vis_res_sats(storeData, sys, num_freq, phase_on, fixed_on)
+function [] = vis_res_sats(storeData, sys, settings)
 % Plots Residuals for each satellite as histogram
 %
 % INPUT:
 %   storeData       struct, collected data from all processed epochs
 %   sys             1-digit-char which represents GNSS (G=GPS, R=Glonass, E=Galileo)
-%   num_freq        number of processed frequencies
-%   phase_on        boolean, true when phase was processed
-%   fixed_on        boolean, true if fixed solution is plotted
+%   settings        struct, processing settings from GUI
 %
 % Revision:
 %   2023/11/09, MFWG: adding QZSS
@@ -14,6 +12,13 @@ function [] = vis_res_sats(storeData, sys, num_freq, phase_on, fixed_on)
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
+
+
+proc_freq = settings.INPUT.proc_freqs; 	% number of processed frequencies
+
+plot_phase = strcmp(settings.PROC.method, 'Code + Phase') && ...
+    ~strcmp(settings.IONO.model, 'GRAPHIC');    % plot phase residuals?
+fixed_on = settings.PLOT.fixed;                 % plot fixed residuals?
 
 
 % create loop index
@@ -37,7 +42,7 @@ end
 
 
 % loop over frequencies to plot
-for j = 1:num_freq
+for j = 1:proc_freq
     % get code residuals of current frequency (e.g. storeData.residuals_code_1)
     if ~fixed_on        % float residuals
         sol_str = 'Float';
@@ -56,7 +61,7 @@ for j = 1:num_freq
     fig_title = [sol_str ' Code ' sprintf('%d',j) ' Residuals, ' char2gnss(sys)];
     plot_sat_histo(code_res_j, mod(loop,100), n_c, sys, code_str, col, fig_title)
     
-    if phase_on
+    if plot_phase
         % get phase residuals of current frequency (e.g. storeData.residuals_phase_1)
         if ~fixed_on        % float residuals
             field = sprintf('residuals_phase_%1.0f', j);

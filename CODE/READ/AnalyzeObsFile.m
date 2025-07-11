@@ -48,7 +48,7 @@ fprintf('\nReceiver: %s', obs.receiver_type);
 fprintf('\nAntenna: %s',  obs.antenna_type);
 
 % print observation types (e.g., indicated in RINEX header)
-fprintf('\n\nObservation types (RINEX notation)\n')
+fprintf('\n\nObservation types (RINEX notation) according to header\n')
 if obs.rinex_version == 3 || obs.rinex_version == 0
     fprintf('GPS: '); print_obs_types(obs.types_gps_3,  3);
     fprintf('GLO: '); print_obs_types(obs.types_glo_3,  3);
@@ -76,7 +76,7 @@ fprintf('  %s | %d/%d | %d/%03d\n', t, obs.startGPSWeek, floor(obs.startSow/8640
 
 
 fprintf('\n%s%.0f', 'Total number of epochs: ', n);                     % number of epochs
-fprintf('\n%s%.0f', 'Observation interval [s]: ', obs.interval);      % observation interval
+fprintf('\n%s%.3f', 'Observation interval [s]: ', obs.interval);      % observation interval
 fprintf('\n%s%.2f\n', 'Approximate length [hours]: ', n*obs.interval/3600);    % length of RINEX file in hours
 
 % hardcode some settings

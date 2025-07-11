@@ -1,8 +1,8 @@
 function [init_ambs, Epoch] = AdjustPhase2Code(Epoch, init_ambs)
-% Function to adjust phase data to C1 code to, for example, limiting the 
-% ambiguities for numerical reasons.
+% Function to adjust phase observations to C1 code to, for example, 
+% limiting the ambiguities for numerical reasons.
 % Useful, for example, when processing raw sensor data from Android
-% smartphones
+% smartphones.
 % 
 % INPUT:
 %   Epoch           struct, epoch-specific data for current epoch
@@ -25,7 +25,7 @@ init_ambs(delete) = NaN;
 % get initialized ambiguities for satellites observed in current epoch
 init_ambs_ep = init_ambs(:,prns);
 
-% adjust phase observations to code observations for 1st frequency
+% adjust L1 phase observations to C1 code observations for 1st frequency
 idx_ep_1 = isnan(init_ambs_ep(1,:));
 if any(idx_ep_1)       % check if there are satellites which have none initialization value yet
     init_L1 = floor( (Epoch.C1 - Epoch.L1)./Epoch.l1 );     % difference code - phase in [cy]
@@ -33,7 +33,7 @@ if any(idx_ep_1)       % check if there are satellites which have none initializ
 end
 Epoch.L1 = Epoch.L1 + Epoch.l1 .* init_ambs(1,prns)';       % align phase to code
 
-% adjust phase observations to code observations for 2nd frequency
+% adjust L2 phase observations to C1 code observations for 2nd frequency
 if ~isempty(Epoch.L2)
     idx_ep_2 = isnan(init_ambs_ep(2,:));
     if any(idx_ep_2)
@@ -43,7 +43,7 @@ if ~isempty(Epoch.L2)
     Epoch.L2 = Epoch.L2 + Epoch.l2 .* init_ambs(2,prns)';
 end
 
-% adjust phase observations to code observations for 3rd frequency
+% adjust L3 phase observations to C1 code observations for 3rd frequency
 if ~isempty(Epoch.L3)
     idx_ep_3 = isnan(init_ambs_ep(3,:));
     if any(idx_ep_3)

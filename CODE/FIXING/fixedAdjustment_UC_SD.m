@@ -131,7 +131,7 @@ Adjust.res_fix(:,2) = codephase((1 + 2*no_sats) : (4*no_sats));
 Adjust.res_fix(:,3) = codephase((1 + 4*no_sats) : (6*no_sats));
 
 % calculates coordinates from fixed adjustment
-Adjust.xyz_fix = Adjust.param(1:3) + dx.x(1:3);
+Adjust.param_fix = Adjust.param(1:3) + dx.x(1:3);
 Adjust.fixed = true;
 
 % save ionosphere estimation from fixed adjustment

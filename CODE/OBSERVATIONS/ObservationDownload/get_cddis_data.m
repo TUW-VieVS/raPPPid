@@ -10,10 +10,13 @@ function filestatus = get_cddis_data(host, folders, files, targets, bool_print)
 %   targets         cell, path to local disk where downloaded file is saved
 %   bool_print      boolean, true -> print output to command window
 % OUTPUT:
-%	filestatus      boolean, true if element successfully downloaded
-%
+%   filestatus      0... could not be downloaded
+%                   1....successfully downloaded
+%                   2....already existing, but zipped
+%                   3....already existing and unzipped
+% 
 % Revision:
-%   ...
+%   2025/06/01, MFWG: add check if file already existing
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -48,6 +51,16 @@ for i = 1:n
     % check variable type
     if ischar(folder); folder = {folder}; end
     
+    % check if file is already existing
+    [~, decompr, ~] = fileparts(['A:/', file ]);
+    if isfile([target file])
+        filestatus(i) = 2;      % archive already existing
+        continue
+    elseif isfile([target decompr])
+        filestatus(i) = 3;      % already existing and decompressed
+        continue
+    end
+    
     % try download
     try
         url = [host folder{1} '/' file];
@@ -65,8 +78,8 @@ for i = 1:n
     catch
         if bool_print
             fprintf(2, ['Download failed: ', url '\n'])
-            filestatus(i) = 0;
         end
+        filestatus(i) = 0;
     end
     
 end

@@ -1,4 +1,4 @@
-function [] = DownloadDaily30sIGS(stations, doys, year)
+function [] = DownloadDaily30sIGS(stations, doys, year, host)
 % Function to download, decompress and save daily RINEX observation files 
 % for IGS stations with 30s interval. They are saved in the correct folder
 % of raPPPid.
@@ -8,23 +8,41 @@ function [] = DownloadDaily30sIGS(stations, doys, year)
 % open('../CODE/OBSERVATIONS/ObservationDownload/IGS_r3_stations.txt')
 % 
 % Example call: 
-% DownloadDaily30sIGS({'GRAZ00AUT', 'MIZU00JPN', 'FALK00FLK'}, 001, 2020)
-% DownloadDaily30sIGS('GRAZ00AUT', 032, 2020)
-% DownloadDaily30sIGS('', 012, 2020)
-% DownloadDaily30sIGS('BRUX00BEL', 001, 2020)
-% DownloadDaily30sIGS('KIRU00SWE', 360, 2020)
+%   DownloadDaily30sIGS({'GRAZ00AUT', 'MIZU00JPN', 'FALK00FLK'}, 001, 2020)
+%   DownloadDaily30sIGS('GRAZ00AUT', 032, 2020)
+%   DownloadDaily30sIGS('', 012, 2020)
+%   DownloadDaily30sIGS('BRUX00BEL', 001, 2020)
+%   DownloadDaily30sIGS('KIRU00SWE', 360, 2020)
+% 
+% host = 1:   'igs-ftp.bkg.bund.de:21';
+% host = 2:   'https://cddis.nasa.gov';    % typically very complete
+% host = 3:   'igs.ign.fr:21';
+% host = 4:   'https://data.bdsmart.cn/pub/data/igs/';
 % 
 % INPUT:
 %   stations	cell, station names, 9-digit [4-digit name, '00', 3-digit country]
 %   doys        vector, day of year for download
 %   year        number, year
+%   host        string, define source of download (optional)
 % OUTPUT:
 %   []
 %
+% Revision:
+%   2025/05/30, MFWG: specifiy host or try download from all hosts
+% 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-host = 2;
+
+%% Prepare
+if nargin == 3
+    % if host is not defined as input variable try do download from all
+    for h = 1:4
+        DownloadDaily30sIGS(stations, doys, year, h)
+    end
+    return
+end
+
 
 switch host
     case 1
@@ -33,6 +51,8 @@ switch host
         URL_host = 'https://cddis.nasa.gov';    % typically very complete
     case 3
         URL_host = 'igs.ign.fr:21';
+    case 4
+        URL_host = 'https://data.bdsmart.cn/pub/data/igs/';        
 end
 
 % check input of variable year
@@ -90,6 +110,8 @@ for d = 1:no_days
                 URL_folder = {['/archive/gnss/data/daily/' year '/' doy '/' year(3:4) 'd']};    % cddis.gsfc.nasa.gov
             case 3
                 URL_folder = {['/pub/igs/data/' year '/' doy '/']};       % igs.ign.fr
+            case 4 
+                URL_folder = ['/' year '/' doy '/'];
         end 
         
         % file name
@@ -143,11 +165,29 @@ while i <= numel(files)
 
 end
 
-% download all files
-if host ~= 2
-    file_status = ftp_download_multi(URL_host, URL_folders, files, targets, true);
-else    % download from cddis
-    file_status = get_cddis_data(URL_host, URL_folders, files, targets, true);
+
+%% download all files
+switch host
+    
+    case {1, 3}
+        file_status = ftp_download_multi(URL_host, URL_folders, files, targets, true);
+        
+    case 2
+        file_status = get_cddis_data(URL_host, URL_folders, files, targets, true);
+        
+    case 4
+        n = numel(files);
+        file_status = zeros(1,n);
+        for i = 1:n
+            try
+                websave([targets{i} '/' files{i}], [URL_host URL_folders{i} files{i}]);
+                file_status(i) = 1;
+            catch
+                delete([targets{i} '/' files{i} '.html'])
+                file_status(i) = 0;
+            end
+        end
+        
 end
 
 
@@ -156,7 +196,8 @@ if ishandle(WBAR)
     waitbar(0, WBAR, 'Download finished. Decompressing.')
 end
 
-% unzip all files and delete archives
+
+%% unzip all files and delete archives
 unzipped = unzip_and_delete(files, targets);
 
 % update waitbar
@@ -164,6 +205,8 @@ if ishandle(WBAR)
     waitbar(0, WBAR, 'Decompressing finished. Convert *.crx to *.rnx')
 end
 
+
+%% *.crx to *.rnx
 % change path to folder where, for example, crx2rnx.exe (Windows) is stored
 work_path = pwd;
 if ispc
@@ -180,6 +223,11 @@ end
 n = numel(files);
 for i = 1:n
     
+    if file_status(i) == 0 || file_status(i) == 3
+        % skip files which could not be downloaded or are existing
+        continue
+    end
+    
     % create absolute path
     file = unzipped{i};
     full_file_path = [erase(work_path, 'WORK'), file(4:end)];
@@ -188,6 +236,8 @@ for i = 1:n
     if ispc         % Windows
         str = strcat('CRX2RNX "',full_file_path,'"');
     elseif isunix 	% Linux
+        % To run the RNXCMP bash script, make them executable
+        system('chmod u+x ./*');
         str = strcat('./CRX2RNX "',full_file_path,'"');
     end
     
@@ -203,8 +253,6 @@ for i = 1:n
         waitbar(progress, WBAR, 'Converting *.crx to *.rnx')
     end
 end
-
-
 
 % go back to WORK folder
 cd(work_path)
@@ -224,9 +272,11 @@ path_info = what([pwd, '/../CODE/7ZIP/']);      % canonical path of 7-zip is nee
 path_7zip = [path_info.path, '/7za.exe'];
 for i = 1:num_files
     curr_archive = [targets{i}, '/', files{i}];
-    file_unzipped = unzip_7zip(path_7zip, curr_archive);
-    unzipped{i} = file_unzipped;
-    delete(curr_archive);
+    if isfile(curr_archive)
+        file_unzipped = unzip_7zip(path_7zip, curr_archive);
+        unzipped{i} = file_unzipped;
+        delete(curr_archive);
+    end
 end
 
 

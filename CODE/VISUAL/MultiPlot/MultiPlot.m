@@ -45,6 +45,9 @@ Q95 = cell(n_unique, 6);    % 0.95 quantile for North, East, Height, 2D, 3D, ZTD
 Q_dT = cell(n_unique,1);    % points in time all convergence periods have in common
 % initialize variable for ConvAccur Plot
 CA = cell(n_unique, 2);     % 2D convergence, 3D accuracy at the end, label
+% initialize variable to store statistics in calcPerformanceIndicators.m
+STATS = cell(9, n_unique+1);
+
 
 % loop over different labels
 for i = 1:n_unique   
@@ -81,20 +84,17 @@ for i = 1:n_unique
         % get position data
         [pos_3D, pos_UTM] = getPositionData(storeData, obs, curr_label, PlotStruct);
         % get true position
-        [pos_3D_true, pos_geo_true, North_true, East_true] = ...
+        [~, pos_geo_true, North_true, East_true] = ...
             getTruePosition(xyz_true(ii,:), pos_3D);
         % calculate coordinate differences for whole processing
         dN = pos_UTM(:,1) - North_true;
         dE = pos_UTM(:,2) - East_true;
         dH = pos_UTM(:,3) - pos_geo_true.h;
-        % get troposphere estimation and calculate difference to IGS
-        dZTD = []; 
-        if PlotStruct.tropo; dZTD = TropoDifference(storeData, obs); end
-        
-        xyz_diff = pos_3D - pos_3D_true;        % not really used
-        
+        % calculate difference of troposphere estimation to IGS troposphere product
+        dZTD = TropoDifference(storeData, obs, PlotStruct);
+                
         reset_epochs = storeData.float_reset_epochs;    % epochs where solution was resetted during processing
-        no_epochs = numel(storeData.gpstime);          % number of epochs of current processing
+        no_epochs = numel(storeData.gpstime);           % number of epochs of current processing
         
         % reshape processing results to convergence periods
         d = Reshape2ConvergePeriods(storeData, dN, dE, dH, dZTD, reset_epochs, no_epochs, d, PlotStruct);
@@ -149,14 +149,20 @@ for i = 1:n_unique
     end
     
     % print perfomance and statistic of current label to command window
-    calcPerformanceIndicators(d, conv_2D, TTCF{i}, dT_all, q68, q95, curr_label, PlotStruct)
+    STATS = calcPerformanceIndicators(d, conv_2D, TTCF{i}, dT_all, q68, q95, curr_label, PlotStruct, STATS, i);
     
 end         % end of loop over different labels
 
 
-% Create Plots for all labels which were prepared before
+% Create Plots for all labels which were prepared before 
 CreateAll(Q68, Q95, Q_dT, BOX, BARS, TTCF, CA, unique_labels, bars_minutes, PlotStruct);
 
+% Print statistics to command window (in the case of multiple labels)
+if n_unique > 1
+    r = STATS(2:end, 1); c = STATS(1, 2:end);
+    T = cell2table(STATS(2:end, 2:end), 'VariableNames', c, 'RowNames', r);
+    disp(T); fprintf('\n')
+end
 
 % close waitbar
 if ishandle(WBAR);        close(WBAR);    end
@@ -211,18 +217,6 @@ end
 if PlotStruct.convaccur
     ConvAccurPlot(CA, coleurs, PlotStruct);
 end
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

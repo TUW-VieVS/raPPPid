@@ -16,6 +16,7 @@ function [Epoch, Adjust, model] = calc_float_solution(input, obs, Adjust, Epoch,
 % Revision:
 %   2023/09/07, MFG: bug (no adjustment before KalmanFilter); cleaning code
 %   2025/01/09, MFWG: cleaning code (reset of parameters and covariance)
+%   2025/06/11, MFWG: check #obs instead of #sats before adjustment
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -28,6 +29,7 @@ NO_PARAM = Adjust.NO_PARAM;				% number of estimated parameters
 model = [];                          	% Initialize struct model
 no_sats = numel(Epoch.sats);            % total number of satellites in current epoch
 it = 0; 	% number of current iteration
+filter_type = settings.ADJ.filter.type; % method of parameter estimation
 
 % check if approximate position is available
 if ~Adjust.float && any(Adjust.param(1:3) == 0 | isnan(Adjust.param(1:3)) | any(Adjust.param(1:3) == 1))
@@ -50,16 +52,16 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
     % --- model the observations of current epoch, IMPORTANT FUNCTION!
     % if first iteration OR 2nd iteration if coordinate or clock jump occur
     coord_jump = it >= 2 && norm(dx.x(1:3)) > 0.05;
-    clock_jump = it >= 2 && abs(sum([dx.x(5),dx.x(8),dx.x(11),dx.x(14)])) > 1000; 
+    clock_jump = it >= 2 && ReceiverClockJump(dx.x, settings.IONO.model);
     if it == 1 || coord_jump || clock_jump
         [model, Epoch] = modelErrorSources(settings, input, Epoch, model, Adjust, obs);
     end
     
     % --- receiver clock errors and biases
-    model = getReceiverClockBiases(model, Epoch, Adjust.param, settings);
+    model = getReceiverClockBiases(model, Epoch, Adjust.param_pred, settings);
     
     % --- Line-of-Sight-Vector and Theoretical Range (they might change when iterating)
-    los = vecnorm2(model.Rot_X - Adjust.param(1:3));
+    los = vecnorm2(model.Rot_X - Adjust.param_pred(1:3));
     model.rho = repmat(los', 1, num_freq);
     
     % --- initialize estimation of ionosphere in parameter vector:
@@ -68,8 +70,9 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
     if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Estimate')
         n = numel(Adjust.param);
         idx_iono = n-no_sats+1:n;
-        bool_iono = ( Adjust.param(idx_iono) == 0 );
-        Adjust.param(idx_iono(bool_iono)) = model.iono(bool_iono,1);
+        iono_0 = ( Adjust.param(idx_iono) == 0 );
+        Adjust.param(idx_iono(iono_0)) = model.iono(iono_0,1);
+        Adjust.param_pred(idx_iono(iono_0)) = model.iono(iono_0,1);
     end  
     
     % --- update model with modeled observations
@@ -77,7 +80,7 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
         model_observations(model, Adjust, settings, Epoch);
     
     % --- check for outliers
-    % dangerous function!, omc depends on estimated parameters which can
+    % dangerous function!, omc depends on predicted parameters which can
     % be very wrong at the beginning of the convergence
     if settings.PROC.check_omc
         [Epoch, Adjust] = check_omc(Epoch, model, Adjust, settings, obs.interval); 
@@ -105,23 +108,21 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
     % --- create covariance matrix of observations
     Adjust = createObsCovariance(Adjust, Epoch, settings, model.el);
     
-    % --- check if too many satellites have been excluded because of e.g. 
+    % --- check if too many observations have been excluded because of e.g. 
     % elevation cutoff, check_omc, missing broadcast corrections...
-    exclude = any(Epoch.exclude,2);
-    n_gps = sum(Epoch.gps & ~exclude);   n_glo = sum(Epoch.glo & ~exclude);
-    n_gal = sum(Epoch.gal & ~exclude);   n_bds = sum(Epoch.bds & ~exclude);   n_qzss = sum(Epoch.qzss & ~exclude);
-    bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, settings.INPUT.use_QZSS, ...
-        n_gps, n_glo, n_gal, n_bds, n_qzss, settings.INPUT.use_GNSS);
-    if ~bool_enough_sats && ~settings.INPUT.bool_parfor
-        fprintf(2, 'Not enough satellites for adjustment (Epoch %d)           \n', Epoch.q)
-        Adjust.res = zeros(2*no_sats*settings.INPUT.proc_freqs,1);
+    n_observations = numel(Epoch.exclude);
+    n_reject = sum(Epoch.exclude(:) | Epoch.cs_found(:) * strcmp(settings.IONO.model, 'GRAPHIC'));
+    if n_observations - n_reject < DEF.MIN_SATS
+        % not enough observation for parameter estimation in current epoch
+        fprintf(2, 'Not enough observations (Epoch %d)           \n', Epoch.q)
+        dx.x(1:3) = 0; Adjust.res = NaN(numel(Adjust.omc),1);
+        Adjust.float = false; Adjust.fixed = false;
         return
     end
     
     
-    
     %% ------- Calculate Position ------------
-    switch settings.ADJ.filter.type        
+    switch filter_type        
 
         case 'Kalman Filter Iterative'      % Kalman Filter with inner-epoch iteration
             if it == 1
@@ -134,18 +135,13 @@ while it < DEF.ITERATION_MAX_NUMBER    	% Start iteration (because of linearizat
                 break;
             else        % inner-epoch iteration continues
                 Adjust.param = Adjust.param + dx.x;
+                % replace prediction with current values
+                Adjust.param_pred = Adjust.param;
+                Adjust.param_sigma_pred = Adjust.param_sigma;
             end
 
         case 'Kalman Filter'
-            if ~Adjust.float && it == 1 &&  strcmpi(settings.PROC.method,'Code + Phase')
-                % perform a non normal LSQ-solution as starting point for
-                % the Kalman Filter
-                dx = adjustment(Adjust);
-                Adjust.param = Adjust.param + dx.x;
-                Adjust.param_pred = Adjust.param;
-                continue;       % start Kalman-Filter in next iteration
-            end
-            Adjust = KalmanFilter(Adjust, Epoch, settings, model);
+            Adjust = KalmanFilter(Adjust);
             Adjust.res = calc_res(settings, input, Epoch, model, Adjust, obs);
             break;              % no inner-epoch iteration
             
@@ -164,7 +160,7 @@ end             % end of iteration of current epoch
 
 %% Handle results
 % check if solution converged in current epoch
-if ~strcmp(settings.ADJ.filter.type,'Kalman Filter') && norm(dx.x(1:3)) >= DEF.ITERATION_THRESHOLD
+if ~strcmp(filter_type, 'Kalman Filter') && norm(dx.x(1:3)) >= DEF.ITERATION_THRESHOLD
     if bool_print
         fprintf('\tSolution did not converge in this epoch!!!                 \n')
     end
@@ -205,6 +201,21 @@ end
 
 
 %% AUXILIARY FUNCTIONS
+
+function bool = ReceiverClockJump(dx, iono_model)
+% determine change of receiver clock error in the last iteration
+if ~strcmp(iono_model, 'Estimate, decoupled clock')
+    sum_rec_clk = dx(8) + dx(11) + dx(14) + dx(17) + dx(20);
+else
+    sum_rec_clk = dx(7) + dx( 8) + dx( 9) + dx(10) + dx(11);
+end
+% check for jump
+bool = false; 
+if sum_rec_clk > 1000;      bool = true;        end
+
+
+
+
 function Adjust = stop_iteration(Adjust, dx)
 % Saves some variables when stopping the inner-epoch iteration
 Adjust.float = true;               	% valid float solution
@@ -228,6 +239,10 @@ Adjust.param_sigma(idx_) = initial_var; % reset variances to initial variance
 function res = calc_res(settings, input, Epoch, model, Adjust, obs)
 % Calculates the post-fit residuals when using a Kalman Filter
 % recalculate error sources and modeled observations since parameters changed
+Adjust.param_pred = Adjust.param;       % replace prediction with current estimation
+los = vecnorm2(model.Rot_X - Adjust.param(1:3));
+model.rho = repmat(los', 1, settings.INPUT.proc_freqs);
+model = getReceiverClockBiases(model, Epoch, Adjust.param, settings);
 [model, Epoch] = modelErrorSources(settings, input, Epoch, model, Adjust, obs);
 [code_model, phase_model] = model_observations(model, Adjust, settings, Epoch);
 % calculate residuals (observation minus modeled observation)
@@ -237,8 +252,11 @@ if strcmpi(settings.PROC.method, 'Code + Phase')
     s_f = numel(Epoch.sats) * settings.INPUT.proc_freqs;    % #sats x # freqs
     code_row = 1:2:2*s_f;   	% rows for code  obs [1,3,5,7,...]
     phase_row = 2:2:2*s_f;  	% rows for phase obs [2,4,6,8,...]
-    res(code_row,1)	 = (Epoch.code(:)  - code_model(:))  .*  ~exclude; 	% for code-observations
-    res(phase_row,1) = (Epoch.phase(:) - phase_model(:)) .*  ~exclude .*  usePhase;    % for phase-observations
+    res(code_row,:)	 = (Epoch.code(:)  - code_model(:))  .*  ~exclude; 	% for code-observations
+    res(phase_row,:) = (Epoch.phase(:) - phase_model(:)) .*  ~exclude .*  usePhase;    % for phase-observations
+    if strcmp(settings.IONO.model, 'GRAPHIC')
+         res(code_row,:) = [];
+    end
 else
     res = (Epoch.code(:)  - code_model(:))  .*  ~exclude;
 end

@@ -105,10 +105,10 @@ for j = 1:n_labels
             
             % update waitbar
             if ishandle(WBAR)
-                progress2 = i/n_unique;      % 1/100 [%]
-                progress1 = ii/n_files;     % 1/100 [%]
-                mess_1 = sprintf('%s%02.2f%s', 'Station Graph: approaching ', progress1*100, '%.');
-                mess_2 = sprintf('%s%s%s%02.2f%s', 'Station ', curr_stat, ': ', progress2*100, '% finished');
+                progress1 = j/n_labels;         % 1/100 [%]
+                progress2 = i/n_unique;         % 1/100 [%]
+                mess_1 = sprintf('%s%02.2f%s', ['Current label: ' curr_label ', approaching '], progress1*100, '%');
+                mess_2 = sprintf('%s%s%s%02.2f%s', 'Current station: ', curr_stat, ', ', progress2*100, '% finished');
                 waitbar(progress1, WBAR, {mess_1; mess_2})
             end
             % check if user pushed STOP button

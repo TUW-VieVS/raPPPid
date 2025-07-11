@@ -1,5 +1,5 @@
-function vis_plotReceiverClock(hours, strXAxis, param, resets_h, ...
-    settings, clk_file, station, startdate)
+function vis_plotReceiverClock(hours, strXAxis, param, resets_h, ff, ...
+    settings, clk_file, station, startdate, NO_PARAM)
 % Plots estimated receiver clock error(s):
 %   o receiver clock error (usually GPS) and receiver clock offsets (to 
 %     usually GPS)
@@ -12,10 +12,12 @@ function vis_plotReceiverClock(hours, strXAxis, param, resets_h, ...
 %   strXAxis    label for x-axis
 %   param       estimated parameters of all processed epochs
 %   reset_h     vector, time of resets in hours
+%   ff          string, indicating what solution is plotted
 % 	settings    struct, processing settings from GUI
 %   clk_file    string, path to precise clock file
 %   station     string, 4-digit station identifier
 %   startdate   [year month day]
+%   NO_PARAM    number of estimated parameters
 % OUTPUT:
 %   []
 % 
@@ -32,7 +34,6 @@ function vis_plotReceiverClock(hours, strXAxis, param, resets_h, ...
 % check if receiver clock is decoupled
 DecoupledClockModel = strcmp(settings.IONO.model, 'Estimate, decoupled clock');
 
-
 % true if GNSS was processed and should be plotted 
 isGPS  = settings.INPUT.use_GPS;          
 isGLO  = settings.INPUT.use_GLO;
@@ -40,38 +41,44 @@ isGAL  = settings.INPUT.use_GAL;
 isBDS  = settings.INPUT.use_BDS;
 isQZSS = settings.INPUT.use_QZSS;
 
-
 m2ns = 1e9 / Const.C;       % convert from [m] to [ns]
 
+% consider shift in parameter vector if new parameters were added 
+if DecoupledClockModel 
+    d = NO_PARAM - DEF.NO_PARAM_DCM;
+else
+    d = NO_PARAM - DEF.NO_PARAM_ZD;
+end
+  
 
 % extract estimated receiver errors for each GNSS [m]
 if ~DecoupledClockModel
     m = 1;      % one receiver clock error for code and phase
     % get receiver clock error and offsets
-    rec_clk_GPS  = param( 5,:) * m2ns;  % convert from [m] to [ns]
-    rec_clk_GLO  = param( 8,:) * m2ns;
-    rec_clk_GAL  = param(11,:) * m2ns;
-    rec_clk_BDS  = param(14,:) * m2ns;
+    rec_clk_GPS  = param( 8+d,:) * m2ns;  % convert from [m] to [ns]
+    rec_clk_GLO  = param(11+d,:) * m2ns;
+    rec_clk_GAL  = param(14+d,:) * m2ns;
+    rec_clk_BDS  = param(17+d,:) * m2ns;
     % rec_clk_QZSS is handled later (to avoid errors with old processings)
 else
     m = 2;      % seperate receiver clock error for code and phase
     % get code receiver clock errors
-    rec_clk_GPS(1,:) = param(5,:) * m2ns;  % convert from [m] to [ns]
-    rec_clk_GLO(1,:) = param(6,:) * m2ns;
-    rec_clk_GAL(1,:) = param(7,:) * m2ns;
-    rec_clk_BDS(1,:) = param(8,:) * m2ns;
+    rec_clk_GPS(1,:) = param( 8+d,:) * m2ns;  % convert from [m] to [ns]
+    rec_clk_GLO(1,:) = param( 9+d,:) * m2ns;
+    rec_clk_GAL(1,:) = param(10+d,:) * m2ns;
+    rec_clk_BDS(1,:) = param(11+d,:) * m2ns;
     % get phase receiver clock errors
-    rec_clk_GPS(2,:) = param(10,:) * m2ns;
-    rec_clk_GLO(2,:) = param(11,:) * m2ns;
-    rec_clk_GAL(2,:) = param(12,:) * m2ns;
-    rec_clk_BDS(2,:) = param(13,:) * m2ns;
+    rec_clk_GPS(2,:) = param(13+d,:) * m2ns;
+    rec_clk_GLO(2,:) = param(14+d,:) * m2ns;
+    rec_clk_GAL(2,:) = param(15+d,:) * m2ns;
+    rec_clk_BDS(2,:) = param(16+d,:) * m2ns;
     % rec_clk_QZSS is handled later (to avoid errors with old processings)
 end
 
 
 % preparations for plotting
 strYAxis = 'dt_{rec} [ns]';
-fig_clk = figure('Name','Clock Plot', 'NumberTitle','off');
+fig_clk = figure('Name', ['Clock Plot, ' ff ' solution'], 'NumberTitle','off');
 n = isGPS + isGLO + isGAL + isBDS + isQZSS;     % number of plots
 i = 1;
 
@@ -86,7 +93,7 @@ end
 
 % plot GPS
 if isGPS
-    i = plot_clk(rec_clk_GPS, i, n, m, resets_h, hours, strXAxis, ['GPS ' strYAxis], DEF.COLOR_G);
+    i = plot_clk(rec_clk_GPS, i, n, m, resets_h, hours, ff, strXAxis, ['GPS ' strYAxis], DEF.COLOR_G);
     if ~isempty(rec_clk_true)
         plot(rec_clk_true(:,1), rec_clk_true(:,2), 'g-', 'LineWidth', 2)
         % create histogram of difference
@@ -97,15 +104,15 @@ if isGPS
 end
 % plot Glonass
 if isGLO
-    i = plot_clk(rec_clk_GLO, i, n, m, resets_h, hours, strXAxis, ['GLO ' strYAxis], DEF.COLOR_R);
+    i = plot_clk(rec_clk_GLO, i, n, m, resets_h, hours, ff, strXAxis, ['GLO ' strYAxis], DEF.COLOR_R);
 end
 % plot Galileo
 if isGAL
-    i = plot_clk(rec_clk_GAL, i, n, m, resets_h, hours, strXAxis, ['GAL ' strYAxis], DEF.COLOR_E);
+    i = plot_clk(rec_clk_GAL, i, n, m, resets_h, hours, ff, strXAxis, ['GAL ' strYAxis], DEF.COLOR_E);
 end
 % plot Beidou
 if isBDS
-    i = plot_clk(rec_clk_BDS, i, n, m, resets_h, hours, strXAxis, ['BDS ' strYAxis], DEF.COLOR_C);
+    i = plot_clk(rec_clk_BDS, i, n, m, resets_h, hours, ff, strXAxis, ['BDS ' strYAxis], DEF.COLOR_C);
 end
 % plot QZSS
 if isQZSS
@@ -116,7 +123,7 @@ if isQZSS
         rec_clk_QZS(1,:) = param( 9,:) * m2ns;
         rec_clk_QZS(2,:) = param(14,:) * m2ns;
     end
-    i = plot_clk(rec_clk_QZS, i, n, m, resets_h, strTitle, hours, strXAxis, ['QZSS ' strYAxis], DEF.COLOR_J);
+    i = plot_clk(rec_clk_QZS, i, n, m, resets_h, strTitle, hours, ff, strXAxis, ['QZSS ' strYAxis], DEF.COLOR_J);
 end
 
 % add customized datatip
@@ -163,7 +170,7 @@ end
 
 
 
-function i = plot_clk(rec_clk, i, n, m, resets_h, hours, strX, strY, color)
+function i = plot_clk(rec_clk, i, n, m, resets_h, hours, ff, strX, strY, color)
 % function to plot receiver clock error
 % rec_clk ... receiver clock error(s) to plot
 % i ... number of plot
@@ -171,6 +178,7 @@ function i = plot_clk(rec_clk, i, n, m, resets_h, hours, strX, strY, color)
 % m ... number of clock errors to plot
 % resets_h ... [h], resets
 % hours ... [h], x values for plotting
+% ff ... string, 'float' or 'fixed'
 % strX ... string, label of x-axis
 % strY ... string, label of y-axis
 % color ... plotting color, depending on GNSS
@@ -182,16 +190,17 @@ lstyle = '-';
 for j = 1:m         
     hold on
     % extract and plot
-    nonzero = (rec_clk(j,:) ~= 0);
-    plot(hours(nonzero),  rec_clk(j, nonzero), 'LineStyle', lstyle, 'Color', color)
-    plot(hours(~nonzero), rec_clk(j, ~nonzero), 'k.')       % plot epochs without solution
+    is_zero = (rec_clk(j,:) == 0);
+    % plot(hours(is_zero), rec_clk(j, is_zero), 'k.')  	% plot epochs without solution
+    hours(is_zero) = NaN; rec_clk(j, is_zero) = NaN;    % replace 0 with NaN
+    plot(hours,  rec_clk(j, :), 'LineStyle', lstyle, 'Color', color)
     % style
-    if i == 1; title('Estimated Receiver Clock Error'); end
+    if i == 1; title(['Receiver Clock Error, ' ff]); end
     xlabel(strX)
     ylabel(strY)
     grid on;
     if ~isempty(resets_h); vline(resets_h, 'k:'); end	% plot vertical lines for resets
-    xlim([hours(1) hours(end)])
+    xlim([0, hours(end)])
     Grid_Xoff_Yon()
     lstyle = '--';       % for potential plot of receiver phase clock error
 end

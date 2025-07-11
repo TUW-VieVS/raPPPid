@@ -40,10 +40,17 @@ if settings.ORBCLK.MGEX
             file = {['GRG0MGXFIN_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
             
         case 'WUM'
-            URL_host = 'igs.gnsswhu.cn:21';
-            URL_folder = {['/pub/whu/phasebias/' yyyy, '/orbit/']};
-            file = {['WUM0MGXRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
-                        
+            switch settings.ORBCLK.prec_prod_type
+                case 'Rapid'
+                    URL_host = 'igs.gnsswhu.cn:21';
+                    URL_folder = {['/pub/whu/phasebias/' yyyy, '/orbit/']};
+                    file = {['WUM0MGXRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
+                case 'Final'
+                    URL_folder = {['/pub/igs/products/mgex/', gpsweek, '/']};
+                    file = {['WUM0MGXFIN_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
+            end
+
+            
         case 'GFZ'
             file = {['GBM0MGXRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
             URL_host = 'ftp.gfz-potsdam.de:21';

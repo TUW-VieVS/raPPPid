@@ -230,12 +230,12 @@ if PLOT.satvisibility
     l_sto{end+1} = 'cutoff';
     l_sat{end+1} = 'obs';
 end
-if PLOT.float_amb                   % Float Ambiguity plots
+if PLOT.amb && PLOT.float       % Float Ambiguity plots
     l_sto{end+1} = 'N_1';
     l_sto{end+1} = 'N_2';
     l_sto{end+1} = 'N_3';
 end
-if PLOT.fixed_amb                   % Fixed Ambiguity plots
+if PLOT.amb && PLOT.fixed       % Fixed Ambiguity plots
     l_sto{end+1} = 'refSatGPS';
     l_sto{end+1} = 'refSatGAL';
     l_sto{end+1} = 'N_EW';

@@ -426,19 +426,21 @@ end
 % Ionosphere Model
 switch structure.IONO.model
     case '2-Frequency-IF-LCs'
-        set(handles.radiobutton_models_ionosphere_2freq,           'Value', 1);
+        set(handles.radiobutton_models_ionosphere_2freq,      	'Value', 1);
     case '3-Frequency-IF-LC'
-        set(handles.radiobutton_models_ionosphere_3freq,           'Value', 1);
+        set(handles.radiobutton_models_ionosphere_3freq,      	'Value', 1);
     case 'Estimate with ... as constraint'
         set(handles.radiobutton_models_ionosphere_estimateConstraint,   'Value', 1);
     case 'Correct with ...'
-        set(handles.radiobutton_models_ionosphere_correct,         'Value', 1);
+        set(handles.radiobutton_models_ionosphere_correct,    	'Value', 1);
 	case 'Estimate'
-        set(handles.radiobutton_models_ionosphere_estimate,        'Value', 1);
+        set(handles.radiobutton_models_ionosphere_estimate,  	'Value', 1);
     case 'Estimate, decoupled clock'
-        set(handles.radiobutton_models_ionosphere_decoupled,       'Value', 1);
+        set(handles.radiobutton_models_ionosphere_decoupled, 	'Value', 1);
+    case 'GRAPHIC'
+        set(handles.radiobutton_models_ionosphere_graphic,  	'Value', 1);        
     case 'off'
-        set(handles.radiobutton_models_ionosphere_off,             'Value', 1);
+        set(handles.radiobutton_models_ionosphere_off,        	'Value', 1);
 end
 % Source of Ionosphere
 switch structure.IONO.source
@@ -450,7 +452,7 @@ switch structure.IONO.source
         set(handles.radiobutton_source_ionosphere_NeQuick,         'Value', 1);
     case 'CODE spherical harmonics'
         set(handles.radiobutton_source_ionosphere_CODE,            'Value', 1);
-    case 'VTEC from Correction stream'
+    case 'VTEC from Correction Stream'
         set(handles.radiobutton_model_ionosphere_CorrectionStream, 'Value', 1);  
     case 'TOBS File'
         set(handles.radiobutton_model_ionosphere_TOBS,             'Value', 1);   
@@ -535,7 +537,7 @@ try
         case 'GFZ MGEX'
             handles.radiobutton_models_biases_code_GFZ_MGEX.Value = 1;
         case {'HUST MGEX', 'HUS MGEX'}
-            handles.radiobutton_models_biases_code_HUS_MGEX.Value = 1;
+            handles.radiobutton_models_biases_code_HUST_MGEX.Value = 1;
         case 'CNES postprocessed'
             handles.radiobutton_models_biases_code_CNES_post.Value = 1;            
         case 'Correction Stream'
@@ -660,19 +662,19 @@ end
 
 % Antex File
 if contains(structure.OTHER.antex, 'Use existing')
-        set(handles.radiobutton_antex_existing, 'Value', 1);
-        set(handles.edit_antex, 'String', '');
+    set(handles.radiobutton_antex_existing, 'Value', 1);
+    set(handles.edit_antex, 'String', '');
 end
 if contains(structure.OTHER.antex, 'Download current')
-        set(handles.radiobutton_antex_downl,    'Value', 1);
-        set(handles.edit_antex, 'String', '');
+    set(handles.radiobutton_antex_downl,    'Value', 1);
+    set(handles.edit_antex, 'String', '');
 end
-if contains(structure.OTHER.antex, 'Manual choice:') 
-        set(handles.radiobutton_antex_manual,   'Value', 1);
-        [path.antex_1, path.antex_2] = fileparts2(structure.OTHER.file_antex);
-        set(handles.edit_antex, 'String', path.antex_2);
+if contains(structure.OTHER.antex, 'Manual choice:')
+    set(handles.radiobutton_antex_manual,   'Value', 1);
+    [path.antex_1, path.antex_2] = fileparts2(structure.OTHER.file_antex);
+    set(handles.edit_antex, 'String', path.antex_2);
 end
-try 
+try
     handles.checkbox_rec_antex.Value = structure.OTHER.antex_rec_manual;
 catch
     handles.checkbox_rec_antex.Value = 0;
@@ -755,7 +757,13 @@ end
 set(handles.edit_refSatGPS, 'String', num2str(structure.AMBFIX.refSatGPS)); 
 set(handles.edit_refSatGAL, 'String', num2str(structure.AMBFIX.refSatGAL));
 try
+    set(handles.edit_refSatGLO, 'String', num2str(structure.AMBFIX.refSatGLO));
+end
+try
     set(handles.edit_refSatBDS, 'String', num2str(structure.AMBFIX.refSatBDS));
+end
+try
+    set(handles.edit_refSatQZS, 'String', num2str(structure.AMBFIX.refSatQZS));
 end
 % exclude satellites manually from fixing
 try
@@ -778,6 +786,16 @@ set(handles.popupmenu_filter, 'Value', value);
 % Filter settings
 [handles] = setFilterSettingsToGUI(structure, handles);
 
+% Satellite
+try
+    set(handles.checkbox_satellite, 'Value', structure.ADJ.satellite.bool );
+    set(handles.edit_sat_mass, 'String', num2str(structure.ADJ.satellite.mass));
+    set(handles.edit_sat_area, 'String', num2str(structure.ADJ.satellite.area));
+    set(handles.edit_sat_drag, 'String', num2str(structure.ADJ.satellite.drag));
+    set(handles.edit_sat_solar, 'String', num2str(structure.ADJ.satellite.solar));
+catch
+    set(handles.checkbox_satellite, 'Value', 0 );
+end
 
 
 %% Estimation - Weighting
@@ -1020,8 +1038,8 @@ if bool_settings == 1   % do this only for the settings structure
     end	
 	set(handles.checkbox_plot_elev,             'Value', structure.PLOT.elevation     );
 	set(handles.checkbox_plot_sat_visibility,   'Value', structure.PLOT.satvisibility );
-	set(handles.checkbox_plot_float_amb,        'Value', structure.PLOT.float_amb     );
-	set(handles.checkbox_plot_fixed_amb,        'Value', structure.PLOT.fixed_amb     );
+	try; set(handles.checkbox_plot_amb,        'Value', structure.PLOT.amb     ); end
+%	set(handles.checkbox_plot_fixed_amb,        'Value', structure.PLOT.fixed_amb     );
 	try
 		set(handles.checkbox_plot_clock,            'Value', structure.PLOT.clock     );
 	catch

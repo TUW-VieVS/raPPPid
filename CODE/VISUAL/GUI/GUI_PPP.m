@@ -162,7 +162,7 @@ end
         end
     
         function menu_file_parametersFiles_loadParameters_Callback(hObject, eventdata, handles)
-        [FileName, PathName] = uigetfile('*.mat', 'Select a parameters file (*.mat)', 'PARAMETERS/');
+        [FileName, PathName] = uigetfile('*.mat', 'Select a parameters file (*.mat)', [pwd '/PARAMETERS/']);
         PathName = relativepath(PathName);   % convert absolute path to relative path
         if FileName
             load([PathName, FileName], 'parameters');
@@ -187,7 +187,7 @@ end
         
         function menu_file_parametersFiles_saveParameters_Callback(hObject, eventdata, handles)
         
-        [filename, PathName] = uiputfile('*.mat', 'Save GUI Settings', ['PARAMETERS/', '']);
+        [filename, PathName] = uiputfile('*.mat', 'Save GUI Parameters', [pwd '/PARAMETERS/']);
         PathName = relativepath(PathName);   % convert absolute path to relative path
         if filename
             settings = getSettingsFromGUI(handles);   % get input from GUI and put it into structure "settings"
@@ -208,7 +208,7 @@ end
     end
     
         function menu_file_settingsFiles_loadSettings_Callback(hObject, eventdata, handles)
-        [FileName, PathName] = uigetfile('*.mat', 'Select a settings file (*.mat) to load', Path.RESULTS);
+        [FileName, PathName] = uigetfile('*.mat', 'Select a settings file (*.mat) to load', GetFullPath(Path.RESULTS));
         PathName = relativepath(PathName);	% convert absolute path to relative path
         if FileName
             load([PathName, FileName], 'settings');
@@ -230,7 +230,7 @@ end
         
         function menu_file_settingsFiles_saveSettings_Callback(hObject, eventdata, handles)
         guidata(hObject, handles);
-        [filename, PathName] = uiputfile('*.mat', 'Save GUI Settings', [Path.RESULTS, 'settings_']);
+        [filename, PathName] = uiputfile('*.mat', 'Save GUI Settings', [GetFullPath(Path.RESULTS), 'settings_']);
         PathName = relativepath(PathName);   % convert absolute path to relative path
         if filename
             settings = getSettingsFromGUI(handles);   % get input from GUI and put it into structure "settings"
@@ -434,7 +434,7 @@ end
 function pushbutton_obs_file_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/OBS/'], handles.paths.obs_1, handles.paths.rinex_date);
 if ~exist(folder, 'dir'); folder = [Path.DATA '/OBS/']; end     % e.g., data folder was deleted
-[FileName, PathName] = uigetfile({'*.*o;*.rnx;*.obs;*.txt'}, 'Select the Observation File', folder);
+[FileName, PathName] = uigetfile({'*.*o;*.rnx;*.obs;*.txt'}, 'Select the Observation File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName        % uigetfile cancelled
     return;
@@ -1055,7 +1055,7 @@ end
 % --- Executes on button press in pushbutton_load_true_kinematic.
 function pushbutton_load_true_kinematic_Callback(hObject, eventdata, handles)
 if isempty(handles.edit_plot_path.String);    return;   end
-[FileName, PathName] = uigetfile({'*.*'}, 'Select the reference trajectory', [Path.DATA 'COORDS/']);
+[FileName, PathName] = uigetfile({'*.*'}, 'Select the reference trajectory', GetFullPath([Path.DATA 'COORDS/']));
 if FileName == 0;    return;    end
 PathName = relativepath(PathName);   % convert absolute path to relative path
 % write into textfields
@@ -1199,7 +1199,7 @@ for i = 1:rows
 end
 startfolder = [Path.DATA, '/OBS'];
 while true      % loop to add multiple files
-    [files, fpath] = uigetfile({'*.*o;*.rnx;*.obs;*.txt'}, 'Select (multiple) RINEX-Files for Batch-Processing', startfolder, 'MultiSelect', 'on');
+    [files, fpath] = uigetfile({'*.*o;*.rnx;*.obs;*.txt'}, 'Select (multiple) RINEX-Files for Batch-Processing', GetFullPath(startfolder), 'MultiSelect', 'on');
 	fpath = relativepath(fpath);   % convert absolute path to relative path
     if isempty(files) || isnumeric(files)          
         return       % no files selected, stopp adding files in table
@@ -1496,7 +1496,7 @@ end
 
 function pushbutton_load_process_list_Callback(hObject, eventdata, handles)
 
-[FileName, PathName] = uigetfile('*.mat','Select process list(s)', './PROCESSLIST/', 'multiselect', 'on');
+[FileName, PathName] = uigetfile('*.mat','Select process list(s)', [pwd '/PROCESSLIST/'], 'multiselect', 'on');
 PathName = relativepath(PathName);
 
 fileChosen = 1;
@@ -1726,7 +1726,7 @@ for i = 1:rows
         break
     end
 end
-startfolder = Path.RESULTS;
+startfolder = GetFullPath(Path.RESULTS);
 global STOP_CALC;   STOP_CALC = 0;
 while true      % loop to add multiple files
     PathName = uigetdir(startfolder, 'Select result folder(s) of processing(s)');
@@ -1758,7 +1758,9 @@ while true      % loop to add multiple files
     i_fail = [];
     for i = 1:n         % loop over all detected data4plot.mat-files to load date and stationname
         % load in current file
-        path_folder = all_folders{i,1}; path_folder = path_folder{1};        
+        path_folder = all_folders{i,1}; 
+        if~iscell(path_folder); path_folder = {path_folder}; end
+        path_folder = path_folder{1};        
         path_data4plot = [path_folder '/data4plot.mat'];
         path_results_txt = [path_folder '/results_float.txt'];
         path_settings_txt = [path_folder '/settings_summary.txt'];
@@ -2019,7 +2021,7 @@ if handles.checkbox_multi_plot_each_row.Value || handles.checkbox_multi_plot_eac
     end
 end
 
-[FileName, PathName] = uigetfile('*.mat','Select plot list(s)', './PLOTLIST/', 'multiselect', 'on');
+[FileName, PathName] = uigetfile('*.mat','Select plot list(s)', [pwd '/PLOTLIST/'], 'multiselect', 'on');
 PathName = relativepath(PathName);
 
 fileChosen = 1;
@@ -2256,7 +2258,7 @@ end
 
 function pushbutton_sp3_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/ORBIT/'], handles.paths.sp3_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.sp3*;*.eph*'}, 'Select the .sp3 File', folder);
+[FileName, PathName] = uigetfile({'*.sp3*;*.eph*'}, 'Select the .sp3 File', GetFullPath(folder));
 
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
@@ -2303,7 +2305,7 @@ end
 
 function pushbutton_clock_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/CLOCK/'], handles.paths.clk_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile('*.*clk*', 'Select the *.clk File', folder);
+[FileName, PathName] = uigetfile('*.*clk*', 'Select the *.clk File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -2352,7 +2354,7 @@ end
 
 function pushbutton_obx_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/ORBIT/'], handles.paths.obx_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile('*.obx', 'Select the .clk_30s File', folder);
+[FileName, PathName] = uigetfile('*.obx', 'Select the .clk_30s File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -2405,7 +2407,7 @@ end
 
 function pushbutton_nav_multi_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BROADCAST/'], handles.paths.navMULTI_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*MN.rnx;*.*n'}, 'Select the Multi-GNSS Navigation File', folder);
+[FileName, PathName] = uigetfile({'*MN.rnx;*.*n'}, 'Select the Multi-GNSS Navigation File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName        % uigetfile cancelled
     return;
@@ -2427,7 +2429,7 @@ end
 % Navigation-File GPS (.n)
 function pushbutton_nav_GPS_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BROADCAST/'], handles.paths.navGPS_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.*n;*.rnx'}, 'Select the Navigation File (GPS)', folder);
+[FileName, PathName] = uigetfile({'*.*n;*.rnx'}, 'Select the Navigation File (GPS)', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -2502,7 +2504,7 @@ end
 
 function pushbutton_nav_GLO_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BROADCAST/'], handles.paths.navGLO_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.*g;*.rnx'}, 'Select the Navigation File (GLONASS)', folder);
+[FileName, PathName] = uigetfile({'*.*g;*.rnx'}, 'Select the Navigation File (GLONASS)', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName        % uigetfile cancelled
     return;
@@ -2545,7 +2547,7 @@ end
 
 function pushbutton_nav_GAL_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BROADCAST/'], handles.paths.navGAL_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.*l;*.rnx'}, 'Select the Navigation File (GALILEO)', folder);
+[FileName, PathName] = uigetfile({'*.*l;*.rnx'}, 'Select the Navigation File (GALILEO)', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -2592,7 +2594,7 @@ end
 
 function pushbutton_nav_BDS_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BROADCAST/'], handles.paths.navBDS_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.*c;*.rnx'}, 'Select the BeiDou Navigation File', folder);
+[FileName, PathName] = uigetfile({'*.*c;*.rnx'}, 'Select the BeiDou Navigation File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -2640,7 +2642,7 @@ end
 
 function pushbutton_corr2brdc_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/STREAM/'], handles.paths.corr2brdc_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.*c;*.ssr;CLK*.mat'}, 'Select the Correction File', folder);
+[FileName, PathName] = uigetfile({'*.*c;*.ssr;CLK*.mat'}, 'Select the Correction File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -2716,7 +2718,7 @@ guidata(hObject, handles);
 end
 function pushbutton_tropo_file_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/TROPO/'], handles.paths.tropo_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.*zpd;*.tro'}, 'Select the Tropo File', folder);
+[FileName, PathName] = uigetfile({'*.*zpd;*.tro'}, 'Select the Tropo File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName        % uigetfile cancelled
     return;
@@ -2858,7 +2860,7 @@ end
 
 function pushbutton_ionex_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/IONO/'], handles.paths.ionex_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.*i;*.inx'}, 'Select the Ionex File', folder);
+[FileName, PathName] = uigetfile({'*.*i;*.inx'}, 'Select the Ionex File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName        % uigetfile cancelled
     return;
@@ -2979,7 +2981,7 @@ end
 
 function pushbutton_dcb_P1P2_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BIASES/'], handles.paths.dcbP1P2_1, handles.paths.rinex_date(2:5));
-[FileName, PathName] = uigetfile('P1P2*.dcb', 'Select the DCB (P1P2) File for', folder);
+[FileName, PathName] = uigetfile('P1P2*.dcb', 'Select the DCB (P1P2) File for', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -3024,7 +3026,7 @@ end
 
 function pushbutton_dcb_P1C1_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BIASES/'], handles.paths.dcbP1C1_1, handles.paths.rinex_date(2:5));
-[FileName, PathName] = uigetfile({'P1C1*.dcb'}, 'Select the P1C1 DCB File', folder);
+[FileName, PathName] = uigetfile({'P1C1*.dcb'}, 'Select the P1C1 DCB File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -3066,7 +3068,7 @@ end
 
 function pushbutton_dcb_P2C2_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BIASES/'], handles.paths.dcbP2C2_1, handles.paths.rinex_date(2:5));
-[FileName, PathName] = uigetfile({'P2C2*.dcb'}, 'Select the P2C2 DCB File', folder);
+[FileName, PathName] = uigetfile({'P2C2*.dcb'}, 'Select the P2C2 DCB File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -3127,7 +3129,7 @@ end
 
 function pushbutton_bias_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BIASES/'], handles.paths.bias_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*.bia;*.bsx;*.mat'}, 'Select a Sinex BIAS File', folder);
+[FileName, PathName] = uigetfile({'*.bia;*.bsx;*.mat'}, 'Select a Sinex BIAS File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -3243,7 +3245,7 @@ end
 
 function pushbutton_antex_Callback(hObject, eventdata, handles)
 folder = [Path.DATA '/ANTEX/'];
-[FileName, PathName] = uigetfile('*.atx*', 'Select the ANTEX-File', folder);
+[FileName, PathName] = uigetfile('*.atx*', 'Select the ANTEX-File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -3365,24 +3367,16 @@ end
 
 % Reference Satellite Choice
 function radiobutton_refSat_high_Callback(hObject, eventdata, handles)
-handles.text_refSatGPS.Enable = 'Off'; handles.edit_refSatGPS.Enable = 'Off';
-handles.text_refSatGAL.Enable = 'Off'; handles.edit_refSatGAL.Enable = 'Off';
-handles.text_refSatBDS.Enable = 'Off'; handles.edit_refSatBDS.Enable = 'Off';
+handles = GUI_enable_onoff(handles);
 end
 function radiobutton_refSat_central_Callback(hObject, eventdata, handles)
-handles.text_refSatGPS.Enable = 'Off'; handles.edit_refSatGPS.Enable = 'Off';
-handles.text_refSatGAL.Enable = 'Off'; handles.edit_refSatGAL.Enable = 'Off';
-handles.text_refSatBDS.Enable = 'Off'; handles.edit_refSatBDS.Enable = 'Off';
+handles = GUI_enable_onoff(handles);
 end
 function radiobutton_refSat_Callback(hObject, eventdata, handles)
-handles.text_refSatGPS.Enable = 'Off'; handles.edit_refSatGPS.Enable = 'Off';
-handles.text_refSatGAL.Enable = 'Off'; handles.edit_refSatGAL.Enable = 'Off';
-handles.text_refSatBDS.Enable = 'Off'; handles.edit_refSatBDS.Enable = 'Off';
+handles = GUI_enable_onoff(handles);
 end
 function radiobutton_refSat_manually_Callback(hObject, eventdata, handles)
-handles.text_refSatGPS.Enable = 'On'; handles.edit_refSatGPS.Enable = 'On';
-handles.text_refSatGAL.Enable = 'On'; handles.edit_refSatGAL.Enable = 'On';
-handles.text_refSatBDS.Enable = 'On'; handles.edit_refSatBDS.Enable = 'On';
+handles = GUI_enable_onoff(handles);
 end
 
 
@@ -3773,7 +3767,7 @@ if ~isempty(prn)
     if isnumeric(prn) && (prn < 1 || prn > DEF.SATS)
         wrong_input = true; 
     elseif ischar(prn) 
-        if n > 3 || n <= 1
+        if n <= 1 || n == 4 || n == 5 || n == 6 || n > 7
             wrong_input = true;
         end
         if str2double(prn) > DEF.SATS || str2double(prn) < 1
@@ -3781,17 +3775,17 @@ if ~isempty(prn)
         end
     end
     if wrong_input
-        errordlg({'Wrong input for PRN!', 'Please use 3-digit name (e.g., G04, 232, R08)'}, 'Error');
+        errordlg({'Wrong input for PRN!', 'Please use 3-digit name (e.g., G04, 232, R08, C01:C05)'}, 'Error');
         return
     end
 end
 
 
-% check if prn is text e.g. G15, E17, C05
+% check if prn is text e.g. G15, E17, C05 and convert to number
 if ischar(prn)
     if isempty(prn)
         prn = [];
-    else
+    elseif n == 3
         gnss_number = char2gnss_number(prn(1));
         if ~isnan(gnss_number)      % convert from e.g. E23 to 223
             prn = str2double(prn(2:end));
@@ -4232,7 +4226,7 @@ end
 
 % pushbutton to set path to data4plot.mat
 function pushbutton_plot_path_Callback(hObject, eventdata, handles)
-[FileName, PathName] = uigetfile('data4plot*.mat','Select the data4plot.mat for Opening Plots', Path.RESULTS);
+[FileName, PathName] = uigetfile('data4plot*.mat','Select the data4plot.mat for Opening Plots', GetFullPath(Path.RESULTS));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -4630,8 +4624,8 @@ PLOT.coordxyz      = get(handles.checkbox_plot_xyz,           'Value');
 PLOT.XYZ      	   = get(handles.checkbox_plot_xyzplot,       'Value');
 PLOT.elevation     = get(handles.checkbox_plot_elev,          'Value');
 PLOT.satvisibility = get(handles.checkbox_plot_sat_visibility,'Value');
-PLOT.float_amb     = get(handles.checkbox_plot_float_amb,     'Value');
-PLOT.fixed_amb     = get(handles.checkbox_plot_fixed_amb,     'Value');
+PLOT.amb     	   = get(handles.checkbox_plot_amb,     'Value');
+% PLOT.fixed_amb     = get(handles.checkbox_plot_fixed_amb,     'Value');
 PLOT.clock     	   = get(handles.checkbox_plot_clock,         'Value');
 PLOT.dcb     	   = get(handles.checkbox_plot_dcb,           'Value');
 PLOT.wet_tropo     = get(handles.checkbox_plot_wet_tropo,     'Value');

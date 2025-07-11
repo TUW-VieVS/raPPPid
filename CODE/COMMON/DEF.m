@@ -11,7 +11,7 @@
 classdef DEF
     
     properties (Constant = true)
-        version = ['Version 3.1 ', char(169), ' TUW 2025'];
+        version = ['Version 4.0 ', char(169), ' TUW 2025'];
         
         % size of many variables due to raPPPid internal satellite numbering
         SATS = 410;
@@ -20,13 +20,14 @@ classdef DEF
         SATS_GPS = 32;
         SATS_GLO = 27;
         SATS_GAL = 36;      % because of E33 and E36
-        SATS_BDS = 60;      % because of a crazy amount of BDS sats
+        SATS_BDS = 62;      % because of a crazy amount of BDS sats
         SATS_QZSS = 7;      % planned 2023/2024, currently 4 
         
         % GPS three-frequency satellites which send L5 signal
-        % (status Nov 2022)
+        % (status Mai 2025, check out
+        % https://qzss.go.jp/en/technical/satellites/index.html)
         % ||| change to IGS satellite metadata
-        PRNS_GPS_L5 = [1, 3, 6, 8, 9, 10, 11, 14, 18, 23, 24, 25, 26, 27, 30, 32];
+        PRNS_GPS_L5 = [1, 3, 4, 6, 8, 9, 10, 11, 14, 18, 23, 24, 25, 26, 27, 28, 30, 32];
         
         % default leap seconds
         LEAP_SEC = 18;
@@ -36,13 +37,7 @@ classdef DEF
         
         % threshold for norm of coordinates to stop inner-epoch iteration 
         ITERATION_THRESHOLD = 1e-3;     % [m]  
-        
-        % maximum time difference for a correction from correction stream,
-        % timely nearest correction from correction stream has to be under
-        % this threshold
-        THRESHOLD_corr2brdc_clk_dt = 60;        % [s], for clock corrections
-        THRESHOLD_corr2brdc_orb_dt = 120;       % [s], for orbit corrections
-        
+                
         % default observation type ranking
         RANKING_GPS = 'WCDPSLXYMDIQ';
         RANKING_GLO = 'PCIQX';
@@ -66,29 +61,43 @@ classdef DEF
         %                  1     2      3      4       5      6       7
         
         % number of estimated parameters: 
-        % x, y, z, tropo,                                               (4)
+        % x, y, z, velocity x, velocity y, velocity z, tropo,           (7)
         % rec clock GPS,   dcb^G_1, dcb^G_2,                            (3)
         % rec offset GLO,  dcb^R_1, dcb^R_2,                            (3)
         % rec offset GAL,  dcb^E_1, dcb^E_2,                            (3)
         % rec offset BDS,  dcb^C_1, dcb^C_2,                            (3)  
         % rec offset QZSS, dcb^J_1, dcb^J_2,                            (3)
-        NO_PARAM_ZD = 19;	
-
+        NO_PARAM_ZD = 22;	
+        PARAM_ZD = ...
+            {'x'; 'y'; 'z'; 'v_x'; 'v_y'; 'v_z'; 'zwd'; ...
+            'rec_clk_G'; 'dcb_1_G'; 'dcb_2_G'; ...
+            'rec_clk_R'; 'dcb_1_R'; 'dcb_2_R'; ...
+            'rec_clk_E'; 'dcb_1_E'; 'dcb_2_E'; ...
+            'rec_clk_C'; 'dcb_1_C'; 'dcb_2_C'; ...
+            'rec_clk_J'; 'dcb_1_J'; 'dcb_2_J'; };
+        
         % decoupled clock model, number of estimated parameters : 
-        % x, y, z, tropo,                                               (4)
         % rec clock code:  GPS, GLO, GAL, BDS, QZSS                     (5)
         % rec clock phase: GPS, GLO, GAL, BDS, QZSS                     (5)
         % IFB: GPS, GLO, GAL, BDS, QZSS                                 (5)
         % L2 bias: GPS, GLO, GAL, BDS, QZSS                             (5)  
         % L3 bias: GPS, GLO, GAL, BDS, QZSS                             (5)  
-        NO_PARAM_DCM = 29;        
-        
+        NO_PARAM_DCM = 32;        
+        PARAM_DCM = ...
+            {'x'; 'y'; 'z'; 'v_x'; 'v_y'; 'v_z'; 'zwd'; ...
+            'rec_clk_code_G';  'rec_clk_code_R';  'rec_clk_code_E';  'rec_clk_code_C';  'rec_clk_code_J'; ...
+            'rec_clk_phase_G'; 'rec_clk_phase_R'; 'rec_clk_phase_E'; 'rec_clk_phase_C'; 'rec_clk_phase_J'; ...
+            'IFB_G'; 'IFB_R'; 'IFB_E'; 'IFB_C'; 'IFB_J';
+            'L2_bias_G'; 'L2_bias_R'; 'L2_bias_E'; 'L2_bias_C'; 'L2_bias_J';
+            'L3_bias_G'; 'L3_bias_R'; 'L3_bias_E'; 'L3_bias_C'; 'L3_bias_J'; };
+
         % minimal number of satellites in an epoch to calculate a position
         MIN_SATS = 4;
         
         % some persistent variables for Ambiguity Fixing
-        CUTOFF_REF_SAT = 20;    % [°], try to change reference satellite if below
+        CUTOFF_REF_SAT = 15;    % [°], try to change reference satellite if below
         AR_THRES_SUCCESS_RATE = 0.99;    % for LAMBDA method
+        PPPAR_IF_LSQ = false;	% LSQ with pseudo-observations for IF LC PPP-AR 
         
         % default thresholds [m] for multi-plot
         % - float solution

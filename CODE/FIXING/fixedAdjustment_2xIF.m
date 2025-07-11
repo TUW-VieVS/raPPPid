@@ -222,7 +222,7 @@ Adjust = saveFixedAdjustment_2xIF(dx, Adjust, Epoch.no_sats);
 
 
 % calculates coordinates from fixed adjustment
-Adjust.xyz_fix = Adjust.param(1:3) + dx.x(1:3);
+Adjust.param_fix = Adjust.param(1:3) + dx.x(1:3);
 Adjust.fixed = true;
 
 end

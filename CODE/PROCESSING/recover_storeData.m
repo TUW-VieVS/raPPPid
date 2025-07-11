@@ -16,7 +16,7 @@ function storeData = recover_storeData(folderstring)
 % ||| only the following data is read out from the textfiles:
 %     coordinates, troposphere (estimation)
 
-% ||| does not work for output files written from decoupled clock model
+% ||| DCM:does not work for output files written from decoupled clock model
 
 % initialize
 storeData = struct;
@@ -35,7 +35,7 @@ storeData.N_2 = []; storeData.N_var_2 = []; storeData.residuals_code_2 = [];
 storeData.N_3 = []; storeData.N_var_3 = []; storeData.residuals_code_3 = [];
 storeData.fixed = []; storeData.ttff = [];
 storeData.refSatGPS = []; storeData.refSatGLO = []; storeData.refSatGAL = []; storeData.refSatBDS = []; storeData.refSatQZS = [];
-storeData.xyz_fix = []; storeData.param_var_fix = [];
+storeData.param_fix = []; storeData.param_var_fix = [];
 storeData.HMW_12 = []; storeData.HMW_23 = []; storeData.HMW_13 = [];
 storeData.residuals_code_fix_1 = []; storeData.residuals_phase_fix_1 = [];
 storeData.residuals_code_fix_2 = []; storeData.residuals_phase_fix_2 = [];
@@ -57,11 +57,26 @@ storeData.L1_bias = []; storeData.L2_bias = []; storeData.L3_bias = [];
 storeData.mp1 = []; storeData.mp2 = []; storeData.MP_c = []; storeData.MP_p = [];
 
 
+% open, read and close file
+if ~isfile(folderstring);   folderstring = [folderstring '/settings_summary.txt'];   end
+fid = fopen(folderstring);
+TXT = textscan(fid,'%s', 'delimiter','\n', 'whitespace','');
+TXT = TXT{1};
+fclose(fid);
+
+% detect numer of estimated parameters
+bool_no_param = contains(TXT, 'Number of estimated parameters:');
+if any(bool_no_param)
+    line_param = TXT{bool_no_param};
+    idx = strfind(line_param, '):');
+    storeData.NO_PARAM = str2double(line_param(idx+1:end)); 
+end
 
 
 
 
-%% read out results of float solution from textfile
+
+%% read out results of float solution from results file
 floatpath = [folderstring '/results_float.txt'];
 if isfile(floatpath)
 
@@ -118,7 +133,7 @@ if isfile(floatpath)
     idx_bds_reclk = 18:iii:n;        % BeiDou receiver clock error/offset [m]    
     % ...
     idx_dzwd = 23:iii:n;             % estimated residual zenith wet delay [m]
-    idx_zwd = 24:iii:n;            	% zenith wet delay (a priori + estimation) [m]
+    idx_zwd = 24:iii:n;                 % zenith wet delay (a priori + estimation) [m]
     idx_zhd = 25:iii:n;             	% zenith hydrostatic delay (modeled) [m]
     idx_G_dcb1 = 26:iii:n;           % GPS DCB between processed f1 and f2 [m]
     idx_G_dcb2 = 27:iii:n;           % GPS DCB between processed f1 and f3 [m]
@@ -131,10 +146,14 @@ if isfile(floatpath)
     
     % ||| continue at some point
     
+    Z = zeros(numel(idx_x), 1);     % velocity is not extracted
+    
+    
     % save GPS time
     storeData.gpstime = D(idx_t);
     % save float xyz coordinates and estimated residual zwd
-    storeData.param = [D(idx_x), D(idx_y), D(idx_z), D(idx_dzwd), ...
+    storeData.param = [D(idx_x), D(idx_y), D(idx_z), ...
+        Z, Z, Z, D(idx_dzwd), ...
         D(idx_gps_reclk), D(idx_G_dcb1), D(idx_G_dcb2), ...
         D(idx_glo_reclk), D(idx_R_dcb1), D(idx_R_dcb2), ...
         D(idx_gal_reclk), D(idx_E_dcb1), D(idx_E_dcb2), ...
@@ -221,11 +240,11 @@ if isfile(fixedpath)
     % ||| continue at some point
     
     % save estimated xyz coordinates
-    storeData.xyz_fix = [D(idx_x), D(idx_y), D(idx_z)];
+    storeData.param_fix = [D(idx_x), D(idx_y), D(idx_z)];
     % save estimated UTM coordinates
     storeData.posFixed_utm = [D(idx_utm_x), D(idx_utm_y), D(idx_geo_h)];
     % create storeData.fixed (epochs with valid fixed solution)
-    storeData.fixed = all(~isnan(storeData.xyz_fix), 2) & all(storeData.xyz_fix ~= 0, 2);
+    storeData.fixed = all(~isnan(storeData.param_fix), 2) & all(storeData.param_fix ~= 0, 2);
     
     
     

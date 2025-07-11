@@ -42,7 +42,7 @@ if contains(settings.PROC.method, 'Phase')  % except code only solution
     
     % --- cycle-slip detection based on time-difference of phase observations
     if settings.OTHER.CS.TimeDifference
-        Epoch = cycleSlip_TimeDifference(Epoch, use_column, settings);
+        Epoch = cycleSlip_TimeDiff(Epoch, use_column, settings);
     end    
     
     
@@ -51,6 +51,12 @@ if contains(settings.PROC.method, 'Phase')  % except code only solution
         Epoch = cycleSlip_LLI(Epoch, use_column, settings);
     end
    
+    if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+        % DCM is sensitive if single phase observations are missing ->
+        % exclude all phase observations (although cycle slip might have
+        % been detected only on a single frequency)
+        Epoch.cs_found(any(Epoch.cs_found,2), :) = 1;
+    end
 
     % save detected cycle slips in Epoch.sat_status
     Epoch.sat_status(Epoch.cs_found) = 3;

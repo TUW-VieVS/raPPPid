@@ -124,9 +124,23 @@ switch settings.BIASES.code
         [~, ~] = mkdir(target{1});
         URL_host = 'igs.ign.fr:21';
         URL_folder = {['/pub/igs/products/mgex/dcb/' yyyy '/']};
-        file = {['DLR0MGXFIN_' yyyy quart '0000_03L_01D_DCB.BSX.gz']};
+        URL_host_2   = 'https://cddis.nasa.gov';
+        URL_folder_2 = {['/archive/gnss/products/bias/' yyyy '/']};
+        files{1} = ['DLR0OPSFIN_' yyyy quart '0000_03L_01D_DCB.BIA.gz'];
+        files{2} = ['DLR0OPSFIN_' yyyy quart '0000_03L_07D_DCB.BIA.gz'];          
+        files{3} = ['DLR0MGXFIN_' yyyy quart '0000_03L_01D_DCB.BSX.gz'];
+        files{4} = ['DLR0MGXFIN_' yyyy quart '0000_03L_07D_DCB.BSX.gz'];
+        files{5} = ['DLR0MGXFIN_' yyyy quart '0000_03L_01D_DCB.BIA.gz'];
+        files{6} = ['DLR0MGXFIN_' yyyy quart '0000_03L_07D_DCB.BIA.gz'];
         % download, unzip, save file-path
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        for i = 1:6
+            file = files(i);
+            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
+            if file_status == 0
+                file_status = get_cddis_data(URL_host_2, URL_folder_2, file, target, false);
+            end
+            if file_status ~= 0;   break;   end
+        end
         if file_status == 0
             errordlg({'No DLR Multi-GNSS quarterly DCBs found on server. Please change source of biases!';' ';'(DLR Multi-GNSS quarterly DCBs only become available some months in retrospect; perhaps this is the problem.)'}, 'Error');
         end
@@ -149,28 +163,42 @@ switch settings.BIASES.code
             if file_status == 0
                 errordlg('No CODE DCBs found on server. Please change source of biases!', 'Error');
             end
-            decompressed{i} = unzip_and_delete(files(i), targets(i));
-            settings.BIASES.code_file{i} = decompressed{i};
+            decompressed = unzip_and_delete(files(i), targets(i));
+            settings.BIASES.code_file{i} = decompressed{1};
         end
-
+        
     case 'WUM MGEX'
         % create folder and prepare download
         target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
         [~, ~] = mkdir(target{1});
-        URL_host = 'igs.gnsswhu.cn:21';
-        URL_folder = {['/pub/whu/phasebias/' yyyy, '/bias/']};
-        URL_host_2 = 'igs.ign.fr:21';
-        URL_folder_2 = {['/pub/igs/products/mgex/' gpsweek, '/']};
-        file   = {['WUM0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
-        file_2 = {['WUM0MGXRAP_' yyyy doy '0000_01D_01D_ABS.BIA.gz']};
+        URL_host_2 = 'https://cddis.nasa.gov';
+        if str2double(gpsweek) > 2230
+            URL_folders_2 = {['/archive/gnss/products/' gpsweek]};
+        else
+            URL_folders_2 = {['/archive/gnss/products/mgex/' gpsweek]};
+        end
+        switch settings.ORBCLK.prec_prod_type
+            case 'Rapid'
+                URL_host = 'igs.gnsswhu.cn:21';
+                URL_folder = {['/pub/whu/phasebias/' yyyy, '/bias/']};
+                file   = {['WUM0MGXRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+                file_2 = {['WUM0MGXRAP_' yyyy doy '0000_01D_01D_ABS.BIA.gz']};
+            case 'Final'
+                URL_host = 'igs.ign.fr:21';
+                URL_folder = {['/pub/igs/products/mgex/' gpsweek, '/']};
+                file   = {['WUM0MGXFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
+                file_2 = {['WUM0MGXFIN_' yyyy doy '0000_01D_30S_OSB.BIA.gz']};
+        end
         % download
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, false);
         if file_status == 0
-            file_status = ftp_download(URL_host_2, URL_folder_2{1}, file{1}, target{1}, false);
+            file_status = ftp_download(URL_host, URL_folder{1}, file_2{1}, target{1}, false);
         end
-        if file_status == 0
-            file = file_2;
-            file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        if file_status == 0     % try alternative
+            file_status = get_cddis_data(URL_host_2, URL_folders_2, file, target, true);
+        end
+        if file_status == 0     % try alternative
+            file_status = get_cddis_data(URL_host_2, URL_folders_2, file_2, target, true);
         end
         if file_status == 0
             errordlg('No WUM MGEX Biases found on server. Please specify different source!', 'Error');

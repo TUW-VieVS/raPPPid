@@ -23,6 +23,10 @@ function plotResiduals(storeData, settings, epochs, reset_h, hours, label_x, sat
 %% Preparations
 n = settings.INPUT.proc_freqs;      % number of processed frequencies
 
+bool_plot_phase = strcmpi(settings.PROC.method,'Code + Phase') && ...
+    ~strcmp(settings.IONO.model, 'GRAPHIC');    % plot phase residuals?
+
+
 % get residuals depending if float or fixed plot
 phase_residuals = [];
 if settings.PLOT.float
@@ -31,7 +35,7 @@ if settings.PLOT.float
     code_residuals  = full(storeData.residuals_code_1);
     if n > 1; code_residuals(:,:,2) = full(storeData.residuals_code_2); end
     if n > 2; code_residuals(:,:,3) = full(storeData.residuals_code_3); end
-    if strcmpi(settings.PROC.method,'Code + Phase')
+    if bool_plot_phase
         phase_residuals = full(storeData.residuals_phase_1);
         if n > 1; phase_residuals(:,:,2) = full(storeData.residuals_phase_2); end
         if n > 2; phase_residuals(:,:,3) = full(storeData.residuals_phase_3); end
@@ -110,7 +114,7 @@ phase_residuals(phase_residuals==0) = NaN;
 if settings.INPUT.use_GPS
     % Extract data and replaces zeros with NaN
     Res_code_GPS = code_residuals(:, 1:DEF.SATS_GPS, :);
-    if strcmpi(settings.PROC.method,'Code + Phase')
+    if bool_plot_phase
         Res_phase_GPS = phase_residuals(:, 1:DEF.SATS_GPS, :);
         Res_phase_GPS(Res_phase_GPS==0) = NaN;
     end
@@ -123,7 +127,7 @@ end
 % Glonass
 if settings.INPUT.use_GLO
     Res_code_GLO = code_residuals(:, 101:100+DEF.SATS_GLO, :);
-    if strcmpi(settings.PROC.method,'Code + Phase')
+    if bool_plot_phase
         Res_phase_GLO = phase_residuals(:, 101:100+DEF.SATS_GLO, :);
     end
     glo_prns = obs_prns(obs_prns>100 & obs_prns<200);
@@ -135,7 +139,7 @@ end
 % Galileo
 if settings.INPUT.use_GAL
     Res_code_GAL = code_residuals(:, 201:200+DEF.SATS_GAL, :);
-    if strcmpi(settings.PROC.method,'Code + Phase')
+    if bool_plot_phase
         Res_phase_GAL = phase_residuals(:, 201:200+DEF.SATS_GAL, :);
     end
     gal_prns = obs_prns(obs_prns>200 & obs_prns<300);
@@ -147,7 +151,7 @@ end
 % BeiDou
 if settings.INPUT.use_BDS
     Res_code_BDS = code_residuals(:, 301:399, :);
-    if strcmpi(settings.PROC.method,'Code + Phase')
+    if bool_plot_phase
         Res_phase_BDS = phase_residuals(:, 301:399, :);
     end
     bds_prns = obs_prns(obs_prns>300 & obs_prns<400);
@@ -159,7 +163,7 @@ end
 % QZSS
 if settings.INPUT.use_QZSS
     Res_code_QZSS = code_residuals(:, 401:410, :);
-    if strcmpi(settings.PROC.method,'Code + Phase')
+    if bool_plot_phase
         Res_phase_QZSS = phase_residuals(:, 401:410, :);
     end
     qzss_prns = obs_prns(obs_prns>400 & obs_prns<500);
@@ -175,7 +179,7 @@ if settings.INPUT.use_GPS || settings.INPUT.use_GLO || settings.INPUT.use_GAL ||
 %     code_residuals(elev < 60) = NaN;
 %     phase_residuals(elev < 60) = NaN;
     vis_plotResidualsHistogram(code_residuals, phase_residuals, solution_string, ...
-        gps_prns, glo_prns, gal_prns, bds_prns, qzss_prns, strcmpi(settings.PROC.method,'Code + Phase'))
+        gps_prns, glo_prns, gal_prns, bds_prns, qzss_prns, bool_plot_phase)
 end
 
 

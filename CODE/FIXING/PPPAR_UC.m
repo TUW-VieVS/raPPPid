@@ -1,5 +1,4 @@
-function [Epoch, Adjust] = ...
-    PPPAR_UC(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, input, satellites, obs, model)
+function [Epoch, Adjust] = PPPAR_UC(HMW_12, HMW_23, HMW_13, Adjust, Epoch, settings, obs, model)
 % Fix ambiguities and calculating fixed position in the uncombined model.
 %
 % INPUT:
@@ -7,8 +6,6 @@ function [Epoch, Adjust] = ...
 % 	Adjust          adjustment data and matrices for current epoch [struct]
 %	Epoch           epoch-specific data for current epoch [struct]
 %	settings        settings from GUI [struct]
-%	input           input data e.g. ephemerides and additional data  [struct]
-%	satellites      satellite specific data (elev, az, windup, etc.) [struct]
 %   obs             containing observation specific data [struct]
 %   model           modeled error-sources and observations [struct]
 % OUTPUT:
@@ -16,6 +13,7 @@ function [Epoch, Adjust] = ...
 %	Epoch           epoch-specific data for current epoch [struct]
 %
 % Revision:
+%   2025/04/02, MFWG: conversion covariance matrix to cycles
 %   2024/12/30, MFWG: switching to LAMBDA 4.0
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -39,14 +37,13 @@ idx_G = Epoch.refSatGPS_idx;        % index of GPS reference satellite
 idx_E = Epoch.refSatGAL_idx;        % index of Galileo reference satellite
 idx_E_ = Epoch.refSatGAL_idx-no_glo;% index of Galileo reference satellite without GLONASS
 % processing settings
-start_epoch_fixing = settings.AMBFIX.start_fixing(end,:);   % current start epochs for EW, WL, NL
 proc_frqs = settings.INPUT.proc_freqs;  % number of processed frequencies
 s_f = no_sats*proc_frqs;                % #satellites x #frequencies
 q = Epoch.q;                            % epoch number of processing
 q0 = Adjust.fixed_reset_epochs(end);    % epoch number of last reset
 
 % check if fixing has started
-if q < max(start_epoch_fixing)
+if Adjust.fix_now(2)
     return
 end
 
@@ -103,6 +100,10 @@ if proc_frqs > 1
     Q_NN_3 = Adjust.param_sigma(idx_3,idx_3);
     Q_NN = Adjust.param_sigma([idx_1,idx_2,idx_3],[idx_1,idx_2,idx_3]);
     
+    % convert covariance matrizes from meters to cycles
+    Q_NN_1 = Q_NN_1 ./ Epoch.l1;	% divide rows by wavelength
+    Q_NN_1 = Q_NN_1 ./ Epoch.l1';  	% divide columns by wavelength
+    
     % Create matrix C for covariance propagation of covariance matrix
     % to calculate SD covariance matrix
     C = -eye(no_gps+no_glo+no_gal);
@@ -143,13 +144,11 @@ if proc_frqs > 1
     % l_23 = Const.C ./ abs(Epoch.f2 - Epoch.f3);
     
     % exclude satellites from fixing (e.g., under cutoff, cycle slip, GLONASS)
-    fixit = Epoch.fixable(:,1) & (is_gps | is_gal | is_bds);
+    fixit = Epoch.fixable(:,1) & ~Epoch.exclude(:,1) & (is_gps | is_gal | is_bds);
     % fixit = Epoch.fixable(:,1) & is_gps;              % fix only GPS
     % fixit = Epoch.fixable(:,1) & is_gal;              % fix only Galileo
     % fixit = Epoch.fixable(:,1) & is_gps & is_gal;   	% fix GPS & Galileo
-    
-    % ||| satellites e.g. under cutoff are not excluded?! use Epoch.exclude
-    
+
     % exclude reference satellites
     fixit(idx_G) = false;
     fixit(idx_E) = false;
@@ -180,27 +179,27 @@ if proc_frqs > 1
     N1_SD_fix(fixit) = N1_SD_fix_sub;
     N1_SD_fix(~fixit) = NaN;
 
-%     % fix ambiguities on 2nd frequency with LAMBDA
-%     [N2_SD_sub_fixed, sqnorm] = LAMBDA(N2_cy_SD_sub, Q_NN_2_SD_sub, 5, 3, 0.99);
-%     % get best ambiguity set and keep only integer fixes
-%     N2_SD_fix_sub = N2_SD_sub_fixed(:,1);
-%     bool_int = (N2_SD_fix_sub - floor(N2_SD_fix_sub)) == 0;
-%     N2_SD_fix_sub(~bool_int) = NaN;
-%     
-%     % consider removed (unfixable) satellites
-%     N2_SD_fix(fixit) = N2_SD_fix_sub;
-%     N2_SD_fix(~fixit) = NaN;
-%     
-%     % check consistency of N2 fix with WL12 and N2
-%     correct_fix = (N1_SD_fix - N2_SD_fix) == WL_12_SD_';
-%     N1_SD_fix(~correct_fix) = NaN;      
-%     % N2_SD_fix is not used in the further process
-% 
-%     % check if any ambiguities can be fixed at all
-%     if sum(correct_fix) < 2
-%         Adjust = fixing_failed(Adjust);
-%         return
-%     end
+    % fix ambiguities on 2nd frequency with LAMBDA
+    [N2_SD_sub_fixed, sqnorm] = LAMBDA(N2_cy_SD_sub, Q_NN_2_SD_sub, 5, 3, 0.99);
+    % get best ambiguity set and keep only integer fixes
+    N2_SD_fix_sub = N2_SD_sub_fixed(:,1);
+    bool_int = (N2_SD_fix_sub - floor(N2_SD_fix_sub)) == 0;
+    N2_SD_fix_sub(~bool_int) = NaN;
+    
+    % consider removed (unfixable) satellites
+    N2_SD_fix(fixit) = N2_SD_fix_sub;
+    N2_SD_fix(~fixit) = NaN;
+    
+    % check consistency of N2 fix with WL12 and N2
+    correct_fix = (N1_SD_fix - N2_SD_fix) == WL_12_SD_';
+    N1_SD_fix(~correct_fix) = NaN;      
+    % N2_SD_fix is not used in the further process
+
+    % check if any ambiguities can be fixed at all
+    if sum(correct_fix) < 2
+        Adjust = fixing_failed(Adjust);
+        return
+    end
     
     % transform fixed WL_13, WL_23, N1 to N1, N2, N3
     Z = [0 0 1; -1 1 1; -1 0 1];
@@ -298,5 +297,5 @@ end
 function Adjust = fixing_failed(Adjust)
 % This function is called if the fixing is impossible or failed to reset
 % the struct Adjust in the correct way
-Adjust.xyz_fix(1:3) = NaN;
+Adjust.param_fix(1:3) = NaN;
 Adjust.fixed = false;

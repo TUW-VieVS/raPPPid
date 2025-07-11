@@ -1,9 +1,9 @@
 function [Epoch, satellites, storeData, obs, model_save, Adjust] = ...
     initProcessing(settings, obs)
 % initProcessing is called once in PPP_main.m before starting the
-% epoch-wise calculation. It is used for creating the structs 
-% Epoch, satellites, storeData, model_save and Adjust and
-% initializing the variables of them and the struct obs
+% epoch-wise calculation. This function creates the structs 
+% Epoch, satellites, storeData, model_save and Adjust and initializes the 
+% fields/variables. The struct obs is mainly created with anheader.m
 %
 % INPUT:
 %   settings        struct, settings for processing (from GUI)
@@ -30,7 +30,7 @@ decoupled_clock_model = strcmp(settings.IONO.model, 'Estimate, decoupled clock')
 proc_frqs = settings.INPUT.proc_freqs;		% number of processed frequencies
 num_frqs = settings.INPUT.num_freqs;        % number of input frequencies
 % expected total number of processed epochs
-tot_eps = settings.PROC.epochs(2)-settings.PROC.epochs(1)+1;    
+tot_eps = settings.PROC.epochs(2) - settings.PROC.epochs(1) + 1;    
 
 % booleans for processed GNSS
 isGPS = settings.INPUT.use_GPS;
@@ -43,8 +43,10 @@ isBDS = settings.INPUT.use_BDS;
 % determine number of in all epochs estimated parameters (e.g., xyz but not
 % ambiguities)
 Adjust.NO_PARAM = DEF.NO_PARAM_ZD;
+Adjust.ORDER_PARAM = DEF.PARAM_ZD;
 if decoupled_clock_model
     Adjust.NO_PARAM = DEF.NO_PARAM_DCM;
+	Adjust.ORDER_PARAM = DEF.PARAM_DCM;
 end   
 % Initialize Adjust for 1st epoch
 Adjust.float = false;
@@ -183,6 +185,7 @@ Epoch.corr2brdc_clk = zeros(5,nnn);		% timestamp, a0, a1, a2, IOD
 storeData.gpstime = zeros(tot_eps,1);
 storeData.dt_last_reset = zeros(tot_eps,1);
 storeData.NO_PARAM = Adjust.NO_PARAM;
+storeData.ORDER_PARAM = Adjust.ORDER_PARAM;
 storeData.obs_interval = obs.interval;
 storeData.float = false(tot_eps,1);         % set to true when float position is achieved
 % Adjusted Parameters and Covariance
@@ -207,7 +210,9 @@ end
 storeData.N_1    = zeros(tot_eps,nnn);              % float ambiguities
 storeData.N_var_1 = zeros(tot_eps,nnn);             % variance of float ambiguities
 storeData.residuals_code_1 = zeros(tot_eps,nnn);
-if strcmpi(settings.PROC.method,'Code + Phase'); storeData.residuals_phase_1 = zeros(tot_eps,nnn); end
+if strcmpi(settings.PROC.method,'Code + Phase') && ~strcmp(settings.IONO.model, 'GRAPHIC')
+    storeData.residuals_phase_1 = zeros(tot_eps,nnn);
+end
 if proc_frqs > 1
     storeData.N_2    = zeros(tot_eps,nnn);
     storeData.N_var_2 = zeros(tot_eps,nnn);
@@ -234,9 +239,9 @@ end
 if settings.AMBFIX.bool_AMBFIX
     storeData.fixed = false(tot_eps,1);         % true if fixed solution in this epoch
     storeData.ttff = NaN;                       % time/epoch to first fix
-    storeData.xyz_fix = zeros(tot_eps,3);    	% fixed coordinates
+    storeData.param_fix = zeros(tot_eps,Adjust.NO_PARAM);    	% fixed parameters
     storeData.param_var_fix = zeros(tot_eps,3);	% variances of fixed coordinates
-    storeData.HMW_12 = zeros(tot_eps,nnn);       % HMW LC between 1st and 2nd frequency
+    storeData.HMW_12 = zeros(tot_eps,nnn);    	% HMW LC between 1st and 2nd frequency
     if proc_frqs >= 2
         storeData.HMW_23 = zeros(tot_eps,nnn);  	% HMW LC between 2nd and 3rd frequency
 		storeData.HMW_13 = zeros(tot_eps,nnn);  % HMW LC between 1st and 3rd frequency

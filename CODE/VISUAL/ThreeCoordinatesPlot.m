@@ -1,6 +1,6 @@
 function ThreeCoordinatesPlot(interval, seconds, dN, dE, dH, resets, str_xAxis, station_date, floatfix)
-% Three Coordinates Plot: Plots Position differences of 3 UTM
-% coordinates together into one graph
+% Three Coordinates Plot: Plots Position differences of 3 UTM  coordinates 
+% together into one graph.
 %
 % INPUT:
 %   interval        observation interval [s]
@@ -15,6 +15,8 @@ function ThreeCoordinatesPlot(interval, seconds, dN, dE, dH, resets, str_xAxis, 
 % OUTPUT:
 %   []
 %
+% Revision:
+%   2025/06/23, MFWG: improve colors and data gap handling
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -27,24 +29,24 @@ RMS_dN = calculate_rms(dN);
 RMS_dE = calculate_rms(dE);
 RMS_dH = calculate_rms(dH);
 
-isnan_dN = isnan(dN); isnan_dE = isnan(dE); isnan_dH = isnan(dH);
-dN(isnan_dN) = 0;     dE(isnan_dE) = 0;     dH(isnan_dH) = 0;
-
-% plot
-ind = find(seconds==0 | isnan(seconds));        % remove suspicious data
+% remove suspicious data
+ind = find(seconds==0 | isnan(seconds));        
 seconds(ind) = [];
 dN(ind) = []; dE(ind) = []; dH(ind) = [];
+
+% plot
 fig_3coord = figure('Name','Three Coordinates Plot', 'NumberTitle','off');
 hold on
-plot(seconds,dH,'color','g', 'LineWidth',1);
-plot(seconds,dN,'color','r', 'LineWidth',1);
-plot(seconds,dE,'color','b', 'LineWidth',1);
+plot(seconds, dH, 'color', [0 0.82 0], 'LineWidth', 1);
+plot(seconds, dN, 'color', [0.82 0 0], 'LineWidth', 1);
+plot(seconds, dE, 'color', [0 0 0.82], 'LineWidth', 1);
 if ~isempty(resets); vline(resets, 'k:'); end	% plot vertical lines for resets
-none = dH==0 | dN==0 | dE==0;	% plot black line where no solution
-xAxis_black = seconds;
-xAxis_black(~none) = NaN;
-dH(~none) = NaN;
-plot(xAxis_black,dH,'color','k','linewidth',2);
+
+% plot black line in epochs without no solution
+none = isnan(dN) | isnan(dE) | isnan(dH) | (dN==0 & dE==0 & dH==0);	
+xAxis_black = seconds;      xAxis_black(~none) = NaN;
+black(none) = 0;            black(~none) = NaN;
+plot(xAxis_black, black, 'color', 'k', 'linewidth', 2);
 
 % create legend with RMS (values == 0 and NaNs are ignored in the calculation)
 unit = 'cm)';
@@ -81,7 +83,7 @@ elseif tick_int > 900           % tick interval is more than 15min
 elseif tick_int > 600           % tick interval is more than 10min
     tick_int = tick_int - mod(tick_int, 600);   % round to 10min
 end
-[vec, txt] = xLabelling(tick_int, seconds, interval);
+[vec, txt] = xLabelling(tick_int, unique(seconds,'stable'), interval);
 ax1 = gca;                      % current axes
 set(ax1,'XTick',vec,'XTickLabel',txt)
 
