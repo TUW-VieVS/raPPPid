@@ -22,7 +22,7 @@ function filestatus = get_cddis_data(host, folders, files, targets, bool_print)
 % *************************************************************************
 
 n = numel(files);          % number of files to download
-filestatus = ones(n,1);    % initalize with: download successful 
+filestatus = ones(n,1);    % initialize with: download successful 
 netrcfile = [Path.CURL '.netrc'];
 pathCURL  = [Path.CURL 'curl.exe'];
 cookie    = '../CODE/OBSERVATIONS/ObservationDownload/cookie.txt';
@@ -37,6 +37,7 @@ if ~ntrc_is_valid
     % rename example.netrc to .netrc.
     % Open .netrc and replace XXX with your login credentials
     errordlg({'Enter login credentials into the .netrc file!', 'Use ConnectCDDIS.m or check', 'get_cddis_data.m for details.'}, 'ERROR');
+    filestatus = zeros(n,1);
     return
 end
 
@@ -53,19 +54,28 @@ for i = 1:n
     
     % check if file is already existing
     [~, decompr, ~] = fileparts(['A:/', file ]);
-    if isfile([target file])
+    if isfile([target '/' file])
         filestatus(i) = 2;      % archive already existing
         continue
-    elseif isfile([target decompr]) || isfile([target decompr '.mat'])
+    elseif isfile([target '/' decompr]) || isfile([target '/' decompr '.mat'])
         filestatus(i) = 3;      % already existing and decompressed
         continue
     end
     
+    % create download url
+    url = [host folder{1} '/' file];
+
+    % refuse any component containing a double quote or control character
+    if ~is_shell_safe(url) || ~is_shell_safe(target) || ~is_shell_safe(file)
+        filestatus(i) = 0;
+        if bool_print
+            fprintf(2, ['Download skipped (unsafe characters in path or URL): ', url '\n'])
+        end
+        continue
+    end
+
     % download
     try
-        % create download url
-        url = [host folder{1} '/' file];
-
         % try to download with Windows curl installation
         if ~exist([target '/' file],'file')
             command = ['curl -s -c "' cookie '" -L --netrc-file "' netrcfile '" "' url '" -o "' target '/' file '"'];
@@ -97,7 +107,7 @@ end
 
 % delete cookie file
 delete ('../CODE/OBSERVATIONS/ObservationDownload/cookie.txt');
-
+end
 
 
 
@@ -118,4 +128,14 @@ fclose(fid);
 if contains(NETRC{2}, 'XXX') && contains(NETRC{3}, 'XXX')
     ntrc_is_valid = false;
 end
-    
+
+end
+
+
+function safe = is_shell_safe(str)
+% This function returns false if the string contains a double quote or any 
+% control character the characters that would let a caller-supplied string 
+% break out of the double-quoted curl arguments. Spaces, parentheses etc. 
+% are allowed because they are harmless inside the quotes.
+safe = ischar(str) && ~any(str == '"') && ~any(double(str) < 32);
+end

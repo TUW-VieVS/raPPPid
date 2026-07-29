@@ -1,11 +1,12 @@
-function [Epoch] = RawSensor2Epoch(RAW, epochheader, q, raw_variables, Epoch, settings, use_column, leap_sec)
+function [Epoch] = RawSensor2Epoch(RAW, IMURAW, epochheader, q, raw_variables, Epoch, settings, use_column, leap_sec)
 % This function is called at the beginning of an epoch and gets all data 
 % (e.g., raw GNSS measurements) from the raw sensor file (Android) for the 
 % current epoch. The observations and additional data is saved in the 
 % struct Epoch for epoch-wise processing.
 % 
 % INPUT:
-%   RAW             matrix, gnss raw measurements from textfile
+%   RAW             matrix, gnss raw measurements from text file
+%   IMURAW          struct, fields contain IMU-relevant data
 %   epochheader     vector, indicating the lines where a new epoch starts
 %   q               number of current epoch
 %   raw_variable    cell array, contains the variables contained in each epoch
@@ -18,12 +19,11 @@ function [Epoch] = RawSensor2Epoch(RAW, epochheader, q, raw_variables, Epoch, se
 %
 % Revision:
 % 2025/08/14, MFWG: switch to cal2gpstime
+% 2026/07/24, MFWG: adding 3rd frequency (Galileo E5b, BeiDou B1AC)
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-
-% ||| third-frequency is ignored because no triple-frequency smartphones exist
 
 % Bits of gnssRaw.State (2^xxx):
 % 0: Code Lock                      1: Bit Sync     
@@ -67,7 +67,6 @@ idx = find(gnssRaw.ConstellationType, 1, 'first');
 [gpsweek, gpstime] = generateGpsTimeWeek(gnssRaw.TimeNanos(idx), gnssRaw.FullBiasNanos(idx), gnssRaw.BiasNanos(idx), ...
     gnssRaw.ReceivedSvTimeNanos(idx), gnssRaw.TimeOffsetNanos(idx), gnssRaw.FullBiasNanos_1, gnssRaw.BiasNanos_1);
 
-
 % -) generate code pseudorange for all satellites
 PR = generateCodePseudorange(gnssRaw, leap_sec);
 % MultipathIndicator:
@@ -103,7 +102,7 @@ Doppler = -gnssRaw.PseudorangeRateMetersPerSecond;    % [m/s]
 Epoch.gps_time = gpstime;
 Epoch.gps_week = gpsweek;
 Epoch.time = gpstime2cal(gpsweek, gpstime);
-Epoch.mjd = gps2jd_GT(gpsweek, gpstime) - 2400000.5;
+Epoch.mjd = 44244 + gpsweek*7 + gpstime/86400;
 % satellite numbers
 Epoch.sats = unique(sort(sats));
 
@@ -119,24 +118,25 @@ isGAL_E5a= (gnssRaw.ConstellationType == 6) & (round(gnssRaw.CarrierFrequencyHz/
 isBDS_B2a= (gnssRaw.ConstellationType == 5) & (round(gnssRaw.CarrierFrequencyHz/1e3) == round(Const.BDS_F2a/1e3));
 isQZS_L5 = (gnssRaw.ConstellationType == 4) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.QZSS_F5/1e4));
 secnd_frq = isGPS_L5 | isGAL_E5a| isBDS_B2a| isQZS_L5;     % not considered: isGLO_G2
+isGAL_E5b = (gnssRaw.ConstellationType == 6) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GAL_F5b /1e4));
+isBDS_B1AC= (gnssRaw.ConstellationType == 5) & (round(gnssRaw.CarrierFrequencyHz/1e3) == round(Const.BDS_F1AC/1e3));
+third_frq = isGAL_E5b | isBDS_B1AC;             % not considered: GPS L2, GLONASS G3, QZSS L6
 
 % save observation data into Epoch.obs
-obs = NaN(numel(Epoch.sats),8); Epoch.obs = obs;
-[obs]  = save2obs(obs, 1, Epoch.sats, sats, PR, Phase, SNR, Doppler, first_frq);
-[obs]  = save2obs(obs, 2, Epoch.sats, sats, PR, Phase, SNR, Doppler, secnd_frq);
-% obs is ordered the following at the moment:
-%     1 2 [] 3 4 [] 5 6 [] 7 8 []; ...    % GPS
-%     1 2 [] 3 4 [] 5 6 [] 7 8 []; ...    % GLONASS
-%     1 2 [] 3 4 [] 5 6 [] 7 8 []; ...    % Galileo
-%     1 2 [] 3 4 [] 5 6 [] 7 8 [];        % BeiDou
-%     1 2 [] 3 4 [] 5 6 [] 7 8 [];        % QZSS
+nFreq = 3;
+obs = NaN(numel(Epoch.sats),4*nFreq); Epoch.obs = obs;
+[obs]  = save2obs(obs, 1, nFreq, Epoch.sats, sats, PR, Phase, SNR, Doppler, first_frq);
+[obs]  = save2obs(obs, 2, nFreq, Epoch.sats, sats, PR, Phase, SNR, Doppler, secnd_frq);
+[obs]  = save2obs(obs, 3, nFreq, Epoch.sats, sats, PR, Phase, SNR, Doppler, third_frq);
+% obs is ordered the following at the moment (columns):
+%     L1 L2 L3 C1 C2 C3 S1 S2 S3 D1 D2 D3
 
 % variables with information of the Epoch
 n = numel(Epoch.sats);      % number of satellites
 Epoch.usable = true;
 Epoch.rinex_header = createRinexHeader(Epoch.gps_week, Epoch.gps_time, Epoch.usable, n);
-Epoch.LLI_bit_rinex  = zeros(n, 8);
-Epoch.ss_digit_rinex = zeros(n, 8);
+Epoch.LLI_bit_rinex  = zeros(n, 4*nFreq);
+Epoch.ss_digit_rinex = zeros(n, 4*nFreq);
 
 % boolean vectors for each GNSS
 Epoch.gps  = Epoch.sats < 100;
@@ -149,38 +149,160 @@ Epoch.other_systems = ~Epoch.gps & ~Epoch.glo & ~Epoch.gal & ~Epoch.bds & ~Epoch
 % rearrange obs to Epoch.obs to make it consistent with obs.use_column and
 % keep only processed frequencies
 % first frequency:
-Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gps, use_column(1,1:3:10), [1 3 5 7]);
-Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.glo, use_column(2,1:3:10), [1 3 5 7]);
-Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gal, use_column(3,1:3:10), [1 3 5 7]);
-Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.bds, use_column(4,1:3:10), [1 3 5 7]);
-Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.qzss,use_column(5,1:3:10), [1 3 5 7]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gps, use_column(1,1:3:10), [1 4 7 10]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.glo, use_column(2,1:3:10), [1 4 7 10]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gal, use_column(3,1:3:10), [1 4 7 10]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.bds, use_column(4,1:3:10), [1 4 7 10]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.qzss,use_column(5,1:3:10), [1 4 7 10]);
 % second frequency:
-Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gps, use_column(1,2:3:11), [2 4 6 8]);
-Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.glo, use_column(2,2:3:11), [2 4 6 8]);
-Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gal, use_column(3,2:3:11), [2 4 6 8]);
-Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.bds, use_column(4,2:3:11), [2 4 6 8]);
-Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.qzss,use_column(5,2:3:11), [2 4 6 8]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gps, use_column(1,2:3:11), [2 5 8 11]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.glo, use_column(2,2:3:11), [2 5 8 11]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gal, use_column(3,2:3:11), [2 5 8 11]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.bds, use_column(4,2:3:11), [2 5 8 11]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.qzss,use_column(5,2:3:11), [2 5 8 11]);
+% third frequency:
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gps, use_column(1,3:3:12), [3 6 9 12]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.glo, use_column(2,3:3:12), [3 6 9 12]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.gal, use_column(3,3:3:12), [3 6 9 12]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.bds, use_column(4,3:3:12), [3 6 9 12]);
+Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.qzss,use_column(5,3:3:12), [3 6 9 12]);
+
+
+
+%% IMU DATA FOR CURRENT EPOCH
+
+epoch_utc = Epoch.time - seconds(leap_sec);
+dt_imu    = 1.0;
+
+% initialize blank values (e.g, no sensor data, no time overlap for interpolation)
+Epoch.IMU.acc_raw = NaN(0,3); Epoch.IMU.acc = NaN(1,3);
+Epoch.IMU.gyr_raw = NaN(0,3); Epoch.IMU.gyr = NaN(1,3);
+Epoch.IMU.acc_bias = NaN(1,3); Epoch.IMU.gyr_drift = NaN(1,3);
+Epoch.IMU.mag_raw = NaN(0,3);
+Epoch.IMU.mag     = NaN(1,3);
+Epoch.IMU.OrientationDeg = nan(0, 3);
+Epoch.IMU.yaw_deg        = NaN;
+Epoch.IMU.pitch_deg      = NaN;
+Epoch.IMU.roll_deg       = NaN;
+
+
+% ----- Accelerometer and Gyroscope: UncalAccel and UncalGyro -----
+if settings.KINE.bool_IMU && isfield(IMURAW, 'UncalAccel') && ~isempty(IMURAW.UncalAccel) && isfield(IMURAW, 'UncalGyro')  && ~isempty(IMURAW.UncalGyro)
+
+    % find accelerations in the window [epoch - 1s, epoch]
+    mask_acc = (IMURAW.UncalAccel.t > epoch_utc - seconds(dt_imu))   &   (IMURAW.UncalAccel.t <= epoch_utc);
+    if ~any(mask_acc)
+         % fallback: If no data found, look in the forward window [epoch, epoch + 1s]
+        mask_acc = (IMURAW.UncalAccel.t > epoch_utc)   &   (IMURAW.UncalAccel.t <= epoch_utc + seconds(dt_imu));
+    end
+    % find gyroscope measurements in the window [epoch - 1s, epoch]
+    mask_gyr = (IMURAW.UncalGyro.t > epoch_utc - seconds(dt_imu)) & (IMURAW.UncalGyro.t <= epoch_utc);
+    if ~any(mask_gyr)
+        % fallback: If no data found, look in the forward window [epoch, epoch + 1s]
+        mask_gyr = (IMURAW.UncalGyro.t > epoch_utc)   &   (IMURAW.UncalGyro.t <= epoch_utc + seconds(dt_imu));
+    end
+
+    % extract the data in the time window
+    TT_acc = IMURAW.UncalAccel(mask_acc, :);
+    TT_gyr = IMURAW.UncalGyro(mask_gyr,  :);
+
+    % --- Synchronization & Resampling ---
+    if ~isempty(TT_acc) && ~isempty(TT_gyr)
+
+        % Create a common time vector (0.01s steps) spanning the overlapping time range of both sensors
+        t_common = (max(TT_acc.t(1), TT_gyr.t(1)):seconds(0.01):min(TT_acc.t(end), TT_gyr.t(end)))';
+        if numel(t_common) >= 2
+
+            % resample both sensors using linear interpolation
+            TT_acc = retime(TT_acc, t_common, 'linear');
+            TT_gyr = retime(TT_gyr, t_common, 'linear');
+
+            % calculate raw motion by subtracting the bias/drift from the uncalibrated values
+            Epoch.IMU.acc_raw = [TT_acc.UncalAccelXMps2 - TT_acc.BiasXMps2, ...
+                                  TT_acc.UncalAccelYMps2 - TT_acc.BiasYMps2, ...
+                                  TT_acc.UncalAccelZMps2 - TT_acc.BiasZMps2];
+            Epoch.IMU.gyr_raw = [TT_gyr.UncalGyroXRadPerSec - TT_gyr.DriftXRadPerSec, ...
+                                  TT_gyr.UncalGyroYRadPerSec - TT_gyr.DriftYRadPerSec, ...
+                                  TT_gyr.UncalGyroZRadPerSec - TT_gyr.DriftZRadPerSec];
+
+            % save mean biases/drifts for this specific epoch
+            Epoch.IMU.acc_bias  = mean([TT_acc.BiasXMps2, TT_acc.BiasYMps2, TT_acc.BiasZMps2], 1);
+            Epoch.IMU.gyr_drift = mean([TT_gyr.DriftXRadPerSec, TT_gyr.DriftYRadPerSec, TT_gyr.DriftZRadPerSec], 1);
+            
+            % calculate epoch-averaged motion values
+            Epoch.IMU.acc = mean(Epoch.IMU.acc_raw, 1);
+            Epoch.IMU.gyr = mean(Epoch.IMU.gyr_raw, 1);
+        end
+    end
+end
+
+% ----- Magnetometer: UncalMag -----
+if settings.KINE.bool_IMU && isfield(IMURAW, 'UncalMag') && ~isempty(IMURAW.UncalMag)
+    
+    % find magnetometer measurements in the window [epoch - 1s, epoch]
+    mask_raw = IMURAW.UncalMag.t > epoch_utc - seconds(dt_imu) & IMURAW.UncalMag.t <= epoch_utc;
+    if ~any(mask_raw)
+         % fallback: If no data found, look in the forward window [epoch, epoch + 1s]
+        mask_raw = (IMURAW.UncalMag.t > epoch_utc)   &   (IMURAW.UncalMag.t <= epoch_utc + seconds(dt_imu));
+    end
+
+    if any(mask_raw)
+        % extract X, Y, Z magnetometer components [MicroTesla]
+        Epoch.IMU.mag_raw = [IMURAW.UncalMag.UncalMagXMicroT(mask_raw), ...
+                              IMURAW.UncalMag.UncalMagYMicroT(mask_raw), ...
+                              IMURAW.UncalMag.UncalMagZMicroT(mask_raw)];
+        % calculate epoch-average
+        Epoch.IMU.mag = mean(Epoch.IMU.mag_raw, 1);
+    end
+end
+
+% ----- Orientation/Attitude: OrientationDeg -----
+if settings.KINE.bool_IMU && isfield(IMURAW, 'OrientationDeg') && ~isempty(IMURAW.OrientationDeg)
+    mask_ori = IMURAW.OrientationDeg.t > epoch_utc - seconds(dt_imu)    & ...
+               IMURAW.OrientationDeg.t <= epoch_utc;
+    if ~any(mask_ori)
+         % fallback: If no data found, look in the forward window [epoch, epoch + 1s]
+        mask_ori = IMURAW.OrientationDeg.t > epoch_utc   & ...
+                   IMURAW.OrientationDeg.t <= epoch_utc + seconds(dt_imu);
+    end
+
+    if any(mask_ori)
+        % extract orientation angles [°]
+        yaw_masked   = IMURAW.OrientationDeg.yawDeg(mask_ori);
+        roll_masked  = IMURAW.OrientationDeg.rollDeg(mask_ori);
+        pitch_masked = IMURAW.OrientationDeg.pitchDeg(mask_ori);
+        Epoch.IMU.OrientationDeg = [yaw_masked, roll_masked, pitch_masked];
+    
+        % save last attitude of this epoch [°]
+        Epoch.IMU.yaw_deg   = yaw_masked(end);
+        Epoch.IMU.pitch_deg = pitch_masked(end);
+        Epoch.IMU.roll_deg  = roll_masked(end);
+    end
+end
+
+% motion state and ZUPT probability for current epoch
+[Epoch.motionState, Epoch.ZUPT_prob] = detectMotionState(Epoch);
 
 
 
 
-
-function [obs] = save2obs(obs, frq, Epoch_sats, sats, C_data, L_data, S_data, D_data, bool_data)
-% This function saves the read-in measurements into obs 
-% Therefore, the code matches satellites with measurement with all 
+function [obs] = save2obs(obs, frq, nFreq, Epoch_sats, sats, C_data, L_data, S_data, D_data, bool_data)
+% This function saves the read-in measurements into obs
+% Therefore, the code matches satellites with measurement with all
 % satellites of the current epoch.
-% 
+%
 % INPUT:
 %   obs             matrix, measurements of current epoch
-%   frq             frequency, 1 or 2
+%   frq             frequency, 1, 2 or 3
+%   nFreq           total number of frequency slots in obs (columns per obs type)
 %   Epoch_sats  	vector, satellites observed in current epoch
 %   sats            vector, satellites with raw GNSS data
 %   C_data, L_data, S_data, D_data
-%                   code, phase, SNR, Doppler data 
+%                   code, phase, SNR, Doppler data
 %   bool_data       boolean, indicating frequency
 % OUTPUT:
 %	Epoch_obs       updated new data of current frequency
-% 
+%
 % *************************************************************************
 
 % find indices to save data into Epoch.obs
@@ -193,11 +315,11 @@ L_data_ = L_data(bool_data);
 S_data_ = S_data(bool_data);
 D_data_ = D_data(bool_data);
 
-% save observatio data into Epoch.obs
-obs(idx_a, frq    ) = L_data_(idx_b);     % phase
-obs(idx_a, frq + 2) = C_data_(idx_b);     % code
-obs(idx_a, frq + 4) = S_data_(idx_b);     % C/N0
-obs(idx_a, frq + 6) = D_data_(idx_b);     % Doppler
+% save observation data into Epoch.obs
+obs(idx_a, frq          ) = L_data_(idx_b);     % phase
+obs(idx_a, frq +   nFreq) = C_data_(idx_b);     % code
+obs(idx_a, frq + 2*nFreq) = S_data_(idx_b);     % C/N0
+obs(idx_a, frq + 3*nFreq) = D_data_(idx_b);     % Doppler
 
 
 
@@ -228,9 +350,4 @@ h = hour(caldate);  m = minute(caldate);    s = second(caldate);
 rinex_header = ['> ' sprintf('%4d ', y) sprintf('%02d ', mn) sprintf('%02d ', floor(d)) ...
     sprintf('%02d ', floor(h)) sprintf('%02d ', floor(m)) sprintf('%02.7f  ', s)...
     sprintf('%1d ', ~usable) sprintf('%2d ', n_sats)];
-
-
-
-
-
 

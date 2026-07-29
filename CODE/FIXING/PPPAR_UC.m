@@ -46,8 +46,11 @@ proc_frqs = settings.INPUT.proc_freqs;  % number of processed frequencies
 s_f = no_sats*proc_frqs;                % #satellites x #frequencies
 q = Epoch.q;                            % epoch number of processing
 q0 = Adjust.fixed_reset_epochs(end);    % epoch number of last reset
+% relevant epochs of HMW (min/max to be independent of the filter direction:
+% q0 is the start epoch, which is > q for backward processing)
+q_hmw = min(q0,q):max(q0,q);
 
-% get Hatch-Melbourne-Wübbena linear combination
+% get Hatch-Melbourne-WÃ¼bbena linear combination
 HMW_12 = Adjust.HMW_12;
 HMW_23 = Adjust.HMW_23;
 HMW_13 = Adjust.HMW_13;
@@ -68,9 +71,9 @@ end
 %% Multi-frequency fixing
 if proc_frqs > 1       
     % fix SD HMW
-    Epoch.WL_12 = HMW_fixing(HMW_12(q0:q,:), Epoch, model.el(:,1), obs.interval, settings, Epoch.WL_12);
-    Epoch.WL_13 = HMW_fixing(HMW_13(q0:q,:), Epoch, model.el(:,1), obs.interval, settings, Epoch.WL_13);
-    Epoch.WL_23 = HMW_fixing(HMW_23(q0:q,:), Epoch, model.el(:,1), obs.interval, settings, Epoch.WL_23);
+    Epoch.WL_12 = HMW_fixing(HMW_12(q_hmw,:), Epoch, model.el(:,1), obs.interval, settings, Epoch.WL_12);
+    Epoch.WL_13 = HMW_fixing(HMW_13(q_hmw,:), Epoch, model.el(:,1), obs.interval, settings, Epoch.WL_13);
+    Epoch.WL_23 = HMW_fixing(HMW_23(q_hmw,:), Epoch, model.el(:,1), obs.interval, settings, Epoch.WL_23);
     % extract WL fixes for satellites of current epoch
     WL_12_SD = Epoch.WL_12(Epoch.sats);
     WL_13_SD = Epoch.WL_13(Epoch.sats);
@@ -91,27 +94,29 @@ if proc_frqs > 1
     WL_13_SD(inconsistent) = NaN;
     WL_23_SD(inconsistent) = NaN;
     
-    % indices of frequencies
-    idx_1 = (NO_PARAM +             1):(NO_PARAM +   no_sats);      % index for 1st frequency
-    idx_2 = (NO_PARAM +   no_sats + 1):(NO_PARAM + 2*no_sats);      % ...
-    idx_3 = (NO_PARAM + 2*no_sats + 1):(NO_PARAM + 3*no_sats);
-
-    % get float ambiguities
-    N1 = Adjust.param(idx_1);
-    N2 = Adjust.param(idx_2);
-    N3 = Adjust.param(idx_3);
-    % convert to cycles
+    % get float ambiguities and convert to cycles
+    idx_2 = []; idx_3 = []; N2_cy = []; N3_cy = [];
+    [N1, idx_1] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, 1);   % 1st frequency
     N1_cy = N1 ./ Epoch.l1;
-    N2_cy = N2 ./ Epoch.l2;
-    N3_cy = N3 ./ Epoch.l3;
+    if proc_frqs >= 2
+        idx_2 = (NO_PARAM +   no_sats + 1):(NO_PARAM + 2*no_sats);      % indices for 2nd frequency
+        N2 = Adjust.param(idx_2);
+        N2_cy = N2 ./ Epoch.l2;
+    end
+    if proc_frqs >= 3
+        idx_3 = (NO_PARAM + 2*no_sats + 1):(NO_PARAM + 3*no_sats);      % indices for 3rd frequency
+         N3 = Adjust.param(idx_3);
+         N3_cy = N3 ./ Epoch.l3;
+    end
+    % put together
     N_cy = [N1_cy; N2_cy; N3_cy];
     
-    % extract covariance matrizes from float solution
+    % extract covariance matrices from float solution
     Q_NN_1 = Adjust.param_sigma(idx_1,idx_1);
     Q_NN_2 = Adjust.param_sigma(idx_2,idx_2);
     Q_NN_3 = Adjust.param_sigma(idx_3,idx_3);
     Q_NN = Adjust.param_sigma([idx_1,idx_2,idx_3],[idx_1,idx_2,idx_3]);
-    % convert covariance matrizes from meters to cycles
+    % convert covariance matrices from meters to cycles
     Q_NN_1 = Q_NN_1 ./ Epoch.l1;	% divide rows by wavelength
     Q_NN_1 = Q_NN_1 ./ Epoch.l1';  	% divide columns by wavelength
     
@@ -127,36 +132,41 @@ if proc_frqs > 1
         C(idx_E, idx_E) = 0;
     end
     if settings.INPUT.use_BDS
-        C(is_bds, idx_E) = 1;
-        C(idx_E, idx_E) = 0;
-    end    
+        C(is_bds, idx_C) = 1;
+        C(idx_C, idx_C) = 0;
+    end
     % calculate SD covariance matrix
     Q_NN_1_SD = C*Q_NN_1*C';  	% ... for N1 ambiguities
     Q_NN_2_SD = C*Q_NN_2*C';  	% ... for N2 ambiguities
-    Q_NN_3_SD = C*Q_NN_3*C';  	% ... for N3 ambiguities
+    % Q_NN_3_SD = C*Q_NN_3*C';  	% ... for N3 ambiguities
     
     % single difference ambiguities
     N1_cy_SD(is_gps) = N1_cy(idx_G) - N1_cy(is_gps);
     N2_cy_SD(is_gps) = N2_cy(idx_G) - N2_cy(is_gps);
-    N3_cy_SD(is_gps) = N3_cy(idx_G) - N3_cy(is_gps);
     N1_cy_SD(is_glo) = N1_cy(is_glo) - N1_cy(is_glo);   % ||| no reference satellite for GLONASS
     N2_cy_SD(is_glo) = N2_cy(is_glo) - N2_cy(is_glo);
-    N3_cy_SD(is_glo) = N3_cy(is_glo) - N3_cy(is_glo);
     N1_cy_SD(is_gal) = N1_cy(idx_E) - N1_cy(is_gal);
     N2_cy_SD(is_gal) = N2_cy(idx_E) - N2_cy(is_gal);
-    N3_cy_SD(is_gal) = N3_cy(idx_E) - N3_cy(is_gal);
     N1_cy_SD(is_bds) = N1_cy(idx_C) - N1_cy(is_bds);
     N2_cy_SD(is_bds) = N2_cy(idx_C) - N2_cy(is_bds);
-    N3_cy_SD(is_bds) = N3_cy(idx_C) - N3_cy(is_bds);    
     % put together
-    N_cy_SD = [N1_cy_SD; N2_cy_SD; N3_cy_SD];
+    N_cy_SD = [N1_cy_SD; N2_cy_SD];
+    if proc_frqs >= 3
+        N3_cy_SD(is_gps) = N3_cy(idx_G) - N3_cy(is_gps);
+        N3_cy_SD(is_glo) = N3_cy(is_glo) - N3_cy(is_glo);
+        N3_cy_SD(is_gal) = N3_cy(idx_E) - N3_cy(is_gal);
+        N3_cy_SD(is_bds) = N3_cy(idx_C) - N3_cy(is_bds);
+        % put together
+        N_cy_SD = [N_cy_SD; N3_cy_SD];
+    end
+
     
     % to check with fixed WLs
     % N12_cy_SD = N2_cy_SD - N1_cy_SD;
     % N13_cy_SD = N3_cy_SD - N1_cy_SD;
     % N23_cy_SD = N3_cy_SD - N2_cy_SD;
     
-    % wavelenghts of WL LCs
+    % wavelengths of WL LCs
     % l_12 = Const.C ./ abs(Epoch.f1 - Epoch.f2);
     % l_13 = Const.C ./ abs(Epoch.f1 - Epoch.f3);
     % l_23 = Const.C ./ abs(Epoch.f2 - Epoch.f3);
@@ -199,7 +209,7 @@ if proc_frqs > 1
     N1_SD_fix(~fixit) = NaN;
 
     % fix ambiguities on 2nd frequency with LAMBDA
-    [N2_SD_sub_fixed, sqnorm] = LAMBDA(N2_cy_SD_sub, Q_NN_2_SD_sub, 5, 3, 0.99);
+    [N2_SD_sub_fixed, sqnorm] = LAMBDA(N2_cy_SD_sub, Q_NN_2_SD_sub, 5, 3, DEF.AR_THRES_SUCCESS_RATE);
     % get best ambiguity set and keep only integer fixes
     N2_SD_fix_sub = N2_SD_sub_fixed(:,1);
     bool_int = (N2_SD_fix_sub - floor(N2_SD_fix_sub)) == 0;
@@ -240,8 +250,7 @@ else
     %% single frequency ambiguity fixing
     % ||| this works only programmatically
     % get variables
-    idx_1 = (NO_PARAM + 1):(NO_PARAM +no_sats);   	% index for 1st frequency
-    N1 = Adjust.param(idx_1);                       % get ambiguities
+    [N1, idx_1] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, 1);   % get ambiguities
     N1_cy = N1 ./ Epoch.l1;                         % convert to cycles
     Q_NN_1 = Adjust.param_sigma(idx_1,idx_1);       % get covariance matrix
     

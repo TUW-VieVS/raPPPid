@@ -23,13 +23,16 @@ v_x = Eph(8);   v_y = Eph(9);   v_z = Eph(10);
 a_x = Eph(11);  a_y = Eph(12);  a_z = Eph(13);
 % get epoch of ephemerides, GPS time [sow]
 toe = Eph(18);   	
-% For details on variable Eph check read_brdc.m and subfunctions or 
+% For details on variable Eph check read_nav_brdc.m and subfunctions or
 % https://vievswiki.geo.tuwien.ac.at/raPPPid/General/InputData
 
 % put together [km]
 pos = [ x ;  y ;  z ];
 vel = [v_x; v_y; v_z];
 acc = [a_x; a_y; a_z];
+
+% repair possible GPS week rollover between toe and Ttr (both in [sow])
+Ttr = toe + check_t(Ttr - toe);
 
 % Runge Kutta 4 orbit integration
 [X, V] = rungeKutta4(toe, pos*1000, vel*1000, acc*1000, Ttr);

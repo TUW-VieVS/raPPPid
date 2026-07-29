@@ -1,5 +1,5 @@
 function [settings] = DownloadBiases(settings, gpsweek, dow, yyyy, mm, doy)
-% This function dowloads the selected orbit and clock files (*.sp3 and
+% This function downloads the selected orbit and clock files (*.sp3 and
 % *.clk) from an IGS or Analysis Center server.
 %
 % INPUT:
@@ -198,7 +198,7 @@ switch settings.BIASES.code
             ['P2C2' yyyy(3:4) mm '_RINEX.DCB'];};
         % download, unzip, save file-path
         for i = 1:length(files)
-            if ~isfile([target{1} file{1}]) && ~isfile([target{1} decomp{1}]) && ~isfile([target{1} decomp{1} '.mat'])
+            if ~isfile([targets{i} files{i}]) && ~isfile([targets{i} decomp{i}]) && ~isfile([targets{i} decomp{i} '.mat'])
                 try
                     websave([targets{i} files{i}], [host URL_folder{i} files{i}]);
                 catch
@@ -265,10 +265,17 @@ switch settings.BIASES.code
         % create folder and prepare download
         target = {[Path.DATA, 'BIASES/', yyyy, '/' doy]};
         [~, ~] = mkdir(target{1});
+        % try to download
         URL_host = 'igs.ign.fr:21';
         URL_folder = {['/pub/igs/products/mgex/' gpsweek, '/']};
         file = {['GRG0MGXFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
-        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true); 
+        file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        % try server alternative
+        if file_status == 0
+            cddis_host = 'https://cddis.nasa.gov';
+            cddis_folder = {['/archive/gnss/products/' gpsweek '/']};
+            file_status = get_cddis_data(cddis_host, cddis_folder, file, target, true);
+        end
         if file_status == 0
             errordlg('No CNES MGEX Biases found on server. Please change source of biases!', 'Error');
         end
@@ -314,21 +321,46 @@ switch settings.BIASES.code
                 file = {['COD0OPSRAP_' yyyy doy '0000_01D_01D_OSB.BIA']};
                 decomp = {['COD0OPSRAP_' yyyy doy '0000_01D_01D_OSB.BIA']};
                 bool_archive = false;
+                % additional source: CDDIS mirrors this (gzipped) even
+                % when CODE's own site doesn't have it anymore
+                file_cddis = {['COD0OPSRAP_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
             otherwise
                 errordlg([settings.ORBCLK.prec_prod_type ' CODE OSBs are not implemented!'], 'Error');
         end
         % download, unzip, save file-path
+        decompressed_cddis = {};
         if ~isfile([target{1} file{1}]) && ~isfile([target{1} decomp{1}]) && ~isfile([target{1} decomp{1} '.mat'])
+            downloaded = false;
             try
                 websave([target{1} file{1}], [host URL_folder{1} file{1}]);
+                downloaded = true;
             catch
+                % websave can leave a 0-byte file behind even on failure;
+                % delete it so it doesn't fool the CDDIS fallback's
+                % already-exists check below
+                if isfile([target{1} file{1}]); delete([target{1} file{1}]); end
+            end
+            if ~downloaded && exist('file_cddis', 'var')
+                fs = get_cddis_data('https://cddis.nasa.gov', {['/archive/gnss/products/' gpsweek '/']}, file_cddis, target, true);
+                if fs(1) == 1 || fs(1) == 2
+                    % already decompressed here - do not run unzip_and_delete
+                    % again below on what is now a plain (non-archive) file
+                    decompressed_cddis = unzip_and_delete(file_cddis, target);
+                    downloaded = true;
+                end
+            end
+            if ~downloaded
                 errordlg('No CODE Biases found on server. Please change source of biases!', 'Error');
             end
         end
-        if ~bool_archive        % pretend archive, otherwise code does not work
-            file{1} = [file{1} '.gz'];
+        if isempty(decompressed_cddis)
+            if ~bool_archive        % pretend archive, otherwise code does not work
+                file{1} = [file{1} '.gz'];
+            end
+            decompressed = unzip_and_delete(file(1), target(1));
+        else
+            decompressed = decompressed_cddis;
         end
-        decompressed = unzip_and_delete(file(1), target(1));
         % save file-path
         settings.BIASES.code_file = decompressed{1};
 
@@ -341,6 +373,9 @@ switch settings.BIASES.code
         file = {['GRG0OPSFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
         % download, unzip, save file-path
         file_status = ftp_download(URL_host, URL_folder{1}, file{1}, target{1}, true);
+        if file_status == 0     % additional source: CDDIS
+            file_status = get_cddis_data('https://cddis.nasa.gov', {['/archive/gnss/products/' gpsweek '/']}, file, target, true);
+        end
         if file_status == 0
             errordlg('No CNES OSBs Biases found on server. Please change source of biases!', 'Error');
         end

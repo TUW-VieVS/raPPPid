@@ -9,8 +9,8 @@ function [Az, El] = topocent(X, dx)
 %   X           3x1, receiver position in ECEF
 %	dx          3x1, ECEF line-of-sight vector from receiver to satellite 
 % Returns:
-%	Az          azimuth from north positive clockwise [°]
-%	El          elevation angle [°]
+%	Az          azimuth from north positive clockwise [degree]
+%	El          elevation angle [degree]
 %  
 %   Revision:
 %   ...
@@ -31,10 +31,10 @@ d2r = pi/180;       % factor from degree to radiant
 % ellipsoidal WGS 84 coordinates
 [phi,lambda,~] = xyz2ell_GT(X(1), X(2), X(3), Const.WGS84_A, Const.WGS84_E_SQUARE);   
 
-% for clearity calculate cosinus and sinus into variables
-cos_l = cos(lambda);        % latitude lambda
+% for clarity calculate cosinus and sinus into variables
+cos_l = cos(lambda);        % longitude lambda
 sin_l = sin(lambda);
-cos_p = cos(phi);           % longitude phi
+cos_p = cos(phi);           % latitude phi
 sin_p = sin(phi);
 
 % build matrix
@@ -49,7 +49,7 @@ U = local_vector(3);
 
 hor_dis = sqrt(E^2+N^2);    % horizontal distance
 
-% calculate azimuth and elevation from East, North, Up and convert [°]
+% calculate azimuth and elevation from East, North, Up and convert [degree]
 if hor_dis > 1.e-20
     Az = atan2(E,N)/d2r;
     El = atan2(U,hor_dis)/d2r;

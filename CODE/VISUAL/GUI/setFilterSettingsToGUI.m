@@ -10,6 +10,11 @@ function [handles] = setFilterSettingsToGUI(filtersetts, handles)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
+% Filter Type
+string_all = get(handles.popupmenu_filter,'String');
+value = find(strcmp(string_all,filtersetts.ADJ.filter.type));
+set(handles.popupmenu_filter, 'Value', value);
+
 % en/disable estimation of receiver DCBs
 set(handles.checkbox_estimate_rec_dcbs,     'Value', filtersetts.BIASES.estimate_rec_dcbs)
 
@@ -58,7 +63,7 @@ if ~strcmp(filtersetts.ADJ.filter.type,'No Filter')			% Filter is enabled
     	% Receiver Clock Error QZSS
         set(handles.edit_filter_qzss_offset_sigma0,        'String', sprintf('%.0f', sqrt(filtersetts.ADJ.filter.var_rclk_qzss)) );
         set(handles.edit_filter_qzss_offset_Q,             'String', sprintf('%.0f', sqrt(filtersetts.ADJ.filter.Q_rclk_qzss)) );
-        set(handles.popupmenu_filter_qzss_offset_dynmodel, 'Value', filtersetts.ADJ.filter.dynmodel_rclk_bds+1);
+        set(handles.popupmenu_filter_qzss_offset_dynmodel, 'Value', filtersetts.ADJ.filter.dynmodel_rclk_qzss+1);
     end
     try
         % Receiver Clock Drift

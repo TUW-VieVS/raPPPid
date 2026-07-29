@@ -10,7 +10,7 @@ function [stec] = corr2brdc_stec(C_nm, S_nm, H_I, az, elev, lat_rx, lon_rx, H_rx
 %   C_nm        cosine coefficients [TECU]
 %   S_nm        sine coefficients [TECU] 
 %   H_I         height of ionospheric layer [m]
-%   az          azimut [°]
+%   az          azimuth [°]
 %   elev        elevation [°]
 %   lat_rx      latitude of receiver [rad]
 %   lon_rx      longitude of receiver [rad]
@@ -60,7 +60,7 @@ end
 
 
 %% calculate mean sun-fixed and phase shifted longitude of the IPP
-t = mod(Ttr,86400);     % [sod]
+t = mod(Ttr, 86400);    % [sod]
 lon_S = mod(lon_IPP + (t-50400)*pi/43200, 2*pi);       % (2)
 
 

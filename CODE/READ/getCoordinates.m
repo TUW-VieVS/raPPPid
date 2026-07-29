@@ -46,7 +46,11 @@ XYZ = get_weekly_IGS_coordinates(stations, dates, XYZ, coordsyst);
 if all( abs(XYZ(:)) > 1e4 );   return;   end
 
 % ----- try station position time series from webigs-rf.ign.fr -----
-XYZ = get_station_position_time_series(stations, dates, XYZ);
+XYZ = get_station_position_time_series_IGN(stations, dates, XYZ);
+if all( abs(XYZ(:)) > 1e4 );   return;   end
+
+% ----- try station position time series from geodesy.unr.edu -----
+XYZ = get_station_position_time_series_NGL(stations, dates, XYZ, coordsyst);
 if all( abs(XYZ(:)) > 1e4 );   return;   end
 
 % ----- check EUREF estimation -----

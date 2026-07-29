@@ -61,11 +61,10 @@ end
 if sum( ~isnan(N_fixed(:)) ) >= 3  	% ||| check condition
 
     s_f = no_sats*proc_frqs;             	% #satellites x #frequencies
-    idx_N = (NO_PARAM + 1):(NO_PARAM + s_f);     % indices of ambiguities
     idx_iono = (NO_PARAM + s_f + 1):(NO_PARAM + s_f + no_sats);
 
     % get float ambiguities
-    N_float = Adjust.param(idx_N);
+    [N_float, idx_N] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, proc_frqs);
 
     % difference between float and fixed ambiguities
     N_diff = N_float - N_fixed;

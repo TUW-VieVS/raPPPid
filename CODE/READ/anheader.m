@@ -94,7 +94,9 @@ while 1
     
     % Antenna type
     if contains(line,'ANT # / TYPE')
-        antenna_type = line(21:40);
+        % usually, antenna type is written in columns 21-40. However,
+        % some receivers/converters write a non-standard field.
+        antenna_type = strtrim(line(21:min(60,length(line))));
     end
     
     % Receiver type
@@ -293,8 +295,8 @@ if ~isempty(shiftlines)
                 col = strfind(obs_types_bds_3, type3);
                 index = 4;
             case 'J'
-                col = strfind(obs_types_bds_3, type3);
-                index = 5;                
+                col = strfind(obs_types_qzss_3, type3);
+                index = 5;
             otherwise
                 continue
         end
@@ -372,9 +374,9 @@ catch
     if bool_print; fprintf(['Used leap seconds: ' num2str(obs.leap_sec) ' \n']); end
 end
 
-% Glonass channel numbers
+% GLONASS channel numbers
 obs.glo_channel = glo_channel;
-% Glonass Code-Phase Alignment Header Record
+% GLONASS Code-Phase Alignment Header Record
 obs.glo_cod_phs_bis = glo_cod_phs_bis;
 
 % save station relevant data

@@ -24,6 +24,28 @@ function [] = write_SP3_File(settings, obs, storeData, q_end, filename)
 %   param      = NxM array: [X(m), Y(m), Z(m), Vx, Vy, Vz, clk_s, clk_rate]
 
 
+% Locate the receiver-clock parameter column in storeData.param
+if ~strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+    clk_prefix = 'rec_clk_';        % zero-differenced model
+else
+    clk_prefix = 'rec_clk_code_';   % decoupled clock model
+end
+% GNSS letter of the first processed system
+if     settings.INPUT.use_GPS;  clk_sys = 'G';
+elseif settings.INPUT.use_GLO;  clk_sys = 'R';
+elseif settings.INPUT.use_GAL;  clk_sys = 'E';
+elseif settings.INPUT.use_BDS;  clk_sys = 'C';
+elseif settings.INPUT.use_QZSS; clk_sys = 'J';
+else;  error('write_SP3_File: no GNSS selected for processing.');
+end
+
+% column of storeData.param holding that receiver clock error [m]
+clk_idx = find(strcmp(storeData.ORDER_PARAM, [clk_prefix clk_sys]));
+if isempty(clk_idx)
+    error('write_SP3_File: receiver clock parameter "%s" not found in ORDER_PARAM.', ...
+          [clk_prefix clk_sys]);
+end
+
 
 out_dir = settings.PROC.output_dir;
 fout    = fullfile(out_dir, filename);
@@ -68,8 +90,9 @@ fmt = ['#c%c' ...              % "#c" + P/V flag
        '%3s ' ...              % Orbit‐type
        '%4s\n'];               % Agency
 
-fprintf(fid, fmt, 'V', tv(1,1), tv(1,2), tv(1,3), tv(1,4), tv(1,5), tv(1,6)-(storeData.param(1,8)/Const.C), ...
-        min(q_end,size(param,1)), DataType, obs.coordsyst, 'EXT', 'XXXX');           
+% correct the seconds by the estimated receiver clock error [s]
+fprintf(fid, fmt, 'V', tv(1,1), tv(1,2), tv(1,3), tv(1,4), tv(1,5), tv(1,6)-(param(1,clk_idx)/Const.C), ...
+        min(q_end,size(param,1)), DataType, obs.coordsyst, 'EXT', 'XXXX');
 
 % Line # 02: GPS week, SOW, interval, MJD, frac‑day
 fmt2 = ['## ' ...          % "##" + blank  
@@ -142,14 +165,16 @@ fprintf(fid, '/*%59s\n', '');
 %-- DATA BLOCK
   for q = 1:min(q_end,size(param,1))
     Yr = tv(q,1); Mo = tv(q,2); Da = tv(q,3);
-    Hr = tv(q,4); Mn = tv(q,5); Sec = tv(q,6)-(storeData.param(q,8)/Const.C);
+    % correct the seconds by the estimated receiver clock error [s]
+    Hr = tv(q,4); Mn = tv(q,5); Sec = tv(q,6)-(param(q,clk_idx)/Const.C);
 
     % Epoch header (line 23)
     fprintf(fid, '*  %4d %02d %02d %02d %02d %11.8f\n', Yr, Mo, Da, Hr, Mn, Sec);
 
     % Position & clock (line 24):
     X = param(q,1)/1000; Y = param(q,2)/1000; Z = param(q,3)/1000;  % km
-    clk = (param(q,8)/Const.C)*1e6;                                 % µs
+    % convert estimated receiver clock error [m] -> [µs]
+    clk = (param(q,clk_idx)/Const.C)*1e6;                                 % µs
     fprintf(fid, 'P%-3s%14.6f%14.6f%14.6f%14.6f\n', SatID, X, Y, Z, clk);
 
     % Velocity & rate (line 25):

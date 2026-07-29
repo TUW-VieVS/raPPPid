@@ -56,7 +56,7 @@ for iteration = 1:30
     A_Doppler(:,5) = (param(2) - sat_pos_y) ./ rho;   % y velocity
     A_Doppler(:,6) = (param(3) - sat_pos_z) ./ rho;   % z velocity
     % Partial derivations: receiver clock drift
-    A_Doppler(:,11) = 1 ./ wavelengths;         % receiver clock drift
+    A_Doppler(:,11) = ones(size(wavelengths));  % receiver clock drift
 
     % weight matrix
     P_Doppler = eye(s_f);       % ignore weighting here -> eye
@@ -99,7 +99,9 @@ end
 
 
 % calculate receiver clock drift after velocity estimation
-rec_clk_drift = median(-Epoch.doppler(:) - dot_r_v, 'omitmissing');
+rec_clk_drift_ = -Epoch.doppler(:) - dot_r_v;
+rec_clk_drift_ = rec_clk_drift_(~isnan(rec_clk_drift_));    % remove NaNs
+rec_clk_drift = median(rec_clk_drift_);
 
 % return the approximate velocity
 velo = param(4:6);

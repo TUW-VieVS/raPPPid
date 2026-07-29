@@ -16,22 +16,17 @@ function [settings] = getSettingsFromGUI(handles)
 
 
 path = handles.paths;
+settings.version = handles.text_version.String;     % save raPPPid version as information
 
 
 %% File - Set input files
 
-% Single processing Rinex input file
+% Single processing RINEX input file
 settings.INPUT.file_obs = join_path(path.obs_1, path.obs_2);
 
 % Batch-Processing enabled? (not used in setSettingsToGUI)
 settings.INPUT.bool_batch  = handles.checkbox_batch_proc.Value;
 settings.INPUT.bool_parfor = settings.INPUT.bool_batch && handles.checkbox_parfor.Value;
-
-% approximate position
-settings.INPUT.pos_approx = ...
-    [str2double(get(handles.edit_x, 'String'));
-    str2double(get(handles.edit_y, 'String'));
-    str2double(get(handles.edit_z, 'String'))];
 
 % settings for real-time processing
 settings.INPUT.bool_realtime  = get(handles.checkbox_realtime,  'Value');
@@ -286,7 +281,8 @@ settings.OTHER.mp_detection = get(handles.checkbox_mp_detection, 'Value');
 settings.OTHER.mp_degree = str2double(get(handles.edit_mp_degree, 'String'));
 settings.OTHER.mp_thresh = str2double(get(handles.edit_mp_thresh, 'String'));
 settings.OTHER.mp_cooldown = str2double(get(handles.edit_mp_cooldown, 'String'));
-
+settings.OTHER.mp_doppler = get(handles.checkbox_mp_doppler, 'Value');
+settings.OTHER.mp_doppler_thresh = str2double(get(handles.edit_mp_doppler_thresh, 'String'));
 
 
 %% Model - Kinematic
@@ -303,6 +299,9 @@ settings.KINE.offset(3) = str2double(get(handles.edit_offset_z,  'String'));
 % Orientation Mode
 settings.KINE.orient_mode = handles.uibuttongroup_orientation_mode.SelectedObject.String;
 
+% Antenna Orientation
+settings.KINE.ant_orient = handles.uibuttongroup_ant_orientation_mode.SelectedObject.String;
+
 % Satellite PPP
 settings.KINE.satellite.bool  = get(handles.checkbox_satellite, 'Value');
 settings.KINE.satellite.ID    = get(handles.edit_sat_id, 'String');
@@ -311,6 +310,9 @@ settings.KINE.satellite.area  = str2double(get(handles.edit_sat_area, 'String'))
 settings.KINE.satellite.drag  = str2double(get(handles.edit_sat_drag, 'String'));
 settings.KINE.satellite.solar = str2double(get(handles.edit_sat_solar, 'String'));
 
+% IMU 
+settings.KINE.bool_IMU = get(handles.checkbox_IMU, 'Value');
+settings.KINE.file_IMU = join_path(path.IMU_1, path.IMU_2);
 
 
 
@@ -401,77 +403,10 @@ end
 
 %% Estimation - Adjustment
 
-% LSQ or Filter
-value = get(handles.popupmenu_filter, 'Value');
-string_all = get(handles.popupmenu_filter, 'String');
-settings.ADJ.filter.type = string_all{value};		% 'No Filter' or 'Kalman Filter' or 'Kalman Filter Iterative'
-
-% Direction of Filter
-value = get(handles.popupmenu_filter_direction, 'Value');
-string_all = get(handles.popupmenu_filter_direction, 'String');
-settings.ADJ.filter.direction = string_all{value};  % e.g. 'Forwards'
-
-% Filter Settings: values of dropdown menus (popupmenus) have to be taken - 1 to have [0;1]
-% Coordinates
-settings.ADJ.filter.var_coord  = str2double( get(handles.edit_filter_coord_sigma0, 'String') )^2;	% a-priori-variance of coordinates
-settings.ADJ.filter.Q_coord   = str2double( get(handles.edit_filter_coord_Q, 'String') )^2;        % system noise of coordinates
-settings.ADJ.filter.dynmodel_coord = get(handles.popupmenu_filter_coord_dynmodel, 'Value') - 1;    % dynamic model of coordinates
-
-% Velocity
-settings.ADJ.filter.var_velocity  = str2double( get(handles.edit_filter_velocity_sigma0, 'String') )^2;	% a-priori-variance of coordinates
-settings.ADJ.filter.Q_velocity   = str2double( get(handles.edit_filter_velocity_Q, 'String') )^2;        % system noise of coordinates
-settings.ADJ.filter.dynmodel_velocity = get(handles.popupmenu_filter_velocity_dynmodel, 'Value') - 1;    % dynamic model of coordinates
-
-% Zenith Wet Delay
-settings.ADJ.filter.var_zwd = str2double( get(handles.edit_filter_zwd_sigma0, 'String') )^2;    % a-priori-variance of zenith wet delay
-settings.ADJ.filter.Q_zwd = str2double( get(handles.edit_filter_zwd_Q, 'String') )^2;          % system noise of zenith wet delay
-settings.ADJ.filter.dynmodel_zwd = get(handles.popupmenu_filter_zwd_dynmodel, 'Value') - 1;
-
-% Receiver Clock Error (GPS)
-settings.ADJ.filter.var_rclk_gps = str2double( get(handles.edit_filter_rec_clock_sigma0, 'String') )^2; % a-priori-variance of GPS receiver clock
-settings.ADJ.filter.Q_rclk_gps   = str2double( get(handles.edit_filter_rec_clock_Q, 'String') )^2;     % system noise of GPS receiver clock
-settings.ADJ.filter.dynmodel_rclk_gps = get(handles.popupmenu_filter_rec_clock_dynmodel, 'Value') - 1;
-
-% Receiver Clock Error (Glonass)
-settings.ADJ.filter.var_rclk_glo = str2double( get(handles.edit_filter_glonass_offset_sigma0, 'String') )^2;	% a-priori-variance of GLO receiver clock
-settings.ADJ.filter.Q_rclk_glo = str2double( get(handles.edit_filter_glonass_offset_Q, 'String') )^2;          % system noise of GLO receiver clock
-settings.ADJ.filter.dynmodel_rclk_glo = get(handles.popupmenu_filter_glonass_offset_dynmodel, 'Value')-1;
-
-% Receiver Clock Error (Galileo)
-settings.ADJ.filter.var_rclk_gal = str2double( get(handles.edit_filter_galileo_offset_sigma0, 'String') )^2;    % a-priori-variance of GAL receiver clock
-settings.ADJ.filter.Q_rclk_gal = str2double( get(handles.edit_filter_galileo_offset_Q, 'String') )^2;          % system noise of GAL receiver clock
-settings.ADJ.filter.dynmodel_rclk_gal = get(handles.popupmenu_filter_galileo_offset_dynmodel, 'Value')-1;
-
-% Receiver Clock Error (BeiDou)
-settings.ADJ.filter.var_rclk_bds = str2double( get(handles.edit_filter_beidou_offset_sigma0, 'String') )^2;    % a-priori-variance of BDS receiver clock
-settings.ADJ.filter.Q_rclk_bds = str2double( get(handles.edit_filter_beidou_offset_Q, 'String') )^2;          % system noise of BDS receiver clock
-settings.ADJ.filter.dynmodel_rclk_bds = get(handles.popupmenu_filter_beidou_offset_dynmodel, 'Value')-1;
-
-% Receiver Clock Error (QZSS)
-settings.ADJ.filter.var_rclk_qzss = str2double( get(handles.edit_filter_qzss_offset_sigma0, 'String') )^2;    % a-priori-variance of QZSS receiver clock
-settings.ADJ.filter.Q_rclk_qzss = str2double( get(handles.edit_filter_qzss_offset_Q, 'String') )^2;          % system noise of QZSS receiver clock
-settings.ADJ.filter.dynmodel_rclk_qzss = get(handles.popupmenu_filter_qzss_offset_dynmodel, 'Value')-1;
-
-% Receiver Differential Code Biases
-settings.BIASES.estimate_rec_dcbs = get(handles.checkbox_estimate_rec_dcbs, 'Value');      % en/disable estimation of receiver DCBs
-settings.ADJ.filter.var_DCB = str2double( get(handles.edit_filter_dcbs_sigma0, 'String') )^2;
-settings.ADJ.filter.Q_DCB = str2double( get(handles.edit_filter_dcbs_Q, 'String') )^2;
-settings.ADJ.filter.dynmodel_DCB = get(handles.popupmenu_filter_dcbs_dynmodel, 'Value')-1;
-
-% Receiver Clock Drift
-settings.ADJ.filter.var_rclk_drift = str2double( get(handles.edit_filter_rec_clk_drift_sigma0, 'String') )^2;
-settings.ADJ.filter.Q_rclk_drift = str2double( get(handles.edit_filter_rec_clk_drift_Q, 'String') )^2;
-settings.ADJ.filter.dynmodel_rclk_drift = get(handles.popupmenu_filter_rec_clk_drift_dynmodel, 'Value')-1;
-
-% Float Ambiguities
-settings.ADJ.filter.var_amb = str2double( get(handles.edit_filter_ambiguities_sigma0, 'String') )^2; 	% a-priori-variance of float ambiguities
-settings.ADJ.filter.Q_amb  = str2double( get(handles.edit_filter_ambiguities_Q, 'String') )^2;         % system noise of float ambiguities
-settings.ADJ.filter.dynmodel_amb = get(handles.popupmenu_filter_ambiguities_dynmodel, 'Value') - 1;
-
-% Ionosphere
-settings.ADJ.filter.var_iono = str2double( get(handles.edit_filter_iono_sigma0, 'String') )^2;    % a-priori-variance of ionosphere
-settings.ADJ.filter.Q_iono = str2double( get(handles.edit_filter_iono_Q, 'String') )^2;          % system noise of ionosphere
-settings.ADJ.filter.dynmodel_iono = get(handles.popupmenu_filter_iono_dynmodel, 'Value') - 1;
+% Filter type, direction, and all per-parameter noise/dynamic-model settings
+filtersetts = getFilterSettingsFromGUI(handles);
+settings.ADJ.filter = filtersetts.ADJ.filter;
+settings.BIASES.estimate_rec_dcbs = filtersetts.BIASES.estimate_rec_dcbs;      % en/disable estimation of receiver DCBs
 
 
 
@@ -491,11 +426,11 @@ settings.IONO.var_iono_decr = str2double(handles.edit_constraint_decrease.String
 % weighting function
 settings.ADJ.weight_elev	 = get(handles.radiobutton_Elevation_Dependency, 'Value');
 settings.ADJ.elev_weight_fun = ...  % get elevation function string and convert to function handle
-    ElevationWeightingFunction(get(handles.edit_elevation_weighting_function, 'String'));
+    ElevationWeightingFunction(strtrim(get(handles.edit_elevation_weighting_function, 'String')));
 settings.ADJ.weight_mplc  	 = get(handles.radiobutton_MPLC_Dependency, 'Value');
 settings.ADJ.weight_sign_str = get(handles.radiobutton_Signal_Strength_Dependency, 'Value');
 settings.ADJ.snr_weight_fun = ...  % get snr function string and convert to function handle
-    SNRWeightingFunction(get(handles.edit_snr_weighting_function, 'String'));
+    SNRWeightingFunction(strtrim(get(handles.edit_snr_weighting_function, 'String')));
 settings.ADJ.weight_bore     = get(handles.radiobutton_Bore_Dependency, 'Value');
 settings.ADJ.weight_none     = get(handles.radiobutton_No_Dependency, 'Value');
 
@@ -677,9 +612,6 @@ settings.PLOT.stream_corr   = get(handles.checkbox_plot_stream_corr,	'Value');
 
 % true coordinates
 settings.PLOT.pos_true = [0; 0; 0];    % ||| change at some point
-if isnan(settings.PLOT.pos_true)       % if no true position is entered used approximate position instead
-    settings.PLOT.pos_true = settings.PLOT.pos_approx;
-end
 
 end
 

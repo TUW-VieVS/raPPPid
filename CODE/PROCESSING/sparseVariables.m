@@ -8,7 +8,7 @@ function [satellites, storeData, model_save, obs] = ...
 
 
 proc_freqs = settings.INPUT.proc_freqs;		% number of processed frequencies
-num_freqs = settings.INPUT.num_freqs;       % number of input frequencies
+num_frqs = settings.INPUT.num_freqs;        % number of input frequencies
 bool_phase = contains(settings.PROC.method,'+ Phase');  % phase processed?
 bool_doppler = contains(settings.PROC.method,'+ Doppler');  % Doppler processed?
 
@@ -24,7 +24,6 @@ if settings.EXP.model_save
     model_save.Ttr              = trysparce(model_save.Ttr);
     model_save.k                = trysparce(model_save.k);
     model_save.trop             = trysparce(model_save.trop);
-    model_save.ZTD              = trysparce(model_save.ZTD);
     model_save.iono             = trysparce(model_save.iono);
     model_save.mfw              = trysparce(model_save.mfw);
 	model_save.mfh              = trysparce(model_save.mfh);
@@ -55,8 +54,8 @@ end
 if contains(settings.IONO.model,'Estimate')		% ionosphere is estimated
     storeData.iono_est = sparse(storeData.iono_est);
 end
-storeData.exclude  = sparse(storeData.cs_found);
-storeData.cs_found = sparse(storeData.exclude);
+storeData.exclude  = sparse(storeData.exclude);
+storeData.cs_found = sparse(storeData.cs_found);
 
 % satellite status
 if settings.EXP.storeData_sat_status && isfield(storeData, 'sat_status')
@@ -100,11 +99,21 @@ end
 % multipath detection
 if settings.OTHER.mp_detection
     storeData.mp_C1_diff_n = sparse(storeData.mp_C1_diff_n);
-    if num_freqs >= 2
+    if num_frqs >= 2
         storeData.mp_C2_diff_n = sparse(storeData.mp_C2_diff_n);
     end
-    if num_freqs >= 3
+    if num_frqs >= 3
         storeData.mp_C3_diff_n = sparse(storeData.mp_C3_diff_n);
+    end
+end
+% pseudorange rate check with Doppler
+if settings.OTHER.mp_doppler
+    storeData.mp_DopplerPR_1 = sparse(storeData.mp_DopplerPR_1);
+    if num_frqs >= 2
+        storeData.mp_DopplerPR_2 = sparse(storeData.mp_DopplerPR_2);
+    end
+    if num_frqs >= 3
+        storeData.mp_DopplerPR_3 = sparse(storeData.mp_DopplerPR_3);
     end
 end
 
@@ -172,13 +181,13 @@ end
 % --- variables depending on number of input frequencies
 % Carrier-to-Noise density
 satellites.SNR_1 = sparse(satellites.SNR_1);
-if num_freqs > 1; satellites.SNR_2 = sparse(satellites.SNR_2); end
-if num_freqs > 2; satellites.SNR_3 = sparse(satellites.SNR_3); end
+if num_frqs > 1; satellites.SNR_2 = sparse(satellites.SNR_2); end
+if num_frqs > 2; satellites.SNR_3 = sparse(satellites.SNR_3); end
 % Doppler measurement
 if settings.EXP.satellites_D
     satellites.D1 = sparse(satellites.D1);
-    if num_freqs > 1; satellites.D2 = sparse(satellites.D2); end
-    if num_freqs > 2; satellites.D3 = sparse(satellites.D3); end
+    if num_frqs > 1; satellites.D2 = sparse(satellites.D2); end
+    if num_frqs > 2; satellites.D3 = sparse(satellites.D3); end
 end
 
 

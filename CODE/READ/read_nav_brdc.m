@@ -1,4 +1,4 @@
-function  [input] = read_brdc(settings, input, leap_sec, glo_channels)
+function  [input] = read_nav_brdc(settings, input, leap_sec, glo_channels)
 % This functions reads the navigation messages (RINEX format) and 
 % converts them into an internal raPPPid format.
 % 
@@ -29,14 +29,15 @@ if settings.ORBCLK.bool_nav_multi || glo_channels
     fclose(fide);
     % choose read-in function depending on RINEX version
     rversion = str2double(NAVDATA{1}(1));
+    input.ORBCLK.Eph_version = rversion;
     if rversion == 3
-        [input.IONO.klob_coeff, input.nequ_coeff, input.BDGIM_coeff, ....
+        [input.IONO.klob_coeff, input.IONO.nequ_coeff, input.IONO.klob_coeff_BDS, ....
             Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi(NAVDATA, leap_sec);
     elseif rversion >= 4
-        [input.IONO.klob_coeff, input.nequ_coeff, input.BDGIM_coeff, ....
+        [input.IONO.klob_coeff, input.IONO.nequ_coeff, input.IONO.klob_coeff_BDS, input.IONO.BDGIM_coeff, ....
             Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi_r4(NAVDATA, leap_sec);
     else
-        errordlg('Check read_brdc.m and version of navigation message!', 'HUGE error');
+        errordlg('Check read_nav_brdc.m and version of navigation message!', 'HUGE error');
     end
 end
 
@@ -47,7 +48,7 @@ if settings.ORBCLK.bool_nav_single
     if ~isempty(settings.ORBCLK.file_nav_GPS) &&  settings.INPUT.use_GPS
         [input.IONO.klob_coeff, Eph_GPS] = read_nav_gps(settings.ORBCLK.file_nav_GPS);
     end
-    % Glonass broadcast ephemeris navigation file
+    % GLONASS broadcast ephemeris navigation file
     if settings.INPUT.use_GLO && ~isempty(settings.ORBCLK.file_nav_GLO)
         Eph_GLO = read_nav_glo(settings.ORBCLK.file_nav_GLO, leap_sec);
     end    
@@ -57,7 +58,7 @@ if settings.ORBCLK.bool_nav_single
     end
     % BeiDou broadcast ephemeris navigation file
     if settings.INPUT.use_BDS && ~isempty(settings.ORBCLK.file_nav_BDS)
-        [input.BDGIM_coeff, Eph_BDS] = read_nav_bds(settings.ORBCLK.file_nav_BDS, leap_sec);
+        [input.IONO.klob_coeff_BDS, Eph_BDS] = read_nav_bds(settings.ORBCLK.file_nav_BDS, leap_sec);
     end
 end
 

@@ -22,7 +22,8 @@ function [F_rad_grav] = transition_radius(param, Epoch, obs, sat)
 % *************************************************************************
 
 
-r = norm(param(1:3));
+r_sat = param(1:3); r_sat = r_sat(:);
+r = norm(r_sat);
 x = param(1); y = param(2); z = param(3);
 
 %% Two Body Gravity
@@ -30,8 +31,8 @@ dx_two_body = (-Const.GM/r^3)*eye(3) + (3*Const.GM/r^5)*param(1:3)*param(1:3)'; 
 
 %% Third Body Perturbations
 h = mod(Epoch.gps_time, 86400) / 3600; % Current time of day in decimal hours 
-rMoon2Sat = r - moonPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h); % Radius from Moon to the Satellite
-rSun2Sat = r - 1e3*sunPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h); % Radius from Sun to the Satellite
+rMoon2Sat = r_sat - moonPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h); % Radius from Moon to the Satellite
+rSun2Sat = r_sat - 1e3*sunPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h); % Radius from Sun to the Satellite
 
 dA_Moon = -Const.Moon_muM * (eye(3)/norm(rMoon2Sat)^3 - 3*(rMoon2Sat*rMoon2Sat')/norm(rMoon2Sat)^5); % Third Body Acceleration wrt satellite radius Term due to Moon
 dA_Sun = -Const.Sun_muS * (eye(3)/norm(rSun2Sat)^3 - 3*(rSun2Sat*rSun2Sat')/norm(rSun2Sat)^5); % Third Body Acceleration Term wrt satellite radius due to Sun
@@ -42,7 +43,7 @@ d = norm(R);
 alpha_srp = (Const.P_srp * sat.solar * sat.area) / sat.mass; % Scalar acceleration magnitude for the SRP
 
 I = eye(3); % Identity Matrix
-A_srp = -alpha_srp * Const.AU^2 * (I/d^3 - 3*(R*R')/d^5); % Component of SRP acceleration term wrt satellite radius
+A_srp = alpha_srp * Const.AU^2 * (I/d^3 - 3*(R*R')/d^5); % Component of SRP acceleration term wrt satellite radius
 
 %% J2 Perturbation  
 
@@ -72,7 +73,7 @@ dfy_dz = 10*y*z*(x^2+y^2)/r^4;
 % Computing the partial derivatives of fz wrt satellite radius
 dfz_dx = -10*x*z^3/r^4;
 dfz_dy = -10*y*z^3/r^4;
-dfz_dz = (5*z^2/r^2) + (10*z^2*(x^2+y^2)/r^4);
+dfz_dz = (5*z^2/r^2 - 3) + (10*z^2*(x^2+y^2)/r^4);
 
 dA_dJ2 = zeros(3,3);
 

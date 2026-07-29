@@ -1,17 +1,17 @@
 function [model, Epoch] = modelApproximately(settings, input, Epoch, param, obs, iteration)
 % This function is a simpler version of modelErrorSources.m and models error
-% sources for modelling the observation for calculating an approximate
+% sources for modeling the observation for calculating an approximate
 % position or velocity. 
 % 
 % INPUT:
 %   settings    	settings from GUI  [struct]
-%   input           input data (ephemerides, PCOs, etc.)   [struct]
+%   input           input data (ephemeris, PCOs, etc.)   [struct]
 %   Epoch           epoch-specific data for current epoch  [struct]
 %   param           (simplified) parameter vector [vector]
 %   obs             consisting observations and corresponding data   [struct]
 %   iteration       step of iteration
 % OUTPUT:
-%   model           extended with modelled corrections to current satellite, [struct]
+%   model           extended with modeled corrections to current satellite, [struct]
 %   Epoch           updated with cutoff
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
@@ -26,7 +26,7 @@ pos_WGS84 = cart2geo(param(1:3));
 n_num_frq  = settings.INPUT.num_freqs;      % number of input frequencies (e.g. 2 for IF-LC)
 proc_frqs = settings.INPUT.proc_freqs;      % number of processed frequencies
 frqs = 1:proc_frqs;                 % 1 : # processed frequencies
-num_sat = Epoch.no_sats;            % number of satellites in current epoch
+num_sat = numel(Epoch.sats);        % number of satellites in current epoch
 
 % initialize the struct model
 model = init_struct_model(num_sat, proc_frqs, n_num_frq);  	% Init struct model
@@ -111,7 +111,7 @@ for i_sat = 1:num_sat
     % --- Get column of broadcast ephemerides for current satellite ---
     k = Epoch.BRDCcolumn(prn);
     if settings.ORBCLK.bool_brdc && isnan(k)      % no ephemeris
-        if ~settings.INPUT.bool_parfor; fprintf('No broadcast orbit data for satellite %f.0 in SOW %.3f              \n', prn, Ttr); end
+        if ~settings.INPUT.bool_parfor; fprintf('No broadcast orbit data for satellite %d in SOW %.3f              \n', prn, Ttr); end
         Epoch.exclude(i_sat,frqs) = true;       % eliminate satellite
         Epoch.status(:) = 15;
         Epoch.tracked(prn) = 1;
@@ -126,7 +126,7 @@ for i_sat = 1:num_sat
         [dT_sat, noclock] = satelliteClockBrdc(Ttr, Eph_brdc(:,k), isGPS, isGLO, isGAL, isBDS, isQZSS, settings.ORBCLK.corr2brdc_clk, Epoch.corr2brdc_clk(:,prn));
     end
     if isnan(dT_sat) || dT_sat == 0 || noclock       % no clock correction
-        if ~settings.INPUT.bool_parfor; fprintf('No precise clock data for satellite %.0f in SOW %0.3f              \n', prn, Ttr); end
+        if ~settings.INPUT.bool_parfor; fprintf('No precise clock data for satellite %.0f (%s)              \n', prn, Epoch.rinex_header); end
         exclude = true;                 % eliminate satellite
         status(:) = 5;
         Epoch.tracked(prn) = 1;         % set epoch counter for this satellite to 1
@@ -160,7 +160,7 @@ for i_sat = 1:num_sat
     % ----- Vectors, Angles, Distance between Receiver and Satellite -----
     
     % --- Azimuth, Elevation, zenith distance, cutoff-angle ---
-    [az, el] = topocent(pos_XYZ,X_rot-pos_XYZ);     % calculate azimuth and elevation [°]
+    [az, el] = topocent(pos_XYZ,X_rot-pos_XYZ);     % calculate azimuth and elevation [degree]
     if el < settings.PROC.elev_mask         % elevation is under cut-off-angle
         exclude = true;                     % eliminate satellite
         status(:) = 2;
@@ -189,7 +189,7 @@ for i_sat = 1:num_sat
     trop = 0;
     if iteration > 2 	% ignore atmosphere during the first two iterations (more stable)
         p = 1013.25; T = 15; q = 48.14;     % default values for pressure, temperature, relative humidity
-        [trop, ~, ~] = tropo_hopfield(Ttr, el/180*pi, [T;p;q], 0);
+        [trop, ~, ~] = tropo_hopfield(Ttr, el/180*pi, [T; p; q]);
     end
    
     
@@ -225,8 +225,9 @@ for i_sat = 1:num_sat
                 iono(3) = 40.3/f3^2 * stec;
             case 'VTEC from Correction Stream'
                 % find nearest VTEC data in correction stream       ||| interpolate
-                dt = Ttr - input.ORBCLK.corr2brdc_vtec.t;     % time difference [sow]
-                dt(dt<0) = [];                  % ignore future data to maintain real-time conditions
+                dt = Ttr - input.ORBCLK.corr2brdc_vtec.t;      % time difference [sow]
+                if any(dt > 0); dt(dt<0) = []; end      % ignore future data to maintain real-time conditions
+                dt = abs(dt);
                 idx = find(dt == min(dt));  	% index of nearest VTEC data
                 C_nm = input.ORBCLK.corr2brdc_vtec.Cnm(:,:,idx);	% cosine coefficients [TECU]
                 S_nm = input.ORBCLK.corr2brdc_vtec.Snm(:,:,idx); 	% sine coefficients [TECU]
@@ -291,7 +292,7 @@ for i_sat = 1:num_sat
     % --- Satellite Antenna Phase Center Correction ---
     % convert observation from Antenna Phase Center to Center of Mass which
     % is necessary when orbit/clock product refers to the CoM
-    % ||| check´n´change for not sp3
+    % ||| check and change for not sp3
     dX_PCO_SAT_ECEF_corr = zeros(proc_frqs,1);
     if settings.OTHER.bool_sat_pco && settings.ORBCLK.bool_sp3 && ~exclude   	
         % satellite Phase Center Offset and precise ephemerides are enabled
@@ -337,9 +338,9 @@ for i_sat = 1:num_sat
     model.trop(i_sat,frqs) = trop;              % Troposphere delay for elevation
     model.iono(i_sat,frqs) = iono(frqs);        % Ionosphere delay
     % Observation direction
-    model.az(i_sat,frqs)   = az;                % Satellites' azimuth [°]
-    model.el(i_sat,frqs)   = el;                % Satellites' elevation [°]
-    model.bore(i_sat,frqs) = bore;              % Satellites' boresight angle [°]
+    model.az(i_sat,frqs)   = az;                % Satellites' azimuth [degree]
+    model.el(i_sat,frqs)   = el;                % Satellites' elevation [degree]
+    model.bore(i_sat,frqs) = bore;              % Satellites' boresight angle [degree]
     % Phase center offsets and variations
     model.dX_ARP_ECEF_corr(i_sat,frqs)= dX_ARP_ECEF_corr;               % Receiver antenna reference point correction in ECEF
     model.dX_PCO_rec_corr(i_sat,frqs) = dX_PCO_REC_ECEF_corr(frqs);     % Receiver phase center offset correction in ECEF

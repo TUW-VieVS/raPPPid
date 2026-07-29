@@ -13,7 +13,7 @@ function [storeData] = create_output(storeData, obs, settings, q_range)
 %                                        .posFixed_geo, .posFixed_utm
 %  
 % Revision:
-%   2025/10-11, MFWG: add csv ouput, improve and change function
+%   2025/10-11, MFWG: add csv output, improve and change function
 %   2025/06/04, MFWG: replace Epoch.q with number of epochs
 %   2025/03/20, MFWG: rec clk error to time of epoch and flexible #digits
 %   2024/12/17, MFWG: slight improvements, writing output for DCM
@@ -28,7 +28,7 @@ function [storeData] = create_output(storeData, obs, settings, q_range)
 
 q_ = max(q_range);      % determine number of processed epochs
 
-epchs = settings.PROC.epochs(1):settings.PROC.epochs(2);   % processed epochs of the rinex observation file
+epchs = settings.PROC.epochs(1):settings.PROC.epochs(2);   % processed epochs of the RINEX observation file
 
 if isempty(epchs)
     % no epochs processed -> can not write any output
@@ -222,7 +222,9 @@ if settings.EXP.results_csv
     % ----- (1) results_float.csv -----
     % first part
     head_1 = {'epoch', 'reset', 'GPS_week', 'sow', 'latitude', 'longitude', 'height', 'x_UTM', 'y_UTM', 'zhd_model', 'zwd_model'};  % avoid whitespaces! (older Matlab versions)
-    M_1 =    [ epchs', reset_float, gpsweek, t_epoch, posFloat_geo, posFloat_utm(:,1:2), storeData.zhd, storeData.zwd];
+    M_1 =    [ epchs', reset_float, gpsweek, t_epoch, ...
+               posFloat_geo(:,1:2)*180/pi, posFloat_geo(:,3), ...
+               posFloat_utm(:,1:2), storeData.zhd, storeData.zwd];
     % second part
     head_2 = storeData.ORDER_PARAM';
     M_2    = storeData.param;
@@ -239,7 +241,9 @@ if settings.EXP.results_csv
     if settings.AMBFIX.bool_AMBFIX
         % first part
         head_1 = {'epoch', 'reset', 'GPS_week', 'sow', 'latitude', 'longitude', 'height', 'x_UTM', 'y_UTM', 'zhd_model', 'zwd_model'};  % avoid whitespaces! (older Matlab versions)
-        M_1 =    [ epchs', reset_fixed, gpsweek, t_epoch, posFixed_geo, posFixed_utm(:,1:2), storeData.zhd, storeData.zwd];
+        M_1 =    [ epchs', reset_fixed, gpsweek, t_epoch, ...
+                   posFixed_geo(:,1:2)*180/pi, posFixed_geo(:,3), ...
+                   posFixed_utm(:,1:2), storeData.zhd, storeData.zwd];
         % second part
         head_2 = storeData.ORDER_PARAM';
         M_2    = storeData.param_fix;

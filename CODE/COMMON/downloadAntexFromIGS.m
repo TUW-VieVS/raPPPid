@@ -19,22 +19,24 @@ file_atx{2} = 'igs20.atx';
 file_atx{3} = 'igs08.atx';
 file_atx{4} = 'igs05.atx';
 
-% path to antex file
+% path to ANTEX file
 target_atx = [Path.DATA, 'ANTEX/'];
 
 
 % loop to download file
 fprintf('Download started. \n')
 for i = 1:4
-    % delete old igsXX.atx file to enable download of new file
-    delete([target_atx, file_atx{i}]);  	
-    
     % atx-files are not small and server is slow -> increase timeout
     woptions = weboptions;
     woptions.Timeout = 60;      % use 60s (usually 5s is the default value)
-    websave([target_atx file_atx{i}] , ['https://files.igs.org/pub/station/general/' file_atx{i}], woptions);
-
-     fprintf('File %d finished, %d remaining.        \n', i, 4-i);
+    try
+        % websave overwrites the target file in place on success, so the
+        % previous local file is only replaced once the download succeeded
+        websaveChecked([target_atx file_atx{i}] , ['https://files.igs.org/pub/station/general/' file_atx{i}], woptions);
+        fprintf('File %d finished, %d remaining.        \n', i, 4-i);
+    catch
+        fprintf(2, 'Download failed: %s! Keeping previous local file.\n', file_atx{i});
+    end
 end
 
 fprintf('Download finished. \n')

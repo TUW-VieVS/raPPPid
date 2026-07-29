@@ -18,6 +18,8 @@ function [param_pred, Transition] = DynamicPredictionPosVel(...
 % Revision:
 %   ...
 %
+% Created by Hoor Bano
+% 
 % This function belongs to raPPPid, Copyright (c) 2025, M.F. Wareyka-Glaner
 % *************************************************************************
 
@@ -51,8 +53,8 @@ CoriolisMat = -2 * Omega_mat;
 
 % Centrifugal acceleration
 CentrifugalMat =    [Const.WE^2,    0,              0;
-                    0,              Const.WE^2,    0;
-                    0,              0,              -Const.WE^2];
+                    0,              Const.WE^2,     0;
+                    0,              0,              0];
 
 F_combined_rad = F_rad_grav + F_rad_drag + CentrifugalMat;  % total radial acceleration
 F_combined_vel = F_vel_drag + CoriolisMat;                  % velocity-dependent acceleration

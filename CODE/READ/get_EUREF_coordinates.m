@@ -29,7 +29,9 @@ if nargin == 2  	% no input for XYZ
     XYZ = zeros(n,3);
     xyz_found = false(n,1);
 else
-    xyz_found = all(XYZ ~= 0,2);  % check which stations have coordinates already
+    % check which stations have coordinates already, a bias from Coords.txt
+    % ( < 1e4 ) is ignored
+    xyz_found = all(abs(XYZ) > 1e4, 2);
 end
 
 % loop over all files
@@ -78,8 +80,10 @@ for i = 1:n
     delete(curr_archive);
     if isfile([file_unzipped '.mat'])      % check if *.mat-file already exists
         load([file_unzipped '.mat'], 'STATIONS_all', 'XYZ_all');
-    else
+    elseif isfile(file_unzipped)
         [STATIONS_all, XYZ_all] = readSINEXcoordinates(file_unzipped);
+    else
+        continue        % decompressing the SINEX file failed
     end
 
     % check for which files the current date is valid
@@ -89,7 +93,7 @@ for i = 1:n
             station_idx = strcmpi(STATIONS_all, stations(ii));
             coords = XYZ_all(station_idx,:);
             if ~isempty(coords)
-                XYZ(ii,:) = coords;
+                XYZ(ii,:) = coords - XYZ(ii,:);     % subtract possible bias from Coords.txt
             end
             xyz_found(ii) = true;
         end

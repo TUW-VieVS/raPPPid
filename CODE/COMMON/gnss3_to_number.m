@@ -15,8 +15,8 @@ switch gnss3
     case {'BDS', 'bds'}
         number = 300;
     case {'QZSS', 'qzss'}
-        number = 400;    
-    otherwise 
+        number = 400;
+    otherwise
         number = NaN;
         errordlg('ERROR: char2gnss3.m', 'Error');
 end

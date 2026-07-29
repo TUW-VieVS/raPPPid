@@ -20,7 +20,7 @@ for i = 1:n
     curr_file = rinexfiles{i};      % current RINEX file
     
     % extract information from file name
-    station  = curr_file(1:4);      % short station name
+    station  = curr_file(1:9);      % long station name (4-char site, '00', 3-char country)
     interval = str2double(curr_file(29:30));    % observation interval
     year     = str2double(curr_file(13:16));    % year
     doy      = str2double(curr_file(17:19));    % day of year
@@ -29,7 +29,7 @@ for i = 1:n
     if interval == 30
         DownloadDaily30sIGS(station, doy, year)
     elseif interval == 1
-        DownloadHourly01sIGS.m(station, [], doy, year)
+        DownloadHourly01sIGS(station, [], doy, year)
     else
         % ||| not implemented
     end

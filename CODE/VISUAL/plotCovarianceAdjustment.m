@@ -102,6 +102,7 @@ if ~decoupled_clock_model
     ticks{20} = 'dt_{QZSS}';
     ticks{21} = 'dcb_{12}^{QZSS}';
     ticks{22} = 'dcb_{23}^{QZSS}';
+    ticks{23} = 'dt_{rec} drift';
 else
     % decoupled clock model
     ticks = cell(1, NO_PARAM + s_f + bool_iono*noSats);
@@ -135,8 +136,9 @@ else
     ticks{28} = 'L3_{bias}^{GPS}';
     ticks{29} = 'L3_{bias}^{GLO}';
     ticks{30} = 'L3_{bias}^{GAL}';
-    ticks{28} = 'L3_{bias}^{BDS}';
-    ticks{29} = 'L3_{bias}^{QZSS}';
+    ticks{31} = 'L3_{bias}^{BDS}';
+    ticks{32} = 'L3_{bias}^{QZSS}';
+    ticks{33} = 'dt_{rec} drift';
 end
 
 % loop to create ticks for ambiguities

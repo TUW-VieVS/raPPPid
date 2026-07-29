@@ -69,7 +69,7 @@ for j = 1:no_frqs     % loop to plot all processed frequencies
     
     % --- CODE
     Code_res_j = Code_res(:,:,j);       % Code Residuals of current frequency
-    subplot(no_cols,no_frqs,i_plot);        i_plot=i_plot+1;
+    subplot(no_frqs,no_cols,i_plot);        i_plot=i_plot+1;
     hold on 
     plot(Elev(:,prns), Code_res_j(:,prns), '.', 'MarkerSize', ms);
     % style code residuals plot over elevation
@@ -91,7 +91,7 @@ for j = 1:no_frqs     % loop to plot all processed frequencies
     % --- PHASE
     if ~isempty(Phase_res)
         Phase_res_j = Phase_res(:,:,j);    	% Phase Residuals of current frequency
-        subplot(no_cols,no_frqs,i_plot);    i_plot=i_plot+1;
+        subplot(no_frqs,no_cols,i_plot);    i_plot=i_plot+1;
         hold on
         plot(Elev(:,prns), Phase_res_j(:,prns), '.', 'MarkerSize', ms);
         % style phase residuals plot over elevation
@@ -113,7 +113,7 @@ for j = 1:no_frqs     % loop to plot all processed frequencies
     % --- Doppler
     if ~isempty(Doppler_res)
         Doppler_res_j = Doppler_res(:,:,j);    	% Doppler Residuals of current frequency
-        subplot(no_cols,no_frqs,i_plot);    i_plot=i_plot+1;
+        subplot(no_frqs,no_cols,i_plot);    i_plot=i_plot+1;
         hold on
         plot(Elev(:,prns), Doppler_res_j(:,prns), '.', 'MarkerSize', ms);
         % style Doppler residuals plot over elevation
@@ -151,7 +151,7 @@ for j = 1:no_frqs     % loop to plot all processed frequencies
     
     
     % --- CODE
-    subplot(no_cols,no_frqs,i_plot);        i_plot=i_plot+1;
+    subplot(no_frqs,no_cols,i_plot);        i_plot=i_plot+1;
     hold on 
     plot(hours, Code_res_j(:,prns), '.', 'MarkerSize', ms);
     % style code residuals plot over time
@@ -172,7 +172,7 @@ for j = 1:no_frqs     % loop to plot all processed frequencies
     % --- PHASE
     if ~isempty(Phase_res)
         Phase_res_j = Phase_res(:,:,j);    	% Phase Residuals of current frequency
-        subplot(no_cols,no_frqs,i_plot);        i_plot=i_plot+1;
+        subplot(no_frqs,no_cols,i_plot);        i_plot=i_plot+1;
         hold on
         plot(hours, Phase_res_j(:,prns), '.', 'MarkerSize', ms);
         % style phase residuals plot over time
@@ -194,7 +194,7 @@ for j = 1:no_frqs     % loop to plot all processed frequencies
     % --- Doppler
     if ~isempty(Doppler_res)
         Doppler_res_j = Doppler_res(:,:,j);    	% Doppler Residuals of current frequency
-        subplot(no_cols,no_frqs,i_plot);        i_plot=i_plot+1;
+        subplot(no_frqs,no_cols,i_plot);        i_plot=i_plot+1;
         hold on
         plot(hours, Doppler_res_j(:,prns), '.', 'MarkerSize', ms);
         % style Doppler residuals plot over time

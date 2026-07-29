@@ -38,7 +38,7 @@ if isempty(T); return; end
 sow = T(:,1);     % time in seconds of week
 
 % get satellite coordinates
-X = Eph.X'; Y = Eph.X'; Z = Eph.X';
+X = Eph.X'; Y = Eph.Y'; Z = Eph.Z';
 
 % check for missing data
 isData = (X~=0) & ~isnan(X) & (Y~=0) & ~isnan(Y) & (Z~=0) & ~isnan(Z);

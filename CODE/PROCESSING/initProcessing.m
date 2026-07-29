@@ -13,7 +13,7 @@ function [Epoch, satellites, storeData, obs, model_save, Adjust] = ...
 %   satellites      struct, satellite specific data (e.g. elevation)
 %   storeData       struct, collects data from all epochs (not used during epoch-wise processing)
 %   obs             struct, observation corresponding data
-%   model_save      struct, collects the modelled corrections for all epochs
+%   model_save      struct, collects the modeled corrections for all epochs
 %   Adjust      	struct, contains all adjustment relevant data for currently processed epoch
 %
 % Revision:
@@ -54,8 +54,8 @@ end
 Adjust.float = false;
 Adjust.fixed = false;
 Adjust.est_ZWD = false;             % true if ZWD is estimated in current epoch
-Adjust.float_reset_epochs = 1;      % 1st epoch of processing is like a reset of the solution
-Adjust.fixed_reset_epochs = 1;
+Adjust.float_reset_epochs = [];     % initialized in PPP_main after creating q_range
+Adjust.fixed_reset_epochs = [];
 Adjust.reset_time = NaN;            % initialized in resetSolution.m in first epoch, time of last reset in gps-time [sow]
 Adjust.param = [];          Adjust.param_pred = [];
 Adjust.param_sigma = [];    Adjust.param_sigma_pred = [];
@@ -170,6 +170,10 @@ if settings.OTHER.mp_detection
 	Epoch.mp_C_diff = NaN(3,nnn);	% result of checkMultipath.m (code difference) for each frequency
     Epoch.mp_last = NaN(3,nnn);		% last Multipath event on each frequency
 end
+% multipath detection with pseudorate check with Doppler
+if settings.OTHER.mp_doppler
+    Epoch.mp_DopplerPR = [];
+end
 
 % variables for ambiguity fixing
 Epoch.WL_12 = NaN(nnn,1);                  % WL Ambiguities between 1st and 2nd frequency
@@ -215,7 +219,6 @@ Epoch.L2_bias = [];
 Epoch.L3_bias = [];
 % other
 Epoch.sats = [];
-Epoch.no_sats = [];
 Epoch.delta_windup = [];
 Epoch.rinex_header = '';
 Epoch.usable = [];
@@ -226,6 +229,10 @@ Epoch.BRDCcolumn = NaN(nnn,1);
 % corrections from real-time correction stream
 Epoch.corr2brdc_orb = zeros(8,nnn);		% timestamp, radial, along, outof, v_radial, v_along, v_outof, IOD
 Epoch.corr2brdc_clk = zeros(5,nnn);		% timestamp, a0, a1, a2, IOD
+% motion state and ZUPT probability
+Epoch.motionState = []; Epoch.ZUPT_prob = [];
+% subfield for IMU variables
+Epoch.IMU = [];
 
 
 %% storeData
@@ -239,6 +246,7 @@ storeData.float = false(tot_eps,1);         % set to true when float position is
 storeData.fixed = false(tot_eps,1);         % true if fixed solution in this epoch
 % Adjusted Parameters and Covariance
 storeData.param     = zeros(tot_eps, Adjust.NO_PARAM);
+storeData.param_pred= zeros(tot_eps, Adjust.NO_PARAM);
 storeData.param_sigma = cell(tot_eps,1);    % cell as covariance matrix of parameters changes size over time
 storeData.param_var = zeros(tot_eps,Adjust.NO_PARAM);
 storeData.exclude = zeros(tot_eps,nnn);   	% boolean for sat under cutoff angle, 1 = under cutoff
@@ -247,7 +255,7 @@ storeData.cs_found = zeros(tot_eps,nnn);    % boolean, true = phase observation 
 storeData.PDOP = zeros(tot_eps,1);
 storeData.HDOP = zeros(tot_eps,1);
 storeData.VDOP = zeros(tot_eps,1);
-% modelled zenith hydrostatic and wet delay
+% modeled zenith hydrostatic and wet delay
 storeData.zhd = zeros(tot_eps,1);
 storeData.zwd = zeros(tot_eps,1);
 % satellite status
@@ -278,7 +286,7 @@ if proc_frqs > 2
     if bool_doppler; storeData.residuals_doppler_3 = zeros(tot_eps,nnn); end
 end
 
-% intialize reference satellites (used for PPP-AR and DCM)
+% initialize reference satellites (used for PPP-AR and DCM)
 if settings.AMBFIX.bool_AMBFIX || decoupled_clock_model
     storeData.refSatGPS = NaN(tot_eps,1);       % GPS
     storeData.refSatGLO = NaN(tot_eps,1);       % GLONASS
@@ -367,7 +375,7 @@ if settings.OTHER.CS.HMW
     end
 end
 
-% multipath detection
+% multipath detection with code time-difference
 if settings.OTHER.mp_detection
     storeData.mp_C1_diff_n = zeros(tot_eps,nnn); % code (C1) difference of last n epochs
     if num_frqs >= 2
@@ -377,6 +385,19 @@ if settings.OTHER.mp_detection
         storeData.mp_C3_diff_n = zeros(tot_eps,nnn); % C3 difference of last n epochs
     end
 end
+
+% multipath detection with pseudorate check with Doppler
+if settings.OTHER.mp_doppler
+    storeData.mp_DopplerPR_1 = zeros(tot_eps,nnn);      % difference between pseudorange rate and Doppler on frequency 1
+    if num_frqs >= 2
+        storeData.mp_DopplerPR_2 = zeros(tot_eps,nnn);  % difference between pseudorange rate and Doppler on frequency 2
+    end
+    if num_frqs >= 3
+        storeData.mp_DopplerPR_3 = zeros(tot_eps,nnn);  % difference between pseudorange rate and Doppler on frequency 3
+    end
+end
+
+
 
 
 % when ionosphere is estimated
@@ -407,6 +428,20 @@ if settings.INPUT.num_freqs >= 3    % 3-Frequency MP-LC
     storeData.MP_c = zeros(tot_eps,nnn);
     storeData.MP_p = zeros(tot_eps,nnn);
 end
+
+% IMU related variables
+if settings.KINE.bool_IMU
+    storeData.triad         = NaN(3,tot_eps);
+    storeData.fn            = NaN(3,tot_eps);
+    storeData.quat          = NaN(4,tot_eps);
+    storeData.motionState   = NaN(1,tot_eps);
+    storeData.up_axis       = NaN(1,tot_eps);
+    storeData.z_yaw         = NaN(1,tot_eps);
+    storeData.forward_body  = NaN(3,tot_eps);
+    storeData.gnss_bearing  = NaN(1,tot_eps);
+    storeData.yaw_forward   = NaN(1,tot_eps);
+end
+
 
 
 %% satellites
@@ -441,7 +476,6 @@ if settings.EXP.model_save
     model_save.Ttr    = zeros(tot_eps,nnn); 		% Signal transmission time
     model_save.k	  = zeros(tot_eps,nnn);  		% Column of ephemerides
     model_save.trop   = zeros(tot_eps,nnn);   	% Troposphere delay for elevation
-    model_save.ZTD    = zeros(tot_eps,nnn);	 	% Troposphere total zenith delay (if estimated only ZHD)
     model_save.iono   = zeros(tot_eps,nnn,proc_frqs);          % Ionosphere delay
     model_save.mfw    = zeros(tot_eps,nnn);     	% Wet tropo mapping function
     model_save.mfh    = zeros(tot_eps,nnn);     	% Hydrostatic tropo mapping function

@@ -27,7 +27,9 @@ function [ctp, flgm_ctp] = ctpole(mjd, ant, xp, yp)
 
 
 % ant_ell - ellipsoial coordinates of antenna (lam,phi,hgt)
-[phi,lam] = xyz2ell(ant');
+ant_ell = cart2geo(ant);
+phi = ant_ell.lat;
+lam = ant_ell.lon;
 clt = pi/2 - phi; % colatitude (measured from North Pole <0 : 180 deg>)
 
 % ----- start: change to orginal function

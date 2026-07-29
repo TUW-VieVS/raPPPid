@@ -24,7 +24,7 @@ fid = fopen(file_clk);          % open precise clock file
 % Initialization
 if nargin == 1;     bool_check = true;     end
 GPS = [];   GLO = [];   GAL = [];   BDS = [];   QZSS = [];
-
+ymdhms_old = [0 0 0 0 0 0];
 
 %% Loop over header
 while 1
@@ -63,7 +63,6 @@ end
 %% Data records
 % preparation
 epoch = 0;
-isfirst = true;
 
 tline = fgetl(fid);
 while ischar(tline)                 % loop over rows/lines of file
@@ -82,38 +81,35 @@ while ischar(tline)                 % loop over rows/lines of file
     clkbiasvar = data{11};              % clock bias sigma [s], might be empty
     if isempty(clkbiasvar); clkbiasvar = 0; end     % to avoid errors lateron
     
+    ymdhms = [year month day hour min sec];
+
     % record of GNSS satellite:
     if contains('GRECJ', gnss_char)
-        % find out time (always GPS time)
-        [~, sow] = cal2gpstime([year month day hour min sec]);
         % look if new epoch
-        if isfirst
+        if ~isequal(ymdhms, ymdhms_old)
             epoch = epoch + 1;
-            isfirst = false;
-            t = round(sow);                         % Seconds of week
-        elseif (sow-t) >= 0.5
-            epoch = epoch + 1;
-            t = round(sow);                         % Seconds of week
+            [~, sow] = cal2gpstime(ymdhms);     % find out time (always GPS time)
+            ymdhms_old = ymdhms;
         end
         switch gnss_char
             case 'G'        % for GPS satellites
-                GPS.t(epoch,1) = t;
+                GPS.t(epoch,1) = sow;
                 GPS.dT(epoch,prn) = clkbias;                % Clock bias [s]
                 GPS.sigma_dT(epoch, prn) = clkbiasvar;   	% Clock bias sigma [s]
             case 'R'        % for GLONASS satellites
-                GLO.t(epoch,1) = t;
+                GLO.t(epoch,1) = sow;
                 GLO.dT(epoch,prn) = clkbias;
                 GLO.sigma_dT(epoch, prn) = clkbiasvar;
             case 'E'        % for GALILEO satellites
-                GAL.t(epoch,1) = t;
+                GAL.t(epoch,1) = sow;
                 GAL.dT(epoch,prn) = clkbias;
                 GAL.sigma_dT(epoch, prn) = clkbiasvar;
             case 'C'        % for BEIDOU satellites
-                BDS.t(epoch,1) = t;
+                BDS.t(epoch,1) = sow;
                 BDS.dT(epoch,prn) = clkbias;
                 BDS.sigma_dT(epoch, prn) = clkbiasvar;           
             case 'J'        % for QZSS satellites
-                QZSS.t(epoch,1) = t;
+                QZSS.t(epoch,1) = sow;
                 QZSS.dT(epoch,prn) = clkbias;
                 QZSS.sigma_dT(epoch, prn) = clkbiasvar;          
         end

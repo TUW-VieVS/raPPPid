@@ -1,22 +1,14 @@
-function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = ...
+function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, corr_QZSS, vtec] = ...
     read_corr2brdc_stream(lines)
-% Reads in a recorded realtime correction stream (e.g., from CNES) and 
+% Reads in a recorded realtime correction stream (e.g., from CNES) and
 % saves the data in an internal format. Stream was recorded with BKG Ntrip.
-% RESTRICTIONS: 
-% - vtec spherical harmonics have only one layer
-% - one correction type (ephemeris/clock/code-bias/phase-bias-correction) 
-%   is for all 4 GNSS to the same time. 
-% BUT: 
-%   the different correction types (orbits, clocks, code/phase biases, vtec) 
-%   can occur to different points of time (but for all GNSS at the same
-%   time)
-% 
-% INPUT: 
+%
+% INPUT:
 %   lines       cell, data of (recorded) real-time correction stream
-% 
-% OUTPUT: 
-%   corr_GPS, corr_GLO, corr_GAL, corr_BDS 
-%        	structs, contain the collowing fields for the specific GNSS:
+%
+% OUTPUT:
+%   corr_GPS, corr_GLO, corr_GAL, corr_BDS, corr_QZSS
+%        	structs, contain the following fields for the specific GNSS:
 %               .t_orb      timestamps of orbit corrections [sow]
 %               .t_clk      timestamps of clock corrections [sow]
 %               .t_code     timestamps of code biases [sow]
@@ -41,18 +33,31 @@ function [corr_GPS, corr_GLO, corr_GAL, corr_BDS, vtec] = ...
 %
 % Revision:
 %   2025/02/06, MFWG: save degree, order, and height of VTEC
+%   2026/05/27, MFWG: improve getime
+%   2026/07/21, MFWG: code/phase bias time-vectors for each GNSS
+%   2026/07/21, MFWG: orbit/clock time-vectors for each GNSS
+%   2026/07/24, MFWG: adding QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
+% ||| vtec spherical harmonics have only one layer
 % ||| constant degree and order of VTEC message assumed
 
 
 
 %% Initialization of Variables
-i_orb=0; i_clk=0; i_cb=0; i_pb=0; i_tec=0;	% indices for saving the data
+i_vtec=0;	% index for saving VTEC data
 vtec = [];
+
+% orbit/clock/code-bias/phase-bias indices for each GNSS (see Revision above)
+i_orb_GPS=0; i_orb_GLO=0; i_orb_GAL=0; i_orb_BDS=0; i_orb_QZSS=0;
+i_clk_GPS=0; i_clk_GLO=0; i_clk_GAL=0; i_clk_BDS=0; i_clk_QZSS=0;
+i_cb_GPS=0;  i_cb_GLO=0;  i_cb_GAL=0;  i_cb_BDS=0;  i_cb_QZSS=0;
+i_pb_GPS=0;              i_pb_GAL=0;  i_pb_BDS=0;  i_pb_QZSS=0;     % no GLONASS phase biases
+
+% GPS time in seconds of week of current SSR correction
 sow = 0;
 
 % logical vectors for data headers
@@ -66,22 +71,34 @@ n_orb   = sum(bool_orbit);
 n_clk   = sum(bool_clk);
 n_code  = sum(bool_c_bias);
 n_phase = sum(bool_p_bias);
-% vectors with time of ...
-t_orb = zeros(n_orb+1, 1);  t_clk = zeros(n_clk+1, 1);      % first epoch will be removed later
-t_cb  = zeros(n_code+1, 1); t_pb  = zeros(n_phase+1, 1);
-t_orb(1) = -1;      % ... ephemeris-correction  [seconds of week]
-t_clk(1) = -1;      % ... clock-correction      [seconds of week]
-t_cb(1)  = -1;      % ... code-bias-correction  [seconds of week]
-t_pb(1)  = -1;      % ... phase-bias-correction [seconds of week]
+% vectors with time of ... (first entry will be removed later)
+% orbit/clock time-vectors for each GNSS
+t_orb_GPS = zeros(n_orb+1, 1);  t_orb_GLO = zeros(n_orb+1, 1);
+t_orb_GAL = zeros(n_orb+1, 1);  t_orb_BDS = zeros(n_orb+1, 1);
+t_orb_QZSS = zeros(n_orb+1, 1);
+t_clk_GPS = zeros(n_clk+1, 1);  t_clk_GLO = zeros(n_clk+1, 1);
+t_clk_GAL = zeros(n_clk+1, 1);  t_clk_BDS = zeros(n_clk+1, 1);
+t_clk_QZSS = zeros(n_clk+1, 1);
+% code/phase bias time-vectors for each GNSS
+t_cb_GPS = zeros(n_code+1, 1);  t_cb_GLO = zeros(n_code+1, 1);
+t_cb_GAL = zeros(n_code+1, 1);  t_cb_BDS = zeros(n_code+1, 1);
+t_cb_QZSS = zeros(n_code+1, 1);
+t_pb_GPS = zeros(n_phase+1, 1); t_pb_GAL = zeros(n_phase+1, 1); t_pb_BDS = zeros(n_phase+1, 1);
+t_pb_QZSS = zeros(n_phase+1, 1);
+t_orb_GPS(1) = -1;  t_orb_GLO(1) = -1;  t_orb_GAL(1) = -1;  t_orb_BDS(1) = -1;  t_orb_QZSS(1) = -1;   % ... orbit-correction  [seconds of week]
+t_clk_GPS(1) = -1;  t_clk_GLO(1) = -1;  t_clk_GAL(1) = -1;  t_clk_BDS(1) = -1;  t_clk_QZSS(1) = -1;   % ... clock-correction      [seconds of week]
+t_cb_GPS(1) = -1;  t_cb_GLO(1) = -1;  t_cb_GAL(1) = -1;  t_cb_BDS(1) = -1;  t_cb_QZSS(1) = -1;   % ... code-bias-correction  [seconds of week]
+t_pb_GPS(1) = -1;  t_pb_GAL(1) = -1;  t_pb_BDS(1) = -1;  t_pb_QZSS(1) = -1;    % ... phase-bias-correction [seconds of week]
 t_tec(1) = -1;      % ... vertical TEC          [seconds of week]
 % strings with the order of the bias corrections
-C_GPS = ''; C_GLO = ''; C_GAL = ''; C_BDS = '';
-P_GPS = ''; P_GLO = ''; P_GAL = ''; P_BDS = '';
+C_GPS = ''; C_GLO = ''; C_GAL = ''; C_BDS = ''; C_QZSS = '';
+P_GPS = ''; P_GLO = ''; P_GAL = ''; P_BDS = ''; P_QZSS = '';
 % initialize matrices
 [radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS, c_bias_GPS, p_bias_GPS] = init_corr(DEF.SATS_GPS, n_orb, n_clk, n_code, n_phase);
 [radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO, c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO, c_bias_GLO, p_bias_GLO] = init_corr(DEF.SATS_GLO, n_orb, n_clk, n_code, n_phase);
 [radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL, c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL, c_bias_GAL, p_bias_GAL] = init_corr(DEF.SATS_GAL, n_orb, n_clk, n_code, n_phase);
 [radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS, c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS, c_bias_BDS, p_bias_BDS] = init_corr(DEF.SATS_BDS, n_orb, n_clk, n_code, n_phase);
+[radial_QZSS, along_QZSS, outof_QZSS, v_radial_QZSS, v_along_QZSS, v_outof_QZSS, IOD_orb_QZSS, c0_QZSS, c1_QZSS, c2_QZSS, IOD_clk_QZSS, c_bias_QZSS, p_bias_QZSS] = init_corr(DEF.SATS_QZSS, n_orb, n_clk, n_code, n_phase);
 % VTEC values
 vtec_header = contains(lines, 'VTEC');
 bool_vtec = any(vtec_header);           % check if stream contains VTEC information
@@ -115,10 +132,6 @@ while j < lgth
 % --- Orbit Correction:       
         if mess_type == 1
             j = j + 1;     line = lines(j);     line = char(line);
-            if t_orb(i_orb+1) ~= sow        % check if new time epoch
-                i_orb = i_orb + 1;
-                t_orb(i_orb+1) = sow;
-            end
             loop_end = j + no_lines;
             loop_end = min([loop_end, lgth]);
             while j < loop_end      % loop over data lines
@@ -129,60 +142,98 @@ while j < lgth
                 IOD_orb = sscanf(line( 6:15), '%f');
                 switch sys      % save data
                     case 'G'
+                        if t_orb_GPS(i_orb_GPS+1) ~= sow    % check if new time epoch for GPS
+                            i_orb_GPS = i_orb_GPS + 1;
+                            t_orb_GPS(i_orb_GPS+1) = sow;
+                        end
                         [radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS] = ...
-                            save_orb_corr(i_orb, prn, val(1:3), val(4:6), IOD_orb, radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS);
+                            save_orb_corr(i_orb_GPS, prn, val(1:3), val(4:6), IOD_orb, radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS);
                     case 'R'
+                        if t_orb_GLO(i_orb_GLO+1) ~= sow    % check if new time epoch for GLONASS
+                            i_orb_GLO = i_orb_GLO + 1;
+                            t_orb_GLO(i_orb_GLO+1) = sow;
+                        end
                         [radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO] = ...
-                            save_orb_corr(i_orb, prn, val(1:3), val(4:6), IOD_orb, radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO);
+                            save_orb_corr(i_orb_GLO, prn, val(1:3), val(4:6), IOD_orb, radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO);
                     case 'E'
+                        if t_orb_GAL(i_orb_GAL+1) ~= sow    % check if new time epoch for Galileo
+                            i_orb_GAL = i_orb_GAL + 1;
+                            t_orb_GAL(i_orb_GAL+1) = sow;
+                        end
                         [radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL] = ...
-                            save_orb_corr(i_orb, prn, val(1:3), val(4:6), IOD_orb, radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL);
+                            save_orb_corr(i_orb_GAL, prn, val(1:3), val(4:6), IOD_orb, radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL);
                     case 'C'
+                        if t_orb_BDS(i_orb_BDS+1) ~= sow    % check if new time epoch for BeiDou
+                            i_orb_BDS = i_orb_BDS + 1;
+                            t_orb_BDS(i_orb_BDS+1) = sow;
+                        end
                         [radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS] = ...
-                            save_orb_corr(i_orb, prn, val(1:3), val(4:6), IOD_orb, radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS);
-                end               
+                            save_orb_corr(i_orb_BDS, prn, val(1:3), val(4:6), IOD_orb, radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS);
+                    case 'J'
+                        if t_orb_QZSS(i_orb_QZSS+1) ~= sow  % check if new time epoch for QZSS
+                            i_orb_QZSS = i_orb_QZSS + 1;
+                            t_orb_QZSS(i_orb_QZSS+1) = sow;
+                        end
+                        [radial_QZSS, along_QZSS, outof_QZSS, v_radial_QZSS, v_along_QZSS, v_outof_QZSS, IOD_orb_QZSS] = ...
+                            save_orb_corr(i_orb_QZSS, prn, val(1:3), val(4:6), IOD_orb, radial_QZSS, along_QZSS, outof_QZSS, v_radial_QZSS, v_along_QZSS, v_outof_QZSS, IOD_orb_QZSS);
+                end
                 j = j + 1;     line = lines(j);     line = char(line);
             end
             
 % --- Clock Correction:              
         elseif mess_type == 2
             j = j + 1;     line = lines(j);     line = char(line);
-            if t_clk(i_clk+1) ~= sow        % check if new time epoch
-                i_clk = i_clk + 1;
-                t_clk(i_clk+1) = sow;
-            end
             loop_end = j + no_lines;
-            loop_end = min([loop_end, lgth]);    
-            while j < loop_end      % loop over data lines       
+            loop_end = min([loop_end, lgth]);
+            while j < loop_end      % loop over data lines
                 if contains(line, '>'); break; end
                 sys = line(1);
-                prn = prns(j);                
+                prn = prns(j);
                 clks = sscanf(line(19:48), '%f');
                 IOD_clk = sscanf(line(6:15), '%f');
                 switch sys
                     case 'G'
+                        if t_clk_GPS(i_clk_GPS+1) ~= sow    % check if new time epoch for GPS
+                            i_clk_GPS = i_clk_GPS + 1;
+                            t_clk_GPS(i_clk_GPS+1) = sow;
+                        end
                         [c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS] = ...
-                            save_clk_corr(i_clk, prn, clks, IOD_clk, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS);
+                            save_clk_corr(i_clk_GPS, prn, clks, IOD_clk, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS);
                     case 'R'
+                        if t_clk_GLO(i_clk_GLO+1) ~= sow    % check if new time epoch for GLONASS
+                            i_clk_GLO = i_clk_GLO + 1;
+                            t_clk_GLO(i_clk_GLO+1) = sow;
+                        end
                         [c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO] = ...
-                            save_clk_corr(i_clk, prn, clks, IOD_clk, c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO);
+                            save_clk_corr(i_clk_GLO, prn, clks, IOD_clk, c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO);
                     case 'E'
+                        if t_clk_GAL(i_clk_GAL+1) ~= sow    % check if new time epoch for Galileo
+                            i_clk_GAL = i_clk_GAL + 1;
+                            t_clk_GAL(i_clk_GAL+1) = sow;
+                        end
                         [c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL] = ...
-                            save_clk_corr(i_clk, prn, clks, IOD_clk, c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL);
+                            save_clk_corr(i_clk_GAL, prn, clks, IOD_clk, c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL);
                     case 'C'
+                        if t_clk_BDS(i_clk_BDS+1) ~= sow    % check if new time epoch for BeiDou
+                            i_clk_BDS = i_clk_BDS + 1;
+                            t_clk_BDS(i_clk_BDS+1) = sow;
+                        end
                         [c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS] = ...
-                            save_clk_corr(i_clk, prn, clks, IOD_clk, c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS);
+                            save_clk_corr(i_clk_BDS, prn, clks, IOD_clk, c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS);
+                    case 'J'
+                        if t_clk_QZSS(i_clk_QZSS+1) ~= sow  % check if new time epoch for QZSS
+                            i_clk_QZSS = i_clk_QZSS + 1;
+                            t_clk_QZSS(i_clk_QZSS+1) = sow;
+                        end
+                        [c0_QZSS, c1_QZSS, c2_QZSS, IOD_clk_QZSS] = ...
+                            save_clk_corr(i_clk_QZSS, prn, clks, IOD_clk, c0_QZSS, c1_QZSS, c2_QZSS, IOD_clk_QZSS);
                 end
                 j = j + 1;     line = lines(j);     line = char(line);
             end
             
-% --- Code Bias Correction:              
+% --- Code Bias:
         elseif mess_type == 3
             j = j + 1;     line = lines(j);     line = char(line);
-            if t_cb(i_cb+1) ~= sow        % check if new time epoch
-                i_cb = i_cb + 1;
-                t_cb(i_cb+1) = sow;
-            end
             loop_end = j + no_lines;
             loop_end = min([loop_end, lgth]);
             while j < loop_end      % loop over data lines
@@ -197,28 +248,47 @@ while j < lgth
                 values = sscanf(temp, '%f');
                 switch sys
                     case 'G'
+                        if t_cb_GPS(i_cb_GPS+1) ~= sow      % check if new time epoch for GPS
+                            i_cb_GPS = i_cb_GPS + 1;
+                            t_cb_GPS(i_cb_GPS+1) = sow;
+                        end
                         [pos_3, C_GPS] = get_order(types, C_GPS);
-                        c_bias_GPS(i_cb, prn, pos_3) = values;
+                        c_bias_GPS(i_cb_GPS, prn, pos_3) = values;
                     case 'R'
+                        if t_cb_GLO(i_cb_GLO+1) ~= sow      % check if new time epoch for GLONASS
+                            i_cb_GLO = i_cb_GLO + 1;
+                            t_cb_GLO(i_cb_GLO+1) = sow;
+                        end
                         [pos_3, C_GLO] = get_order(types, C_GLO);
-                        c_bias_GLO(i_cb, prn, pos_3) = values;
+                        c_bias_GLO(i_cb_GLO, prn, pos_3) = values;
                     case 'E'
+                        if t_cb_GAL(i_cb_GAL+1) ~= sow      % check if new time epoch for Galileo
+                            i_cb_GAL = i_cb_GAL + 1;
+                            t_cb_GAL(i_cb_GAL+1) = sow;
+                        end
                         [pos_3, C_GAL] = get_order(types, C_GAL);
-                        c_bias_GAL(i_cb, prn, pos_3) = values;
+                        c_bias_GAL(i_cb_GAL, prn, pos_3) = values;
                     case 'C'
+                        if t_cb_BDS(i_cb_BDS+1) ~= sow      % check if new time epoch for BeiDou
+                            i_cb_BDS = i_cb_BDS + 1;
+                            t_cb_BDS(i_cb_BDS+1) = sow;
+                        end
                         [pos_3, C_BDS] = get_order(types, C_BDS);
-                        c_bias_BDS(i_cb, prn, pos_3) = values;
+                        c_bias_BDS(i_cb_BDS, prn, pos_3) = values;
+                    case 'J'
+                        if t_cb_QZSS(i_cb_QZSS+1) ~= sow    % check if new time epoch for QZSS
+                            i_cb_QZSS = i_cb_QZSS + 1;
+                            t_cb_QZSS(i_cb_QZSS+1) = sow;
+                        end
+                        [pos_3, C_QZSS] = get_order(types, C_QZSS);
+                        c_bias_QZSS(i_cb_QZSS, prn, pos_3) = values;
                 end
                 j = j + 1;     line = lines(j);     line = char(line);
             end
             
-% --- Phase Bias Correction:  
+% --- Phase Bias:
         elseif mess_type == 4
             j = j + 2;     line = lines(j);     line = char(line);
-            if t_pb(i_pb+1) ~= sow        % check if new time epoch
-                i_pb = i_pb + 1;
-                t_pb(i_pb+1) = sow;
-            end
             loop_end = j + no_lines;
             loop_end = min([loop_end, lgth]);
             while j < loop_end      % loop over data lines
@@ -228,20 +298,39 @@ while j < lgth
                 types = ''; temp = []; k=1;	% initialize
                 for i = 0:28:length(line)-50    % loop over current data line to get phase biases
                     types(k,:) = line(38+i:39+i); k=k+1;
-                    temp = [temp, line(43+i:50+i)]; 
+                    temp = [temp, line(43+i:50+i)];
                 end
                 if ~isempty(temp)
                     values = sscanf(temp, '%f');
-                    switch sys          % no glonass phase biases
+                    switch sys          % no GLONASS phase biases
                         case 'G'
+                            if t_pb_GPS(i_pb_GPS+1) ~= sow      % check if new time epoch for GPS
+                                i_pb_GPS = i_pb_GPS + 1;
+                                t_pb_GPS(i_pb_GPS+1) = sow;
+                            end
                             [pos_3, P_GPS] = get_order(types, P_GPS);
-                            p_bias_GPS(i_pb, prn, pos_3) = values;
+                            p_bias_GPS(i_pb_GPS, prn, pos_3) = values;
                         case 'E'
+                            if t_pb_GAL(i_pb_GAL+1) ~= sow      % check if new time epoch for Galileo
+                                i_pb_GAL = i_pb_GAL + 1;
+                                t_pb_GAL(i_pb_GAL+1) = sow;
+                            end
                             [pos_3, P_GAL] = get_order(types, P_GAL);
-                            p_bias_GAL(i_pb, prn, pos_3) = values;
+                            p_bias_GAL(i_pb_GAL, prn, pos_3) = values;
                         case 'C'
+                            if t_pb_BDS(i_pb_BDS+1) ~= sow      % check if new time epoch for BeiDou
+                                i_pb_BDS = i_pb_BDS + 1;
+                                t_pb_BDS(i_pb_BDS+1) = sow;
+                            end
                             [pos_3, P_BDS] = get_order(types, P_BDS);
-                            p_bias_BDS(i_pb, prn, pos_3) = values;
+                            p_bias_BDS(i_pb_BDS, prn, pos_3) = values;
+                        case 'J'
+                            if t_pb_QZSS(i_pb_QZSS+1) ~= sow    % check if new time epoch for QZSS
+                                i_pb_QZSS = i_pb_QZSS + 1;
+                                t_pb_QZSS(i_pb_QZSS+1) = sow;
+                            end
+                            [pos_3, P_QZSS] = get_order(types, P_QZSS);
+                            p_bias_QZSS(i_pb_QZSS, prn, pos_3) = values;
                     end
                 end
                 j = j + 1;     line = lines(j);     line = char(line);
@@ -250,9 +339,9 @@ while j < lgth
 % --- VTEC Map:  
         elseif mess_type == 5
             j = j + 1;     line = lines(j);     line = char(line);
-            if t_tec(i_tec+1) ~= sow        % check if new time epoch
-                i_tec = i_tec + 1;
-                t_tec(i_tec+1) = sow;                
+            if t_tec(i_vtec+1) ~= sow        % check if new time epoch
+                i_vtec = i_vtec + 1;
+                t_tec(i_vtec+1) = sow;                
             end
 
             values = textscan(line,'%f', 'delimiter','\n', 'whitespace','');
@@ -266,7 +355,7 @@ while j < lgth
                 coeff = coeff{1};
                 C(k,:) = coeff; k=k+1;          % save coefficients of this line into matrix
             end
-            vtec_coeff(:,:,i_tec) = C;          % save coefficients
+            vtec_coeff(:,:,i_vtec) = C;          % save coefficients
         end
         
     else  	% no new epoch
@@ -277,23 +366,21 @@ end         % end of: loop over the lines of the correction-stream-file
 
 
 %% Save all variables in output structs
-% correct orbit and clock time-vectors (1st entry = -1) of and save them
-t_orb = t_orb(2:end); 	% time of ephemeris-correction  [seconds of week]
-t_clk = t_clk(2:end);  	% time of clock-correction      [seconds of week]
-corr_GPS.t_orb = t_orb';   corr_GLO.t_orb = t_orb';   corr_GAL.t_orb = t_orb';   corr_BDS.t_orb = t_orb';
-corr_GPS.t_clk = t_clk';   corr_GLO.t_clk = t_clk';   corr_GAL.t_clk = t_clk';   corr_BDS.t_clk = t_clk';
-% save orbit and clock corrections
-corr_GPS = orbclk2struct(radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS, corr_GPS);
-corr_GLO = orbclk2struct(radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO, c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO, corr_GLO);
-corr_GAL = orbclk2struct(radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL, c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL, corr_GAL);
-corr_BDS = orbclk2struct(radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS, c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS, corr_BDS);
+% remove 1st entry (initialization), remove unused epochs, and save orbit and 
+% clock corrections and their time-vectors for each GNSS 
+corr_GPS = orbclk2struct(t_orb_GPS, radial_GPS, along_GPS, outof_GPS, v_radial_GPS, v_along_GPS, v_outof_GPS, IOD_orb_GPS, t_clk_GPS, c0_GPS, c1_GPS, c2_GPS, IOD_clk_GPS);
+corr_GLO = orbclk2struct(t_orb_GLO, radial_GLO, along_GLO, outof_GLO, v_radial_GLO, v_along_GLO, v_outof_GLO, IOD_orb_GLO, t_clk_GLO, c0_GLO, c1_GLO, c2_GLO, IOD_clk_GLO);
+corr_GAL = orbclk2struct(t_orb_GAL, radial_GAL, along_GAL, outof_GAL, v_radial_GAL, v_along_GAL, v_outof_GAL, IOD_orb_GAL, t_clk_GAL, c0_GAL, c1_GAL, c2_GAL, IOD_clk_GAL);
+corr_BDS = orbclk2struct(t_orb_BDS, radial_BDS, along_BDS, outof_BDS, v_radial_BDS, v_along_BDS, v_outof_BDS, IOD_orb_BDS, t_clk_BDS, c0_BDS, c1_BDS, c2_BDS, IOD_clk_BDS);
+corr_QZSS = orbclk2struct(t_orb_QZSS, radial_QZSS, along_QZSS, outof_QZSS, v_radial_QZSS, v_along_QZSS, v_outof_QZSS, IOD_orb_QZSS, t_clk_QZSS, c0_QZSS, c1_QZSS, c2_QZSS, IOD_clk_QZSS);
 
-% remove epochs without data (time-vector == 0), then save code and phase  
-% bias corrections and time-vectors
-corr_GPS = biases2struct(C_GPS, P_GPS, c_bias_GPS, p_bias_GPS, t_cb, t_pb, corr_GPS);
-corr_GLO = biases2struct(C_GLO, P_GLO, c_bias_GLO, p_bias_GLO, t_cb, t_pb, corr_GLO);
-corr_GAL = biases2struct(C_GAL, P_GAL, c_bias_GAL, p_bias_GAL, t_cb, t_pb, corr_GAL);
-corr_BDS = biases2struct(C_BDS, P_BDS, c_bias_BDS, p_bias_BDS, t_cb, t_pb, corr_BDS);
+% remove epochs without data (time-vector == 0), then save code and phase
+% bias corrections and time-vectors for each GNSS
+corr_GPS = biases2struct(C_GPS, P_GPS, c_bias_GPS, p_bias_GPS, t_cb_GPS, t_pb_GPS, corr_GPS);
+corr_GLO = biases2struct(C_GLO, P_GLO, c_bias_GLO, p_bias_GLO, t_cb_GLO, zeros(n_phase+1,1), corr_GLO);   % no Glonass phase biases
+corr_GAL = biases2struct(C_GAL, P_GAL, c_bias_GAL, p_bias_GAL, t_cb_GAL, t_pb_GAL, corr_GAL);
+corr_BDS = biases2struct(C_BDS, P_BDS, c_bias_BDS, p_bias_BDS, t_cb_BDS, t_pb_BDS, corr_BDS);
+corr_QZSS = biases2struct(C_QZSS, P_QZSS, c_bias_QZSS, p_bias_QZSS, t_cb_QZSS, t_pb_QZSS, corr_QZSS);
 
 % save time and coefficients of vtec spherical harmonics
 if bool_vtec
@@ -316,8 +403,8 @@ end         % end of read_corr2brdc_stream.m
 
 function [rad, al, out, v_rad, v_al, v_out, IOD_orb, c0, c1, c2, IOD_clk, c_bias, p_bias] ...
     = init_corr(n_sats, n_orb, n_clk, n_code, n_phase)
-% function to get initialise the struct for each GNSS
-% initialise orbit corrections
+% function to get initialize the struct for each GNSS
+% initialize orbit corrections
 rad     = zeros(n_orb, n_sats);         % radial component
 al      = zeros(n_orb, n_sats);         % along-track component
 out     = zeros(n_orb, n_sats);         % out-of-plane component
@@ -325,41 +412,61 @@ v_rad   = zeros(n_orb, n_sats);         % velocity radial component
 v_al    = zeros(n_orb, n_sats);     	% velocity along-track component
 v_out   = zeros(n_orb, n_sats);         % velocity out-of-plane component
 IOD_orb = zeros(n_orb, n_sats);         % Issue of Data orbit
-% initialise clock corrections
+% initialize clock corrections
 c0 = zeros(n_clk, n_sats);
 c1 = zeros(n_clk, n_sats);
 c2 = zeros(n_clk, n_sats);
 IOD_clk = zeros(n_clk, n_sats);         % Issue of Data clock
-% initialise code biases matrix
+% initialize code biases matrix
 c_bias = zeros(n_code,n_sats, 1);
-% initialise phase biases matrix
+% initialize phase biases matrix
 p_bias = zeros(n_phase,n_sats, 1);
 end
 
 
 function [sow, no_lines, mess_type] = getime(line)
-% function to read out the date from current line and convert it to julian date and gps-time
-if contains(line, 'ORBIT')
-    i = 8;                          % start of date record
+% function to read out the date from current line and convert it to and gps
+% time in seconds of week
+
+% define the format of line
+formatSpec = '> %s %f %f %f %f %f %f %f %f %s';
+
+% read the line
+data = textscan(line, formatSpec);
+
+% assign parts to variables with correct types
+type      = data{1}{1};     % string (ORBIT, CLOCK, CODE_BIAS, PHASE_BIAS, VTEC)
+year      = data{2};
+month     = data{3};
+day       = data{4};
+hour      = data{5};
+minute    = data{6};
+seconds   = data{7};
+no_lines  = data{9};
+
+% unused:
+% stream    = data{10}{1};    % name of stream, string
+% intv      = data{8};        % decoded interval (0 = 1 sec, 1 = 2 sec, 2 =
+% 5 sec, 3 = 10 sec, 4 = 15 sec, 5 = 30 sec, 6 = 60 sec, 7 = 120 sec, 8 =
+% 240 sec, 9 = 300 sec, 10 = 600 sec, 11 = 900 sec, 12 = 1800 sec, 13 =
+% 3600 sec, 14 = 7200 sec, 15 = 10800 sec)
+
+% convert timestamp to GPS seconds of week
+[~, sow] = cal2gpstime([year month day hour minute seconds]);
+
+% detect type of SSR correction
+if contains(type, 'ORBIT')
     mess_type = 1;
-elseif contains(line, 'CLOCK')
-    i = 8;
+elseif contains(type, 'CLOCK')
     mess_type = 2;
-elseif contains(line, 'CODE_BIAS')
-    i = 12;
+elseif contains(type, 'CODE_BIAS')
     mess_type = 3;
-elseif contains(line, 'PHASE_BIAS')
-    i = 13;
+elseif contains(type, 'PHASE_BIAS')
     mess_type = 4;
-elseif contains(line, 'VTEC')
-    i = 7;
+elseif contains(type, 'VTEC')
     mess_type = 5;
 end
 
-date = sscanf(line(i+01:i+27), '%f'); 	% dangerous hardcoding!
-jd = cal2jd_GT(date(1), date(2), date(3) + date(4)/24 + date(5)/1440 + date(6)/86400);
-[~, sow, ~] = jd2gps_GT(jd);
-no_lines = date(8);                     % number of lines of data record
 end
 
 
@@ -367,7 +474,7 @@ function [pos, ORDER] = get_order(types, ORDER)
 % function to get index of each element of "types" in "ORDER"
 % types ... contains bias types of current epoch
 % ORDER ... contains the order of all biases 
-n = length(types);      	% number of bias types in current line
+n = size(types, 1);
 if isequal(types, ORDER)
     pos = 1:n;
 elseif ~isempty(ORDER)
@@ -417,21 +524,37 @@ IOD_clk(i_clk,prn) = IOD_clk_epoch;
 end
 
 
-function [save_struct] = orbclk2struct(radial, along, outof, v_radial, v_along, v_outof, IOD_orb, c0, c1, c2, IOD_clk, save_struct)
-% function to save orbit and clock corrections matrices into struct
+function [save_struct] = orbclk2struct(t_orb, radial, along, outof, v_radial, v_along, v_outof, IOD_orb, t_clk, c0, c1, c2, IOD_clk)
+% function to remove the 1st entry, remove unused epochs, and save orbit 
+% and clock corrections and their time-vectors into struct
+
+% remove 1st entry due to initialization (1st entry == -1)
+t_orb(1) = []; t_clk(1) = [];
+
+% detect epochs without data for this GNSS (e.g. another GNSS' message
+% was logged at that time-stamp, see read_corr2brdc_stream.m)
+nodata_orb = (t_orb == 0);
+nodata_clk = (t_clk == 0);
+% remove epochs without data
+t_orb = t_orb(~nodata_orb);
+t_clk = t_clk(~nodata_clk);
+
 % orbit corrections
-save_struct.radial = radial;
-save_struct.along = along;
-save_struct.outof = outof;
-save_struct.v_radial = v_radial;
-save_struct.v_along = v_along;
-save_struct.v_outof = v_outof;
-save_struct.IOD_orb = IOD_orb;
+save_struct.t_orb = t_orb';
+save_struct.radial = radial(~nodata_orb,:);
+save_struct.along = along(~nodata_orb,:);
+save_struct.outof = outof(~nodata_orb,:);
+save_struct.v_radial = v_radial(~nodata_orb,:);
+save_struct.v_along = v_along(~nodata_orb,:);
+save_struct.v_outof = v_outof(~nodata_orb,:);
+save_struct.IOD_orb = IOD_orb(~nodata_orb,:);
+
 % clock corrections
-save_struct.c0 = c0;
-save_struct.c1 = c1;
-save_struct.c2 = c2;
-save_struct.IOD_clk = IOD_clk;
+save_struct.t_clk = t_clk';
+save_struct.c0 = c0(~nodata_clk,:);
+save_struct.c1 = c1(~nodata_clk,:);
+save_struct.c2 = c2(~nodata_clk,:);
+save_struct.IOD_clk = IOD_clk(~nodata_clk,:);
 end
 
 
@@ -456,7 +579,7 @@ for i = 1:size(CODE, 1)
 end
 % save phase biases and exclude epochs without data (-> all-zero-epochs)
 save_struct.pbias = [];
-for i = 1:length(PHASE)
+for i = 1:size(PHASE, 1)
     field = strcat('L', PHASE(i,:));            % name of bias-type
     % take correct dimension from p_bias-matrix and remove all-zero-epochs
     save_struct.pbias.(field) = p_bias(~nodata_p,:,i);	 

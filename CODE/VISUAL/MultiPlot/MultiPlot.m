@@ -136,7 +136,7 @@ for i = 1:n_unique
         CA = prepConvaccurPlot(CA, d, i, conv_2D, unique_labels, PlotStruct.bar_position(end));
     end
     
-    % print perfomance and statistic of current label to command window
+    % print performance and statistic of current label to command window
     STATS = calcPerformanceIndicators(d, conv_2D, TTCF{i}, dT_all, q68, q95, curr_label, PlotStruct, STATS, i);
     
 end         % end of loop over different labels

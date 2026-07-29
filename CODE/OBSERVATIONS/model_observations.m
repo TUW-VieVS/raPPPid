@@ -1,7 +1,7 @@
 function [code_model, phase_model, doppler_model] = ...
     model_observations(model, Adjust, settings, Epoch)          
-% Building the modelled range including all correction models for code
-% observations
+% Building the modeled observation including all correction models for
+% code, phase, and Doppler observations.
 %
 % INPUT:
 % 	model       [struct], model corrections for all visible satellites
@@ -9,9 +9,9 @@ function [code_model, phase_model, doppler_model] = ...
 %   settings    [struct], settings of processing from GUI
 % 	Epoch 		[struct], epoch-specific data
 % OUTPUT:
-% 	code_model      modelled code observations
-% 	phase_model     modelled phase observations
-% 	doppler_model   modelled doppler observations
+% 	code_model      modeled code observations
+% 	phase_model     modeled phase observations
+% 	doppler_model   modeled doppler observations
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -30,7 +30,7 @@ no_sats = numel(Epoch.sats);   	% number of satellites
 
 
 % If ionosphere is estimated use estimated ionospheric delay instead of 
-% modelled ionospheric delay to model the observation
+% modeled ionospheric delay to model the observation
 iono = model.iono;
 if contains(settings.IONO.model, 'Estimate')
     n = numel(param_);
@@ -71,8 +71,7 @@ code_model = code_model .* ~exclude;
 phase_model = [];
 if contains(settings.PROC.method,'+ Phase')
     % get current float ambiguities
-    idx = (NO_PARAM+1):(NO_PARAM+no_sats*proc_freq);
-    ambig = param_(idx);
+    ambig = GetAmbiguitiesFromParam(param_, NO_PARAM, no_sats, proc_freq);
     ambig = reshape(ambig, [length(ambig)/proc_freq , proc_freq, 1]);   % convert from vector to matrix
     if strcmp(settings.IONO.model, 'GRAPHIC'); ambig = ambig/2; end     % GRAPHIC: divide ambiguity by 2      
 
@@ -108,7 +107,7 @@ if contains(settings.PROC.method, '+ Doppler')
     rec_clk_drift = param_(strcmp(Adjust.ORDER_PARAM, 'rec_clk_drift'));
     
     % calculate velocity and position part for observation equation, check
-    % Diss. Glaner p.13
+    % e.g. PhD thesis Glaner (p.13)
     v =  - vel_s + vel_r;
     r = (- pos_s + pos_r) ./ vecnorm(- pos_s + pos_r);
     

@@ -54,9 +54,9 @@ switch option
         file = {['BRDM00DLR_S_' yyyy doy '0000_01D_MN.rnx.gz']};
         bool_ign = false;
         
-    case 'CAS, BDRM'        
+    case 'CAS, BDRM'
         % from the data center of the Chinese Academy of Sciences (CAS)
-        httpserver = ['https://data.bdsmart.cn/pub/product/rts/brdc/' yyyy];
+        httpserver = ['https://data.bdsmart.cn/pub/product/rts/brdc/' yyyy '/' doy];
         file  = ['BRDM00CAS_S_' yyyy doy '0000_01D_MN.rnx.gz'];
         dcmpr = ['BRDM00CAS_S_' yyyy doy '0000_01D_MN.rnx'];
         % try to download
@@ -65,6 +65,7 @@ switch option
         end
         % unzip if download was successful
         brdc_file_path = unzip_and_delete({file}, target_nav);
+        brdc_file_path = brdc_file_path{1};
         if ~isfile(brdc_file_path)
             errordlg({'No CAS Multi-GNSS Navigation File found on server.', ' Please specify different source!'}, 'Error');
         end
@@ -72,6 +73,7 @@ switch option
         
     otherwise
         errordlg({'DownloadBrdcNavMess.m failed. Please', 'specify a different navigation file!'}, 'Error');
+        return
 end
 
 % try to download from igs.ign.fr

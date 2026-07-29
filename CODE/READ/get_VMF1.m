@@ -1,10 +1,12 @@
-function input = get_VMF1(obs, input, settings)
+function input = get_VMF1(obs, input, vmf_version, bool_print, approx_pos)
 % Defines and reads all VMF1 information.
 % 
 % INPUT:
 %   obs         struct, observation-specific information
 %   input       struct, holding input data
-%   settings    struct, processing settings from GUI
+%   vmf_version string, 'operational' or 'forecast'
+%   bool_print  boolean, print information to command window?
+%   approx_pos  3x1, approximate position to download gridwise version
 % OUTPUT:
 %	input       struct, updated with input.TROPO.VMF1.data
 %
@@ -17,9 +19,9 @@ function input = get_VMF1(obs, input, settings)
 
 product = 'VMF1';
 
-if strcmp(settings.TROPO.vmf_version, 'operational')
+if strcmp(vmf_version, 'operational')
     type = 'VMF1_OP';
-elseif strcmp(settings.TROPO.vmf_version, 'forecast')
+elseif strcmp(vmf_version, 'forecast')
     type = 'VMF1_FC';
 end
 
@@ -58,7 +60,7 @@ for i_jd = 1:length(jd_all)
             errordlg({'VMF1 is not available!', 'Change troposphere model to GPT3.'}, 'Error');
             continue
         end
-        if ~settings.INPUT.bool_parfor
+        if bool_print
             fprintf('  %s%s%s%s\n' , file_VMF1,' successfully downloaded into ', dir_VMF1_sitewise,'.');
         end
     end
@@ -95,14 +97,21 @@ else
     
     % use gridwise VMF1
     input.TROPO.VMF1.version = 'gridwise';
+    input.TROPO.V3GR.xyz = approx_pos;
     
     % determine all necessary mjd's
     input.TROPO.VMF1.data{2} = unique(VMF1_data{2});
     
     % get the correct VMF1 coefficients
     VMF1_grid_file = []; 
-    approx_pos_WGS84 = cart2geo(settings.INPUT.pos_approx);     % approximate position
+    approx_pos_WGS84 = cart2geo(approx_pos);     % approximate position
     
+    % make sure that download of sitewise version is possible
+    if any(approx_pos == 0) || any(isnan(approx_pos))
+        input.TROPO.VMF1 = rmfield(input.TROPO.VMF1, 'data');
+        return; 
+    end
+
     for i_jd = 1:length(input.TROPO.VMF1.data{2})
         dir_orography = '../CODE/ATMOSPHERE';
         input.TROPO.VMF1.data{1}{i_jd} = upper(obs.stationname);

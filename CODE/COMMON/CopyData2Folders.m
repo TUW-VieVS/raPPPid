@@ -269,7 +269,7 @@ if ispc         % Windows
 elseif isunix 	% Linux
     % To run the RNXCMP bash script, make them executable
     system('chmod u+x ./*');
-    str = strcat('./CRX2RNX "',full_file_path,'"');
+    str = strcat('./CRX2RNX "',curr_path,'"');
 end
 
 % writing command to command line to decompress with crx2rnx.exe

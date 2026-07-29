@@ -34,7 +34,7 @@ path_file_ = ['"' archive '"'];
 path_7zip_ = ['"' path_7zip '"'];
 
 % prepare file/archive name check
-checkcontent = [path_7zip,  ' l ', archive];    % building string for command line
+checkcontent = [path_7zip_,  ' l ', path_file_];    % building string for command line
 [status, cmdout] = system(checkcontent);      	% status = 0 = OK
 
 % check if the file compressed in the archive has the same name as the archive

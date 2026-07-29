@@ -135,7 +135,7 @@ P_fix = blkdiag(P_float, P_fix_1, P_fix_2);
 % Least-Squares-Adjustment, only 3 coordinates and ambiguities get estimated
 dx = adjustment(A_fixed, P_fix, omc_fixed, 3);
 % save variables from fixed adjustment into Adjust
-Adjust = saveFixedAdjustment_2xIF(dx, Adjust, Epoch.no_sats);
+Adjust = saveFixedAdjustment_2xIF(dx, Adjust, numel(Epoch.sats));
 
 
 

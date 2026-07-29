@@ -110,12 +110,11 @@ for i = 1:noeph
         minute =  sscanf(line(16:17), '%f');
         second =  sscanf(line(19:22), '%f');
         % calculation of toe (time of ephemerides) in GPS time:
-        jd = cal2jd_GT(year, month, day + hour/24 + minute/1440 + second/86400);
-        [~,sow_utc,~] = jd2gps_GT(jd);      % conversion to GPS-time
+        [week_utc, sow_utc] = cal2gpstime([year, month, day, hour, minute, second]);
         sod_moscow = mod(round(sow_utc) + 3*3600,86400);
         IOD(i) = floor(sod_moscow/900);
-        jd = jd + leap_sec/(60*60*24);      % Introduction of leap second between GPS and UTC
-        [week,sow,~] = jd2gps_GT(jd);
+        % Introduction of leap second between GPS and UTC
+        [week, sow] = addSecondsToGpsTime(week_utc, sow_utc, leap_sec);
         % save results from this epoch:
         toe(i)    = sow;    % epoch of ephemerides GPS (converted from UTC)
         woe(i)    = week;   % week of ephemerides (?)
@@ -132,13 +131,12 @@ for i = 1:noeph
         minute    = sscanf(line(19:20), '%f');
         second    = sscanf(line(22:23), '%f');
         % calculation of toe in GPS time:
-        jd = cal2jd_GT(year, month, day + hour/24 + minute/1440 + second/86400);
-        [~,sow_utc,~] = jd2gps_GT(jd);
+        [week_utc, sow_utc] = cal2gpstime([year, month, day, hour, minute, second]);
         sod_moscow = mod(round(sow_utc) + 3*3600,86400);
-        IOD(i) = floor(sod_moscow/900); 
-        
-        jd = jd + leap_sec/(60*60*24); % Introduction of leap second between GPS and UTC
-        [week,sow,~] = jd2gps_GT(jd);
+        IOD(i) = floor(sod_moscow/900);
+
+        % Introduction of leap second between GPS and UTC
+        [week, sow] = addSecondsToGpsTime(week_utc, sow_utc, leap_sec);
         toe(i) = sow; % epoch of ephemerides GPS (converted from UTC)
         woe(i) = week;
         TauN(i)   =  sscanf(line(24:42), '%f');    % [s], clock bias

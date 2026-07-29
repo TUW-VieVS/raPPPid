@@ -18,7 +18,7 @@ function [M] = RemoveMeanPerSatelliteArc(M)
 % ||| jumps (e.g., due cycle slips) during a satellite arc are not detected
 
 
-M(isnan(M)) = 0;        % replace zeros with NaN
+M(isnan(M)) = 0;        % replace NaN with zero (logical() below cannot handle NaN)
 n = size(M,2);          % number of columns
 
 for i = 1:n             % loop over columns
@@ -27,8 +27,8 @@ for i = 1:n             % loop over columns
         mask = logical(vec');                       % force logical vector
         starts = strfind([false, mask], [0 1]);     % data begins
         stops = strfind([mask, false], [1 0]);      % data ends
-        n = numel(starts);
-        for ii = 1:n            % loop over data series of current satellite
+        n_arcs = numel(starts);
+        for ii = 1:n_arcs       % loop over data series of current satellite
             s1 = starts(ii);
             s2 = stops(ii);
             if s1 == s2

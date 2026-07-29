@@ -4,8 +4,8 @@ function vtec = iono_gims(Lat_IPP, Lon_IPP, Ttr, ionex_data, method)
 % leap seconds are not considered).
 % 
 % INPUT:
-%   Lat_IPP         latitude of ionospheric pierce point [°]
-%   Lon_IPP         longitude of ionospheric pierce point [°]
+%   Lat_IPP         latitude of ionospheric pierce point [degree]
+%   Lon_IPP         longitude of ionospheric pierce point [degree]
 %   Ttr             signal transmission time [sow]
 %   ionex_data      Data from ionex-File [struct]
 %   method          type of interpolation (GUI)
@@ -95,6 +95,7 @@ Ttr = mod(Ttr,86400);                   % Ttr now in seconds of day
 T =  mod(ionex.start_sow + (time_index - 1)*ionex.interval, 86400); % also in seconds of day
 % T can be before or after Ttr
 Lon_IPP = Lon_IPP + 360*(Ttr - T)/86400;
+Lon_IPP = mod(Lon_IPP + 180, 360) - 180;   % normalize to (-180,180] to avoid dateline wraparound errors
 
 % Find Indices for the IPP in the TEC-Map and Bivariate Interpolation
 gim = ionex.map(:,:,time_index);
@@ -138,7 +139,9 @@ T1 = ionex.start_sow + (time_index(2)-1)*ionex.interval;
 % Ttr = mod(Ttr, 86400);  % [sod]
 Lon_IPP_0 = Lon_IPP + 360*(Ttr - T0)/86400;
 Lon_IPP_1 = Lon_IPP + 360*(Ttr - T1)/86400;
-% 15°/h, Latitude does not change by rotating around z-axis
+Lon_IPP_0 = mod(Lon_IPP_0 + 180, 360) - 180;   % normalize to (-180,180] to avoid dateline wraparound errors
+Lon_IPP_1 = mod(Lon_IPP_1 + 180, 360) - 180;
+% 15 degree/h, Latitude does not change by rotating around z-axis
 
 % Find Indices for the IPP in the TEC-Map und Bivariate Interpolation
 gim_0 = ionex.map(:,:,time_index(1));

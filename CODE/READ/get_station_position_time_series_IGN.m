@@ -1,4 +1,4 @@
-function XYZ = get_station_position_time_series(stations, dates, XYZ)
+function XYZ = get_station_position_time_series_IGN(stations, dates, XYZ)
 % This function extracts the daily position estimates of from webigs-rf.ign.fr
 % The station time series is downloaded to take the timely nearest
 % coordinates. If all positions in the file
@@ -70,29 +70,31 @@ for i = 1:n
     
 
     %% Download
-    % check if file is existing, otherwise download it
-    if ~isfile([target file])
+    % check if file is existing and up to date, otherwise (re-)download it
+    download = ~isfile([target file]);
+    if ~download
+        info = dir([target file]);
+        curr_time = now;                     %#ok<TNOW1>, only this works here
+        file_age = curr_time - info.datenum; % days since last modification/download
+        download = file_age > 3;             % file is older than three days
+    end
+
+    if download
         try
             websave([target file], [httpserver file]);
         catch
             continue
         end
-
-    else
-        % file is existing, check age
-        info = dir([target file]);
-        last_modif = info.datenum;
-        curr_time = now;                    %#ok<TNOW1>, only this works here
-        file_age = curr_time - last_modif;  % days since last modification/download
-
-        if file_age > 3
-            % file is older than three days -> download
-            try
-                websave([target file], [httpserver file]);
-            catch
-                continue
-            end
-
+        % the server can answer with an HTML error/redirect page 
+        % -> detect this and clean up the dummy file(s)
+        dummy_file = [target file '.html'];
+        if isfile(dummy_file)
+            delete(dummy_file);
+        end
+        % check if the download produced a usable file
+        if ~isfile([target file]) || dir([target file]).bytes == 0
+            if isfile([target file]);  delete([target file]);  end
+            continue
         end
     end
 

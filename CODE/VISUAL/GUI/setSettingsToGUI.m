@@ -66,10 +66,6 @@ if bool_settings        % do this only for the settings structure
         set(handles.pushbutton_download,'Enable','On');
         set(handles.pushbutton_analyze_rinex,'Enable','On');
     end
-    % approximate position
-    set(handles.edit_x, 'String', num2str(structure.INPUT.pos_approx(1)) );
-    set(handles.edit_y, 'String', num2str(structure.INPUT.pos_approx(2)) );
-    set(handles.edit_z, 'String', num2str(structure.INPUT.pos_approx(3)) );
 
     % settings for real-time processing
     set(handles.checkbox_realtime,  'Value', structure.INPUT.bool_realtime);
@@ -527,6 +523,8 @@ try
             handles.radiobutton_models_biases_code_CODE_OSB.Value = 1;
         case 'CNES OSBs'
             handles.radiobutton_models_biases_code_CNES_OSB.Value = 1;
+        case 'IGS'
+            handles.radiobutton_models_biases_code_IGS.Value = 1;
         case 'CODE MGEX'
             handles.radiobutton_models_biases_code_CODE_IAR.Value = 1;
         case 'CNES MGEX'
@@ -539,6 +537,8 @@ try
             handles.radiobutton_models_biases_code_GFZ_MGEX.Value = 1;
         case {'HUST MGEX', 'HUS MGEX'}
             handles.radiobutton_models_biases_code_HUST_MGEX.Value = 1;
+        case {'WCC MGEX'}
+            handles.radiobutton_models_biases_code_WCC.Value = 1;
         case 'CNES postprocessed'
             handles.radiobutton_models_biases_code_CNES_post.Value = 1;
         case 'Correction Stream'
@@ -662,7 +662,7 @@ catch
 end
 
 % Antex File
-if contains(structure.OTHER.antex, 'Use existing')
+if contains(structure.OTHER.antex, 'igsXX_wwww.atx autodetection') || contains(structure.OTHER.antex, 'Use existing')
     set(handles.radiobutton_antex_existing, 'Value', 1);
     set(handles.edit_antex, 'String', '');
 end
@@ -715,6 +715,10 @@ try
     set(handles.edit_mp_degree, 'String', num2str((structure.OTHER.mp_degree)));
     set(handles.edit_mp_thresh, 'String', num2str(structure.OTHER.mp_thresh ));
     set(handles.edit_mp_cooldown, 'String', num2str(structure.OTHER.mp_cooldown));
+end
+try
+    set(handles.checkbox_mp_doppler, 'Value', structure.OTHER.mp_doppler);
+    set(handles.edit_mp_doppler_thresh, 'String', num2str(structure.OTHER.mp_doppler_thresh));
 end
 
 % Loss of Lock Index ||| delete try/catch at some later point
@@ -789,6 +793,8 @@ try
             handles.radiobutton_or_earth.Value = 1;
         case 'ORBEX'
             handles.radiobutton_or_orbex.Value = 1;
+        case 'IMU'
+            handles.radiobutton_or_IMU.Value = 1;
     end
 catch
     try
@@ -803,6 +809,33 @@ catch
     catch
     end
 
+end
+
+% Antenna Orientation
+try
+    switch structure.KINE.ant_orient
+        case 'forwards'
+            handles.radiobutton_ant_forwards.Value = 1;
+        case 'backwards'
+            handles.radiobutton_ant_backwards.Value = 1;
+        otherwise
+            handles.radiobutton_ant_forwards.Value = 1;
+    end
+catch
+end
+
+% IMU
+try
+    handles.checkbox_IMU.Value = structure.KINE.bool_IMU;
+catch
+    handles.checkbox_IMU.Value = 0;
+end
+try
+    [path.IMU_1, path.IMU_2] = fileparts2(structure.KINE.file_IMU);
+    set(handles.edit_IMU, 'String', path.IMU_2);
+catch
+    path.IMU_1 = ''; path.IMU_2 = '';
+    set(handles.edit_IMU, 'String', path.IMU_2);
 end
 
 
@@ -875,12 +908,7 @@ end
 
 %% Estimation - Adjustment
 
-% Filter Type
-string_all = get(handles.popupmenu_filter,'String');
-value = find(strcmp(string_all,structure.ADJ.filter.type));
-set(handles.popupmenu_filter, 'Value', value);
-
-% Filter settings
+% Filter type and all per-parameter noise/dynamic-model settings
 [handles] = setFilterSettingsToGUI(structure, handles);
 
 
@@ -1181,17 +1209,6 @@ if bool_settings == 1   % do this only for the settings structure
     set(handles.checkbox_plot_signal_qual,      'Value', structure.PLOT.signal_qual   );
     set(handles.checkbox_plot_res_sats,         'Value', structure.PLOT.res_sats      );
     set(handles.checkbox_plot_stream_corr,      'Value', structure.PLOT.res_sats      );
-
-    %     % true position for single plot
-    %     if any(nonzeros(structure.INPUT.pos_approx-structure.PLOT.pos_true))
-    %         set(handles.edit_x_true, 'String', num2str(structure.PLOT.pos_true(1)) );
-    %         set(handles.edit_y_true, 'String', num2str(structure.PLOT.pos_true(2)) );
-    %         set(handles.edit_z_true, 'String', num2str(structure.PLOT.pos_true(3)) );
-    %     else
-    %         set(handles.edit_x_true, 'String', '' );
-    %         set(handles.edit_y_true, 'String', '' );
-    %         set(handles.edit_z_true, 'String', '' );
-    %     end
 
 end
 

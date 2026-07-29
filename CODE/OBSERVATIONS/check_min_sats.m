@@ -83,5 +83,10 @@ switch noGNSS
         if noSats < 7
             bool_enoughSats = false;
         end
+
+    case 5
+        if noSats < 8
+            bool_enoughSats = false;
+        end
 end
 

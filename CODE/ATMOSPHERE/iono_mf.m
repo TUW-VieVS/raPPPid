@@ -1,6 +1,6 @@
 function value_mf = iono_mf(el, mf, az, R, hgt)
-% Calulates the value of the mapping function for ionospheric correction 
-% from an ionex file.
+% Calculates the value of the mapping function for ionospheric correction 
+% from an IONEX file.
 % 
 % INPUT:
 %   el          elevation of the satellite [°]
@@ -10,8 +10,6 @@ function value_mf = iono_mf(el, mf, az, R, hgt)
 %   hgt         height of single layer [km]
 % OUTPUT:
 %   value_mf    value of mapping function
-%   Lat_IPP     latitude of the ionospheric pierce point [°]
-%   Lon_IPP     longitude of the ionospheric pierce point [°]
 % 
 % Revision:
 %   2025/01/22, MFGW: removed calculation of IPP

@@ -27,7 +27,6 @@ function vis_plotSatConstellation(h, epochs, strXAxis, satellites, cutoff, isGPS
 observ_sats = logical(full(satellites.obs));
 cutoff = full(cutoff);
 cutoff(isnan(cutoff)) = 0;
-plot_GPS_L5 = isGPS && ~isGLO && ~isGAL && ~isBDS && ~isQZS;
 
 eps = numel(epochs);
 prn_obs = ones(eps,1) * [1:410];        % [] are important
@@ -129,15 +128,6 @@ if isGPS
     plot(h, UsedGPS,  '.', 'Color',DEF.COLOR_G)
     legend_txt{end+1} = 'GPS visible';
     legend_txt{end+1} = 'GPS used';
-    if plot_GPS_L5          % plot number of GPS L5 satellites
-        noGPS_L5 = sum(observ_sats(:, DEF.PRNS_GPS_L5),2,'omitnan');
-        notUsed_L5 = sum( cutoff(:, DEF.PRNS_GPS_L5),2,'omitnan');
-        UsedGPS_L5 = noGPS_L5-notUsed_L5;
-        plot(h, noGPS_L5,    '.', 'Color', [1 .65 0.8])
-        plot(h, UsedGPS_L5,  '.', 'Color', [1 .65 0])
-        legend_txt{end+1} = 'L5 visible';
-        legend_txt{end+1} = 'L5 used';
-    end
 end
 if isGLO
     plot(h, noAllGLO, '.', 'Color',[0.8 1.0 1.0])
@@ -182,14 +172,6 @@ hold on
 if isGPS
     plot(h, sv_GPS+0.1,   '.', 'Color', DEF.COLOR_G);
     plot(h, sv_GPS_cutoff+0.1, '.', 'Color',[0.8 0.8 0.8]);
-    if plot_GPS_L5              % plot number of GPS L5 satellites
-        bool_L5 = false(1,DEF.SATS_GPS);
-        bool_L5(DEF.PRNS_GPS_L5) = true;
-        sv_GPS(:,~bool_L5) = 0;
-        sv_GPS_cutoff(:,~bool_L5) = 0;
-        plot(h, sv_GPS+0.1, '.', 'Color', [1 .65 0]);
-        plot(h, sv_GPS_cutoff+0.1, '.', 'Color',[1 .65 0.8]);
-    end
 end
 if isGLO
     plot(h, sv_GLO-100.1, '.', 'Color', DEF.COLOR_R);
@@ -232,11 +214,6 @@ if isGPS
     % plot lines (better visible)
     histogram(UsedGPS, edges, 'Normalization','probability', 'FaceAlpha', 0.3, 'EdgeColor', DEF.COLOR_G, 'DisplayStyle', 'stairs')
     lg_txt{end+1} = 'GPS';
-    if plot_GPS_L5              % plot number of GPS L5 satellites
-        % histogram(UsedGPS_L5, edges, 'Normalization','probability', 'FaceAlpha', 0.3, 'FaceColor',[1 .65 0])
-        histogram(UsedGPS_L5, edges, 'Normalization','probability', 'FaceAlpha', 0.3, 'EdgeColor', [1 .65 0], 'DisplayStyle', 'stairs')
-        lg_txt{end+1} = 'GPS L5';
-    end
 end
 if isGLO
     edges = -.5:1:max(UsedGLO)+.5;

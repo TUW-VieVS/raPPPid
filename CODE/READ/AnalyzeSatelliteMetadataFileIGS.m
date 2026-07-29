@@ -171,10 +171,10 @@ DATA = MDATA(idx_1:idx_2);
 
 function yeardoy = convertTimeStamp(str)
 % This function converts the timestampt into year and (fractional) doy
-% str ... timestamp (e.g., 1991:012:43200)
+% str ... timestamp (e.g., 1991:012:43200), format YYYY:DDD:SSSSS
 % yeardoy ... (1) year and (2) doy
 yeardoy(1) = str2double(str(01:04));
-yeardoy(2) = str2double(str(06:07)) + str2double(str(10:14))/86400;
+yeardoy(2) = str2double(str(06:08)) + str2double(str(10:14))/86400;
 
 function descr = block2descr(block)
 % This function finds the description to a specific satellite block

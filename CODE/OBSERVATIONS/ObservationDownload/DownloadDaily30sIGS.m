@@ -4,7 +4,7 @@ function [] = DownloadDaily30sIGS(stations, doys, year, host)
 % of raPPPid.
 % The stations of which data should be downloaded can be either delivered as
 % cell or entered in the IGS_r3_stations.txt (same folder as this function)
-% For a (uncomplete) list of IGS MGEX station check IGS_r3_stations.txt
+% For a (incomplete) list of IGS MGEX station check IGS_r3_stations.txt
 % open('../CODE/OBSERVATIONS/ObservationDownload/IGS_r3_stations.txt')
 % 
 % Example call: 
@@ -28,7 +28,7 @@ function [] = DownloadDaily30sIGS(stations, doys, year, host)
 %   []
 %
 % Revision:
-%   2025/05/30, MFWG: specifiy host or try download from all hosts
+%   2025/05/30, MFWG: specify host or try download from all hosts
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -105,14 +105,14 @@ for d = 1:no_days
         doy = sprintf('%03.0f',doys(d));
         switch host
             case 1
-                URL_folder = {['/IGS/obs/' year '/' doy '/']};            % igs.bkg.bund.de
+                URL_folder = ['/IGS/obs/' year '/' doy '/'];            % igs.bkg.bund.de
             case 2
-                URL_folder = {['/archive/gnss/data/daily/' year '/' doy '/' year(3:4) 'd']};    % cddis.gsfc.nasa.gov
+                URL_folder = ['/archive/gnss/data/daily/' year '/' doy '/' year(3:4) 'd'];    % cddis.gsfc.nasa.gov
             case 3
-                URL_folder = {['/pub/igs/data/' year '/' doy '/']};       % igs.ign.fr
-            case 4 
+                URL_folder = ['/pub/igs/data/' year '/' doy '/'];       % igs.ign.fr
+            case 4
                 URL_folder = ['/' year '/' doy '/'];
-        end 
+        end
         
         % file name
         file = [station '_R_' year doy '0000_01D_30S_MO.crx.gz'];   % RINEX 3

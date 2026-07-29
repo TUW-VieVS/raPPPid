@@ -1,10 +1,11 @@
 function settings = downloadInputFiles(settings, obs_startdate, glo_channels)
-% This function checks if the Input Files which are selected in the GUI
-% exist in particular folder of DATA. If this products if missing this
-% function downloads this file. Additionally some changes in the struct 
-% settings are made for the further processing (e.g. stream Archive has to
-% be handled like processing with precise products). After this function 
-% all filepaths and booleans are (correctly) set in the struct settings.
+% This function downloads all necessary input data depending of the 
+% processing settings from the GUI and makes sure that all input files
+% exist in the particular folder of raPPPid\DATA. 
+% Additionally some changes in the struct settings are made for the further 
+% processing (e.g. stream archive has to be handled like processing with 
+% precise products). After this function all file paths and booleans are 
+% (correctly) set in the struct settings.
 % 
 % INPUT:
 %   settings        struct, settings from GUI
@@ -12,8 +13,8 @@ function settings = downloadInputFiles(settings, obs_startdate, glo_channels)
 % 
 % OUTPUT:
 %   settings        struct, updated with paths to the needed input files
-%   glo_channels    boolean, true if Glonass could not be extracted from
-%                       Rinex header
+%   glo_channels    boolean, true if GLONASS could not be extracted from
+%                       RINEX header
 % Revision:
 %   ...
 %
@@ -27,8 +28,6 @@ function settings = downloadInputFiles(settings, obs_startdate, glo_channels)
 % IGN:    ftp://igs.ign.fr/pub/igs/products/
 % ESA:    ftp://gssc.esa.int/gnss/products/
 %   ...
-
-
 
 % ------ Convert date and create strings ------
 

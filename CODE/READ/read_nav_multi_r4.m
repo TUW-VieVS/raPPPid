@@ -1,4 +1,4 @@
-function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
+function [klob, nequ, klob_BDS, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
     read_nav_multi_r4(NAV, leap_sec)
 % Function to read in a RINEX 4 multi GNSS broadcast message file.
 % GLONASS time is converted in GPS time, while BDS time is considered 
@@ -11,12 +11,13 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 %   fData           cell, containing data of multi-GNSS navigation file
 %   leap_sec        integer, number of leap seconds between UTC and GPS time
 % OUTPUT:
-%   klob            coefficients of Klobuchar Model (GPS ionosphere model)
-%   nequ            coefficients of Nequick Model (Galileo ionosphere model)
-%   BDGIM           coefficients of BeiDou global broadcast ionosphere
+%   klob            6xn, coefficients of Klobuchar Model (GPS ionosphere model)
+%   nequ            4xn, coefficients of Nequick Model (Galileo ionosphere model)
+%   klob_BDS        9xn, Klobuchar coefficients broadcasted by BeiDou 
+%   BDGIM           10xn, coefficients of BeiDou global broadcast ionosphere
 %                   delay correction model (BeiDou ionosphere model)
 %   Eph_GPS         GPS navigation data
-%   Eph_GLO         Glonass navigation data
+%   Eph_GLO         GLONASS navigation data
 %   Eph_GAL         Galileo navigation data
 %   Eph_BDS         BeiDou navigation data
 %
@@ -27,11 +28,10 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 % *************************************************************************
 
 
-% ||| BDS iono model coefficients are not read-in
 % ||| only first data record of broadcast iono models are considered
 
 % check if data to read (real-time processing)
-klob = []; nequ = []; BDGIM = [];
+klob = []; nequ = []; klob_BDS = []; BDGIM = [];
 Eph_GPS = []; Eph_GLO = []; Eph_GAL = []; Eph_BDS = [];
 if isempty(NAV)
     return
@@ -39,31 +39,46 @@ end
 
 
 % ----- LOOP OVER HEADER -----
-i = 1;
-while true
-    line = NAV{i};
-    
-    if contains(line, 'LEAP SECONDS')
-        % ||| do something here
+i = 0;
+if any(contains(NAV, 'END OF HEADER'))
+    % NAV only contains a header on the very first call of a real-time processing
+    i = 1;
+    while true
+        line = NAV{i};
+
+        if contains(line, 'LEAP SECONDS')
+            % ||| do something here
+        end
+
+        if contains(line, 'END OF HEADER')
+            break
+        end
+
+        i = i + 1;
     end
-    
-    if contains(line, 'END OF HEADER')
-        break
-    end
-    
-    i = i + 1;
 end
 
-% count number of messages for each GNSS
+% count number of navigation messages for each GNSS
 no_eph_gps = sum(contains(NAV, '> EPH G'));
 no_eph_glo = sum(contains(NAV, '> EPH R'));
 no_eph_gal = sum(contains(NAV, '> EPH E'));
 no_eph_bds = sum(contains(NAV, '> EPH C'));
-% Initialize navigation messaga variables
+% initialize navigation message variables
 Eph_GPS = zeros(30, no_eph_gps);
-Eph_GLO = zeros(19, no_eph_glo);
+Eph_GLO = zeros(20, no_eph_glo);
 Eph_GAL = zeros(30, no_eph_gal);
 Eph_BDS = zeros(30, no_eph_bds);
+
+% count number of ionosphere messages for each GNSS
+no_ion_gps = sum(contains(NAV, '> ION G'));
+no_ion_gal = sum(contains(NAV, '> ION E'));
+no_ion_bds = sum(contains(NAV, '> ION C'));
+% initialize navigation message variables
+klob     = zeros(2*no_ion_gps, 6);
+nequ     = zeros(no_ion_gal, 4);
+klob_BDS = zeros(2*no_ion_bds, 6);
+BDGIM    = zeros(no_ion_bds, 10);
+
 
 
 
@@ -115,6 +130,11 @@ while i < n_NAV         % loop from END OF HEADER to end of file
                     [nequ, i] = save_nequ_coeff(nequ, NAV, i);
                     
                 case 'C'        % BDGIM
+                    if ~contains(line, 'D1D2')
+                        BDGIM = save_BDGIM_coeff(BDGIM, NAV, i);
+                    else
+                       klob_BDS = save_klob_bds_coeff(klob_BDS, NAV, i);
+                    end
                     % ||| implement BDGIM model
                     
                 otherwise
@@ -134,6 +154,17 @@ while i < n_NAV         % loop from END OF HEADER to end of file
     end
 
 end
+
+% remove potential zero rows 
+klob     = klob(~all(klob == 0, 2), :);
+nequ     = nequ(~all(nequ == 0, 2), :);
+klob_BDS = klob_BDS(~all(klob_BDS == 0, 2), :);
+BDGIM    = BDGIM(~all(BDGIM == 0, 2), :);
+% sort rows by GPS time
+klob     = sortrows(klob, 5);
+nequ     = sortrows(nequ, 4);
+klob_BDS = sortrows(klob_BDS, 6);
+BDGIM    = sortrows(BDGIM, 10);
 
 
 function [Eph_GPS, i] = save_eph_GPS(Eph_GPS, NAV, i, i_gps, type)
@@ -314,8 +345,8 @@ Eph_GLO(14,i_glo) = health;      % health of satellite (0=OK)
 Eph_GLO(15,i_glo) = f_num;       % channel number (-7, ..., 13)
 TauC = 0;
 Eph_GLO(16,i_glo) = TauC;        % [s], -TauC, Correction system time to UTC (SU)
-Eph_GLO(17,i_glo) = woe;         % gps-week, week of ephemerides
-Eph_GLO(18,i_glo) = toe;         % epoch of ephemerides converted into GPS sow
+Eph_GLO(17,i_glo) = woe;         % gps-week, week of ephemeris
+Eph_GLO(18,i_glo) = toe;         % epoch of ephemeris converted into GPS sow
 Eph_GLO(19,i_glo) = IOD;         % Issue of Data
 Eph_GLO(20,i_glo) = sum(type);   % type of navigation message
 
@@ -554,15 +585,14 @@ Eph_BDS(30,i_bds) = sum(type);  % type of navigation message
 
 function [klob, i] = save_klob_coeff(klob, NAV, i)
 % read Klobuchar coefficients
-if ~isempty(klob)
-    return      % currently only first data record is considered
-end
+idx_row = find(all(klob == 0, 2), 1);
 % first line: 
 i = i + 1; line = NAV{i};
 val_1 = textscan(line,'%f'); val_1 = val_1{1};    
 alpha(1) = val_1(7); 
 alpha(2) = val_1(8); 
 alpha(3) = val_1(9);
+[~, gpstime] = cal2gpstime([val_1(1) val_1(2) val_1(3) val_1(4) val_1(5) val_1(6)]);
 % second line:
 i = i + 1; line = NAV{i};
 val_2 = textscan(line,'%f'); val_2 = val_2{1};    
@@ -575,24 +605,73 @@ i = i + 1; line = NAV{i};
 val_3 = textscan(line,'%f'); val_3 = val_3{1};    
 beta(4) = val_3(1);
 % put together alpha and beta coefficients
-klob = [alpha; beta];
-
+klob_row = [alpha gpstime 1; beta gpstime 2];
+% save into output variable
+klob(idx_row:idx_row+1, :) = klob_row;
 
 
 function [nequ, i] = save_nequ_coeff(nequ, NAV, i)
 % read NeQuick-G coefficients
-if ~isempty(nequ)
-    return      % currently only first data record is considered
-end
+idx_row = find(all(nequ == 0, 2), 1);
 % first line: 
 i = i + 1; line = NAV{i};
 val_1 = textscan(line,'%f'); val_1 = val_1{1};    
-nequ(1) = val_1(7); 
-nequ(2) = val_1(8); 
-nequ(3) = val_1(9);
+nequ_row(1) = val_1(7); 
+nequ_row(2) = val_1(8); 
+nequ_row(3) = val_1(9);
+[~, gpstime] = cal2gpstime([val_1(1) val_1(2) val_1(3) val_1(4) val_1(5) val_1(6)]);
 % second line:
 i = i + 1; line = NAV{i};
 val_2 = textscan(line,'%f'); val_2 = val_2{1};    
 disturbance_flag = val_2(1);        % ||| not considered
+% save into output variable
+nequ(idx_row, :) = [nequ_row gpstime];
 
 
+
+function [bdgim, i] = save_BDGIM_coeff(bdgim, NAV, i)
+% read BDGIM coefficients (Klobuchar-style or 9 BDGIM coefficients
+idx_row = find(all(bdgim == 0, 2), 1);
+% first line: 
+i = i + 1; line = NAV{i};
+val_1 = textscan(line,'%f'); val_1 = val_1{1};    
+bdgim_row(1) = val_1(7); 
+bdgim_row(2) = val_1(8); 
+bdgim_row(3) = val_1(9);
+[~, gpstime] = cal2gpstime([val_1(1) val_1(2) val_1(3) val_1(4) val_1(5) val_1(6)]);
+% second line:
+i = i + 1; line = NAV{i};
+val_2 = textscan(line,'%f'); val_2 = val_2{1};    
+bdgim_row(4:7) = val_2(1:4);
+% third line:
+i = i + 1; line = NAV{i};
+val_3 = textscan(line,'%f'); val_3 = val_3{1};
+bdgim_row(8) = val_3(1);
+bdgim_row(9) = val_3(2);
+% save into output variable
+bdgim(idx_row, :) = [bdgim_row gpstime];
+
+
+
+
+function [bds_klob, i] = save_klob_bds_coeff(bds_klob, NAV, i)
+% read BDS Klobuchar-style coefficients
+idx_row = find(all(bds_klob == 0, 2), 1);
+% first line: 
+i = i + 1; line = NAV{i};
+val_1 = textscan(line,'%f'); val_1 = val_1{1};    
+bds_alpha(1) = val_1(7); 
+bds_alpha(2) = val_1(8); 
+bds_alpha(3) = val_1(9);
+[~, gpstime] = cal2gpstime([val_1(1) val_1(2) val_1(3) val_1(4) val_1(5) val_1(6)]);
+% second line:
+i = i + 1; line = NAV{i};
+val_2 = textscan(line,'%f'); val_2 = val_2{1};    
+bds_alpha(4)  = val_2(1);
+bds_beta(1:3) = val_2(2:4);
+% third line:
+i = i + 1; line = NAV{i};
+val_3 = textscan(line,'%f'); val_3 = val_3{1};
+bds_beta(4) = val_3(1);
+% save into output variable
+bds_klob(idx_row:idx_row+1, :) = [1 bds_alpha gpstime; 2 bds_beta gpstime];

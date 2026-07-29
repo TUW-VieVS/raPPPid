@@ -37,7 +37,7 @@ if obs.rinex_version > 0
     fprintf('\nRINEX version: %.2f',  obs.rinex_version_full)
 else
     bool_RINEX = false;     % raw Android sensor data
-    [OBSDATA, newdataepoch] = readAndroidRawSensorData(settings.INPUT.file_obs, obs.vars_raw);
+    [OBSDATA, newdataepoch, IMUDATA] = readAndroidRawSensorData(settings.INPUT.file_obs, settings.KINE.bool_IMU, obs.vars_raw);
     n = numel(newdataepoch) - 1;
     fprintf('\nRaw Android sensor data')
 end
@@ -94,6 +94,7 @@ settings.IONO.model = 'off';
 settings.EXP.satellites_D = 1;
 settings.INPUT.rawDataAndroid = false;
 settings.INPUT.bool_realtime = false;
+settings.OTHER.mp_doppler = true;
 
 % Prepare variables
 [Epoch, satellites, storeData, ~, ~, ~] = initProcessing(settings, obs);
@@ -116,7 +117,7 @@ for q = 1:n
     if bool_RINEX
         [Epoch] = RINEX2Epoch(OBSDATA, newdataepoch, Epoch, q, obs.no_obs_types, obs.rinex_version, settings);
     else
-        [Epoch] = RawSensor2Epoch(OBSDATA, newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column, obs.leap_sec);
+        [Epoch] = RawSensor2Epoch(OBSDATA, IMUDATA, newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column, obs.leap_sec);
     end
     
     % check for identical observation data records
@@ -131,7 +132,7 @@ for q = 1:n
 
     obs.glo_channel(isnan(obs.glo_channel)) = 0;
     % -> frequency of GLONASS satellites is not correct but otherwise
-    % GLONASS is not analzed correctly
+    % GLONASS is not analyzed correctly
     Epoch = RemoveSort(settings, Epoch, q);
     [Epoch, obs] = prepareObservations(settings, obs, Epoch);
 
@@ -169,6 +170,13 @@ for q = 1:n
     storeData.gpstime(q,1) = Epoch.gps_time;
     % tracked satellites
     satellites.obs(q,prns)  = Epoch.tracked(prns);  	% save number of epochs satellite is tracked
+    % pseudorange rate check with Doppler
+    if ~isempty(Epoch.old.sats)
+        [Epoch.mp_DopplerPR, ~] = DopplerCheckPR(Epoch, settings.INPUT.num_freqs, settings.OTHER.mp_doppler_thresh, settings.IONO.model);
+        storeData.mp_DopplerPR_1(q,prns) = Epoch.mp_DopplerPR(1,:);
+        if settings.INPUT.num_freqs >= 2; storeData.mp_DopplerPR_2(q,prns) = Epoch.mp_DopplerPR(2,:); end
+        if settings.INPUT.num_freqs >= 3; storeData.mp_DopplerPR_3(q,prns) = Epoch.mp_DopplerPR(3,:); end
+    end
 
     % count observations for all observation types and each GNSS
     if q == 1 && size(Epoch.obs, 2) > size(obs_count, 2)
@@ -297,23 +305,27 @@ if obs.interval <= 15 	% this plots make only sense for high-rate observation da
         D3_diff(degree_D+1:end,:) = diff(D3, degree_D,1);
         PlotObsDiff(epochs, D3_diff, label_x_epc, rgb, 'D3' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std, obs);
     end
+
+    %     -+-+-+-+- Figures: Pseudorange Rate Check with Doppler  -+-+-+-+-
+    PlotPseudorangeRateCheck(storeData, settings, satellites, epochs, label_x_epc, rgb)
+
 end
 
 
 
 
 % check for huge discrepancy between code and phase observations
-bool_adjustphase2code = false;
+bool_adjustphase2code = false;	fprintf('\n');
 if any(satellites.CL_1(:) > 1e4)
-    fprintf(2, '\nHuge difference between code and phase on frequency 1!\n')
+    fprintf(2, 'Huge difference between code and phase on frequency 1!\n')
     bool_adjustphase2code = true;
 end
 if any(satellites.CL_2(:) > 1e4)
-    fprintf(2, '\nHuge difference between code and phase on frequency 2!\n')
+    fprintf(2, 'Huge difference between code and phase on frequency 2!\n')
     bool_adjustphase2code = true;
 end
 if any(satellites.CL_3(:) > 1e4)
-    fprintf(2, '\nHuge difference between code and phase on frequency 3!\n')
+    fprintf(2, 'Huge difference between code and phase on frequency 3!\n')
     bool_adjustphase2code = true;
 end
 if bool_adjustphase2code

@@ -1,4 +1,4 @@
-function Los_RSW = ECEF2RWS(Rot_X, time, param, leapsec)
+function Los_SWR = ECEF2RWS(Rot_X, time, param, leapsec)
 % This function converts line-of-sight (LOS) vectors from Earth-Centered 
 % Earth-Fixed (ECEF) frame into the RSW (Radial–Along-track–Cross-track) 
 % coordinate frame of a satellite or spacecraft.
@@ -14,7 +14,7 @@ function Los_RSW = ECEF2RWS(Rot_X, time, param, leapsec)
 %   sats        satellites of current epoch
 %   leapsec     [s], number of leap seconds 
 % OUTPUT:
-%	Los_RSW     [m], LOS vectors in RSW
+%	Los_SWR     [m], LOS vectors in SWR (be aware of the axes order!)
 %
 % Revision:
 %   ...
@@ -45,4 +45,4 @@ R = Los_eci'*(r_eci/norm(r_eci));                 % radial
 S = Los_eci'*cross(n/norm(n),r_eci/norm(r_eci));  % along-track
 W = Los_eci'*(n/norm(n));                         % cross-track
 % save
-Los_RSW = [S; W; R];
+Los_SWR = [S; W; R];

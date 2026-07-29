@@ -10,28 +10,30 @@ function output_txt = vis_customdatatip_CycleSlip(obj,event_obj)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-% get position of click (x-value = time [sod], y-value = depends on plot)
+% get position of click (x-value = time [sow], y-value = depends on plot)
 pos = get(event_obj,'Position');
-sod = pos(1);
+sow = pos(1);
 value = pos(2);
 
-% calculate epoch from sod (attention: missing epochs are not considered!)
-epoch = find(event_obj.Target.XData == sod, 1, 'first');
+% calculate epoch from sow (attention: missing epochs are not considered!)
+epoch = find(event_obj.Target.XData == sow, 1, 'first');
 
-% calculate time of day from sod
-[~, hour, min, sec] = sow2dhms(sod);
+% calculate time of day from sow
+[~, hour, min, sec] = sow2dhms(sow);
 % create string with time of day
 str_time = [sprintf('%02.0f', hour), ':', sprintf('%02.0f', min), ':', sprintf('%02.0f', sec)];
 
 
 % create cell with strings as output (which will be shown when clicking)
 i = 1;
-output_txt{i} = ['Time: ',  str_time];      % time of day
+output_txt{i} = ['SOW: ' sprintf('%.1f', sow)];
+i = i + 1;                                  
+output_txt{i} = ['Time: '  str_time];      % time of day
 
 if ~strcmp(event_obj.Target.Marker,'o')     % epoch
     i = i + 1;
-    output_txt{i} = ['Epoch: ', sprintf('%.0f', epoch)];
+    output_txt{i} = ['Epoch: ' sprintf('%.0f', epoch)];
 end
 
 i = i + 1;                                  % value
-output_txt{i} = ['Value: ', sprintf('%.3f', value)];
+output_txt{i} = ['Value: ' sprintf('%.3f', value)];

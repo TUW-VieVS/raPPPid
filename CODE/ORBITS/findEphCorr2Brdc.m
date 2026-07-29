@@ -20,6 +20,7 @@ function Epoch = findEphCorr2Brdc(Epoch, input, settings)
 %  	Epoch       updated (.BRDCcolumn, .corr2brdc_orb, .corr2brdc_clk)
 %
 % Revision:
+%   2026/07/21, MFWG: getOrbClkIdx - logical mask instead of deleting
 %   2025/03/19, MFWG: corr2brdc - keep future nav mess (-> IOD)
 %   2025/03/19, MFWG: switching from to toe
 %   2025/02/03, MFWG: consider all corrections which are still valid (age)
@@ -61,7 +62,7 @@ for i = 1:n
   
     % get data depending on GNSS
     if Epoch.gps(i) && settings.INPUT.use_GPS
-        Eph_gnss = input.ORBCLK.Eph_GPS;  	% read-in broadcast ephemerides from navigation file, matrix
+        Eph_gnss = input.ORBCLK.Eph_GPS;  	% read-in broadcast ephemeris from navigation file, matrix
         r_iode = 24;            % row of issue of data
         r_health = 23;          % row of health
         r_toe = 18;             % row of time of ephemeris
@@ -98,7 +99,7 @@ for i = 1:n
     
     if isempty(Eph_gnss); continue; end    	% no ephemeris for this GNSS
     
-    % get all avilable navigation message data for current satellite number
+    % get all available navigation message data for current satellite number
     idx_sat = find(Eph_gnss(1,:) == sv);   	 % columns of satellites
     Eph_sat = Eph_gnss(:, idx_sat);          % broadcast data satellite
     
@@ -174,9 +175,12 @@ for i = 1:n
             % -) only broadcast message is used
             dt_eph = t - Eph_sat(r_toe,:);  	% diff. to time of ephemeris
             if ~settings.INPUT.bool_realtime
-                dt_eph(dt_eph < 0) = [];       	% do not consider future broadcast ephemeris
+                idx_valid = find(dt_eph >= 0);  	% do not consider future broadcast ephemeris
+            else
+                idx_valid = 1:numel(dt_eph);
             end
-            k = idx_sat(dt_eph == min(dt_eph));	% column of ephemeris, take nearest
+            % keep idx_sat and dt_eph aligned by indexing both through idx_valid
+            k = idx_sat(idx_valid(dt_eph(idx_valid) == min(dt_eph(idx_valid))));	% column of ephemeris, take nearest
             if ~isempty(k)
                 col = k(1);                 	% in case of multiple suitable datasets take first
             end
@@ -194,28 +198,34 @@ end     % end of loop over satellites
 
 
 
-function orb_idx = getOrbClkIdx(gpstime, t_corr, bool_realtime, age)
-% Get indices of orbit/clock corrections since the last corrections for 
-% this satellite. Future corrections are ignored in the case of post-
-% processing to maintain real-time conditions
-% 
+function orb_clk_idx = getOrbClkIdx(gpstime, t_corr, bool_realtime, age)
+% This function is used for orbit and clock SSR corrections.
+% Get indices of orbit/clock corrections since the last correction set for
+% this satellite. Future corrections are always excluded: a SSR correction
+% timestamped after the current epoch (gpstime) is not used.
+%
 % gpstime           [sow], time of current epoch
 % t_corr            vector, [s], time of orbit/clock corrections
-% bool_realtime     boolean, true if real-time processing
+% bool_realtime     boolean, true if real-time processing (unused, kept
+%                   for interface compatibility)
 % age               [s], allowed age of corrections
+%
+% Revision:
+%   2026/07/22, MFWG: always exclude future corrections
+%   2026/07/21, MFWG: find valid indices with a logical mask
+% *************************************************************************
 
-% difference between transmission time and the times of orbit/clock  
-% corrections since the last corrections for this satellite
-dt_corr = gpstime - t_corr;   	
+% difference between epoch time and the time stamps of orbit/clock corrections
+dt_corr = gpstime - t_corr;
 
-% remove future data to maintain real-time conditions
-if ~bool_realtime
-    dt_corr(dt_corr < 0) = [];  	
-end
+% valid: not too old, and not from the future
+valid_corr = (dt_corr <= age) & (dt_corr >= 0);
 
-% find indices of orbit/clock corrections since the last corrections for
-% this satellite
-orb_idx = 1:numel(dt_corr);
-orb_idx(dt_corr > age) = [];     % remove corrections which are too old
+% find valid indices of orbit/clock corrections
+idx_valid = find(valid_corr);
+
+% sort valid indices oldest-to-newest
+[~, order] = sort(dt_corr(idx_valid), 'descend');
+orb_clk_idx = idx_valid(order);
 
 

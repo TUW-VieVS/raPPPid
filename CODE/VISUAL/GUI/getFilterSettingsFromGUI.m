@@ -17,6 +17,11 @@ value = get(handles.popupmenu_filter, 'Value');
 string_all = get(handles.popupmenu_filter, 'String');
 filtersetts.ADJ.filter.type = string_all{value};		% 'No Filter' or 'Kalman Filter' or 'Kalman Filter Iterative'
 
+% Direction of Filter
+value = get(handles.popupmenu_filter_direction, 'Value');
+string_all = get(handles.popupmenu_filter_direction, 'String');
+filtersetts.ADJ.filter.direction = string_all{value};  % e.g. 'Forwards'
+
 % Coordinates
 filtersetts.ADJ.filter.var_coord  = str2double( get(handles.edit_filter_coord_sigma0, 'String') )^2;	% a-priori-variance of coordinates
 filtersetts.ADJ.filter.Q_coord   = str2double( get(handles.edit_filter_coord_Q, 'String') )^2;        % system noise of coordinates

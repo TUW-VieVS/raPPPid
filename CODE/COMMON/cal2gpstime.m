@@ -20,7 +20,8 @@ function [gpsweek, gpstime] = cal2gpstime(calendar)
 
 % convert to datetime
 if ~isdatetime(calendar)
-    calendar = datetime(calendar,  'Format', 'dd MMM yyyy HH:mm:ss.SSS');
+    calendar = datetime(calendar(:,1), calendar(:,2), calendar(:,3), ...
+                        calendar(:,4), calendar(:,5), calendar(:,6));
 end
 
 % duration since the start of GPS time

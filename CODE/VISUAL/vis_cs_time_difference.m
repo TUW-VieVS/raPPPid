@@ -37,24 +37,24 @@ plotit(storeData.gpstime, full(storeData.cs_L1_diff), thresh, sys, vec, ticks, m
 
 function [] = plotit(x, L1_diff, thresh, sys, vec, ticks, resets, degree)
 if sys == 'G'           % GPS
-    loop1 =  1:16;
+    loop1 =  1:99;
     col = DEF.COLOR_G;
 elseif sys == 'R'       % GLONASS
-    loop1 = 101:116;
+    loop1 = 101:199;
     col = DEF.COLOR_R;
 elseif sys == 'E'      	% Galileo
-    loop1 = 201:216;
+    loop1 = 201:299;
     col = DEF.COLOR_E;
 elseif sys == 'C'      	% BeiDou
-    loop1 = 301:316;
+    loop1 = 301:399;
     col = DEF.COLOR_C;
 elseif sys == 'J'      	% QZSS
-    loop1 = 401:407;
-    col = DEF.COLOR_J;    
+    loop1 = 401:410;
+    col = DEF.COLOR_J;
 end
 
-    
-%% plot the satellites G01-G16
+
+%% plot the satellites
 figur = figure('Name', ['Cycle Slip Detection Time-Difference: ' char2gnss(sys)], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
 ii = 1;         % counter of subplot number
 % add customized datatip
@@ -69,9 +69,9 @@ for i = loop1           % loop over satellites
             set(findall(gcf,'type','text'),'fontSize',8)
             % 16 satellites have been plotted in this window -> it is full
             % -> create new figure
-            fig1 = figure('Name', ['Cycle Slip-Detection: ' char2gnss(sys)], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
+            figur = figure('Name', ['Cycle Slip Detection Time-Difference: ' char2gnss(sys)], 'units','normalized', 'outerposition',[0 0 1 1], 'NumberTitle','off');
             ii = 1; % set counter of subplot number to 1
-            dcm = datacursormode(fig1);
+            dcm = datacursormode(figur);
             datacursormode on
             set(dcm, 'updatefcn', @vis_customdatatip_CycleSlip)
         end

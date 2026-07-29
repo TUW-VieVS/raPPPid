@@ -6,7 +6,7 @@ function [Adjust, Epoch] = fixedAdjustment_UC_SD(Epoch, Adjust, model, settings)
 %   Epoch           [struct], epoch specific data for current epoch
 %   Adjust          [struct], adjustment data and matrices
 %   model           [struct], model corrections for all visible satellites
-%   settings        [struct], proceesing settings from GUI
+%   settings        [struct], processing settings from GUI
 % OUTPUT:
 %   Adjust          updated with results of fixed adjustment
 %   Epoch           updated with results of fixed adjustment
@@ -20,7 +20,7 @@ function [Adjust, Epoch] = fixedAdjustment_UC_SD(Epoch, Adjust, model, settings)
 NO_PARAM = Adjust.NO_PARAM;             % number of estimated parameters
 no_sats = numel(Epoch.sats);            % number of satellites
 num_freq = settings.INPUT.proc_freqs;   % number of processed frequencies
-s_f = no_sats * num_freq;               % satelllites x frequencies
+s_f = no_sats * num_freq;               % satellites x frequencies
 A_float = Adjust.A;                     % Design Matrix from float adjustment
 P_float = Adjust.P;                     % Weight Matrix from float adjustment
 elev = model.el(:,1);                   % elevation of current epoch's satellites
@@ -53,7 +53,7 @@ N_SD_fix = [N1_SD_fix(bool_N1); N2_SD_fix(bool_N2); N3_SD_fix(bool_N3)];
 
 % model observations
 param_float = Adjust.param;
-% replace modelled ionospheric delay with estimated float ionospheric delay
+% replace modeled ionospheric delay with estimated float ionospheric delay
 n = numel(param_float);
 idx = (n-no_sats+1):n;
 model_iono = param_float(idx);   % estimated ionospheric delay on 1st frequency
@@ -149,10 +149,10 @@ Adjust.iono_fix = Adjust.param(idx_param) + dx.x(idx_dx_x);
 
 function [model_code_fix, model_phase_fix] = ...
     model_all_fixed_observations(model, Epoch, Adjust, model_iono)
-% Calculates the modelled observations for the fixed adjustment
+% Calculates the modeled observations for the fixed adjustment
 % 
 % INPUT:
-%   model           struct, modelled error sources
+%   model           struct, modeled error sources
 %   Epoch           struct, contains epoch-related data
 %   Adjust          struct, variables for parameter estimation
 % OUTPUT:
@@ -171,7 +171,7 @@ param_float = Adjust.param;
 r_wet_tropo = model.mfw * param_float(4);
 % estimated value for GPS receiver clock from float adjustment
 rec_clk_gps = param_float(5);
-% estimated value for Glonass receiver clock from float adjustment
+% estimated value for GLONASS receiver clock from float adjustment
 rec_clk_glo = param_float(5) + param_float(8);
 % estimated value for Galileo receiver clock from float adjustment
 rec_clk_gal = param_float(5) + param_float(11);
@@ -180,7 +180,7 @@ rec_clk_bds = param_float(5) + param_float(14);
 
 
 %% Model observations
-% modelled code-observation:
+% modeled code-observation:
 model_code_fix = model.rho...                        	% theoretical range
     - Const.C * model.dT_sat_rel...                 	% satellite clock
     + rec_clk_gps.*isGPS + rec_clk_glo.*isGLO + rec_clk_gal.*isGAL + rec_clk_bds.*isBDS... 	% receiver clock
@@ -197,7 +197,7 @@ model_code_fix = model.rho...                        	% theoretical range
     + model.dX_PCO_sat_corr ...                       	% Phase Center Offset Satellite
     + model.dX_PCV_sat_corr;                        	% Phase Center Variation Satellite
 
-% modelled phase-observation:
+% modeled phase-observation:
 model_phase_fix = model.rho...                          % theoretical range
     - Const.C * model.dT_sat_rel...                     % satellite clock
     + rec_clk_gps.*isGPS + rec_clk_glo.*isGLO + rec_clk_gal.*isGAL + rec_clk_bds.*isBDS... 	% receiver clock
@@ -215,7 +215,7 @@ model_phase_fix = model.rho...                          % theoretical range
     + model.dX_PCV_sat_corr ...                         % Phase Center Variation Satellite
     + model.windup;                                     % Phase Wind-Up
 
-% exlude satellites with cutoff-angle or cycle slip true
+% exclude satellites with cutoff-angle or cycle slip true
 model_code_fix(Epoch.exclude) = NaN;
 model_phase_fix(Epoch.exclude | Epoch.cs_found) = NaN;
 

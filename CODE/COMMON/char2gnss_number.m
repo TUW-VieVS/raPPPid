@@ -15,7 +15,7 @@ switch char
     case {'C', 'c'}
         gnss_number = 300;
     case {'J', 'j'}
-        gnss_number = 400;        
-    otherwise 
+        gnss_number = 400;
+    otherwise
         gnss_number = NaN;
 end

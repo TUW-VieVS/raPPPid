@@ -6,13 +6,13 @@ function d = checkVariables(d)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-bool_0 = (d.N == 0) & (d.E == 0) & (d.N == 0);
+bool_0 = (d.N == 0) & (d.E == 0) & (d.H == 0);
 d.dT(bool_0) = NaN;
 d.N(bool_0)  = NaN;
 d.E(bool_0)  = NaN;
 d.H(bool_0)  = NaN;
 % 2) remove convergence periods where all elements are NaN (e.g. datagap)
-bool_nan = all(isnan(d.N) & isnan(d.E) & isnan(d.N), 2);    % complete row isnan
+bool_nan = all(isnan(d.N) & isnan(d.E) & isnan(d.H), 2);    % complete row isnan
 d.dT(bool_nan, :) = [];
 d.N(bool_nan, :)  = [];
 d.E(bool_nan, :)  = [];
@@ -24,6 +24,7 @@ if ~isempty(d.FIXED)
 end
 % handle variable ZTD
 if ~isempty(d.ZTD)
-    d.ZTD(bool_0) = 0;          % boolean
+    d.ZTD(bool_0) = NaN;        % no solution -> no ZTD difference (0 would be a
+                                % perfect agreement with the IGS product)
     d.ZTD(bool_nan, :)  = [];
 end

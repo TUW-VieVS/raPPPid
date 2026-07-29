@@ -1,6 +1,6 @@
 function x = adjustment(varargin)
 % perform simple adjustment with Design-Matrix A, Weight Matrix P and
-% oberserved minus computed omc
+% observed minus computed (omc)
 % 
 % INPUT:
 %   Adjust  	containing all adjustment relevant data [struct]

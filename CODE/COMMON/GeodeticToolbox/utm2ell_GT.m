@@ -1,5 +1,5 @@
-function [lat,lon]=ell2utm_GT(N,E,Zone,a,e2,lcm)
-% ell2utm_GT  Converts UTM coordinates to ellipsoidal coordinates.
+function [lat,lon]=utm2ell_GT(N,E,Zone,a,e2,lcm)
+% utm2ell_GT  Converts UTM coordinates to ellipsoidal coordinates.
 %   UTM northing and easting coordinates must be in a 6 degree
 %   system. Zones begin with zone 1 at longitude 180E to 186E
 %   and increase eastward. Formulae from E.J. Krakiwsky,

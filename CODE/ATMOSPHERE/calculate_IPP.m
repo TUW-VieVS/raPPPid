@@ -12,8 +12,8 @@ function [lat_IPP, lon_IPP] = calculate_IPP(lat_rx, lon_rx, az, el, H)
 % INPUT:
 %   lat_rx      latitude of the receiver [rad]
 %   lon_rx      longitude of the receiver [rad]
-%   el          elevation of the satellite[rad]
 %   az          azimuth to the satellite [rad]
+%   el          elevation of the satellite[rad]
 %   H           height of ionospheric shell (e.g., 450e3) [m]
 % OUTPUT:
 %   lat_IPP     latitude of the ionospheric Pierce Point [rad]

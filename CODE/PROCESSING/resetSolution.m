@@ -79,7 +79,7 @@ if resetnow
         Adjust.fixed = false;
         Adjust.fixed_reset_epochs = [Adjust.fixed_reset_epochs, q];
         Adjust.reset_time = Epoch.gps_time; 
-        % reset Melboure-Wübbena LCs (ATTENTION: values of MW are overwritten!)
+        % reset Melboure-Wuebbena LCs (ATTENTION: values of MW are overwritten!)
         Adjust.HMW_12(1:q,:) = 0;
         Adjust.HMW_23(1:q,:) = 0;
         Adjust.HMW_13(1:q,:) = 0;
@@ -112,7 +112,7 @@ if resetnow
 		Epoch.mp_C2_diff(:,:) = NaN; 
 		Epoch.mp_C3_diff(:,:) = NaN;
 		Epoch.mp_C_diff(:,:) = NaN;
-        Epoch.mp1_last(:) = NaN;
+        Epoch.mp_last(:) = NaN;
     end
     
     % handle old Epoch: this is not a total reset but sufficient

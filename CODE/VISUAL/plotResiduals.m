@@ -134,9 +134,9 @@ if settings.INPUT.use_GLO
         Res_phase_GLO = phase_residuals(:, 101:100+DEF.SATS_GLO, :);
     end
     if bool_doppler
-        Res_doppler_GLO = doppler_residuals(:, 1:DEF.SATS_GLO, :);
+        Res_doppler_GLO = doppler_residuals(:, 101:100+DEF.SATS_GLO, :);
         Res_doppler_GLO(Res_doppler_GLO==0) = NaN;
-    end    
+    end
     glo_prns = obs_prns(obs_prns>100 & obs_prns<200);
     % Plot
     txtcell = {'GLONASS', 'R', solution_string};
@@ -150,9 +150,9 @@ if settings.INPUT.use_GAL
         Res_phase_GAL = phase_residuals(:, 201:200+DEF.SATS_GAL, :);
     end
     if bool_doppler
-        Res_doppler_GAL = doppler_residuals(:, 1:DEF.SATS_GAL, :);
+        Res_doppler_GAL = doppler_residuals(:, 201:200+DEF.SATS_GAL, :);
         Res_doppler_GAL(Res_doppler_GAL==0) = NaN;
-    end    
+    end
     gal_prns = obs_prns(obs_prns>200 & obs_prns<300);
     % Plot
     txtcell = {'Galileo', 'E', solution_string};
@@ -166,7 +166,7 @@ if settings.INPUT.use_BDS
         Res_phase_BDS = phase_residuals(:, 301:399, :);
     end
     if bool_doppler
-        Res_doppler_BDS = doppler_residuals(:, 1:DEF.SATS_BDS, :);
+        Res_doppler_BDS = doppler_residuals(:, 301:399, :);
         Res_doppler_BDS(Res_doppler_BDS==0) = NaN;
     end
     bds_prns = obs_prns(obs_prns>300 & obs_prns<400);
@@ -182,9 +182,9 @@ if settings.INPUT.use_QZSS
         Res_phase_QZSS = phase_residuals(:, 401:410, :);
     end
     if bool_doppler
-        Res_doppler_QZSS = doppler_residuals(:, 1:DEF.SATS_QZSS, :);
+        Res_doppler_QZSS = doppler_residuals(:, 401:410, :);
         Res_doppler_QZSS(Res_doppler_QZSS==0) = NaN;
-    end    
+    end
     qzss_prns = obs_prns(obs_prns>400 & obs_prns<500);
     % Plot
     txtcell = {'QZSS', 'J', solution_string};

@@ -11,7 +11,7 @@
 classdef DEF
     
     properties (Constant = true)
-        ver     = '5.0';
+        ver     = '5.1';
         version = ['Version ' DEF.ver ' ', char(169), ' TUW 2026'];
         
         % size of many variables due to raPPPid internal satellite numbering
@@ -32,7 +32,10 @@ classdef DEF
         
         % default leap seconds
         LEAP_SEC = 18;
-        
+
+        % fixed delay [s] before a real-time observation epoch is processed
+        RT_buffer = 5;
+
         % maximal number of inner-epoch iterations
         ITERATION_MAX_NUMBER = 15;
         
@@ -103,7 +106,7 @@ classdef DEF
         MIN_SATS = 4;
         
         % some persistent variables for Ambiguity Fixing
-        CUTOFF_REF_SAT = 15;    % [°], try to change reference satellite if below
+        CUTOFF_REF_SAT = 15;    % [degree], try to change reference satellite if below
         AR_THRES_SUCCESS_RATE = 0.99;    % for LAMBDA method
         PPPAR_IF_LSQ = false;	% LSQ with pseudo-observations for IF LC PPP-AR 
         
@@ -122,11 +125,11 @@ classdef DEF
         % default processing name
         proc_name = 'noname';
         
-        % define resolution of gridwise VMF3 (1°x1° or 5°x5°)
+        % define resolution of gridwise VMF3 (1x1 or 5x5 [degree])
         VMF3_grid_resolution = 5;
         
         % model of the conventional mean pole
-        ctpm = 'cubic';                % options: 'linear', 'cubic', 'cmp2015'
+        ctpm = 'linear';                % options: 'linear', 'cubic', 'cmp2015'
         
         % colors of GNSS
         COLOR_G = [1 0 0];

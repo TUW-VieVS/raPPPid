@@ -28,12 +28,13 @@ no_sats = numel(Epoch.sats);
 WLNL_corr = strcmp(settings.BIASES.phase, 'SGG FCBs') || strcmp(settings.BIASES.phase, 'TUW (not implemented)');
 b_WL = zeros(no_sats,1);
 b_NL = zeros(no_sats,1); 
-% get Hatch-Melbourne-Wübbena linear combination
+% get Hatch-Melbourne-WÃ¼bbena linear combination
 HMW_12 = Adjust.HMW_12;
 HMW_23 = Adjust.HMW_23;
 
-% determine relevant epochs of HMW 
-q_hmw = q0:q;
+% determine relevant epochs of HMW (min/max to be independent of the filter
+% direction: q0 is the start epoch, which is > q for backward processing)
+q_hmw = min(q0,q):max(q0,q);
 if Epoch.bool_2nd
     % take all HMW epochs in seconds run
     q_hmw = 1:size(HMW_12,1);
@@ -62,7 +63,7 @@ if settings.INPUT.num_freqs == 2
         if settings.INPUT.use_BDS && ~isempty(Epoch.refSatBDS_idx)
             b_NL = b_NL - b_NL(Epoch.refSatBDS_idx).*Epoch.bds;
         end 
-        if settings.INPUT.use_QZSS&& ~isempty(Epoch.refSatBDS_idx)
+        if settings.INPUT.use_QZSS&& ~isempty(Epoch.refSatQZS_idx)
             b_NL = b_NL - b_NL(Epoch.refSatQZS_idx).*Epoch.qzss;
         end        
 
@@ -74,7 +75,7 @@ if settings.INPUT.num_freqs == 2
             sats_gps = Epoch.sats(Epoch.gps);
             HMW_12(q_hmw, sats_gps) = HMW_12(q_hmw, sats_gps) + input.ORBCLK.preciseClk_GPS.WL(sats_gps);
         end
-        if isGAL && Epoch.refSatGAL ~= 0
+        if settings.INPUT.use_GAL && Epoch.refSatGAL ~= 0
             sats_gal = Epoch.sats(Epoch.gal);
             HMW_12(q_hmw, sats_gal) = HMW_12(q_hmw, sats_gal) + input.ORBCLK.preciseClk_GAL.WL(sats_gal-200);
         end
@@ -93,7 +94,7 @@ if settings.INPUT.num_freqs == 2
             
             % reset fixed ambiguities of satellites which have no float
             % estimation for their ambiguity
-            float_N = Adjust.param(NO_PARAM+1 : end);
+            float_N = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, 1);
             reset_fix = Epoch.sats(float_N == 0);
             Epoch.WL_12(reset_fix) = NaN;
             Epoch.NL_12(reset_fix) = NaN;
@@ -119,12 +120,12 @@ elseif settings.INPUT.num_freqs == 3
 %%  2x2-Frequency-IF-LC      
     % --- Extra-Wide Lane-Fixing Procedure ---
     if Adjust.fix_now(1)
-        Epoch = EW_fixing(HMW_23(q_hmw,:), Epoch, model.el, obs.interval, settings);
+        Epoch.WL_23 = HMW_fixing(HMW_23(q_hmw,:), Epoch, model.el, obs.interval, settings, Epoch.WL_23);
     end
     
     % --- Wide-Lane Fixing Procedure ---
     if Adjust.fix_now(1)
-        Epoch = WL_fixing(HMW_12(q_hmw,:), Epoch, model.el, obs.interval, settings);
+        Epoch.WL_12 = HMW_fixing(HMW_12(q_hmw,:), Epoch, model.el, obs.interval, settings, Epoch.WL_12);
     end    
     
     if Adjust.fix_now(2)
@@ -134,7 +135,7 @@ elseif settings.INPUT.num_freqs == 3
     
     % reset fixed ambiguities of satellites which have no float
     % estimation for their ambiguity
-    float_N = Adjust.param( (NO_PARAM+1) : (NO_PARAM+2*no_sats));
+    float_N = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, 2);
     float_N = reshape(float_N, no_sats, 2, 1);
     reset_fix1 = Epoch.sats(float_N(:,1) == 0);
     reset_fix2 = Epoch.sats(float_N(:,2) == 0);

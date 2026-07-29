@@ -3,7 +3,7 @@ function [Epoch, Adjust] = adjPrep_ZD(settings, Adjust, Epoch, prns_old, obs, in
 % float solution with calc_float_solution.m and creates the necessary 
 % variables and prediction for the parameter estimation for the
 % corresponding PPP model. Furthermore, this function checks for changes in
-% the sallite geometry (new or vanished satellites) and manipulates the
+% the satellite geometry (new or vanished satellites) and manipulates the
 % parameter vector and covariance matrix accordingly.
 %
 % INPUT:
@@ -53,7 +53,7 @@ bool_filter = ~strcmp(FILTER.type, 'No Filter');    % true if filter is enabled
 NO_PARAM = Adjust.NO_PARAM;             % number of estimated parameters
 prns = Epoch.sats;                      % satellites of current epoch
 no_sats_old = length(prns_old);      	% number of satellites in last epoch
-no_sats = Epoch.no_sats;                % number of satellites of current epoch
+no_sats = numel(Epoch.sats);            % number of satellites of current epoch
 s_f = no_sats*num_freq;               	% #satellites x #frequencies
 N_eye = eye(s_f);                       % square unit matrix, size = number of ambiguities
 N_idx = (NO_PARAM+1):(NO_PARAM+s_f);  	% indices of the ambiguities
@@ -153,7 +153,7 @@ if bool_filter
     % ----- covariance matrix -----
     if Adjust.est_ZWD && Adjust.param_sigma(7,7) == 1
         % check if estimation of ZWD starts in current epoch and replace 1
-        % in the covariance matrix with inital variance of ZWD from GUI
+        % in the covariance matrix with initial variance of ZWD from GUI
         Adjust.param_sigma(7,7) = FILTER.var_zwd;
     end
     

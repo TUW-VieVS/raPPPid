@@ -12,7 +12,7 @@ classdef Path
     
     properties (Constant = true)
         
-        % Programm-folder
+        % Source code folder
         CODE = '../CODE/'
         
         % Directory of data

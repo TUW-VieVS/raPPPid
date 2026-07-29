@@ -175,7 +175,7 @@ end
 %% add ionosphere constraint part
 if strcmpi(settings.IONO.model,'Estimate with ... as constraint') && Adjust.constraint
     % decreasing weight of ionospheric pseudo-observations over time, check [20] and [19]: 
-    % in the first epoch the std dev of the ionspheric pseudo-observations is taken.
+    % in the first epoch the std dev of the ionospheric pseudo-observations is taken.
     % In the last epoch of the constraint ("constraint until minute" in GUI,
     % e.g. 5min) the std dev is the value from the GUI ("decrease Stdev
     % [m] until" e.g. 3m). In-between it linear interpolation of the variance.
@@ -190,7 +190,7 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') && Adjust.cons
     else
         iono_var = v_end;
     end
-    % create covariance and weigth-matrix of ionospheric
+    % create covariance and weight-matrix of ionospheric
     % pseudo-observations, which are elevation weighted
     if isa(settings.ADJ.elev_weight_fun, 'function_handle')
         P_fac_iono = settings.ADJ.elev_weight_fun(elev*pi/180); 	
@@ -208,7 +208,7 @@ end
 
 
 
-%% add Doppler parth
+%% add Doppler part
 if contains(settings.PROC.method, '+ Doppler')
     % build wavelength vector
     if strcmp(settings.IONO.model, '2-Frequency-IF-LCs')
@@ -224,7 +224,7 @@ if contains(settings.PROC.method, '+ Doppler')
     fac_doppler = P_fac(:, 1:n_proc);
     % build covariance matrix of Doppler observations
     Q_doppler = diag(var_doppler_ms(:) ./ fac_doppler(:));
-    % create covariance and weigth-matrix
+    % create covariance and weight-matrix
     Q = blkdiag(Q, Q_doppler);
     P = blkdiag(P, inv(Q_doppler));
 end

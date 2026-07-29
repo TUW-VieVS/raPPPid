@@ -25,13 +25,12 @@ function signQualPlot(satellites, label_xaxis, hours, isGPS, isGLO, isGAL, isBDS
 % get some variables
 n = settings.INPUT.proc_freqs;          % number of processed frequencies
 cutoff = settings.PROC.elev_mask;       % cutoff angle [°]
+
+% get CN0 threshold
+snr_thresh = [NaN NaN NaN];
 try
-    snr_thresh = settings.PROC.SNR_mask;
-    if numel(snr_thresh) == 1
-        snr_thresh = [snr_thresh snr_thresh snr_thresh];
-    end
+    snr_thresh(1:numel(settings.PROC.SNR_mask)) = settings.PROC.SNR_mask;
 catch
-    snr_thresh = [NaN NaN NaN];
 end
     
 % get observed satellites prns

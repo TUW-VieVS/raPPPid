@@ -61,28 +61,48 @@ if strcmp(settings.IONO.model, '2-Frequency-IF-LCs')
 
     % print percentage to command window
     if fix_GPS
-        perc_1 = calcFixingRate(SAT_fixed, FIXABLE, idx_G, storeData.refSatGPS);
-        fprintf('Fixed GPS satellites: ')
-        fprintf('%05.2f', perc_1)
+        perc_GPS = calcFixingRate(SAT_fixed, FIXABLE, idx_G, storeData.refSatGPS);
+        perc_WL_GPS = calcFixingRate(WL_fix, FIXABLE, idx_G, storeData.refSatGPS);
+        perc_NL_GPS = calcFixingRate(NL_fix, FIXABLE, idx_G, storeData.refSatGPS);
+        fprintf('GPS WL/NL: ')
+        fprintf('%05.2f / %05.2f', perc_WL_GPS, perc_NL_GPS)
         fprintf(' [%%]   \n')
+        fprintf('GPS satellites: ')
+        fprintf('%05.2f', perc_GPS)
+        fprintf(' [%%]   \n\n')
     end
     if fix_GAL
-        perc_1 = calcFixingRate(SAT_fixed, FIXABLE, idx_E, storeData.refSatGAL);
-        fprintf('Fixed GAL satellites: ')
-        fprintf('%05.2f', perc_1)
+        perc_GAL = calcFixingRate(SAT_fixed, FIXABLE, idx_E, storeData.refSatGAL);
+        perc_WL_GAL = calcFixingRate(WL_fix, FIXABLE, idx_E, storeData.refSatGAL);
+        perc_NL_GAL = calcFixingRate(NL_fix, FIXABLE, idx_E, storeData.refSatGAL);
+        fprintf('GAL WL/NL: ')
+        fprintf('%05.2f / %05.2f', perc_WL_GAL, perc_NL_GAL)
         fprintf(' [%%]   \n')
+        fprintf('GAL satellites: ')
+        fprintf('%05.2f', perc_GAL)
+        fprintf(' [%%]   \n\n')
     end
     if fix_BDS
-        perc_1 = calcFixingRate(SAT_fixed, FIXABLE, idx_C, storeData.refSatBDS);
-        fprintf('Fixed BDS satellites: ')
-        fprintf('%05.2f', perc_1)
+        perc_BDS = calcFixingRate(SAT_fixed, FIXABLE, idx_C, storeData.refSatBDS);
+        perc_WL_BDS = calcFixingRate(WL_fix, FIXABLE, idx_C, storeData.refSatBDS);
+        perc_NL_BDS = calcFixingRate(NL_fix, FIXABLE, idx_C, storeData.refSatBDS);
+        fprintf('BDS WL/NL: ')
+        fprintf('%05.2f / %05.2f', perc_WL_BDS, perc_NL_BDS)
         fprintf(' [%%]   \n')
+        fprintf('BDS satellites: ')
+        fprintf('%05.2f', perc_BDS)
+        fprintf(' [%%]   \n\n')
     end
     if fix_QZS
-        perc_1 = calcFixingRate(SAT_fixed, FIXABLE, idx_J, storeData.refSatQZS);
-        fprintf('Fixed QZS satellites: ')
-        fprintf('%05.2f', perc_1)
+        perc_QZS = calcFixingRate(SAT_fixed, FIXABLE, idx_J, storeData.refSatQZS);
+        perc_WL_QZS = calcFixingRate(WL_fix, FIXABLE, idx_J, storeData.refSatQZS);
+        perc_NL_QZS = calcFixingRate(NL_fix, FIXABLE, idx_J, storeData.refSatQZS);
+        fprintf('QZS WL/NL: ')
+        fprintf('%05.2f / %05.2f', perc_WL_QZS, perc_NL_QZS)
         fprintf(' [%%]   \n')
+        fprintf('QZS satellites: ')
+        fprintf('%05.2f', perc_QZS)
+        fprintf(' [%%]   \n\n')
     end
 
 elseif strcmp(settings.IONO.model, 'Estimate, decoupled clock')
@@ -104,35 +124,35 @@ elseif strcmp(settings.IONO.model, 'Estimate, decoupled clock')
 
     % print percentage to command window
     if fix_GPS
-        perc_1 = calcFixingRate(N1_fix, FIXABLE, idx_G, storeData.refSatGPS);
-        perc_2 = calcFixingRate(N2_fix, FIXABLE, idx_G, storeData.refSatGPS);
-        perc_3 = calcFixingRate(N3_fix, FIXABLE, idx_G, storeData.refSatGPS);
-        fprintf('Fixed GPS satellites: ')
-        fprintf('%05.2f, %05.2f, %05.2f', perc_1, perc_2, perc_3)
+        perc_GPS_1 = calcFixingRate(N1_fix, FIXABLE, idx_G, storeData.refSatGPS);
+        perc_GPS_2 = calcFixingRate(N2_fix, FIXABLE, idx_G, storeData.refSatGPS);
+        perc_GPS_3 = calcFixingRate(N3_fix, FIXABLE, idx_G, storeData.refSatGPS);
+        fprintf('GPS satellites: ')
+        fprintf('%05.2f, %05.2f, %05.2f', perc_GPS_1, perc_GPS_2, perc_GPS_3)
         fprintf(' [%%]   \n')
     end
     if fix_GAL
-        perc_1 = calcFixingRate(N1_fix, FIXABLE, idx_E, storeData.refSatGAL);
-        perc_2 = calcFixingRate(N2_fix, FIXABLE, idx_E, storeData.refSatGAL);
-        perc_3 = calcFixingRate(N3_fix, FIXABLE, idx_E, storeData.refSatGAL);
-        fprintf('Fixed GAL satellites: ')
-        fprintf('%05.2f, %05.2f, %05.2f', perc_1, perc_2, perc_3)
+        perc_GAL_1 = calcFixingRate(N1_fix, FIXABLE, idx_E, storeData.refSatGAL);
+        perc_GAL_2 = calcFixingRate(N2_fix, FIXABLE, idx_E, storeData.refSatGAL);
+        perc_GAL_3 = calcFixingRate(N3_fix, FIXABLE, idx_E, storeData.refSatGAL);
+        fprintf('GAL satellites: ')
+        fprintf('%05.2f, %05.2f, %05.2f', perc_GAL_1, perc_GAL_2, perc_GAL_3)
         fprintf(' [%%]   \n')
     end
     if fix_BDS
-        perc_1 = calcFixingRate(N1_fix, FIXABLE, idx_C, storeData.refSatBDS);
-        perc_2 = calcFixingRate(N2_fix, FIXABLE, idx_C, storeData.refSatBDS);
-        perc_3 = calcFixingRate(N3_fix, FIXABLE, idx_C, storeData.refSatBDS);
-        fprintf('Fixed BDS satellites: ')
-        fprintf('%05.2f, %05.2f, %05.2f', perc_1, perc_2, perc_3)
+        perc_BDS_1 = calcFixingRate(N1_fix, FIXABLE, idx_C, storeData.refSatBDS);
+        perc_BDS_2 = calcFixingRate(N2_fix, FIXABLE, idx_C, storeData.refSatBDS);
+        perc_BDS_3 = calcFixingRate(N3_fix, FIXABLE, idx_C, storeData.refSatBDS);
+        fprintf('BDS satellites: ')
+        fprintf('%05.2f, %05.2f, %05.2f', perc_BDS_1, perc_BDS_2, perc_BDS_3)
         fprintf(' [%%]   \n')
     end
     if fix_QZS
-        perc_1 = calcFixingRate(N1_fix, FIXABLE, idx_J, storeData.refSatQZS);
-        perc_2 = calcFixingRate(N2_fix, FIXABLE, idx_J, storeData.refSatQZS);
-        perc_3 = calcFixingRate(N3_fix, FIXABLE, idx_J, storeData.refSatQZS);
-        fprintf('Fixed QZS satellites: ')
-        fprintf('%05.2f, %05.2f, %05.2f', perc_1, perc_2, perc_3)
+        perc_QZS_1 = calcFixingRate(N1_fix, FIXABLE, idx_J, storeData.refSatQZS);
+        perc_QZS_2 = calcFixingRate(N2_fix, FIXABLE, idx_J, storeData.refSatQZS);
+        perc_QZS_3 = calcFixingRate(N3_fix, FIXABLE, idx_J, storeData.refSatQZS);
+        fprintf('QZS satellites: ')
+        fprintf('%05.2f, %05.2f, %05.2f', perc_QZS_1, perc_QZS_2, perc_QZS_3)
         fprintf(' [%%]   \n')
     end
 

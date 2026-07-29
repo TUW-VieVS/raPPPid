@@ -5,7 +5,7 @@ function [] = vis_cs_DF(storeData, sys, tresh, Elev)
 % 
 % INPUT:
 %   storeData       struct, collected data from all processed epochs
-%   sys             1-digit-char which represents GNSS (G=GPS, R=Glonass, E=Galileo)
+%   sys             1-digit-char which represents GNSS (G=GPS, R=GLONASS, E=Galileo)
 %   tresh           [m], threshold for difference between dL1 minus dL2
 %   Elev            elevation of satellites over all epochs
 % OUTPUT:

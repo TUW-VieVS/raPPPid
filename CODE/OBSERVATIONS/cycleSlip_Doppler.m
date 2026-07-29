@@ -15,6 +15,7 @@ function Epoch = cycleSlip_Doppler(Epoch, use_column, settings)
 % Revision:
 %   11 Nov 2020, MFG: implementation extended for GLO and BDS
 %   11 Nov 2023, MFWG: adding QZSS
+%   19 June 2026, MFWG: removing bug when processing linear combination
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -55,18 +56,13 @@ obs_old_J = Epoch.old.obs(Epoch.old.qzss, :);
 
 
 
-% ||| convert Doppler from m/s to Hz in the case of smartphone raw data
-% processing
-
-
-
 %% Check for Cycle-Slips
 
 % --- 1st frequency
 % get columns of observations for GPS
 L1_G = use_column{1, 1}; 	% column of L1-observations in observation-matrix (Epoch.obs)
 D1_G = use_column{1,10}; 	% column of Doppler-observations in observation-matrix (Epoch.obs)
-% get columns of observations for Glonass
+% get columns of observations for GLONASS
 L1_R = use_column{2, 1};
 D1_R = use_column{2,10};
 % get columns of observations for Galileo
@@ -95,12 +91,12 @@ Epoch.cs_L1D1_diff = L1_diff;
 
 % --- 2nd frequency
 % same procedure as 1st frequency
-if settings.INPUT.proc_freqs > 1
+if settings.INPUT.num_freqs > 1
     L2_G = use_column{1, 2};    D2_G = use_column{1,11};
     L2_R = use_column{2, 2};    D2_R = use_column{2,11};
     L2_E = use_column{3, 2};    D2_E = use_column{3,11};
     L2_C = use_column{4, 2};    D2_C = use_column{4,11};
-    L2_J = use_column{4, 2};    D2_J = use_column{4,11};
+    L2_J = use_column{5, 2};    D2_J = use_column{5,11};
     [L2_now, L2_old, D2_now, D2_old] = ...
         getPhaseDoppler(obs_now_G, obs_old_G, obs_now_R, obs_old_R, obs_now_E, obs_old_E, obs_now_C, obs_old_C, obs_now_J, obs_old_J,...
         L2_G, L2_R, L2_E, L2_C, L2_J, D2_G, D2_R, D2_E, D2_C, D2_J, ...
@@ -116,12 +112,12 @@ end
 
 % --- 3rd frequency
 % same procedure as 1st frequency
-if settings.INPUT.proc_freqs > 2
+if settings.INPUT.num_freqs > 2
     L3_G = use_column{1, 3};    D3_G = use_column{1,12};
     L3_R = use_column{2, 3};    D3_R = use_column{2,12};
     L3_E = use_column{3, 3};    D3_E = use_column{3,12};
     L3_C = use_column{4, 3};    D3_C = use_column{4,12};
-    L3_J = use_column{4, 3};    D3_J = use_column{4,12};
+    L3_J = use_column{5, 3};    D3_J = use_column{5,12};
     [L3_now, L3_old, D3_now, D3_old] = ...
         getPhaseDoppler(obs_now_G, obs_old_G, obs_now_R, obs_old_R, obs_now_E, obs_old_E, obs_now_C, obs_old_C, obs_now_J, obs_old_J,...
         L3_G, L3_R, L3_E, L3_C, L3_J, D3_G, D3_R, D3_E, D3_C, D3_J, ...
@@ -134,6 +130,16 @@ if settings.INPUT.proc_freqs > 2
         detect_CS_Doppler(L3_now, L3_old, D3_now, D3_old, dt, 3, Epoch, thresh, bool_print, bool_sat);
     Epoch.cs_L3D3_diff = L3_diff;
 end
+
+% % reduce exclusion vector depending on processed linear combination
+% if strcmp(IONO_model, '2-Frequency-IF-LCs') && n == 2
+%     exclude = exclude(:,1) | exclude(:,2);
+% elseif strcmp(IONO_model, '2-Frequency-IF-LCs') && n == 3
+%     exclude = [exclude(:,1) | exclude(:,2), exclude(:,2) | exclude(:,3)];
+% elseif strcmp(IONO_model, '3-Frequency-IF-LC')
+%     exclude = exclude(:,1) | exclude(:,2) | exclude(:,3);
+% end
+
 
 
 
@@ -235,7 +241,13 @@ cs_found = Epoch.cs_found;
 % print information about detected cycle-slips
 if any(new_cs_found)
     idx_cs = new_cs_found(Epoch.sats);
-    cs_found(:,freq) = cs_found(:,freq) | idx_cs';    % save detected cycle-slips
+    if size(cs_found, 2) >= freq    
+        % flag detected cycle-slips on corresponding frequency
+        cs_found(:,freq) = cs_found(:,freq) | idx_cs';    
+    else         
+        % linear combination is processed: flag cycle slip on all frequencies
+        cs_found = cs_found | idx_cs';    
+    end
     if bool_print
         fprintf('Cycle-Slip found on frequency %1.0f with Doppler in epoch %d:           \n', ...
             freq, Epoch.q);

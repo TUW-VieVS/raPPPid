@@ -6,14 +6,11 @@ function string = sow2hhmmss(sow)
 
 n = length(sow);
 for i = 1:n
-    sod = mod(sow(i),86400);
+    sod = mod(round(sow(i)), 86400);   % round once to whole sec, then cascade
     hour = floor(sod/3600);
-    min = round(floor(mod(sod,3600))/60);
-    while min >= 60
-        hour = hour + 1;
-        min = min - 60;
-    end
-    sec = round(mod(sod,60));
+    soh = mod(sod,3600);
+    min = floor(soh/60);
+    sec = mod(soh,60);
     hh = sprintf('%02d', hour);
     mm = sprintf('%02d', min);
     ss = sprintf('%02d', sec);

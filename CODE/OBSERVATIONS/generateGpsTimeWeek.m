@@ -15,7 +15,7 @@ function [gpsweek, gpstime] = generateGpsTimeWeek(TimeNanos, FullBiasNanos, Bias
 %       TimeOffsetNanos
 %                   int64, [ns], time offset at which the measurement was taken
 %   optional:
-%       FullBiasNanos_1 = FullBiasNanos from first processd epoch
+%       FullBiasNanos_1 = FullBiasNanos from first processed epoch
 %       BiasNanos_1 = TimeNanos from first processed epoch
 % OUTPUT:
 %	gpsweek         [], GPS week number
@@ -58,7 +58,7 @@ gps_week_ns = int64(gpsweek) * WEEK_s_int64 * 1e9;  	% [ns]
 % compute t_RX_ns (time signal received) using FullBiasNanos(1)
 t_RX_ns = TimeNanos - FullBiasNanos_1;
 
-% consider different GNSS time systems, everyting is calculated in [ns]:
+% consider different GNSS time systems, everything is calculated in [ns]:
 t_RX_ns = t_RX_ns - gps_week_ns; 	% t_RX_ns now since beginning of the week, unless we had a week rollover
 
 % subtract the fractional offsets TimeOffsetNanos and BiasNanos:
@@ -69,7 +69,7 @@ t_TX_s  = ReceivedSvTimeNanos;                          % [ns], transmitted time
 PR_s  = double(t_RX_s - t_TX_s)*1e-9;  	% [s]
 
 % check for GPS week rollover here
-n_rollover = floor(PR_s / 604800);      % ||| or round()?
+n_rollover = round(PR_s / 604800);
 
 % correct calculated GPS week
 gpsweek = gpsweek + n_rollover;

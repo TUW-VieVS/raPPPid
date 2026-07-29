@@ -378,6 +378,24 @@ for j = 1:3
             valid_settings = false; return
         end
     end
+    if GLO_on && ~strcmp(settings.INPUT.glo_freq{j}, 'OFF') && ~prebatch_check
+        if ~any(contains(obs_frqs_glo, proc_frqs_glo{j}))
+            errordlg(['Frequency ' proc_frqs_glo{j} ' is not observed and can not be processed!'], windowname);
+            valid_settings = false; return
+        end
+    end
+    if BDS_on && ~strcmp(settings.INPUT.bds_freq{j}, 'OFF') && ~prebatch_check
+        if ~any(contains(obs_frqs_bds, proc_frqs_bds{j}))
+            errordlg(['Frequency ' proc_frqs_bds{j} ' is not observed and can not be processed!'], windowname);
+            valid_settings = false; return
+        end
+    end
+    if QZS_on && ~strcmp(settings.INPUT.qzss_freq{j}, 'OFF') && ~prebatch_check
+        if ~any(contains(obs_frqs_qzss, proc_frqs_qzs{j}))
+            errordlg(['Frequency ' proc_frqs_qzs{j} ' is not observed and can not be processed!'], windowname);
+            valid_settings = false; return
+        end
+    end
 end
 
 % check for errors related to estimation of receiver DCBs
@@ -456,7 +474,7 @@ if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && num_freq == 3 && ~settin
 end
 
 % WL Fixing needs at least two epochs
-if ~prebatch_check && ~DecoupledClockModel && settings.AMBFIX.bool_AMBFIX && ~isempty(rheader.interval) && (ceil(settings.AMBFIX.start_WL_sec/rheader.interval) < 1)
+if ~prebatch_check && ~DecoupledClockModel && settings.AMBFIX.bool_AMBFIX && ~isempty(rheader.interval) && (ceil(settings.AMBFIX.start_WL_sec/rheader.interval) < 2)
     errordlg({'Check start of Fixing!', 'For WL-Fixing at least 2 epochs are needed.'}, windowname);
     valid_settings = false; return
 end
@@ -806,7 +824,7 @@ if settings.INPUT.bool_realtime && ~strcmp(settings.ADJ.filter.direction, 'Forwa
 end
 
 % Resets of the PPP solution make only sense for forwards filtering
-if settings.INPUT.bool_realtime && ~strcmp(settings.ADJ.filter.direction, 'Forwards')
+if settings.PROC.reset_float && ~strcmp(settings.ADJ.filter.direction, 'Forwards')
     errordlg({['Filter direction is "' settings.ADJ.filter.direction '".'], 'Please disable resets of the solution or', 'change filter direction to "Forwards".'}, windowname);
     valid_settings = false; return
 end
@@ -858,6 +876,13 @@ end
 % Linear model for coordinates requires Doppler and velocity estimation
 if settings.ADJ.filter.dynmodel_coord == 2 && (~is_kinematic || ~contains(settings.PROC.method, '+ Doppler'))
     errordlg({'Dynamic Model: "Linear" for coordinates', 'requires velocity estimation with Doppler!'}, windowname);
+    valid_settings = false; return
+end 
+
+% VTEC from correction stream requires correction stream
+if strcmp(settings.IONO.source, 'VTEC from Correction Stream') && ...
+        (settings.ORBCLK.bool_precise || ~settings.ORBCLK.bool_brdc)
+    errordlg({'Ionosphere - VTEC from Correction Stream:', 'Select and enable correction stream!'}, windowname);
     valid_settings = false; return
 end 
 
@@ -1131,7 +1156,7 @@ end
 
 % Batch processing and manually selected for only one day selected orbits, 
 % clocks or biases. This could lead to errors if observation files from
-% multiple days are processd
+% multiple days are processed
 if prebatch_check
     if settings.ORBCLK.bool_precise && strcmp(settings.ORBCLK.prec_prod, 'manually') ...
             && (~contains(settings.ORBCLK.file_sp3, '$') || ~contains(settings.ORBCLK.file_clk, '$'))

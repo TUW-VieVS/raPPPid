@@ -92,8 +92,11 @@ storeData.param = table2array(FLOAT(:, idx_param));
 storeData.NO_PARAM = numel(idx_param);
 
 % float position in UTM and geographic coordinates
+% CSV stores latitude/longitude in degrees, but storeData.posFloat_geo is in
+% radians throughout raPPPid (consumers e.g. SinglePlotting.m convert with
+% *180/pi) -> convert deg -> rad here (height stays [m])
 storeData.posFloat_utm = [FLOAT.x_UTM, FLOAT.y_UTM, FLOAT.height];
-storeData.posFloat_geo = [FLOAT.latitude, FLOAT.longitude, FLOAT.height];
+storeData.posFloat_geo = [FLOAT.latitude*pi/180, FLOAT.longitude*pi/180, FLOAT.height];
 
 % time
 storeData.gpstime = FLOAT.sow;
@@ -151,8 +154,9 @@ end
 storeData.param_fix = table2array(FIXED(:,idx_param));
 
 % fixed position in UTM and geographic coordinates
+% latitude/longitude deg -> rad (see float section above); height stays [m]
 storeData.posFixed_utm = [FIXED.x_UTM, FIXED.y_UTM, FIXED.height];
-storeData.posFixed_geo = [FIXED.latitude, FIXED.longitude, FIXED.height];
+storeData.posFixed_geo = [FIXED.latitude*pi/180, FIXED.longitude*pi/180, FIXED.height];
 
 % create storeData.fixed (epochs with valid fixed solution)
 storeData.fixed = all(~isnan(storeData.param_fix), 2) & all(storeData.param_fix ~= 0, 2);

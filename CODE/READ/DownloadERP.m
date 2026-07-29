@@ -59,6 +59,7 @@ switch settings.ORBCLK.prec_prod
                         file = {['igs' yyyy(3:4) 'P' gpsweek '.erp.Z']};    % IGS erp file
                     end
                 else
+                    % ||| not implemented yet
                     % % not available yet?! CHANGE FILENAME!
                     % file = {['IGS0DEMFIN_' yyyy doy '0000_01D_01D_OSB.BIA.gz']};
                     %
@@ -77,6 +78,8 @@ switch settings.ORBCLK.prec_prod
                     % % save path to EOPs (erp)
                     % settings.ORBCLK.file_erp = decompressed{1};
                     % return
+                    errordlg('IGS Final MGEX ERP file is not implemented!', 'Error');
+                    return
                 end
 
             case 'Rapid'
@@ -99,9 +102,11 @@ switch settings.ORBCLK.prec_prod
         
     case 'ESA'
         % http://navigation-office.esa.int/GNSS_based_products.html
+        % unlike IGS, ESA publishes a daily (not 7-day) ERP file
         if settings.ORBCLK.MGEX
+            target = {[Path.DATA, 'ERP/', yyyy, '/', doy]};
             if str2double(gpsweek) >= 2238
-                file_erp = ['ESA0MGNFIN_' yyyy_0 doy_0 '0000_07D_01D_ERP.ERP.gz'];
+                file_erp = ['ESA0MGNFIN_' yyyy doy '0000_01D_01D_ERP.ERP.gz'];
             else
                 file_erp = ['esm', gpsweek, dow, '.erp.gz'];
             end
@@ -110,17 +115,23 @@ switch settings.ORBCLK.prec_prod
             [~,file{1},~] = fileparts(file{1});
             if ~isfile([target{1}, '/', file{1}])
                 [~, ~] = mkdir(target{1});
-                websave([target{1}, '/', file_erp] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_erp]);
+                try
+                    websave([target{1}, '/', file_erp] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_erp]);
+                catch
+                    errordlg({'Download of ESA MGEX ERP file failed:', file_erp}, 'Error');
+                    return
+                end
             end
             % decompress and delete archive
             decompressed = unzip_and_delete({file_erp}, target(1));
             download = false;   % orbit download is finished
-            
+
         else
             switch settings.ORBCLK.prec_prod_type
                 case 'Final'
+                    target = {[Path.DATA, 'ERP/', yyyy, '/', doy]};
                     if str2double(gpsweek) >= 2238
-                        file_erp = ['ESA0OPSFIN_' yyyy_0 doy_0 '0000_07D_01D_ERP.ERP.gz'];
+                        file_erp = ['ESA0OPSFIN_' yyyy doy '0000_01D_01D_ERP.ERP.gz'];
                     else
                         file_erp = ['esa', gpsweek, dow, '.erp.Z'];
                     end
@@ -129,12 +140,17 @@ switch settings.ORBCLK.prec_prod
                     [~,file{1},~] = fileparts(file{1});
                     if ~isfile([target{1}, '/', file{1}])
                         [~, ~] = mkdir(target{1});
-                        websave([target{1}, '/', file_erp] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_erp]);
+                        try
+                            websave([target{1}, '/', file_erp] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_erp]);
+                        catch
+                            errordlg({'Download of ESA ERP file failed:', file_erp}, 'Error');
+                            return
+                        end
                     end
                     % decompress and delete archive
                     decompressed = unzip_and_delete({file_erp}, target(1));
                     download = false;   % orbit download is finished
-                    
+
                 case 'Rapid'
                     target = {[Path.DATA, 'ERP/', yyyy, '/', doy]};
                     if str2double(gpsweek) >= 2238
@@ -147,12 +163,17 @@ switch settings.ORBCLK.prec_prod
                     [~,file{1},~] = fileparts(file{1});
                     if ~isfile([target{1}, '/', file{1}])
                         [~, ~] = mkdir(target{1});
-                        websave([target{1}, '/', file_erp] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_erp]);
+                        try
+                            websave([target{1}, '/', file_erp] , ['http://navigation-office.esa.int/products/gnss-products/', gpsweek, '/', file_erp]);
+                        catch
+                            errordlg({'Download of ESA ERP file failed:', file_erp}, 'Error');
+                            return
+                        end
                     end
                     % decompress and delete archive
                     decompressed = unzip_and_delete({file_erp}, target(1));
                     download = false;   % orbit download is finished
-                    
+
                 case 'Ultra-Rapid'
                     % ||| implement at some point
                     fprintf(2, 'ESA ultra-rapid ERP file is not implemented!')
@@ -237,29 +258,58 @@ switch settings.ORBCLK.prec_prod
                     file = {['COD0OPSRAP_' yyyy doy '0000_01D_01D_ERP.ERP']};
                     decomp = {['COD0OPSRAP_' yyyy doy '0000_01D_01D_ERP.ERP']};
                     bool_archive = false;
-                    
+                    % additional source: CDDIS mirrors this (gzipped) even
+                    % when CODE's own site doesn't have it anymore
+                    file_cddis = {['COD0OPSRAP_' yyyy doy '0000_01D_01D_ERP.ERP.gz']};
+
                 case 'Ultra-Rapid'
                     URL_folders = {'/CODE/'};
                     file = {['COD0OPSULT_' yyyy doy '0000_01D_01D_ERP.ERP']};
                     decomp = {['COD0OPSULT_' yyyy doy '0000_01D_01D_ERP.ERP']};
                     bool_archive = false;
-                    
+                    % additional source: CDDIS mirrors this (gzipped, "02D"
+                    % span - unlike CODE's own "01D"-labelled file) even
+                    % when CODE's own site doesn't have it anymore
+                    file_cddis = {['COD0OPSULT_' yyyy doy '0000_02D_01D_ERP.ERP.gz']};
+
                 otherwise
                     return
             end
         end
 
         % download
+        decompressed_cddis = {};
         if ~(isfile([target{1} file{1}]) || isfile(decomp{1}))
+            downloaded = false;
             try
                 websave([target{1} file{1}], [host URL_folders{1} file{1}]);
+                downloaded = true;
             catch
+                % websave can leave a 0-byte file behind even on failure;
+                % delete it so it doesn't fool the CDDIS fallback's
+                % already-exists check below
+                if isfile([target{1} file{1}]); delete([target{1} file{1}]); end
+            end
+            if ~downloaded && exist('file_cddis', 'var')
+                fs = get_cddis_data('https://cddis.nasa.gov', {['/archive/gnss/products/' gpsweek '/']}, file_cddis, target, true);
+                if fs(1) == 1 || fs(1) == 2
+                    % already decompressed here - do not run unzip_and_delete
+                    % again below on what is now a plain (non-archive) file
+                    decompressed_cddis = unzip_and_delete(file_cddis, target);
+                    downloaded = true;
+                end
+            end
+            if ~downloaded
                 errordlg('No CODE ERPs found on server!', 'Error');
             end
         end
         download = false;
         % decompress
-        decompressed = unzip_and_delete(file(1), target(1));
+        if isempty(decompressed_cddis)
+            decompressed = unzip_and_delete(file(1), target(1));
+        else
+            decompressed = decompressed_cddis;
+        end
         
     case 'GFZ'
         % https://www.gfz-potsdam.de/en/section/space-geodetic-techniques/topics/gnss-igs-analysis-center/
@@ -267,10 +317,12 @@ switch settings.ORBCLK.prec_prod
         if settings.ORBCLK.MGEX
             switch settings.ORBCLK.prec_prod_type
                 case 'Final'
+                    % GFZ does not provide a final MGEX product (only
+                    % rapid); /pub/GNSS/products/mgex/w<week> no longer
+                    % exists on the server
+                    errordlg('GFZ does not provide a final MGEX ERP product. Please use Rapid instead!', 'Error');
+                    return
 
-                    URL_folders = {['/pub/GNSS/products/mgex/' gpsweek, '/']};
-                    file = {['gbm', gpsweek, dow, '.erp.Z']};
-                    
                 case 'Rapid'
                     % ftp adress without 'pub' does only work in the browser
                     if str2double(gpsweek) > 2245
@@ -307,11 +359,10 @@ switch settings.ORBCLK.prec_prod
         else
             switch settings.ORBCLK.prec_prod_type
                 case 'Final'
-                    % last time checked, GFZ did not change to long
-                    % filenames (10 Jan 2023)
                     URL_folders = {['/pub/GNSS/products/final/w' gpsweek, '/']};
-                    file = {['gfz', gpsweek, dow, '.erp.Z']};
-                    
+                    file = {['GFZ0OPSFIN_' yyyy doy '0000_07D_01D_ERP.ERP.gz']};
+                    target = {[Path.DATA, 'ERP/', yyyy, '/', doy]};
+
                 case 'Rapid'
                     fprintf(2, 'GFZ rapid ERP file is not implemented!')
                     return
@@ -349,7 +400,11 @@ switch settings.ORBCLK.prec_prod
                     file{1}    = ['WUM0MGXRAP_' yyyy doy '0000_01D_01D_ERP.ERP.gz'];
                 case 'Final'
                     URL_folders = {['/pub/igs/products/mgex/', gpsweek, '/']};
-                    file{1} = ['WUM0MGXFIN_' yyyy doy '0000_01D_01D_ERP.ERP.gz']; 
+                    file{1} = ['WUM0MGXFIN_' yyyy doy '0000_01D_01D_ERP.ERP.gz'];
+
+                otherwise
+                    fprintf(2, 'WUM ERP file is not implemented for this product type!')
+                    return
             end
             if str2double(gpsweek) > 2230
                 URL_folders_2 = {['/archive/gnss/products/' gpsweek]};
@@ -429,8 +484,10 @@ if download
         end
     end
     if file_status == 0 && ~isempty(URL_folders_2) 	% try alternative download (e.g., CDDIS)
-        file = files_2{1};    target = target{1};
-        file_status = get_cddis_data(URL_host_2, URL_folders_2, {file}, {target}, true);
+        file_status = get_cddis_data(URL_host_2, URL_folders_2, files_2(1), target(1), true);
+        if file_status == 1 || file_status == 2
+            file = files_2;
+        end
     end
     % other download sources can be added here
     if file_status == 0

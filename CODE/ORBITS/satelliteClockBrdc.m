@@ -3,7 +3,7 @@ function [dT_clk, noclock] = satelliteClockBrdc(Ttr, Eph, isGPS, isGLO, isGAL, i
 % from a real-time correction stream.
 %
 % INPUT:
-% 	Ttr         transmission time (GPStime)
+% 	Ttr         transmission time (GPS time)
 % 	Eph         30x1, navigation message for current satellite (https://vievswiki.geo.tuwien.ac.at/raPPPid/General/InputData)
 %   corr2brdc   boolean, from settings.ORBCLK.corr2brdc_clk
 %   corr_clk    5x1, clock correction to broadcast message [timestamp, a0, a1, a2, IOD]
@@ -35,7 +35,7 @@ if isGPS || isGAL || isBDS
     dT = check_t(Ttr_ - toc);           % time difference between transmission time and time of clock
     dT_clk = a2*dT^2 + a1*dT + a0;      % 2nd degree polynomial clock correction
 elseif isGLO
-    toe = Eph(18);    % epoch of ephemerides converted into GPS sow (only leap seconds accounted)
+    toe = Eph(18);    % epoch of ephemeris converted into GPS sow (only leap seconds accounted)
     dT = check_t(Ttr - toe);
     % dT_clk = (-Tau_N) + Gamma_N + (-Tau_C)
     dT_clk = + Eph(2) + Eph(3)*dT + Eph(16);

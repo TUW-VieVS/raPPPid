@@ -71,7 +71,7 @@ menu_file_setInputFile_Callback(hObject, eventdata, handles)
 % Somehow necessary, does not work as default in GUIDE 
 handles.radiobutton_models_ionosphere_source.Value = 1;
 
-% Initialising variable path
+% Initializing variable path
 path.obs_1      = ''; 	path.obs_2      = '';
 path.navMULTI_1 = ''; 	path.navMULTI_2 = '';
 path.navGPS_1   = ''; 	path.navGPS_2   = '';
@@ -90,6 +90,7 @@ path.dcbP1C1_1  = ''; 	path.dcbP1C1_2  = '';
 path.dcbP2C2_1  = ''; 	path.dcbP2C2_2  = '';
 path.bias_1     = '';	path.bias_2     = '';
 path.antex_1    = '';	path.antex_2     = '';
+path.IMU_1    = '';		path.IMU_2     = '';
 path.rinex_date = '/0000/000/';
 path.plotfile = '';
 path.last_plot = [];
@@ -332,6 +333,12 @@ end
 function menu_run_Callback(hObject, eventdata, handles)
 end
 
+    function menu_run_checks_Callback(hObject, eventdata, handles)
+    setAllPanelsToInvisible(handles)
+    set(handles.uipanel_checks, 'Visible', 'On');
+    handles = GUI_enable_onoff(handles);    % update the visible items
+    guidata(hObject, handles);
+    end
 
     function menu_run_processingOptions_Callback(hObject, eventdata, handles)
     setAllPanelsToInvisible(handles)
@@ -380,6 +387,7 @@ set(handles.uipanel_kinematic,         'Visible',  'Off');   % Kinematic
 set(handles.uipanel_ambiguityFixing,   'Visible',  'Off');   % Ambiguity fixing
 set(handles.uipanel_adjustment,        'Visible',  'Off');   % Adjustment
 set(handles.uipanel_weighting,         'Visible',  'Off');   % Observation weighting
+set(handles.uipanel_checks,    		   'Visible',  'Off');   % Quality Checks
 set(handles.uipanel_processingOptions, 'Visible',  'Off');   % Processing options
 set(handles.uipanel_export,            'Visible',  'Off');   % Export options
 set(handles.uipanel_single_plot,       'Visible',  'Off');   % Single-Plots
@@ -523,11 +531,6 @@ else
     handles.paths.rinex_date = '/0000/000/';
 end
 
-% set approximate position into GUI
-pos_approx = num2str(rheader.pos_approx, '%.4f');
-set(handles.edit_x, 'String', pos_approx(1,:));
-set(handles.edit_y, 'String', pos_approx(2,:));
-set(handles.edit_z, 'String', pos_approx(3,:));
 
 % Enable/Disable stuff on GUI depending on observation file
 % ||| check for Doppler observation and en/disable CS detection with Doppler
@@ -981,46 +984,6 @@ function checkbox_realtime_Callback(hObject, eventdata, handles)
 end
 
 
-% Approximate position
-function edit_x_Callback(hObject, eventdata, handles)
-if isnan(sscanf(get(hObject, 'String'), '%f')) == 1
-    errordlg('Invalid coordinate.', 'Error');
-end
-guidata(hObject, handles);
-end
-
-function edit_x_CreateFcn(hObject, eventdata, handles)
-if ispc && isequal(get(hObject, 'BackgroundColor'), get(0, 'defaultUicontrolBackgroundColor'))
-    set(hObject, 'BackgroundColor', 'white');
-end
-end
-
-function edit_y_Callback(hObject, eventdata, handles)
-if isnan(sscanf(get(hObject, 'String'), '%f')) == 1
-    errordlg('Invalid coordinate.', 'Error');
-end
-guidata(hObject, handles);
-end
-
-function edit_y_CreateFcn(hObject, eventdata, handles)
-if ispc && isequal(get(hObject, 'BackgroundColor'), get(0, 'defaultUicontrolBackgroundColor'))
-    set(hObject, 'BackgroundColor', 'white');
-end
-end
-
-function edit_z_Callback(hObject, eventdata, handles)
-if isnan(sscanf(get(hObject, 'String'), '%f')) == 1
-    errordlg('Invalid coordinate.', 'Error');
-end
-guidata(hObject, handles);
-end
-
-function edit_z_CreateFcn(hObject, eventdata, handles)
-if ispc && isequal(get(hObject, 'BackgroundColor'), get(0, 'defaultUicontrolBackgroundColor'))
-    set(hObject, 'BackgroundColor', 'white');
-end
-end
-
 
 
 % --- Executes on button press in pushbutton_load_pos_true.
@@ -1102,6 +1065,26 @@ end
 
 % True position
 function edit_x_true_Callback(hObject, eventdata, handles)
+input_string = strtrim(get(hObject, 'String'));
+% if the typed text is not a number, try to interpret it as a station name
+if ~isempty(input_string) && ~strcmp(input_string, 'Reference Trajectory') && isnan(str2double(input_string))
+    pos_true = getCoordinates(input_string, [2000 1 1], '');
+    % look up the reference coordinates in Coords.txt
+    if sum(pos_true) ~= 0
+        % position found, write to GUI
+        set(handles.edit_x_true, 'String', num2str(pos_true(1)));
+        set(handles.edit_y_true, 'String', num2str(pos_true(2)));
+        set(handles.edit_z_true, 'String', num2str(pos_true(3)));
+        set(handles.text_x_true, 'String', 'X-Coordinate:');
+        set(handles.text_y_true, 'String', 'Y-Coordinate:');
+        set(handles.text_z_true, 'String', 'Z-Coordinate:');
+        set(handles.text139, 'Visible', 'On');
+        set(handles.text141, 'Visible', 'On');
+        set(handles.text143, 'Visible', 'On');
+    else
+        errordlg(['Station "' input_string '" not found in Coords.txt.'], 'Error');
+    end
+end
 end
 
 function edit_x_true_CreateFcn(hObject, eventdata, handles)
@@ -1171,12 +1154,12 @@ switch col      % action depending of column where event happened
             %             TABLE(rows,:) = [];
         end
         
-    case {6, 9, 12, 15}         % checkboxes GNSS
+    case {3, 6, 9, 12}         % checkboxes GNSS
         if bool_all     % en/disable GPS for all files
             TABLE(filled,col) = {value};
             handles.checkbox_manipulate_all.Value = false;
         end  
-    case {7, 8, 10, 11, 13, 14, 16, 17}         % Frequencies or Ranking
+    case {4, 5, 7, 8, 10, 11, 13, 14}         % Frequencies or Ranking
         if (ischar(value) && str2double(value) == 0)
             if row ~= 1     % all other rows -> copy from cell above
                 TABLE(row, col) = TABLE(row-1, col);
@@ -1194,7 +1177,7 @@ switch col      % action depending of column where event happened
             handles.checkbox_batch_manipulate_identical.Value = false;
         end
 
-    case {3, 4, 5, 18, 19}      % XYZ, Start or End
+    case {18, 19}      % Start or End
         if value == 0
             if row ~= 1     % all other rows -> copy from cell above
                 TABLE(row, col) = TABLE(row-1, col);
@@ -1308,23 +1291,20 @@ while true      % loop to add multiple files
         % write everything into table
         TABLE{row_idx, 1} = fpath;
         TABLE{row_idx, 2} = files{i};
-        TABLE{row_idx, 3} = rheader.pos_approx(1);
-        TABLE{row_idx, 4} = rheader.pos_approx(2);
-        TABLE{row_idx, 5} = rheader.pos_approx(3);
-        TABLE{row_idx, 6} = bool_gps;
-        TABLE{row_idx, 7} = gps_freq_str;
-        TABLE{row_idx, 8} = gps_ranking;
-        TABLE{row_idx, 9} = bool_glo;
-        TABLE{row_idx,10} = glo_freq_str;
-        TABLE{row_idx,11} = glo_ranking;
-        TABLE{row_idx,12} = bool_gal;
-        TABLE{row_idx,13} = gal_freq_str;
-        TABLE{row_idx,14} = gal_ranking;
-        TABLE{row_idx,15} = bool_bds;
-        TABLE{row_idx,16} = bds_freq_str;
-        TABLE{row_idx,17} = bds_ranking;
-        TABLE{row_idx,18} = 1;
-        TABLE{row_idx,19} = 999999;
+        TABLE{row_idx, 3} = bool_gps;
+        TABLE{row_idx, 4} = gps_freq_str;
+        TABLE{row_idx, 5} = gps_ranking;
+        TABLE{row_idx, 6} = bool_glo;
+        TABLE{row_idx, 7} = glo_freq_str;
+        TABLE{row_idx, 8} = glo_ranking;
+        TABLE{row_idx, 9} = bool_gal;
+        TABLE{row_idx,10} = gal_freq_str;
+        TABLE{row_idx,11} = gal_ranking;
+        TABLE{row_idx,12} = bool_bds;
+        TABLE{row_idx,13} = bds_freq_str;
+        TABLE{row_idx,14} = bds_ranking;
+        TABLE{row_idx,15} = 1;
+        TABLE{row_idx,16} = 999999;
         
         row_idx = row_idx + 1;
         
@@ -1439,23 +1419,20 @@ while true      % loop to add multiple files
         % write everything into table
         TABLE{row_idx, 1} = relativepath(AllFiles(i).folder);
         TABLE{row_idx, 2} = AllFiles(i).name;
-        TABLE{row_idx, 3} = rheader.pos_approx(1);
-        TABLE{row_idx, 4} = rheader.pos_approx(2);
-        TABLE{row_idx, 5} = rheader.pos_approx(3);
-        TABLE{row_idx, 6} = bool_gps;
-        TABLE{row_idx, 7} = gps_freq_str;
-        TABLE{row_idx, 8} = gps_ranking;
-        TABLE{row_idx, 9} = bool_glo;
-        TABLE{row_idx,10} = glo_freq_str;
-        TABLE{row_idx,11} = glo_ranking;
-        TABLE{row_idx,12} = bool_gal;
-        TABLE{row_idx,13} = gal_freq_str;
-        TABLE{row_idx,14} = gal_ranking;
-        TABLE{row_idx,15} = bool_bds;
-        TABLE{row_idx,16} = bds_freq_str;
-        TABLE{row_idx,17} = bds_ranking;
-        TABLE{row_idx,18} = 1;
-        TABLE{row_idx,19} = 999999;
+        TABLE{row_idx, 3} = bool_gps;
+        TABLE{row_idx, 4} = gps_freq_str;
+        TABLE{row_idx, 5} = gps_ranking;
+        TABLE{row_idx, 6} = bool_glo;
+        TABLE{row_idx, 7} = glo_freq_str;
+        TABLE{row_idx, 8} = glo_ranking;
+        TABLE{row_idx, 9} = bool_gal;
+        TABLE{row_idx,10} = gal_freq_str;
+        TABLE{row_idx,11} = gal_ranking;
+        TABLE{row_idx,12} = bool_bds;
+        TABLE{row_idx,13} = bds_freq_str;
+        TABLE{row_idx,14} = bds_ranking;
+        TABLE{row_idx,15} = 1;
+        TABLE{row_idx,16} = 999999;
         
         row_idx = row_idx + 1;
         % update waitbar
@@ -1501,6 +1478,7 @@ end
 
 
 function pushbutton_save_process_list_Callback(hObject, eventdata, handles)
+% save process list
 
 process_list = handles.uitable_batch_proc.Data;  	% Data of table [cell]
 
@@ -1558,6 +1536,11 @@ if fileChosen
             load([PathName, FileName{i_file}], 'process_list', 'settings')
         else
             load([PathName, FileName], 'process_list', 'settings')
+        end
+
+        if size(process_list, 2) == 19
+            % old process list before removing approx coordinates
+            process_list(:, 3:5) = [];
         end
         
         % if we have now the process_list variable
@@ -1618,8 +1601,11 @@ if ~isempty(TABLE)
         fpath = [T{i,1} T{i,2}];    % filepath to RINEX file
         rheader = anheader_GUI(fpath);      % read out header
         fprintf('| %s | %s | %s |\n', rheader.station_long(1:4), rheader.receiver, rheader.antenna);
-        T{i, 20} = rheader.receiver;        % save receiver
-        T{i, 21} = rheader.antenna;         % save antenna
+        T{i, 17} = rheader.receiver;        % save receiver
+        T{i, 18} = rheader.antenna;         % save antenna
+        T{i, 19} = rheader.pos_approx(1);   % save X
+        T{i, 20} = rheader.pos_approx(2);   % save Y
+        T{i, 21} = rheader.pos_approx(3);   % save Z
     end
     fprintf('------------------------------------------------------\n'); fprintf('\n\n');
     % plot stations over world
@@ -2417,7 +2403,7 @@ end
 
 function pushbutton_clock_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/CLOCK/'], handles.paths.clk_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile('*.*clk*', 'Select the *.clk File', GetFullPath(folder));
+[FileName, PathName] = uigetfile('*.clk*', 'Select the *.clk File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName            % uigetfile cancelled
     return;
@@ -2519,7 +2505,7 @@ end
 
 function pushbutton_nav_multi_Callback(hObject, eventdata, handles)
 folder = getFolderPath([Path.DATA '/BROADCAST/'], handles.paths.navMULTI_1, handles.paths.rinex_date);
-[FileName, PathName] = uigetfile({'*MN.rnx;*.*n'}, 'Select the Multi-GNSS Navigation File', GetFullPath(folder));
+[FileName, PathName] = uigetfile({'*.rnx;*.*n'}, 'Select the Multi-GNSS Navigation File', GetFullPath(folder));
 PathName = relativepath(PathName);   % convert absolute path to relative path
 if ~FileName        % uigetfile cancelled
     return;
@@ -3439,7 +3425,7 @@ handles = GUI_enable_onoff(handles);
 guidata(hObject, handles);
 end
 
-% Hatch-Melbourne-Wübbena
+% Hatch-Melbourne-Wï¿½bbena
 function checkbox_CycleSlip_HMW_Callback(hObject, eventdata, handles)
 handles = GUI_enable_onoff(handles);
 guidata(hObject, handles);
@@ -3450,6 +3436,30 @@ function checkbox_MP_detection_Callback(hObject, eventdata, handles)
 handles = GUI_enable_onoff(handles);
 guidata(hObject, handles);
 end
+
+
+%% Models - Kinematic
+function pushbutton_IMU_file_Callback(hObject, eventdata, handles)
+% select the file with IMU measurements
+folder = getFolderPath([Path.DATA '/OBS/'], handles.paths.IMU_1, handles.paths.rinex_date);
+[FileName, PathName] = uigetfile({'*.*'}, 'Select the IMU File', GetFullPath(folder));
+
+PathName = relativepath(PathName);   % convert absolute path to relative path
+if ~FileName            % uigetfile cancelled
+    return;
+end
+set(handles.edit_IMU, 'String', FileName);
+
+handles.paths.IMU_1 = PathName;
+handles.paths.IMU_2 = FileName;
+if sscanf(get(handles.edit_IMU, 'String'), '%f') == 0
+    errordlg('Choose a File.', 'File Error');
+end
+guidata(hObject, handles);
+end
+
+
+
 
 %% Estimation - Ambiguity Fixing
 
@@ -4432,18 +4442,18 @@ if ~handles.checkbox_singlemultiplot.Value
         if isfile([results_path '/data4plot.mat'])
             load([results_path '/data4plot.mat'], 'obs', 'satellites', 'storeData');
         else
-            % load storeData from results_float.csv and results_fixed.csv
-            [storeData, success] = read_results_csv(results_path);
-            if ~success
-                % load storeData from results_float.txt and (potentially) results_fixed.txt
-                [storeData, ~] = recover_storeData(results_path);
-            end
+            % load storeData from other text files (results_float/_fixed.csv or .txt)
+            [storeData, ~] = recover_storeData(results_path);
         end
 
         % rebuild variables which could not loaded
         if ~exist('obs', 'var')         
             % obs was not exported to data4plot.mat -> recover from settings_summary.txt
             obs = recover_obs(strrep(results_path, 'data4plot.mat', ''));
+        end
+        if ~exist('storeData', 'var')         
+            % storeData was not exported to data4plot.mat -> recover from settings_summary.txt
+            storeData = recover_storeData(results_path);
         end
         % ||| nothing to recover satellites
         if ~exist('satellites', 'var')
@@ -4471,7 +4481,7 @@ else
         choice = questdlg({'Single Plotting with Multi-Plot Table:',...
             'Multi-Plot Table contains more than one station!'}, ...
             'ATTENTION', ...
-            'Stop', 'Let´s try', 'Stop');
+            'Stop', 'Letï¿½s try', 'Stop');
         if strcmp(choice, 'Stop') || isempty(choice); return; end
     end
     
@@ -4488,7 +4498,7 @@ end
 settings.PLOT = getPlotSettingsFromGUI(handles);
 [~, settings.PLOT] = checkPlotSelection(settings.PLOT, handles);
 
-% check GNSS wich should be plotted and overwrite in settings
+% check GNSS which should be plotted and overwrite in settings
 settings.INPUT.use_GPS = handles.checkbox_plot_gps.Value & settings.INPUT.use_GPS;
 settings.INPUT.use_GLO = handles.checkbox_plot_glo.Value & settings.INPUT.use_GLO;
 settings.INPUT.use_GAL = handles.checkbox_plot_gal.Value & settings.INPUT.use_GAL;
@@ -4512,14 +4522,19 @@ end
 
 % Close all figures (Single-Plot)
 function pushbutton_menu_close_figures_Callback(hObject, eventdata, handles)
+% get the handle of the GUI window before opening the dialog: 
+% gcf is unreliable afterwards because questdlg changes the current figure
+gui_fig = ancestor(hObject, 'figure');
+
 choice = questdlg('Do you want to close all open figures?', ...
     'Close Figures?', ...
     'Yes', 'No', 'No');
 switch choice
     case 'Yes'
         all_figs = findobj(0, 'type', 'figure');
-        for i=1:length(all_figs)
-            if all_figs(i) ~= gcf
+        all_figs(all_figs == gui_fig) = [];      % keep the GUI open
+        for i = 1:numel(all_figs)
+            if isgraphics(all_figs(i))    % might be closed in the meantime
                 close(all_figs(i));
             end
         end
@@ -4555,7 +4570,7 @@ function pushbutton_download_Callback(hObject, eventdata, handles)
 if handles.checkbox_batch_proc.Value
     % download data for batch processing table
     % get data of batch processing table [cell]
-    TABLE = GetTableData(handles.uitable_batch_proc.Data, 2, [6,9,12,15], 2, []);
+    TABLE = GetTableData(handles.uitable_batch_proc.Data, 2, [3,6,9,12], 2, []);
     n = size(TABLE,1);        	% number of rows
     % get processing settings from GUI
     settings = getSettingsFromGUI(handles);

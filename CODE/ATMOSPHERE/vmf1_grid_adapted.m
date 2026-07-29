@@ -13,11 +13,11 @@ function [ah, aw, zhd, zwd, VMF1_grid_file] = ...
 % linearly interpolated to the respective mjd.
 % In the horizontal, a bilinear interpolation is done for the mapping
 % function coefficients as well as for the zenith delays. In the vertical,
-% on the one hand the height correction by Niell (1996) is applied in order
-% to "lift" the hydrostatic mapping function from zero height to h_ell; on
-% the other hand, specific formulae as suggested by Kouba (2008) are
-% applied in order to "lift" the zenith delays from the respective heights
-% of the grid points (orography_ell) to that of the desired location.
+% on the one hand the height correction by Niell (1996) is applied (vmf1_ht.m) 
+% in order to "lift" the hydrostatic mapping function from zero height to 
+% h_ell; on the other hand, specific formulae as suggested by Kouba (2008) 
+% are applied in order to "lift" the zenith delays from the respective 
+% heights of the grid points (orography_ell) to that of the desired location.
 %
 % Reference for conversion of mapping functions:
 % Niell, A.E. (1996), Global mapping functions for the atmosphere delay at

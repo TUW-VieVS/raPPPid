@@ -4,14 +4,14 @@ function settings = PPP_main(settings)
 % 
 % raPPPid intern numbering of frequencies:
 % GPS:      1 | 2 | 3         = L1 | L2  | L5
-% Glonass:  1 | 2 | 3         = G1 | G2  | G3
+% GLONASS:  1 | 2 | 3         = G1 | G2  | G3
 % Galileo:  1 | 2 | 3 | 4 | 5 = E1 | E5a | E5b | E5 | E6
 % BeiDou:   1 | 2 | 3         = B1 | B2  | B3
 % QZSS:     1 | 2 | 3 | 4     = L1 | L2  | L5  | L6
 % 
 % raPPPid intern numbering of satellites and acronyms:
 % GPS:      001-099     gps     G
-% Glonass:  101-199     glo     R
+% GLONASS:  101-199     glo     R
 % Galileo:  201-299     gal     E
 % BeiDou:   301-399     bds     C
 % QZSS:     401-410     qzss    J
@@ -56,7 +56,8 @@ if bool_print
 end
 
 % Initialization and definition of global variable
-global STOP_CALC;	% for stopping calculations before last epoch, set to zero in GUI_PPP
+global STOP_CALC;	    % for stopping calculations before last epoch
+if isempty(STOP_CALC); STOP_CALC = 0; end   % initialize if not set
 
 % number of processed frequencies (for each GNSS) and of input frequencies
 [settings.INPUT.num_freqs, settings.INPUT.proc_freqs, settings.INPUT.n_gnss_freqs] = CountProcessedFrequencies(settings);
@@ -72,7 +73,7 @@ settings.INPUT.use_GNSS = settings.INPUT.use_GPS + settings.INPUT.use_GLO + sett
 
 %% -+-+-+-+-+-READ/PREPARE INPUT DATA-+-+-+-+-+-
 
-% Read Input Data from Files (Ephemerides, Station Data, etc.)
+% Read Input Data from Files (Ephemeris, Station Data, etc.)
 [input, obs, settings, OBSDATA] = readAllInputFiles(settings);
 
 % open files for real-time processing
@@ -84,11 +85,11 @@ if settings.INPUT.bool_realtime
     fid_navmess = fopen(settings.ORBCLK.file_nav_multi);
     fid_corr2brdc = fopen(settings.ORBCLK.file_corr2brdc, 'r'); % fseek(fid_corr2brdc,-100,'eof');
     input.ORBCLK.Eph_GPS = []; input.ORBCLK.Eph_GLO = []; input.ORBCLK.Eph_GAL = []; input.ORBCLK.Eph_BDS = [];
-    q_update = 1; 
+    q_update = 1;
+    t_RT_start = [];  % initialize time of 1st epoch processing
 end
 
-
-% if necessary convert time frame to epochs of RINEX observation file 
+% if necessary convert time frame to epochs of RINEX observation file
 % ||| missing data epochs are not considered
 if settings.INPUT.bool_realtime
     % determine approximate number of epochs to process in real-time (e.g.
@@ -120,26 +121,29 @@ end
 init_ambiguities = NaN(3, 410);     % columns = satellites, rows = frequencies
 
 % Creating q for loop of epoch calculations, q is used for indexing the epochs
-q_range = 1:settings.PROC.epochs(2)-settings.PROC.epochs(1)+1; % one epoch more than the settings in GUI
-q_switch = q_range(end);    % epoch of filter direction change
+q_range = 1:settings.PROC.epochs(2)-settings.PROC.epochs(1)+1; % all epochs from settings.PROC.epochs(1) to (2), both included
+q_switch = NaN;     % epoch of filter direction change (NaN = single run, no change)
 
 % manipulate the loop depending on the filter's direction
 if strcmp(settings.ADJ.filter.direction, 'Fwd-Bwd')
     % add reversed epochs for backwards run
+    q_switch = q_range(end);    % direction changes at the last epoch
     q_range = [q_range(1:end-1) fliplr(q_range)];
 elseif strcmp(settings.ADJ.filter.direction, 'Bwd-Fwd')
     % add reversed before the forwards run
     q_range = [fliplr(q_range) q_range(2:end)];
-    q_switch = 1; 
+    q_switch = 1;               % direction changes at the first epoch
 elseif strcmp(settings.ADJ.filter.direction, 'Backwards')
     % reverse the loop for backwards filtering
     q_range = fliplr(q_range);
-    q_switch = 1; 
 end
 settings.PROC.q_range = q_range;        % save q_range into settings
 
-% time which is needed for reading all input data and going to start-epoch
-read_time = toc(tStart);
+% first processed epoch is like a reset of the solution
+Adjust.float_reset_epochs = q_range(1);
+Adjust.fixed_reset_epochs = q_range(1);
+
+read_time = toc(tStart);    % time which is needed for reading all input data and going to start-epoch
 
 % check if P-code is processed for GPS and Glonass
 % ||| does not work for P1 on 2nd freq or P2 on 1st freq
@@ -180,11 +184,10 @@ for q = q_range         % loop over epochs
         fprintf('%s%s', bspace(1:l_estr), estr);
         l_estr = length(estr);
     end
-    % save data from last epoch (step q-1) and reset Epoch
-    Epoch.old = Epoch;  
-    Epoch.q = q;            % save number of epoch 
-    Epoch = EpochlyReset_Epoch(Epoch);
     
+    Epoch = EpochlyReset_Epoch(Epoch);
+    Epoch.q = q;            % save number of epoch 
+
     n = settings.PROC.epochs(1) + q - 1;        
     if ~settings.INPUT.bool_realtime && ~settings.INPUT.rawDataAndroid
         % post-processing: check if end of file is reached
@@ -201,15 +204,15 @@ for q = q_range         % loop over epochs
        
     % ----- real-time processing: get RINEX observation data -----
     if settings.INPUT.bool_realtime
-        [OBSDATA, fid_obs, fid_navmess, fid_corr2brdc, input, obs] = ...
-            ReadRinexRealTime(settings, input, obs, start_sow, q, fid_obs, fid_navmess, fid_corr2brdc);        
-    end   
+        [OBSDATA, fid_obs, fid_navmess, fid_corr2brdc, input, obs, t_RT_start] = ...
+            ReadRinexRealTime(settings, input, obs, start_sow, q, fid_obs, fid_navmess, fid_corr2brdc, t_RT_start);
+    end
     
     % ----- read in observation data of current epoch -----
     if ~settings.INPUT.rawDataAndroid  	% from RINEX observation file
         [Epoch] = RINEX2Epoch(OBSDATA, obs.newdataepoch, Epoch, n, obs.no_obs_types, obs.rinex_version, settings);
     else                                % from Android raw sensor data
-        [Epoch] = RawSensor2Epoch(OBSDATA, obs.newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column, obs.leap_sec);
+        [Epoch] = RawSensor2Epoch(OBSDATA, input.IMU, obs.newdataepoch, q, obs.vars_raw, Epoch, settings, obs.use_column, obs.leap_sec);
     end
     
     % ----- check usability of epoch -----
@@ -229,14 +232,14 @@ for q = q_range         % loop over epochs
     Epoch = RemoveSort(settings, Epoch, q);
     
     % ----- Find broadcast ephemeris columns and corrections -----
-    % check if satellites have broadcast ephemerides and are healthy, otherwise satellite is excluded
+    % check if satellites have broadcast ephemeris and are healthy, otherwise satellite is excluded
     if settings.ORBCLK.bool_brdc
         if settings.INPUT.bool_realtime
 			% get and read data in real-time
             [input, obs] = RealTimeEphCorr2Brdc(settings, input, obs, fid_navmess, fid_corr2brdc);
         end
         Epoch = findEphCorr2Brdc(Epoch, input, settings);
-    end 
+    end
 
     % ----- prepare observations -----
     [Epoch, obs] = prepareObservations(settings, obs, Epoch);
@@ -313,11 +316,30 @@ for q = q_range         % loop over epochs
     if settings.INPUT.proc_freqs > 1 && ~settings.BIASES.estimate_rec_dcbs
         Epoch = correct_rec_biases(Epoch, obs);
     end
+
+    % --- check change of code observations with Doppler shift ---
+    if ~isempty(Epoch.old.gps_time) && Adjust.float && settings.OTHER.mp_doppler
+        [Epoch.mp_DopplerPR, flagged] = DopplerCheckPR(Epoch, settings.INPUT.num_freqs, settings.OTHER.mp_doppler_thresh, settings.IONO.model);
+        Epoch.exclude = Epoch.exclude | flagged;
+        Epoch.sat_status(flagged) = 18;
+    end
     
     % --- Build LCs and processed observations -> Epoch.code/.phase ---
     [Epoch, storeData] = create_LC_observations(Epoch, settings, storeData, q);
     
-    % reset struct Adjust for new epoch
+    % --- make sure that gridwise VMF data is available and up-to-date ---
+    check_pos_change = false;
+    bool_pos_change = check_pos_change && norm(Adjust.param(1:3) - input.TROPO.V3GR.xyz) > 100;
+    if isfield(input, 'TROPO') && isfield(input.TROPO, 'V3GR') && strcmp(input.TROPO.V3GR.version, 'gridwise') && ...
+            (~isfield(input.TROPO.V3GR, 'data') || bool_pos_change)
+        input = get_V3GR(obs, input, settings.TROPO.vmf_version, ~settings.INPUT.bool_parfor, ApproximatePosition(Epoch, input, obs, settings));
+    end
+    if isfield(input, 'TROPO') && isfield(input.TROPO, 'VMF1') && strcmp(input.TROPO.VMF1.version, 'gridwise') && ...
+            (~isfield(input.TROPO.VMF1, 'data') || bool_pos_change)
+        input = get_VMF1(obs, input, settings.TROPO.vmf_version, ~settings.INPUT.bool_parfor, ApproximatePosition(Epoch, input, obs, settings));
+    end
+
+    % --- reset struct Adjust for new epoch ---
     Adjust = reset_Adjust(Adjust, Epoch, settings);
 
     % -+-+-+-+-+-START CALCULATION EPOCH-WISE SOLUTION-+-+-+-+-+- 
@@ -356,6 +378,10 @@ for q = q_range         % loop over epochs
         realtime_ende = settings.INPUT.bool_realtime && Epoch.gps_time >= ende_sow;
         if STOP_CALC || realtime_ende
             settings.PROC.epochs(2) = q + (settings.PROC.epochs(1)-1);
+            if settings.INPUT.bool_realtime || strcmp(settings.ADJ.filter.direction, 'Forward')
+                % only shrink q_range for real-time or forward processing
+                q_range(q+1:end) = [];     % remove not-processed epochs for creating output
+            end
             break;
         end
     end
@@ -373,7 +399,7 @@ end
 
 % close files of real-time processing
 if settings.INPUT.bool_realtime
-    fclose(fid_obs);
+    fclose(fid_obs); fclose(fid_navmess); fclose(fid_corr2brdc); 
 end
 
 % save epochs of reset

@@ -10,8 +10,8 @@ function  STEC = iono_coeff_global(lat, lon, az, el, Ttr, ion, leap_sec)
 % 	leap_sec:       number of leap seconds
 % 	ion:            struct, data from *.ion-file
 % 	... .height      	height of single layer [km]
-% 	... .lat_GMP        latitude of geomagnetic pole [°]
-% 	... .lon_GMP        longitude of geomagnetic pole [°]
+% 	... .lat_GMP        latitude of geomagnetic pole [deg]
+% 	... .lon_GMP        longitude of geomagnetic pole [deg]
 % 	... .t              time in seconds of week
 % 	... .degree         degree n
 % 	... .order          order m    
@@ -43,7 +43,11 @@ end
 
 % Find upper and lower index of TEC maps, Ttr is between map(i_low) and map(i_high)
 index = find(t <= Ttr);
-i_low = index(end);         % index of nearest last map
+if isempty(index)
+    i_low = 1;              % Ttr before 1st map, use 1st map
+else
+    i_low = index(end);     % index of nearest last map
+end
 if i_low ~= no_maps
     i_high = i_low + 1;     % index of next map
 else
@@ -51,7 +55,11 @@ else
 end
 
 % Part of time-difference to last TEC Map in the range of [0,1]
-lin_factor = (Ttr - t(i_low,1))/(t(i_high,1)-t(i_low,1));
+if i_high == i_low
+    lin_factor = 0;         % only one map available, no interpolation possible/needed
+else
+    lin_factor = (Ttr - t(i_low,1))/(t(i_high,1)-t(i_low,1));
+end
 h_SL = ion.height(i_low,:);            	% Height of single layer
 lat_GMP = ion.lat_GMP(i_low)/180*pi;    % Latitude of Geomagnetic Pole
 lon_GMP = ion.lon_GMP(i_low)/180*pi;    % Longitude of Geomagnetic Pole
@@ -72,7 +80,7 @@ y_IPP = pi/2 - el - asin(RE/(RE + h_SL)*cos(el));
 lat_IPP = asin(sin(lat)*cos(y_IPP)+cos(lat)*sin(y_IPP)*cos(az));
 lon_IPP = lon + asin((sin(y_IPP)*sin(az))/cos(lat_IPP));
 
-% Geomagnetic Latitude (Formulas from Kertz 1969: Einführung in die Geophysik I p.134)
+% Geomagnetic Latitude (Formulas from Kertz 1969: EinfÃ¼hrung in die Geophysik I p.134)
 lat_IPP_gm = asin(sin(lat_GMP)*sin(lat_IPP) + cos(lat_GMP)*cos(lat_IPP)*cos(lon_IPP-lon_GMP));
 
 % Solar-fixed Longitude

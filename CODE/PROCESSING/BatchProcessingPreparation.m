@@ -23,13 +23,13 @@ settings.INPUT.qzss_ranking = DEF.RANKING_QZSS;
 
 
 % check which GNSS are enabled
-bool_GPS = ROW{ 6};
-bool_GLO = ROW{ 9};
-bool_GAL = ROW{12};
-bool_BDS = ROW{15};
+bool_GPS = ROW{ 3};
+bool_GLO = ROW{ 6};
+bool_GAL = ROW{ 9};
+bool_BDS = ROW{12};
 
 % check frequency setting of each GNSS for current row
-for i = 7:3:16
+for i = 4:3:13
     % replace "," with ";" because otherwise processing fails
     ROW{i} = strrep(ROW{i}, ',', ';');
     % make sure that last char of frequency string is a ';' otherwise it is
@@ -40,10 +40,10 @@ for i = 7:3:16
 end
 
 % convert frequencies from strings into numbers
-gps_freq = split(ROW{ 7}, ';');     % split frequencies with ';'
-glo_freq = split(ROW{10}, ';');
-gal_freq = split(ROW{13}, ';');
-bds_freq = split(ROW{16}, ';');
+gps_freq = split(ROW{ 4}, ';');     % split frequencies with ';'
+glo_freq = split(ROW{ 7}, ';');
+gal_freq = split(ROW{10}, ';');
+bds_freq = split(ROW{13}, ';');
 % make sure that gnss_freq contains 3 elements after split
 if length(gps_freq) > 3
     gps_freq = gps_freq(1:3);       % first three frequencies are taken
@@ -94,7 +94,6 @@ end
 
 % manipulate settings for current row
 settings.INPUT.file_obs     = [ROW{1}, ROW{2}];
-settings.INPUT.pos_approx   = [ROW{3}; ROW{4}; ROW{5}];
 settings.INPUT.use_GPS      =  bool_GPS;
 settings.INPUT.use_GLO      =  bool_GLO;
 settings.INPUT.use_GAL      =  bool_GAL;
@@ -107,11 +106,11 @@ settings.INPUT.bds_freq     =  bds_freq;
 [~, settings.INPUT.glo_freq_idx] = ismember(settings.INPUT.glo_freq, DEF.freq_GLO_names);
 [~, settings.INPUT.gal_freq_idx] = ismember(settings.INPUT.gal_freq, DEF.freq_GAL_names);
 [~, settings.INPUT.bds_freq_idx] = ismember(settings.INPUT.bds_freq, DEF.freq_BDS_names);
-settings.INPUT.gps_ranking  =  ROW{ 8};
-settings.INPUT.glo_ranking  =  ROW{11};
-settings.INPUT.gal_ranking  =  ROW{14};
-settings.INPUT.bds_ranking  =  ROW{17};
-settings.PROC.timeFrame     = [ROW{18}, ROW{19}];
+settings.INPUT.gps_ranking  =  ROW{ 5};
+settings.INPUT.glo_ranking  =  ROW{ 8};
+settings.INPUT.gal_ranking  =  ROW{11};
+settings.INPUT.bds_ranking  =  ROW{14};
+settings.PROC.timeFrame     = [ROW{15}, ROW{16}];
 settings.PROC.timeSpan_format_epochs = true;
 settings.PROC.timeSpan_format_SOD = false;
 settings.PROC.timeSpan_format_HOD = false;

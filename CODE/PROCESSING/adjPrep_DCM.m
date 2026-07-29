@@ -52,7 +52,7 @@ bool_filter = ~strcmp(FILTER.type, 'No Filter');    % true if filter is enabled
 NO_PARAM = Adjust.NO_PARAM;             % number of estimated parameters
 prns = Epoch.sats;                      % satellites of current epoch
 no_sats_old = length(prns_old);      	% number of satellites in last epoch
-no_sats = Epoch.no_sats;                % number of satellites of current epoch
+no_sats = numel(Epoch.sats);            % number of satellites of current epoch
 s_f = no_sats*num_freq;               	% #satellites x #frequencies
 no_ambiguities = s_f * bool_code_phase;	% number of estimated ambiguities
 N_eye = eye(s_f);                       % square unit matrix, size = number of ambiguities

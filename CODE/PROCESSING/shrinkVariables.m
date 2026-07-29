@@ -86,6 +86,7 @@ if settings.INPUT.bool_realtime || ...
                 storeData.N_WL_23      	= storeData.N_WL_23(eps,:);
                 storeData.N_NL_23       = storeData.N_NL_23(eps,:);
                 storeData.HMW_23      	= storeData.HMW_23(eps,:);
+                storeData.HMW_13      	= storeData.HMW_13(eps,:);
             end
         else % Uncombined Model
             storeData.N1_fixed = storeData.N1_fixed(eps,:);
@@ -176,7 +177,7 @@ if settings.INPUT.bool_realtime || ...
         end
     end
     
-    % multipath detection
+    % code time-difference
     if settings.OTHER.mp_detection
         storeData.mp_C1_diff_n	= storeData.mp_C1_diff_n(eps,:);
         if num_freqs >= 2
@@ -186,18 +187,28 @@ if settings.INPUT.bool_realtime || ...
             storeData.mp_C3_diff_n	= storeData.mp_C3_diff_n(eps,:);
         end
     end
-    
+    % pseudorange rate check with Doppler
+    if settings.OTHER.mp_doppler
+        storeData.mp_DopplerPR_1 = storeData.mp_DopplerPR_1(eps,:);
+        if num_freqs >= 2
+            storeData.mp_DopplerPR_2 = storeData.mp_DopplerPR_2(eps,:);
+        end
+        if num_freqs >= 3
+            storeData.mp_DopplerPR_3 = storeData.mp_DopplerPR_3(eps,:);
+        end
+    end
+
     % data from ambiguity fixing
     if settings.AMBFIX.bool_AMBFIX
         storeData.param_fix             = storeData.param_fix(eps,:);
         storeData.param_var_fix         = storeData.param_var_fix(eps,:);
         storeData.residuals_code_fix_1  = storeData.residuals_code_fix_1(eps,:);
         storeData.residuals_phase_fix_1 = storeData.residuals_phase_fix_1(eps,:);
-        if proc_freqs>2
+        if proc_freqs>=2
             storeData.residuals_code_fix_2  = storeData.residuals_code_fix_2(eps,:);
             storeData.residuals_phase_fix_2 = storeData.residuals_phase_fix_2(eps,:);
         end
-        if proc_freqs>3
+        if proc_freqs>=3
             storeData.residuals_code_fix_3  = storeData.residuals_code_fix_3(eps,:);
             storeData.residuals_phase_fix_3 = storeData.residuals_phase_fix_3(eps,:);
         end
@@ -227,8 +238,7 @@ if settings.INPUT.bool_realtime || ...
         model_save.Ttr              = model_save.Ttr(eps,:);
         model_save.k                = model_save.k(eps,:);
         model_save.trop             = model_save.trop(eps,:);
-        model_save.ZTD              = model_save.ZTD(eps,:);
-        model_save.iono             = model_save.iono(eps,:);
+        model_save.iono             = model_save.iono(eps,:,:);
         model_save.mfw              = model_save.mfw(eps,:);
 		model_save.mfh              = model_save.mfh(eps,:);
         model_save.zwd              = model_save.zwd(eps);
@@ -239,11 +249,11 @@ if settings.INPUT.bool_realtime || ...
         model_save.solid_tides      = model_save.solid_tides(eps,:);
         model_save.ocean_loading    = model_save.ocean_loading(eps,:);
 		model_save.polar_tides      = model_save.polar_tides(eps,:);
-        model_save.PCO_rec     		= model_save.PCO_rec(eps,:);
-        model_save.PCV_rec     		= model_save.PCV_rec(eps,:);
-        model_save.ARP_ECEF       	= model_save.ARP_ECEF(eps,:);
-        model_save.PCO_sat   		= model_save.PCO_sat(eps,:);
-        model_save.PCV_sat   		= model_save.PCV_sat(eps,:);
+        model_save.PCO_rec     		= model_save.PCO_rec(eps,:,:);
+        model_save.PCV_rec     		= model_save.PCV_rec(eps,:,:);
+        model_save.ARP_ECEF       	= model_save.ARP_ECEF(eps,:,:);
+        model_save.PCO_sat   		= model_save.PCO_sat(eps,:,:);
+        model_save.PCV_sat   		= model_save.PCV_sat(eps,:,:);
         model_save.ECEF_X           = model_save.ECEF_X(eps,:,:);
         model_save.ECEF_V           = model_save.ECEF_V(eps,:,:);
         model_save.Rot_X            = model_save.Rot_X(eps,:,:);

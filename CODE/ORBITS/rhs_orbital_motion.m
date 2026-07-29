@@ -23,10 +23,10 @@ function rhs_pos_vel = rhs_orbital_motion(t, X, sat,  Epoch, obs, dist_a, t0, is
 r = X(1:3);
 v = X(4:6);
 
-utc_time = Epoch.time - (18/86400) + ((t - t0)/86400);  % ||| dehardcode: replace 18 with leap seconds variable
+utc_time = Epoch.time - (obs.leap_sec/86400) + ((t - t0)/86400);
 Ci2e = dcm_eci_2_ecef(utc_time);
 r_eci = Ci2e.' * r;
-v_eci = Ci2e.' * v;
+v_eci = Ci2e.' * v + cross([0;0;Const.WE], r_eci);
 
 %% J2 Perturbation Acceleration
 
@@ -37,8 +37,9 @@ aJ2 = J2_acceleration(r, Const.J2, Const.GM, Const.RE_equ);
 altitude = norm(r) - Const.RE_equ;
 rhoAtmo = getAtmosphericDensity(altitude);
 Ballistic = sat.mass / (sat.drag * sat.area);
-v_rel = v - cross([0;0;Const.WE], r);
-dragA = -0.5 * rhoAtmo * (1/Ballistic) * norm(v_rel) * v_rel;
+% the atmosphere co-rotates with the Earth, therefore v (ECEF) is already
+% the air-relative velocity
+dragA = -0.5 * rhoAtmo * (1/Ballistic) * norm(v) * v;
 
 %% Third Body Accelerations
 
@@ -71,10 +72,10 @@ a_srp = Ci2e * a_srp_eci;
 % Empirical coefficients
 sat.emp.ARc  = 0;
 sat.emp.ARs  = 0;
-sat.emp.ASc  = 6.4e-6;
-sat.emp.ASs  = -2.3e-6;
-sat.emp.ASc2 = -1.70e-5;
-sat.emp.ASs2 = -1.30e-5;
+sat.emp.ASc  = 6.4e-8;
+sat.emp.ASs  = -2.3e-8;
+sat.emp.ASc2 = -1.70e-7;
+sat.emp.ASs2 = -1.30e-7;
 sat.emp.AWc  = 0;
 sat.emp.AWs  = 0;
 

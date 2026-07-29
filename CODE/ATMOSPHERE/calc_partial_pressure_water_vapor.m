@@ -15,7 +15,7 @@ function e = calc_partial_pressure_water_vapor(T, rh)
 % constants between 0 and 100 °C
 C1 = 6.112;     % [hPa]
 C2 = 17.62;
-C3 = 234.12;    % [°C] 
+C3 = 243.12;    % [°C]
 
 % saturation pressure
 E = C1 * exp((C2*T)/(C3+T)); % [hPa]

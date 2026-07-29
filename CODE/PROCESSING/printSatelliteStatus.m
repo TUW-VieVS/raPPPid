@@ -67,7 +67,9 @@ for i = 1:n
             case 16
                 str_add = 'faulty code observations';   
             case 17
-                str_add = 'satellite clock jump';                  
+                str_add = 'satellite clock jump';       
+            case 18
+                str_add = 'PR rate check';
             otherwise
                 str_add = '';
         end

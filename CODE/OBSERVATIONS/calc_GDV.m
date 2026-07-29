@@ -1,7 +1,7 @@
 function dX_GDV = calc_GDV(prn, el, f1, f2, f3, j, IONO_model, n)
 % Calculates the correction for the Group Delay Variation depending on the
 % satellite system, satellite type, elevation and processed
-% frequency/ionosphere modell
+% frequency/ionosphere model
 % check: [18], https://link.springer.com/article/10.1007/s10291-019-0939-7,
 % https://link.springer.com/article/10.1007/s00190-017-1012-3#ref-CR36
 % 
@@ -24,7 +24,7 @@ function dX_GDV = calc_GDV(prn, el, f1, f2, f3, j, IONO_model, n)
 
 dX_GDV = [0,0,0];
 
-%% Get GDV valus depending on GNSS and satellite type
+%% Get GDV values depending on GNSS and satellite type
 if prn > 300        % BDS satellite
     
     % status: 25.Feb 2020, https://www.glonass-iac.ru/en/BEIDOU/
@@ -114,6 +114,6 @@ elseif strcmpi(IONO_model,'3-Frequency-IF-LC')
     dX_GDV(3) = 0;
     
 else
-    % resort depending on processed frequenceis
+    % resort depending on processed frequencies
     dX_GDV(1:numel(j)) = dX_GDV_(j);
 end

@@ -16,8 +16,8 @@ switch char
     case 'C'
         gnss_string3 = 'BDS';
     case 'J'
-        gnss_string3 = 'QZS';        
-    otherwise 
+        gnss_string3 = 'QZS';
+    otherwise
         gnss_string3 = [];
         errordlg('ERROR: char2gnss3.m', 'Error');
 end

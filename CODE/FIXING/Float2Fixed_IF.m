@@ -73,7 +73,7 @@ Q_SD = T * Q_ZD * T';
 
 %% Calculate fixed parameters
 % create some indices variables
-idx_N = (NO_PARAM+1):(NO_PARAM+no_sats);    % indices of ambiguities
+[~, idx_N] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, 1);    % indices of ambiguities
 idx_N = idx_N(idx_fixed);       % indices of fixed ambiguities
 idx_p = 1:NO_PARAM;             % indices of parameters
 

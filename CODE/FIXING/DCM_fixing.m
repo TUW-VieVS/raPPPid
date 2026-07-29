@@ -22,8 +22,7 @@ function [Epoch, Adjust] = DCM_fixing(Adjust, Epoch, settings)
 NO_PARAM = Adjust.NO_PARAM;             % number of estimated parameters
 no_sats = numel(Epoch.sats);          	% number of satellites in current epoch
 proc_frqs = settings.INPUT.proc_freqs; 	% number of processed frequencies
-s_f = no_sats*proc_frqs;             	% #satellites x #frequencies
-idx_N = NO_PARAM+1 : NO_PARAM+s_f;      % indices of float ambiguities
+[~, idx_N] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, proc_frqs);      % indices of float ambiguities
 
 
 

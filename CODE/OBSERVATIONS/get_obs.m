@@ -39,7 +39,7 @@ Epoch.D1 = []; Epoch.D2 = []; Epoch.D3 = [];
 bool_unit_m = settings.INPUT.rawDataAndroid;         % phase observations already in [m], Doppler shift already in [m/s]
 % check processed PPP model
 code_only = strcmpi(settings.PROC.method,'Code Only');
-doppler = contains(settings.PROC.method, '+ Doppler');
+doppler = contains(settings.PROC.method, '+ Doppler') || settings.OTHER.mp_doppler;
 GRAPHIC = strcmpi(settings.IONO.model,'GRAPHIC');
 IF_LC_2fr_1x = strcmpi(settings.IONO.model,'2-Frequency-IF-LCs') & settings.INPUT.num_freqs == 2;
 IF_LC_2fr_2x = strcmpi(settings.IONO.model,'2-Frequency-IF-LCs') & settings.INPUT.num_freqs == 3;
@@ -118,7 +118,7 @@ if settings.INPUT.use_GLO
         
     end
     
-    % for Glonass also existence of frequency has to be checked
+    % for GLONASS also existence of frequency has to be checked
     remove_sat = remove_sat | no_frq;
     
     % +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -291,7 +291,7 @@ elseif IF_LC_2fr_1x     % two frequencies are needed to build LC
     remove_sat = no_C1 | no_C2;
     
 elseif IF_LC_2fr_2x     % at least two frequencies are needed
-    remove_sat = (no_C1 | no_C2) & (no_C2 | no_C3);   % at least 1 LC has to be builded
+    remove_sat = (no_C1 + no_C2 + no_C3) > 1;   % one frequency is allowed missing
     
 elseif IF_LC_3fr        % three frequencies are needed to build LC
     remove_sat = no_C1 | no_C2 | no_C3;

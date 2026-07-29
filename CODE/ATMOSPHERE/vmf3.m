@@ -20,7 +20,7 @@ function [mfh, mfw] = vmf3(ah, aw, mjd, lat, lon, el)
 %        o mjd: modified julian date
 %        o lat: latitude (radians)
 %        o lon: longitude (radians)
-%        o el: zenith distance (radians)
+%        o el: elevation (radians)
 %
 % OUTPUT:
 %        o mfh: hydrostatic mapping factor

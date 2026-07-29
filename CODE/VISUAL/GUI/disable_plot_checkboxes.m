@@ -26,7 +26,7 @@ bool_csv       = isfile([handles.edit_plot_path.String '/results_float.csv']);
 handles = en_disable_AllPlotCheckboxes(handles, 'On');
 
 % receiver biases plot
-if ~settings.BIASES.estimate_rec_dcbs || bool_csv
+if ~settings.BIASES.estimate_rec_dcbs || (bool_csv && ~bool_data4plot)
     set(handles.checkbox_plot_dcb,      'Enable', 'off');
 end
 
@@ -73,12 +73,13 @@ if ~strcmp(settings.ORBCLK.CorrectionStream, 'manually') || ~settings.ORBCLK.boo
     set(handles.checkbox_plot_stream_corr,	'Value', 0)
 end
 
-
-if ~isfield(settings.OTHER, 'mp_detection') || ~settings.OTHER.mp_detection
-    % Multipath detection
-    set(handles.checkbox_plot_mp,            'Enable', 'off');
-    set(handles.checkbox_plot_mp,            'Value', 0);
+% Multipath detection
+set(handles.checkbox_plot_mp,            'Enable', 'off');
+if (isfield(settings.OTHER, 'mp_detection') && settings.OTHER.mp_detection) ...
+        || (isfield(settings.OTHER, 'mp_doppler') && settings.OTHER.mp_doppler)
+    set(handles.checkbox_plot_mp,            'Enable', 'on');
 end
+set(handles.checkbox_plot_mp,            'Value', 0);
 
 if ~contains(settings.PROC.method, '+ Doppler')       % Doppler not processed
     % Velocity plot

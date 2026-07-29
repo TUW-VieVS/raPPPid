@@ -113,9 +113,7 @@ for i = 1:noeph
     af0    = lData(8);                          % sv clock bias [s]
     af1    = lData(9);                          % sv clock drift [s/s]
     af2    = lData(10);                         % sv clock drift rate [s/s^2]
-    hour   = hour + minute/60 + second/3600;    % decimal hour of clock
-    jd = cal2jd_GT(year,month,day+hour/24);        % Julian day of clock
-    [~,toc,~] = jd2gps_GT(jd);                     % week of clock, sow of clock [s]
+    [~, toc] = cal2gpstime([year, month, day, hour, minute, second]);   % sow of clock [s]
     
     
     % -+-+- line 1 -+-+-

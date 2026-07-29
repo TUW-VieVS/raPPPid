@@ -1,10 +1,12 @@
-function input = get_V3GR(obs, input, settings)
+function input = get_V3GR(obs, input, vmf_version, bool_print, approx_pos)
 % Defines and reads all VMF3+GRAD information, collected under the term V3GR.
 % 
 % INPUT:
 %   obs         struct, observation-specific information
 %   input       struct, holding input data
-%   settings    struct, processing settings from GUI
+%   vmf_version string, 'operational' or 'forecast'
+%   bool_print  boolean, print information to command window?
+%   pos_approx  3x1, approximate position to download gridwise version
 % OUTPUT:
 %	input       struct, updated with input.TROPO.V3GR.data
 % 
@@ -38,9 +40,9 @@ for i_jd = 1:length(jd_all)
     % define the subdirectory
     if year < 2008
         NWM_source = 'EI';
-    elseif strcmp(settings.TROPO.vmf_version, 'operational')
+    elseif strcmp(vmf_version, 'operational')
         NWM_source = 'OP';
-    elseif strcmp(settings.TROPO.vmf_version, 'forecast')
+    elseif strcmp(vmf_version, 'forecast')
         NWM_source = 'FC';
     end
     
@@ -63,7 +65,7 @@ for i_jd = 1:length(jd_all)
             errordlg({'VMF3 is not available!', 'Change troposphere model to GPT3.'}, 'Error');
             continue
         end
-        if ~settings.INPUT.bool_parfor
+        if bool_print
             fprintf('  %s%s%s%s\n' , file_V3GR,' successfully downloaded into ',dir_V3GR_sitewise,'.');
         end
     end
@@ -86,7 +88,7 @@ for i_col = 1:size(V3GR_data_all,2)
 end
 
 % check if VMF3 stationlist contains processed station (e.g., IGS station)
-ind = ismember(V3GR_data{1,1}, strtrim(obs.stationname));
+ind = ismember(upper(V3GR_data{1,1}), strtrim(obs.stationname));
 if sum(ind)~=0          % station is part of stationlist
     
     % use sitewise V3GR
@@ -99,11 +101,20 @@ else                    % station is not part of VMF3 stationlist
     
     % use gridwise V3GR
     input.TROPO.V3GR.version = 'gridwise';
+    input.TROPO.V3GR.xyz = approx_pos;
+
     % determine all necessary mjd's
     input.TROPO.V3GR.data{2} = unique(V3GR_data{2});
+
     % get the correct VMF3 and/or GRAD coefficients
     V3GR_grid_file = [];
-    approx_pos_WGS84 = cart2geo(settings.INPUT.pos_approx);
+    approx_pos_WGS84 = cart2geo(approx_pos);
+    % make sure that download of sitewise version is possible
+    if any(approx_pos == 0) || any(isnan(approx_pos))
+        input.TROPO.V3GR = rmfield(input.TROPO.V3GR, 'data');
+        return
+    end
+
     for i_jd = 1:length(input.TROPO.V3GR.data{2})
         % determine mapping functions + zenith delays from gridded V3GR files
         input.TROPO.V3GR.data{1}{i_jd} = upper(obs.stationname);

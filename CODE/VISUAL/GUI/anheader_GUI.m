@@ -103,7 +103,11 @@ while 1
     end
        
     if contains(line,'ANT # / TYPE')                % Antenna type
-        antenna_type = line(21:40);
+        % Standard RINEX places the antenna type in columns 21-40, but some
+        % receivers/converters push the radome beyond column 40. Read up to
+        % the header label (starts at column 61) to capture the full antenna
+        % type plus radome, then trim leading/trailing white space.
+        antenna_type = strtrim(line(21:min(60,length(line))));
     end
     
     if contains(line,'REC # / TYPE / VERS')         % Receiver type

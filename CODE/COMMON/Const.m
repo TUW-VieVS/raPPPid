@@ -1,7 +1,7 @@
 % Collection of relevant geodetic constants in raPPPid (VieVS PPP).
 % 
 % References: 
-%   - Interace Control Documents of GPS, GLONASS, Galileo, BeiDou, QZSS
+%   - Interface Control Documents (ICDs) of GPS, GLONASS, Galileo, BeiDou, QZSS
 %   - RINEX v3 format specification
 %   - [22]: Table 1.5
 %  
@@ -26,6 +26,7 @@ classdef Const
         AU = 1.496e11;          % Astronomical Unit [m] 
         Moon_muM = 4.905e12;    % Moon's gravitational parameter [m^3/s^2]
         Sun_muS = 1.3271e20;    % Sun's gravitational parameter [m^3/s^2] 
+        g0 = 9.80665;           % standard acceleration of gravity [m/s^2]
         % Earths geocentric gravitational constant [m^3/s^2]
         GM = 3.986005e14;   
         GM_GAL = 3.986004418e14;

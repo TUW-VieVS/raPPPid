@@ -1,16 +1,16 @@
 function [model, Epoch] = modelErrorSources(settings, input, Epoch, model, Adjust, obs)
 % This functions models all relevant error sources for PPP and saves it
-% into the struct model. This is used later for modelling the observations.
+% into the struct model. This is used later for modeling the observations.
 %
 % INPUT:
 %   settings    	settings from GUI  [struct]
-%   input           input data (ephemerides, PCOs, etc.)   [struct]
+%   input           input data (ephemeris, PCOs, etc.)   [struct]
 %   Epoch           epoch-specific data for current epoch  [struct]
 %   model           model corrections for all visible sats [struct]
 %   Adjust          adjustment/filter relevant variables [struct]
 %   obs             consisting observations and corresponding data   [struct]
 % OUTPUT:
-%   model           extended with modelled corrections to current satellite, [struct]
+%   model           extended with modeled corrections to current satellite, [struct]
 %   Epoch           update of .excluded, .sat_status, .tracked,
 %
 % Revision:
@@ -27,7 +27,7 @@ pos_XYZ = param_(1:3);   	% current estimation of receiver position [XYZ]
 % .lat = phi = latitude [rad]; .lon = lambda = longitude [rad]; .h = height [m]
 pos_WGS84 = cart2geo(pos_XYZ);
 
-num_sat = Epoch.no_sats;                % number of satellites in current epoch
+num_sat = numel(Epoch.sats);            % number of satellites in current epoch
 n_proc_frq = settings.INPUT.proc_freqs; % number of processed frequencies (e.g. 1 for IF-LC)
 n_num_frq  = settings.INPUT.num_freqs;  % number of input frequencies (e.g. 2 for IF-LC)
 frqs = 1:n_proc_frq;                    % 1 : # processed frequencies
@@ -88,10 +88,20 @@ if model.first_call
     end
 
     % --- Rotation Matrix from Local Level to ECEF ---
-    if ~settings.KINE.bool_kinematic || ~contains(settings.PROC.method,'+ Doppler')
+    if ~settings.KINE.bool_kinematic
+        % static processing
         model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
-    else
+    elseif strcmp(settings.KINE.orient_mode, 'IMU')
+        % kinematic processing with IMU information
+        dt = abs(mod(Epoch.gps_time,86400) - input.IMU.timestamp);
+        bool = (dt == min(dt));
+        [model.R_LL2ECEF] = YawPitchRoll2ECEF(input.IMU.yaw(bool), input.IMU.pitch(bool), input.IMU.roll(bool), pos_WGS84.lat, pos_WGS84.lon);
+    elseif contains(settings.PROC.method,'+ Doppler')
+        % kinematic processing with velocity estimation
         model.R_LL2ECEF = setupRotation_BF2ECEF(param_(1:3), param_(4:6), settings.KINE.orient_mode);
+    else
+        % fallback
+        model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
     end
 end
 
@@ -244,7 +254,7 @@ for i_sat = 1:num_sat
     code_dist = mean(Epoch.code(i_sat,:), 'omitnan');
     [Ttr, ~] = calcTimeOfTransmission(code_dist, Epoch.gps_time, dT_sat, dT_rel);
  
-    % --- Get column of broadcast ephemerides for current satellite ---
+    % --- Get column of broadcast ephemeris for current satellite ---
     k = Epoch.BRDCcolumn(prn);
     if settings.ORBCLK.bool_brdc && isnan(k)      % no ephemeris
         %         fprintf('No broadcast orbit data for satellite %d in SOW %.3f              \n', prn, Ttr);
@@ -299,8 +309,19 @@ for i_sat = 1:num_sat
 
     %% Vectors, Angles, Distance between Receiver and Satellite
 
-    % --- Azimuth, Elevation, zenith distance, cutoff-angle ---
-    [az, elev] = topocent(pos_XYZ, X_rot-pos_XYZ); 	% calculate azimuth and elevation [°]
+    % --- Theoretical Range and Line-of-sight-Vector ---
+    los  = X_rot - pos_XYZ;         % vector from receiver to satellite, Line-of-sight-Vector
+    rho  = norm(los);               % distance from receiver to satellite
+    los0 = los/rho;                 % unit vector from receiver to satellite
+
+    % --- Azimuth, Elevation [degree] ---
+    [az, elev] = topocent(pos_XYZ, los);
+    az_BF = az; elev_BF = elev;     % azimuth and elevation to satellite in antenna coordinate system
+    if settings.KINE.bool_kinematic && settings.KINE.bool_IMU
+        [az_BF, elev_BF] = Rot2AzimuthElevation(model.R_LL2ECEF, los0, settings.KINE.ant_orient);
+    end
+
+    %  --- cutoff-angle ---
     if elev < settings.PROC.elev_mask            	% elevation is under cut-off-angle
         exclude = true;         % eliminate satellite
         status(:) = 2;          % set satellite status
@@ -315,11 +336,6 @@ for i_sat = 1:num_sat
         Ant_BoreSight = [0; 0; -1];
         bore = acosd(dot((Los_Body/norm(Los_Body)), Ant_BoreSight));
     end
-
-    % --- Theoretical Range and Line-of-sight-Vector ---
-    los  = X_rot - pos_XYZ;         % vector from receiver to satellite, Line-of-sight-Vector
-    rho  = norm(los);               % distance from receiver to satellite
-    los0 = los/rho;                 % unit vector from receiver to satellite
 
     % --- Satellite Orientation ---
     if ~settings.ORBCLK.bool_obx || ~isfield(input.ORBCLK, 'OBX')
@@ -558,10 +574,15 @@ for i_sat = 1:num_sat
                 stec = call_NeQuick_G(input.IONO.nequ_coeff, obs.startdate(2), Ttr-obs.leap_sec, pos_WGS84, X_rot);
                 iono = stec2iono(stec, f1, f2, f3);
 
+            case 'BDGIM'
+                % ||| use input.IONO.BDGIM_coeff here
+                % ||| modelApproxamtely!
+                % ||| use newest information for calculation
+
             case 'NTCM-G'
                 sod = mod(Ttr,86400);               % seconds of day
                 UTC = (sod - obs.leap_sec)/3600;    % UTC in [h]
-                stec = NTCM_Galileo(pos_WGS84, az, elev, obs.doy, UTC, input.nequ_coeff);
+                stec = NTCM_Galileo(pos_WGS84, az, elev, obs.doy, UTC, input.IONO.nequ_coeff);
                 iono = stec2iono(stec, f1, f2, f3);
 
             case 'CODE Spherical Harmonics'
@@ -570,8 +591,9 @@ for i_sat = 1:num_sat
 
             case 'VTEC from Correction Stream'
                 % find nearest VTEC data in correction stream       ||| interpolate
-                dt = Ttr - input.ORBCLK.corr2brdc_vtec.t;     % time difference [sow]
-                dt(dt<0) = [];                  % ignore future data to maintain real-time conditions
+                dt = Ttr - input.ORBCLK.corr2brdc_vtec.t;           % time difference [sow]
+                if any(dt > 0); dt(dt<0) = []; end      % ignore future data to maintain real-time conditions
+                dt = abs(dt);
                 idx = find(dt == min(dt));  	% index of nearest VTEC data
                 C_nm = input.ORBCLK.corr2brdc_vtec.Cnm(:,:,idx);	% cosine coefficients [TECU]
                 S_nm = input.ORBCLK.corr2brdc_vtec.Snm(:,:,idx); 	% sine coefficients [TECU]
@@ -663,10 +685,9 @@ for i_sat = 1:num_sat
     % --- Satellite Antenna Phase Center Correction ---
     % convert observation from Antenna Phase Center to Center of Mass which
     % is necessary when orbit/clock product refers to the CoM
-    % ||| check´n´change for not sp3
     dX_PCO_SAT_ECEF_corr = zeros(n_proc_frq,1);
     if settings.OTHER.bool_sat_pco && (settings.ORBCLK.bool_sp3 || bool_stream_COM)
-        % satellite Phase Center Offset and precise ephemerides are enabled
+        % satellite Phase Center Offset and precise ephemeris are enabled
         % and satellite is not under cutoff
         dX_PCO_SAT_ECEF = SatOr_ECEF*offset_LL;     % transform offsets into ECEF site displacements
         los_pco_s = sum(los0.*dX_PCO_SAT_ECEF, 1); 	% project each frequency onto line of sight
@@ -681,7 +702,7 @@ for i_sat = 1:num_sat
     dX_PCV_rec = [0,0,0];
     if settings.OTHER.bool_rec_pcv
         if ~isempty(PCV_rec)    % check if PCV corrections are existing at all (in ANTEX)
-            [dX_PCV_rec, ~] = calc_PCV_rec(PCV_rec, j, elev, az, settings, f1, f2, f3);
+            [dX_PCV_rec, ~] = calc_PCV_rec(PCV_rec, j, elev_BF, az_BF, settings, f1, f2, f3);
         end
     end
 
@@ -708,25 +729,25 @@ for i_sat = 1:num_sat
     end
 
 
-    %% -+-+-+- Assign modelled values to struct 'model' -+-+-+-
+    %% -+-+-+- Assign modeled values to struct 'model' -+-+-+-
 
     model.rho(i_sat,frqs)  	  = rho;            % theoretical range, maybe recalculated in iteration of epoch [m]
     model.dT_sat(i_sat,frqs)  = dT_sat;         % Satellite clock correction [s]
     model.dT_rel(i_sat,frqs)  = dT_rel;     	% Relativistic clock correction [s]
     model.dT_sat_rel(i_sat,frqs) = dT_sat + dT_rel;  % Satellite clock  + relativistic correction [s]
     model.Ttr(i_sat,frqs)    = Ttr;             % Signal transmission time, [sow], gps-time
-    model.k(i_sat,frqs)      = k;               % Column of ephemerides []
+    model.k(i_sat,frqs)      = k;               % Column of ephemeris []
     % Atmosphere
     model.trop(i_sat,frqs) = trop;              % Troposphere delay for elevation [m]
     model.iono(i_sat,frqs) = iono(frqs);        % Ionosphere delay [m]
     model.mfw(i_sat,frqs)  = mfw;               % Wet tropo mapping function []
     model.mfh(i_sat,frqs)  = mfh;               % Hydrostatic tropo mapping function []
     model.zwd(i_sat,frqs)  = zwd;               % zenith wet delay (need for building a priori + estimated zwd later) [m]
-    model.zhd(i_sat,frqs)  = zhd;               % modeled zenith hydrostativ delay []
+    model.zhd(i_sat,frqs)  = zhd;               % modeled zenith hydrostatic delay []
     % Observation direction
-    model.az(i_sat,frqs)   = az;                % satellite azimuth [°]
-    model.el(i_sat,frqs)   = elev;            	% satellite elevation [°]
-    model.bore(i_sat,frqs) = bore;              % satellite boresight angle [°]
+    model.az(i_sat,frqs)   = az;                % satellite azimuth [degree]
+    model.el(i_sat,frqs)   = elev;            	% satellite elevation [degree]
+    model.bore(i_sat,frqs) = bore;              % satellite boresight angle [degree]
     % Phase Wind-Up
     model.delta_windup(i_sat,frqs) = delta_windup;          % Phase windup effect [cycles]
     model.windup(i_sat,frqs)       = windupCorr(frqs);      % Phase windup effect, scaled to frequency [m]

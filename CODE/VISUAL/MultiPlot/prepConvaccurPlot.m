@@ -1,6 +1,5 @@
 function [CA] = prepConvaccurPlot(CA, d, i, conv_2D, unique_labels, point)
-% This function prepares the input data for the Convergence/Accuracy
-% Multi-Plot (ConvAccurPlot.m)
+% This function prepares the input data for ConvAccurPlot.m
 %
 % INPUT:
 %   CA          cell, #labels x 3: 2D convergence | 3D accuracy | label

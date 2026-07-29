@@ -43,10 +43,9 @@ else
     % last place
     i_1 = 1;
     vec = [x_vals(i_1), x_vals(end)];
-    txt = [x_vals(i_1), length(x_vals)];
     if obs_ival > 15 && x_vals(end)-x_vals(1) > 300
          % observation interval > 15 and more than 5 minutes processed
-        txt = sow2hhmm(txt);    % format hh:mm
+        txt = sow2hhmm(vec);    % format hh:mm
         txt = cellstr(strcat(txt,'h'));
     else
         txt = sow2hhmmss(vec);  % format hh:mm:ss

@@ -51,7 +51,7 @@ for i = 1:n
     if exist([target, '/', file], 'file')
         file_status(i) = 2;
         continue;   % if file is already existing, then do nothing
-    elseif exist([target, '/', name_file], 'file')   % ||   exist([target, '/', name_file '.mat'], 'file')
+    elseif exist([target, '/', name_file], 'file')   ||   exist([target, '/', name_file '.mat'], 'file')
         file_status(i) = 3;
         continue;   % if file is already existing, then do nothing
     end
@@ -66,7 +66,7 @@ for i = 1:n
             folder_old = folder;
         catch
             if bool_print
-            fprintf(2, ['Folder does not exist: ftp://', host(1:end-3), folder{1}, '\n'])
+            fprintf(2, ['Folder does not exist: ftp://', host(1:end-3), folder, '\n'])
             end
             file_status(i) = 0;
         end
@@ -78,7 +78,7 @@ for i = 1:n
         file_status(i) = 1;
     catch
         if bool_print
-        fprintf(2, ['Download failed: ftp://', host(1:end-3), folder{1} , '/', file, '\n'])
+        fprintf(2, ['Download failed: ftp://', host(1:end-3), folder , '/', file, '\n'])
         end
         file_status(i) = 0;
     end

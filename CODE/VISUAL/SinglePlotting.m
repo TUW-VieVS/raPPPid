@@ -6,7 +6,7 @@ function [] = SinglePlotting(satellites, storeData, obs, settings)
 % INPUT:
 %   satellites 	struct, satellite specific data
 %   storeData  	struct, has collected data from each epoch
-%   obs      	struct, observations and corresponding data from rinex-observation file
+%   obs      	struct, observation-related data from RINEX observation file
 %   settings	struct, settings from GUI
 % OUTPUT:
 %   []
@@ -177,7 +177,7 @@ if STOP_CALC; return; end
 % -+-+-+-+- Figure: Map Plot -+-+-+-+-
 if settings.PLOT.map
     try
-        MapMoviePlot(pos_geo(:,1)*180/pi, pos_geo(:,2)*180/pi, bool_true_pos, pos_true_geo.lat*180/pi, pos_true_geo.lon*180/pi, station_date, ff)
+        MapMoviePlot(pos_geo(:,1)*180/pi, pos_geo(:,2)*180/pi, bool_true_pos, pos_true_geo.lat*180/pi, pos_true_geo.lon*180/pi, station_date, ff, settings.KINE.bool_kinematic, storeData.time)
     catch
         vis_MaPlot(pos_geo(:,1)*180/pi, pos_geo(:,2)*180/pi, bool_true_pos, pos_true_geo.lat*180/pi, pos_true_geo.lon*180/pi, station_date, ff)
     end
@@ -252,7 +252,7 @@ if settings.PLOT.satvisibility
     if ~isfield (storeData, 'exclude')
         storeData.exclude = storeData.cutoff;       % old processing results
     end
-    vis_plotSatConstellation(hours, epochs, label_x_h, satellites, storeData.exclude, isGPS, isGLO, isGAL, isBDS, isQZSS)
+    vis_plotSatConstellation(hours, epochs, label_x_h, satellites, storeData.exclude, isGPS, isGLO, isGAL, isBDS, isQZSS);
 end
 if STOP_CALC; return; end
 
@@ -424,8 +424,12 @@ if settings.PLOT.mp
             PlotObsDiff(epochs, C3_diff, label_x_epc, rgb, 'C3', settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '', false, obs);
         end
     else
-        fprintf('Multipath detection disabled.          \n')
-        
+        fprintf('Code Time-Difference disabled.          \n')
+    end
+    if (isfield(settings.OTHER, 'mp_doppler') && settings.OTHER.mp_doppler)
+        PlotPseudorangeRateCheck(storeData, settings, satellites, epochs, label_x_epc, rgb)
+    else
+        fprintf('Pseudorange Rate Check with Doppler disabled.          \n')
     end
 end
 if STOP_CALC; return; end

@@ -42,7 +42,7 @@ dcb_13_on = settings.BIASES.estimate_rec_dcbs && num_freq >= 3;
 
 % Get and create some variables
 NO_PARAM = Adjust.NO_PARAM;             % number of estimated parameters
-no_sats = Epoch.no_sats;                % number of satellites of current epoch
+no_sats = numel(Epoch.sats);            % number of satellites of current epoch
 s_f = no_sats*num_freq;               	% #satellites x #frequencies
 no_ambig = s_f * bool_phase;	        % number of estimated ambiguities
 N_eye = eye(s_f);                       % square unit matrix, size = number of ambiguities
@@ -53,12 +53,7 @@ N_idx = (NO_PARAM+1):(NO_PARAM+s_f);  	% indices of the ambiguities
 %% parameter vector
 param_vec = zeros(NO_PARAM + no_ambig + no_sats, 1);    % 23 + #ambiguities + #ionospheric delays
 % insert approximate position (X,Y,Z)
-if ~settings.KINE.bool_kinematic
-    param_vec(1:3) = settings.INPUT.pos_approx;  
-end
-if settings.KINE.bool_kinematic || norm(param_vec(1:3)) == 0
-    param_vec(1:3) = ApproximatePosition(Epoch, input, obs, settings);
-end
+param_vec(1:3) = ApproximatePosition(Epoch, input, obs, settings);
 %  insert approximate velocity (X,Y,Z) and receiver clock drift
 if settings.KINE.bool_kinematic && bool_doppler
     [param_vec(4:6), param_vec(23)] = ApproximateVelocity(Epoch, input, obs, settings, param_vec(1:3));
@@ -74,7 +69,7 @@ param_sigma = eye(NO_PARAM + no_ambig + no_sats);       % initialize
 % build matrix with a priori variances of parameters (from GUI):
 param_sigma(1:3,1:3)    = eye(3)*FILTER.var_coord;      % position
 if settings.KINE.bool_kinematic
-    param_sigma(1:3,1:3)    = eye(3)*FILTER.var_velocity; 	% velocity
+    param_sigma(4:6,4:6)    = eye(3)*FILTER.var_velocity; 	% velocity
 end
 param_sigma(7,7)        = FILTER.var_zwd;               % zenith wet delay
 if GPS_ON

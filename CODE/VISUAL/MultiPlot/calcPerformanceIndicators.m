@@ -101,8 +101,8 @@ elseif PlotStruct.fixed
     median_ttff  = median(TTCF, 'omitnan');             % [minutes]
 
     % percentage no correct fix after n minutes
-    no_fix = sum(isnan(TTCF) | TTCF > n);
-    no_fix = no_fix / numel(TTCF) * 100;        % [%]
+    no_fix = sum(isnan(TTCF) | TTCF > n_min);
+    no_fix = no_fix / numel(TTCF) * 100;                % [%]
 end
 
 % average 2D position error for all epochs

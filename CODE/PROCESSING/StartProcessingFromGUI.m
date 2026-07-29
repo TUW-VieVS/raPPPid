@@ -22,21 +22,21 @@ bool_BATCH_PROC = handles.checkbox_batch_proc.Value;    % batch-processing enabl
 bool_parfor = handles.checkbox_parfor.Value;            % parfor loop enabled?
 
 
-if bool_BATCH_PROC          
+if bool_BATCH_PROC && (exist('gcp', 'file') == 2)
     %% batch processing
     
     % reset plotting panel
     set(handles.edit_plot_path,'String', '');
     handles.paths.plotfile = '';
     un_check_plot_checkboxes(handles, 0);
-    % reset true position into textfields of single plot
+    % reset true position into text fields of single plot
     set(handles.edit_x_true,  'String', '');
     set(handles.edit_y_true,  'String', '');
     set(handles.edit_z_true,  'String', '');
     % get data of batch processing table [cell]
-    TABLE = GetTableData(handles.uitable_batch_proc.Data, 2, [6,9,12,15], [1 2], []);
+    TABLE = GetTableData(handles.uitable_batch_proc.Data, 2, [3,6,9,12], [1 2], []);
     n = size(TABLE,1);        	% number of rows
-    success = false(1,n);       % to save wich lines are successfully processed
+    success = false(1,n);       % to save which lines are successfully processed
     % get processing settings from GUI
     settings = getSettingsFromGUI(handles);
     % check if processing settings are valid in general
@@ -125,7 +125,7 @@ if bool_BATCH_PROC
             for i = 1:n_failed
                 failed2{i} = ['#' num2str(idx_failed(i)) ' ' failed{i}];
             end
-            % print messagebox with information about failed files
+            % print message box with information about failed files
             msgbox(vertcat(mess_header, failed2), 'Achievement', 'help');
             % save failed processlist in folder PROCESSLIST
             process_list = TABLE(~success, :);
@@ -174,7 +174,7 @@ else
     set(handles.edit_plot_path,'String', resultsfolder);    % results folder string to GUI (Single Plot)
     handles.paths.plotfile = resultsfolder;         % path to plot folder
     handles.paths.lastproc = resultsfolder;         % path to last processing
-    % change availability of plot checkboxes
+    % change availability of plot check boxes
     handles = disable_plot_checkboxes(handles, settings_);
     % enable loading of reference coordinates/trajectory
     set(handles.pushbutton_load_pos_true,'Enable','On');        

@@ -56,7 +56,7 @@ dD_dvy = (param_(2) - sat_pos_y) ./ rho;        % y velocity
 dD_dvz = (param_(3) - sat_pos_z) ./ rho;        % z velocity   
 
 % Partial derivation: receiver clock drift
-dR_reclk_drift = 1 ./ wavelengths;
+dR_reclk_drift = ones(size(wavelengths));
 
 
 

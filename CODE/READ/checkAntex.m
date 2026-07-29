@@ -1,6 +1,6 @@
 function input = checkAntex(input, settings, antenna_type)
 % This function checks the read-in of the ANTEX file for missing
-% corrections and finds appropiate replacements (e.g., interpolation)
+% corrections and finds appropriate replacements (e.g., interpolation)
 % Check format details of variables in readAntex.m
 %
 % INPUT:
@@ -44,7 +44,7 @@ PCO_GAL 		= input.OTHER.PCO.sat_GAL;
 PCO_rec_GAL 	= input.OTHER.PCO.rec_GAL;
 PCV_GAL 		= input.OTHER.PCV.sat_GAL;
 PCV_rec_GAL    	= input.OTHER.PCV.rec_GAL;
-% Beidou
+% BeiDou
 PCO_BDS			= input.OTHER.PCO.sat_BDS;
 PCO_rec_BDS		= input.OTHER.PCO.rec_BDS;
 PCV_BDS 		= input.OTHER.PCV.sat_BDS;
@@ -122,6 +122,7 @@ L6_J_proc = any(settings.INPUT.qzss_freq_idx == 4);
 
 
 %% RECEIVER PCO
+no_PCO_G = true; no_PCO_R = true; no_PCO_E = true; no_PCO_C = true; no_PCO_Q = true;
 error_pco = ''; error_pcv = '';
 
 % create vector with all GNSS frequencies and matrix with all receiver PCOs
@@ -395,13 +396,18 @@ end
 
 
 % print error message with missing receiver corrections
-if ~strcmp(antenna_type, 'XxXxX') && bool_print
+if ~strcmp(antenna_type, 'XxXxX') && bool_print && ~settings.INPUT.rawDataAndroid
     if ~isempty(error_pco) && settings.OTHER.bool_rec_pco
         fprintf(2,'\nANTEX lacks receiver PCOs:\n%s\n', error_pco);
     end
     if ~isempty(error_pcv) && settings.OTHER.bool_rec_pcv
         fprintf(2,'\nANTEX lacks receiver PCVs:\n%s\n', error_pcv);
     end
+end
+
+% print error message if no correction at all
+if all([all(no_PCO_G) all(no_PCO_R) all(no_PCO_E) all(no_PCO_C) all(no_PCO_Q)]) && ~settings.INPUT.rawDataAndroid
+    errordlg({'No receiver antenna calibrations found for', ['<' antenna_type '> in ' settings.OTHER.file_antex]}, 'ANTEX');
 end
 
 

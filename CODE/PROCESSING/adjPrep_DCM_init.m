@@ -54,7 +54,7 @@ bool_filter = ~strcmp(FILTER.type, 'No Filter');    % true if filter is enabled
 
 % Get and create some variables
 NO_PARAM = Adjust.NO_PARAM;             % number of estimated parameters
-no_sats = Epoch.no_sats;                % number of satellites of current epoch
+no_sats = numel(Epoch.sats);            % number of satellites of current epoch
 s_f = no_sats*num_freq;               	% #satellites x #frequencies
 no_ambig = s_f * bool_phase;       % number of estimated ambiguities
 N_eye = eye(s_f);                       % square unit matrix, size = number of ambiguities
@@ -68,12 +68,7 @@ iono_idx = (1+NO_PARAM+no_ambig):(NO_PARAM+no_ambig+no_sats);
 %% parameter vector
 param_vec = zeros(NO_PARAM + no_ambig + no_sats, 1);  % 33 + #ambiguities + #ionospheric delays
 % insert approximate position (X,Y,Z)
-if ~settings.KINE.bool_kinematic
-    param_vec(1:3) = settings.INPUT.pos_approx;
-end
-if settings.KINE.bool_kinematic || norm(param_vec(1:3)) == 0
-    param_vec(1:3) = ApproximatePosition(Epoch, input, obs, settings);
-end
+param_vec(1:3) = ApproximatePosition(Epoch, input, obs, settings);
 % insert approximate velocity (X,Y,Z) and receiver clock drift
 if settings.KINE.bool_kinematic && bool_doppler
     [param_vec(4:6), param_vec(33)] = ApproximateVelocity(Epoch, input, obs, settings, param_vec(1:3));
@@ -183,15 +178,15 @@ if bool_filter
     Transition(7,7)     = FILTER.dynmodel_zwd;              % zenith wet delay
     % code receiver clock error
     Transition( 8, 8) 	= FILTER.dynmodel_rclk_gps;     % GPS
-    Transition( 9, 9) 	= FILTER.dynmodel_rclk_gal;     % GLONASS
-    Transition(10,10) 	= FILTER.dynmodel_rclk_gps;     % Galileo
-    Transition(11,11)  	= FILTER.dynmodel_rclk_gal;     % BeiDou
+    Transition( 9, 9) 	= FILTER.dynmodel_rclk_glo;     % GLONASS
+    Transition(10,10) 	= FILTER.dynmodel_rclk_gal;     % Galileo
+    Transition(11,11)  	= FILTER.dynmodel_rclk_bds;     % BeiDou
     Transition(12,12)  	= FILTER.dynmodel_rclk_qzss;    % QZSS
     % phase receiver clock error
     Transition(13,13)   = FILTER.dynmodel_rclk_gps;     % GPS
-    Transition(14,14)   = FILTER.dynmodel_rclk_gal;     % GLONASS
-    Transition(15,15)   = FILTER.dynmodel_rclk_gps;     % Galileo
-    Transition(16,16)   = FILTER.dynmodel_rclk_gal;     % BeiDou
+    Transition(14,14)   = FILTER.dynmodel_rclk_glo;     % GLONASS
+    Transition(15,15)   = FILTER.dynmodel_rclk_gal;     % Galileo
+    Transition(16,16)   = FILTER.dynmodel_rclk_bds;     % BeiDou
     Transition(17,17)   = FILTER.dynmodel_rclk_qzss;    % QZSS
     % Interfrequency Bias (IFB)
     Transition(18,18)  	= FILTER.dynmodel_DCB;          % GPS
@@ -200,11 +195,11 @@ if bool_filter
     Transition(21,21)  	= FILTER.dynmodel_DCB;          % BeiDou
     Transition(22,22)  	= FILTER.dynmodel_DCB;          % QZSS
     % L2 phase bias
-    Transition(21,21)  	= FILTER.dynmodel_DCB;          % GPS
-    Transition(22,22)  	= FILTER.dynmodel_DCB;          % GLONASS
-    Transition(23,23)  	= FILTER.dynmodel_DCB;          % Galileo
-    Transition(24,24)  	= FILTER.dynmodel_DCB;          % BeiDou
-    Transition(25,25)  	= FILTER.dynmodel_DCB;          % QZSS
+    Transition(23,23)  	= FILTER.dynmodel_DCB;          % GPS
+    Transition(24,24)  	= FILTER.dynmodel_DCB;          % GLONASS
+    Transition(25,25)  	= FILTER.dynmodel_DCB;          % Galileo
+    Transition(26,26)  	= FILTER.dynmodel_DCB;          % BeiDou
+    Transition(27,27)  	= FILTER.dynmodel_DCB;          % QZSS
     % L3 phase bias
     Transition(28,28)  	= FILTER.dynmodel_DCB;          % GPS
     Transition(29,29)  	= FILTER.dynmodel_DCB;          % GLONASS

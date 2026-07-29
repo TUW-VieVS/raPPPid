@@ -65,6 +65,8 @@ catch
         fprintf(2, ['Folder does not exist: ftp://', host(1:end-3), folder, '\n'])
     end
     file_status = 0;
+    close(f);
+    return
 end
 
 % Enter passive mode

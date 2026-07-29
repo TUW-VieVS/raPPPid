@@ -3,7 +3,6 @@ function [Epoch, Adjust, model] = calc_float_solution(input, obs, Adjust, Epoch,
 % Filter and calculating float coordinate/position solution.
 %
 % INPUT:
-%	input     	input data (ephemerides, PCOs, etc.) [struct]
 %	obs			consisting observations and corresponding data [struct]
 %	Adjust      containing all adjustment relevant data and matrices from previous epoch [struct]  
 % 	Epoch       epoch-specific data for current epoch [struct] 
@@ -24,7 +23,7 @@ function [Epoch, Adjust, model] = calc_float_solution(input, obs, Adjust, Epoch,
 
 % Preparations
 bool_print = ~settings.INPUT.bool_parfor;   % print to command window?
-num_freq = settings.INPUT.proc_freqs;	% number of processed frequencies
+proc_freq = settings.INPUT.proc_freqs;	% number of processed frequencies
 NO_PARAM = Adjust.NO_PARAM;				% number of estimated parameters
 no_sats = numel(Epoch.sats);            % total number of satellites in current epoch
 filter_type = settings.ADJ.filter.type; % method of parameter estimation
@@ -41,7 +40,7 @@ if any(Adjust.param(1:3) == 0) || any(Adjust.param_pred(1:3) == 0)
     if any(Adjust.param(1:3) == 0);      Adjust.param(1:3)      = xyz_; end
     if any(Adjust.param_pred(1:3) == 0); Adjust.param_pred(1:3) = xyz_; end
 end
-if any(Adjust.param(4:6) == 0) || any(Adjust.param_pred(4:6) == 0)
+if contains(settings.PROC.method, ' + Doppler') && (any(Adjust.param(4:6) == 0) || any(Adjust.param_pred(4:6) == 0))
     [vel_, ~] = ApproximateVelocity(Epoch, input, obs, settings, Adjust.param(1:3));
     if any(Adjust.param(4:6) == 0);      Adjust.param(4:6)      = vel_; end
     if any(Adjust.param_pred(4:6) == 0); Adjust.param_pred(4:6) = vel_; end
@@ -54,7 +53,7 @@ if ~Adjust.float && strcmp(filter_type, 'Kalman Filter') && ~settings.KINE.satel
     LSQ_setts.ADJ.filter.type = 'No Filter';
     LSQ_setts.INPUT.bool_parfor = true;     % to avoid output to the command window
     [~, LSQ, ~] = calc_float_solution(input, obs, Adjust, Epoch, LSQ_setts);
-    % replace initial approximate values of parameters with results of LSQ
+    % replace initial approximate values with results of LSQ
     Adjust.param(1:NO_PARAM) = LSQ.param(1:NO_PARAM);
     Adjust.param_pred(1:NO_PARAM) = LSQ.param(1:NO_PARAM);
     % residual ZWD is expected to be zero 
@@ -82,8 +81,33 @@ while it < DEF.ITERATION_MAX_NUMBER
     
     % --- Line-of-Sight-Vector and Theoretical Range (they might change when iterating)
     los = vecnorm2(model.Rot_X - Adjust.param_pred(1:3));
-    model.rho = repmat(los', 1, num_freq);
+    model.rho = repmat(los', 1, proc_freq);
     
+    % --- check for outliers
+    % dangerous function!, omc depends on predicted parameters which can
+    % be very wrong at the beginning of the convergence
+    if settings.PROC.check_omc
+        % calculate modeled observations
+        [model_code, model_phase, ~] = model_observations(model, Adjust, settings, Epoch);
+        [Epoch, Adjust] = check_omc(model_code, model_phase, Epoch, Adjust, settings, obs.interval); 
+    end
+
+    % --- initialize float ambiguities (e.g., 1st epoch or after cycle-slip)
+    if ~settings.INPUT.rawDataAndroid
+        [N_float, idx] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, proc_freq);
+        N_init = Epoch.phase - Epoch.code;          % values for potential initialization
+        N_init(isnan(N_init) | isinf(N_init)) = 0;  % avoids NaNs and Infs
+        % exclude reference satellites: their ambiguity is set to zero
+        refSats = [Epoch.refSatGPS, Epoch.refSatGLO, Epoch.refSatGAL, Epoch.refSatBDS, Epoch.refSatQZS];
+        is_refSat = ismember(Epoch.sats, refSats(refSats ~= 0));
+        is_refSat_ = repmat(is_refSat(:), proc_freq, 1);
+        % check which ambiguities should be initialized
+        bool_init = (N_float == 0) & ~Epoch.exclude(:) & ~Epoch.cs_found(:) & ~is_refSat_;
+        % initialize ambiguities in parameter and predicted parameter vector
+        Adjust.param(idx(bool_init)) = N_init(bool_init);
+        Adjust.param_pred(idx(bool_init)) = N_init(bool_init);
+    end
+
     % --- initialize estimation of ionosphere in parameter vector:
     % -) for all satellites if no valid float solution
     % -) for satellites which are new in constellation
@@ -99,13 +123,6 @@ while it < DEF.ITERATION_MAX_NUMBER
     [model.model_code, model.model_phase, model.model_doppler] = ...
         model_observations(model, Adjust, settings, Epoch);
     
-    % --- check for outliers
-    % dangerous function!, omc depends on predicted parameters which can
-    % be very wrong at the beginning of the convergence
-    if settings.PROC.check_omc
-        [Epoch, Adjust] = check_omc(Epoch, model, Adjust, settings, obs.interval); 
-    end
-
     % --- select reference satellite for decoupled clock model
     if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
         Epoch = CheckSatellitesFixable(Epoch, settings, model, input);
@@ -141,11 +158,12 @@ while it < DEF.ITERATION_MAX_NUMBER
         % not enough observation for parameter estimation in current epoch
         fprintf(2, 'Not enough observations in epoch %d (%s)           \n', Epoch.q, Epoch.rinex_header)
         dx.x(1:3) = 0; Adjust.res = NaN(numel(Adjust.omc),1);
-        Adjust.float = false; Adjust.fixed = false;
+        % Adjust.float = false; Adjust.fixed = false;
         return
     end
+
     
-    
+
     %% ------- Calculate Position ------------
     switch filter_type        
 
@@ -200,7 +218,7 @@ end
 % Code + Phase - Processing AND at least one satellite is excluded:
 % -> set ambiguities to zero
 if contains(settings.PROC.method, '+ Phase') && any(Epoch.exclude(:))         
-    kk = 1:(num_freq*no_sats);
+    kk = 1:(proc_freq*no_sats);
     kk = kk(Epoch.exclude(:));              % index-numbers of satellites and their frequencies under cutoff
     idx_amb = kk+NO_PARAM;                  % indices where to reset
     Adjust = reset_param_sigma(Adjust, idx_amb, settings.ADJ.filter.var_amb); 
@@ -213,7 +231,7 @@ if contains(settings.IONO.model, 'Estimate') && any(Epoch.exclude(:,1))
     kkk = kkk(Epoch.exclude(:,1));      % index-numbers of satellites and their frequencies under cutoff
     idx_iono = kkk+NO_PARAM;            % indices where to reset
     if contains(settings.PROC.method, '+ Phase')
-        idx_iono = idx_iono + num_freq*no_sats;   % change indices because of ambiguities
+        idx_iono = idx_iono + proc_freq*no_sats;   % change indices because of ambiguities
     end
     Adjust = reset_param_sigma(Adjust, idx_iono, settings.ADJ.filter.var_iono);
 end

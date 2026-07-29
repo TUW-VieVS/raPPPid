@@ -10,7 +10,7 @@ function P_diag = createWeights(Epoch, elev, settings, bore)
 % INPUT:
 %   Epoch           containing epoch-specific data
 %   elev            elevation to GNSS satellites of current epoch [°]
-%   settings        setting of proceesing from GUI
+%   settings        setting of processing from GUI
 %   bore            boresight angle to GNSS satellites of current epoch [°]
 % OUTPUT:
 %   P_diag          [n sats x input freqs], weight for each satellite and frequency
@@ -42,41 +42,50 @@ if settings.ADJ.weight_elev
 
 elseif settings.ADJ.weight_sign_str
     % --- Weighting using signal to noise ratio (e.g., low-cost equipment), check [05]
+    CN0 = [Epoch.S1, Epoch.S2, Epoch.S3];       % collect C/N0 values for all frequencies
+    CN0_mean = mean(CN0, 2, 'omitmissing');     % calculate mean for weighting
+    CN0_ = repmat(CN0_mean, 1, size(CN0, 2));
+
     if ischar(settings.ADJ.snr_weight_fun)
         % hardcoded C/N0 weighting function
         switch settings.ADJ.snr_weight_fun
-            case 'option_1'
+            case 'option_0'
                 if ~isempty(Epoch.S1)
-                    P_diag = goGPS_SNR_weighting(P_diag, Epoch.S1, 1);
+                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,1), 1);
                 end
                 if ~isempty(Epoch.S2) && settings.INPUT.proc_freqs >= 2
-                    P_diag = goGPS_SNR_weighting(P_diag, Epoch.S2, 2);
+                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,2), 2);
                 end
                 if ~isempty(Epoch.S3) && settings.INPUT.proc_freqs >= 3
-                    P_diag = goGPS_SNR_weighting(P_diag, Epoch.S3, 3);
+                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,3), 3);
                 end
-            case 'option_0'
-                % option_0 = 10.^-(max([55-snr,0])./10)
-                SNR = [Epoch.S1, Epoch.S2, Epoch.S3];
-                expo = 55 - SNR;
+            case 'option_1'
+                % option_1 = 10.^-(max([55-snr,0])./10)
+                expo = 55 - CN0_;
                 expo(expo < 0 | isnan(expo)) = 0;
                 expo = expo ./ 10;
                 P_diag = 10 .^ -expo;
+            case 'option_2'
+                % similar to option_1, but uses max(CN0_) instead of 55
+                CN0_REF = max(CN0_(:,1));
+                expo = CN0_REF - CN0_;
+                expo(expo < 0 | isnan(expo)) = 0;
+                expo = expo ./ 10;
+                P_diag = 10 .^ -expo;                
             otherwise
                 fprintf(2, '\nError in createWeights!\n')
         end
     elseif isa(settings.ADJ.snr_weight_fun, 'function_handle')
         % C/N0 weighting function from GUI (user input)
-        SNR = [Epoch.S1, Epoch.S2, Epoch.S3];
         if contains(func2str(settings.ADJ.snr_weight_fun), 'max(')
             % function-handle does not work with max()-function and vector
             for i = 1:n_sats         % ||| more elegant solution than a loop?
                 for j = 1:num_freq
-                    P_diag(i,j) = settings.ADJ.snr_weight_fun(SNR(i,j));
+                    P_diag(i,j) = settings.ADJ.snr_weight_fun(CN0_(i,j));
                 end
             end
         else
-            P_diag(:,:) = settings.ADJ.snr_weight_fun(SNR);
+            P_diag(:,:) = settings.ADJ.snr_weight_fun(CN0_);
             if settings.INPUT.proc_freqs >= 2
                 % replace missing values
                 P_diag_1 = P_diag(:,1);
@@ -138,7 +147,7 @@ P_diag(Epoch.glo,:) = P_diag(Epoch.glo,:) / settings.ADJ.fac_GLO;
 P_diag(Epoch.gal,:) = P_diag(Epoch.gal,:) / settings.ADJ.fac_GAL;
 P_diag(Epoch.bds,:) = P_diag(Epoch.bds,:) / settings.ADJ.fac_BDS;
 
-% very low weigth for weights which are NaN, zero, or negative
+% very low weight for weights which are NaN, zero, or negative
 P_diag(isnan(P_diag)) = 10^-6;
 P_diag(P_diag <= 0) = 10^-6;
 

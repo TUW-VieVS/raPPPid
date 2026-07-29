@@ -21,6 +21,9 @@ function [Epoch, Adjust] = PPPAR_3IF(Adjust, Epoch, settings, input, obs, model)
 
 q = Epoch.q;                            % epoch number of processing
 q0 = Adjust.fixed_reset_epochs(end);    % epoch number of last reset
+% relevant epochs of HMW (min/max to be independent of the filter direction:
+% q0 is the start epoch, which is > q for backward processing)
+q_hmw = min(q0,q):max(q0,q);
 NO_PARAM = Adjust.NO_PARAM;
 no_sats = numel(Epoch.sats);
 
@@ -31,12 +34,12 @@ HMW_23 = Adjust.HMW_23;
 
 % --- Extra-Wide Lane-Fixing Procedure ---
 if Adjust.fix_now(1)
-    Epoch = EW_fixing(HMW_23(q0:q,:), Epoch, model.el, obs.interval, settings);
+    Epoch.WL_23 = HMW_fixing(HMW_23(q_hmw,:), Epoch, model.el, obs.interval, settings, Epoch.WL_23);
 end
 
 % --- Wide-Lane Fixing Procedure ---
 if Adjust.fix_now(1)
-    Epoch = WL_fixing(HMW_12(q0:q,:), Epoch, model.el, obs.interval, settings);
+    Epoch.WL_12 = HMW_fixing(HMW_12(q_hmw,:), Epoch, model.el, obs.interval, settings, Epoch.WL_12);
 end
 
 if Adjust.fix_now(2)
@@ -46,7 +49,7 @@ end
 
 % reset fixed ambiguities of satellites which have no float
 % estimation for their ambiguity
-float_N = Adjust.param( (NO_PARAM+1) : (NO_PARAM+2*no_sats));
+float_N = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, 2);
 float_N = reshape(float_N, no_sats, 2, 1);
 reset_fix1 = Epoch.sats(float_N(:,1) == 0);
 reset_fix2 = Epoch.sats(float_N(:,2) == 0);

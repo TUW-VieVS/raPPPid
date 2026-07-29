@@ -40,9 +40,9 @@ bool_doppler = contains(settings.PROC.method,'+ Doppler');      % true if phase 
 %% satellite variables
 satellites.obs(q,prns)  = Epoch.tracked(prns);  	% save number of epochs satellite is tracked
 satellites.elev(q,prns) = model.el(:,1);	% save elevation of satellites
-satellites.az  (q,prns) = model.az(:,1); 	% save azimuth [°] of satellites
+satellites.az  (q,prns) = model.az(:,1); 	% save azimuth [Â°] of satellites
 if settings.KINE.satellite.bool
-	satellites.bore(q,prns) = model.bore(:,1); 	    % save boresight angle [°] of satellites
+	satellites.bore(q,prns) = model.bore(:,1); 	    % save boresight angle [Â°] of satellites
 end
 
 % Save Carrier-to-Noise density
@@ -76,7 +76,8 @@ end
 storeData.float(q) = bool_float;    % valid float solution in current epoch?
 if bool_phase
     % float ambiguities
-	N_temp = reshape(Adjust.param((NO_PARAM+1):(NO_PARAM+s_f)), 1, no_sats, proc_frqs);
+	[N_temp, idx_N] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, proc_frqs);
+	N_temp = reshape(N_temp, 1, no_sats, proc_frqs);
     storeData.N_1(q,prns) = N_temp(:,:,1);      
 	if proc_frqs>1; storeData.N_2(q,prns) = N_temp(:,:,2); end
 	if proc_frqs>2; storeData.N_3(q,prns) = N_temp(:,:,3); end
@@ -136,7 +137,7 @@ end
 storeData.param_sigma{q} = Adjust.param_sigma;
 
 if ~strcmp(settings.ADJ.filter.type,'No Filter')   &&   bool_phase
-    temp1 = diag( Adjust.param_sigma((NO_PARAM+1):(NO_PARAM+s_f), (NO_PARAM+1):(NO_PARAM+s_f)) );
+    temp1 = diag( Adjust.param_sigma(idx_N, idx_N) );
 	temp2 = reshape(temp1, 1, no_sats, proc_frqs);
     storeData.N_var_1(q,prns) = temp2(:,:,1);
 	if proc_frqs > 1;	storeData.N_var_2(q,prns) = temp2(:,:,2); end
@@ -217,6 +218,7 @@ end
 
 
 %% save multipath detection data
+% code time-difference
 if settings.OTHER.mp_detection
     storeData.mp_C1_diff_n(q,:) = Epoch.mp_C_diff(1,:);
     if num_frqs >= 2
@@ -224,6 +226,16 @@ if settings.OTHER.mp_detection
     end
     if num_frqs >= 3
         storeData.mp_C3_diff_n(q,:) = Epoch.mp_C_diff(3,:);
+    end
+end
+% pseudorange rate check with Doppler
+if settings.OTHER.mp_doppler && ~isempty(Epoch.mp_DopplerPR)
+    storeData.mp_DopplerPR_1(q,prns) = Epoch.mp_DopplerPR(1,:);
+    if num_frqs >= 2
+        storeData.mp_DopplerPR_2(q,prns) = Epoch.mp_DopplerPR(2,:);
+    end
+    if num_frqs >= 3
+        storeData.mp_DopplerPR_3(q,prns) = Epoch.mp_DopplerPR(3,:);
     end
 end
 
@@ -255,7 +267,7 @@ if settings.AMBFIX.bool_AMBFIX
         storeData.N3_fixed(q,prns) = Adjust.N3_fixed;     % fixed ambiguity 3rd frequency
         storeData.iono_fixed(q,prns) = Adjust.iono_fix;   % fixed ionospheric delay estimation
     end
-    % save Hatch-Melbourne-Wübbena LCs
+    % save Hatch-Melbourne-WÃ¼bbena LCs
     storeData.HMW_12(q,prns) = Adjust.HMW_12(q,prns);
     if proc_frqs >= 2
         storeData.HMW_23(q,prns) = Adjust.HMW_23(q,prns);
@@ -303,6 +315,7 @@ storeData.gpstime(q,1) = Epoch.gps_time;
 storeData.time(q,1) = Epoch.time;
 storeData.dt_last_reset(q) = Epoch.gps_time-Adjust.reset_time;      % [s], time since last reset
 storeData.param(q,:) = Adjust.param(1:NO_PARAM);
+storeData.param_pred(q,:) = Adjust.param_pred(1:NO_PARAM);
 
 if Adjust.fixed
     storeData.param_fix(q,:)     = Adjust.param_fix(1:NO_PARAM);
@@ -333,13 +346,26 @@ storeData.cs_found(q,prns) = any(Epoch.cs_found, 2); 	% true if cycle slip found
 storeData.exclude(q,prns)  = any(Epoch.exclude, 2);     % true if satellite's observation excluded on any frequency
 
 
+%% IMU related variables
+if settings.KINE.bool_IMU && settings.INPUT.rawDataAndroid
+    storeData.triad(:,q) = Adjust.z_triad;
+    storeData.fn(:,q) = Adjust.a_n;
+    storeData.quat(:,q) = Adjust.quat;
+    storeData.motionState(:,q) = Epoch.motionState;
+    storeData.up_axis(:,q) = Adjust.up_axis;
+    storeData.z_yaw(1,q) = Adjust.z_yaw;
+    storeData.forward_body(:,q) = Adjust.forward_body;
+    storeData.gnss_bearing(:,q) = Adjust.gnss_bearing;
+    storeData.yaw_forward(:,q) = Adjust.yaw_forward;
+end
+
 %% save satellite status
 % ||| loses information! 
 if settings.EXP.storeData_sat_status
 	storeData.sat_status(q,prns) = Epoch.sat_status(:,1);
 end
 
-%% save modelled error-sources (into model_save)
+%% save modeled error-sources (into model_save)
 
 % save zhd and zwd into storeData for single plot
 storeData.zhd(q) = model.zhd(1);          	% Zenith hydrostatic delay
@@ -349,9 +375,9 @@ if settings.EXP.model_save
     % Frequency-dependent stuff:
     j = 1:proc_frqs;
     if bool_phase
-        model_save.phase(q,prns,j) = model.model_phase(:,j);    % modelled phase ranges
+        model_save.phase(q,prns,j) = model.model_phase(:,j);    % modeled phase ranges
     end
-    model_save.code(q,prns,j)  = model.model_code(:,j);         % modelled code ranges
+    model_save.code(q,prns,j)  = model.model_code(:,j);         % modeled code ranges
     model_save.windup(q,prns,j)   	= model.windup(:,j);    	% Phase windup effect, scaled to frequency
     model_save.shapiro(q,prns,j)   	= model.shapiro(:,j);    	% Phase windup effect, scaled to frequency
     model_save.PCO_rec(q,prns,j) = model.dX_PCO_rec_corr(:,j);	% Receiver phase center offset corrections

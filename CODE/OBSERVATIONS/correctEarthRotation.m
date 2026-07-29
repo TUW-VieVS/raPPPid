@@ -5,10 +5,10 @@ function [X_rot, V_rot] = correctEarthRotation(tau, X, V)
 % INPUT:
 %   tau     travel time of GNSS signal, corrected for receiver clock error
 %   X       3x1, satellite position in ECEF
-%   V       3x1, satellite velocits in ECEF
+%   V       3x1, satellite velocities in ECEF
 % OUTPUT:
 %   X_rot   3x1, corrected satellite position in ECEF
-%   V_rot   3x1, corrected satellite velocits in ECEF
+%   V_rot   3x1, corrected satellite velocities in ECEF
 %
 % Revision:
 %   ...

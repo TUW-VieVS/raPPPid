@@ -44,7 +44,7 @@ for i = 1:n     % loop over data
     no_fix = sum(idx);    % no fix at all or fix after plotting period
     m = numel(data);
     % plot
-    histogram(data, 'BinWidth', bw, 'Normalization','cdf', 'facecolor',coleurs(i,:), 'facealpha',.5, 'edgecolor','k')
+    h = histogram(data, 'BinWidth', bw, 'Normalization','cdf', 'EdgeColor', coleurs(i,:)*0.75, 'LineWidth',2, 'FaceColor', coleurs(i,:), 'FaceAlpha', 0.01);
     % add information about percent of no fixes to legend
     labels_leg{i} = [labels{i}, ': ', sprintf('%2.2f', no_fix/m*100), '%'];
 end
@@ -54,7 +54,7 @@ title(hleg, {'Color, label, no fix [%]'}) 	% title for legend
 box off
 axis tight
 xlim([0 sec_end])
-title({['Accumulated Time to Correct Fix (until ' sec_str 's)']})
+title({['CDF: Time to Correct Fix (until ' sec_str 's)']})
 xlabel({'[s]'})
 ylabel('[%]')
 yticklabels(yticks*100)
@@ -81,7 +81,7 @@ title(hleg, {'Color, label, no fix [%]'}) 	% title for legend
 box off
 axis tight
 xlim([0 sec_end])
-title({['Time to Correct Fix (until ' sec_str 's)']})
+title({['PDF: Time to Correct Fix (until ' sec_str 's)']})
 xlabel({'[s]'})
 ylabel('[%]')
 yticklabels(yticks*100)

@@ -4,7 +4,7 @@ function [dow, hour, min, sec] = sow2dhms(sow)
 % INPUT:
 % 	sow           seconds of week
 % OUTPUT:
-% 	dow           day of gps week (starts sunday at 00:00 GPST)
+% 	dow           day of gps week (starts Sunday at 00:00 GPST)
 % 	hour          hours of day
 % 	min           minutes of hour
 % 	sec           seconds of min

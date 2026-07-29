@@ -87,14 +87,15 @@ set(dcm, 'updatefcn', @vis_customdatatip_vel)
 
 if ~isempty(speed_true)
     % prepare figure
-    fig_histo = figure('Name', 'Difference velocity to reference', 'NumberTitle','off');
+    fig_histo = figure('Name', 'Difference speed to reference', 'NumberTitle','off');
 
     % calculate difference between estimation and reference
     diff = speed_true - speed_vel;
     valid_diff = diff(~isnan(diff));        % ignore NaN explicitely
 
     % plot difference in histogram
-    h = histogram(abs(valid_diff), 'Normalization', 'percentage', 'BinWidth', 0.125);
+    h = histogram(abs(valid_diff), 'Normalization', 'percentage', 'BinWidth', 0.125, ...
+        'DisplayName', 'Speed difference');
     hold on
 
 
@@ -103,9 +104,13 @@ if ~isempty(speed_true)
     perc_cum   = cumsum(perc);          % cumulative percentage
     bins = (h.BinEdges(1:end-1) + h.BinEdges(2:end))/2;
 
+    % save cumulative percentage to make it accessible in the datatip
+    % function (which is a local function without access to this workspace)
+    h.UserData = perc_cum;
+
     % plot cumulative percentage on secondary y-axis
     yyaxis right
-    plot(bins, perc_cum, '-r', 'LineWidth', 1.5)
+    plot(bins, perc_cum, '-r', 'LineWidth', 1.5, 'DisplayName', 'Cumulative percentage')
     ylabel('Cumulative percentage [%]')
     ylim([0 100])
 
@@ -116,7 +121,7 @@ if ~isempty(speed_true)
     stdev = std(valid_diff, 'omitmissing');
     bias = mean(valid_diff, 'omitmissing');
     % style plot
-    title('Velocity Difference')
+    title('Speed Difference')
     xlim([0 3])
     ylim([0 100])
     ylabel('Percentage [%]')
@@ -153,21 +158,33 @@ output_txt{3} = [sprintf('%.3f', velocity) ' km/h'];    % value
 
 
 function output_txt = vis_customdatatip_histo(obj, event_obj)
+% Display the position of the data cursor with relevant information
+% INPUT:
+%   obj          Currently not used (empty)
+%   event_obj    Handle to event object
+% OUTPUT:
+%   output_txt   Data cursor text string (string or cell array of strings).
+%
+% *************************************************************************
+
 % get position of click
 pos = get(event_obj, 'Position');
 velocity_diff = pos(1);
 value = pos(2);
 
 output_txt{1} = event_obj.Target.DisplayName;
+output_txt{2} = ['Velocity Diff [km/h]: ', sprintf('%.2f', velocity_diff)];
 
 if strcmp(event_obj.Target.Type, 'histogram')
     % Histogram bars
-    bin_idx = event_obj.Target.Bin(e.DataIndex);
-    output_txt{2} = ['Velocity Diff [km/h]: ', sprintf('%.2f', velocity_diff)];
     output_txt{3} = ['Percentage: ', sprintf('%.1f%%', value)];
-    output_txt{4} = ['Cumulative: ', sprintf('%.1f%%', cumPerc(bin_idx))];
+    % get cumulative percentage of the clicked bin (saved in UserData)
+    perc_cum = event_obj.Target.UserData;
+    bin_idx = discretize(velocity_diff, event_obj.Target.BinEdges);
+    if ~isnan(bin_idx) && numel(perc_cum) >= bin_idx
+        output_txt{4} = ['Cumulative: ', sprintf('%.1f%%', perc_cum(bin_idx))];
+    end
 else
     % Line (cumulative percentage)
-    output_txt{2} = ['Velocity Diff [km/h]: ', sprintf('%.2f', velocity_diff)];
     output_txt{3} = ['Cumulative %: ', sprintf('%.1f%%', value)];
 end

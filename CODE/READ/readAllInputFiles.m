@@ -1,7 +1,7 @@
 function  [input, obs, settings, OBSDATA] = readAllInputFiles(settings)
 % Reads in all input files to an internal raPPPid format: observations, 
 % navigation file, precise satellite orbits, precise clocks, IONEX,
-% DCB-files, SINEX Bias, met-file, antex-file, ...
+% DCB-files, SINEX Bias, met-file, ANTEX file, ...
 % 
 % INPUT:
 %   settings    struct, processing settings from the GUI
@@ -44,6 +44,7 @@ obs = find_obs_col(obs, settings);
 obs = SavePrintObsType(obs, settings);
 
 % Read-in RINEX observation file in the case of postprocessing
+OBSDATA = {}; input.IMU = {}; obs.newdataepoch = [];
 if ~settings.INPUT.bool_realtime
     if ~settings.INPUT.rawDataAndroid
         % RINEX file
@@ -53,14 +54,11 @@ if ~settings.INPUT.bool_realtime
         end
     else
         % raw sensor data from Android (e.g., smartphone)
-        [OBSDATA, obs.newdataepoch] = readAndroidRawSensorData(settings.INPUT.file_obs, obs.vars_raw);
+        [OBSDATA, obs.newdataepoch, input.IMU] = readAndroidRawSensorData(settings.INPUT.file_obs, settings.KINE.bool_IMU, obs.vars_raw);
         if settings.PROC.timeFrame(2) == 999999        % processing till end of observation file
             settings.PROC.timeFrame(2) = numel(obs.newdataepoch) - 1; 	% number of all epochs
         end
     end
-
-else
-    OBSDATA = {}; obs.newdataepoch = [];
 end
 
 % Start-date in different time-formats
@@ -80,7 +78,7 @@ end
 glo_channels = settings.INPUT.use_GLO & any(isnan(obs.glo_channel));
 
 % automatic download of the files which are needed for processing and some
-% changes (filepaths and booleans) in the struct settings for the futher processing
+% changes (file paths and booleans) in the struct settings for the further processing
 settings = downloadInputFiles(settings, obs.startdate, glo_channels);
 
 
@@ -89,7 +87,7 @@ settings = downloadInputFiles(settings, obs.startdate, glo_channels);
 
 % -) Precise Products
 
-% Read precise ephemerides file
+% Read precise ephemeris file
 if settings.ORBCLK.bool_sp3
     path_sp3 = settings.ORBCLK.file_sp3;
     if contains(path_sp3, '$')
@@ -102,7 +100,7 @@ if settings.ORBCLK.bool_sp3
     input.ORBCLK.preciseEph_GAL = sp3_GAL;
     input.ORBCLK.preciseEph_BDS = sp3_BDS;
     input.ORBCLK.preciseEph_QZSS = sp3_QZSS;
-    obs.coordsyst = GetCoordSystemFromSP3(path_sp3);
+    [obs.coordsyst, ~] = GetCoordAntexFromSP3(path_sp3);
     if settings.INPUT.use_GPS && isempty(input.ORBCLK.preciseEph_GPS); errordlg('No precise orbits for GPS in sp3-file!', 'Error'); end
     if settings.INPUT.use_GLO && isempty(input.ORBCLK.preciseEph_GLO); errordlg('No precise orbits for Glonass in sp3-file!', 'Error'); end
     if settings.INPUT.use_GAL && isempty(input.ORBCLK.preciseEph_GAL); errordlg('No precise orbits for Galileo in sp3-file!', 'Error'); end
@@ -129,7 +127,7 @@ if settings.ORBCLK.bool_clk
         % produce an error if one variable could not be loaded to start new
         % read-in of the precise clock file
         preClk_GPS; preClk_GLO; preClk_GAL; preClk_BDS; 
-        if settings.INPUT.use_QZSS; preClk_QZSS; end
+        if settings.INPUT.use_QZSS; preClk_QZSS; end            %#ok<*VUNUS>
     catch             	% read in original file and save as .mat-file
         if ~isfile(clk_file)
             delete(clk_file_mat);
@@ -184,21 +182,22 @@ end
 
 % -) Broadcast products + correction stream
 
-% Read RINEX navigation ephemerides files and convert to internal Matlab format
+% Read RINEX navigation ephemeris files and convert to internal Matlab format
 bool_nav_iono = strcmp(settings.IONO.source, 'Klobuchar model') || ...
     strcmp(settings.IONO.source, 'NeQuick model') || ...
     strcmp(settings.IONO.source, 'NTCM-G');
 % initialize fields of navigation messages in struct input
+input.ORBCLK.Eph_version = [];
 input.ORBCLK.Eph_GPS = [];     input.ORBCLK.Eph_GLO = [];     
 input.ORBCLK.Eph_GAL = [];     input.ORBCLK.Eph_BDS = []; 
 input.ORBCLK.Eph_QZSS = [];     % ||| not implemented
 % start read-in
 if (settings.ORBCLK.bool_brdc || glo_channels || bool_nav_iono) && ~settings.INPUT.bool_realtime
-    [input] = read_brdc(settings, input, obs.leap_sec, glo_channels);
+    [input] = read_nav_brdc(settings, input, obs.leap_sec, glo_channels);
     if settings.INPUT.use_GLO
-        % find out channels of Glonass satellites and save them in input.glo_channel
+        % find out channels of GLONASS satellites and save them in input.glo_channel
         obs.glo_channel = NaN(99,1);
-        for i = 1:DEF.SATS_GLO        % loop over Glonass satellites
+        for i = 1:DEF.SATS_GLO        % loop over GLONASS satellites
             channel_sat = input.ORBCLK.Eph_GLO(15,input.ORBCLK.Eph_GLO(1,:)==i);    % channels of ephemeris of current satellite
             if ~isempty(channel_sat)
                 obs.glo_channel(i,1) = channel_sat(1);    % save channel of 1st ephemeris data
@@ -213,6 +212,7 @@ end
 % GPS and Galileo corrections are read even if their processing is not activated.
 input.ORBCLK.corr2brdc_GPS = []; input.ORBCLK.corr2brdc_GLO = [];
 input.ORBCLK.corr2brdc_GAL = []; input.ORBCLK.corr2brdc_BDS = [];
+input.ORBCLK.corr2brdc_QZSS = [];
 input.ORBCLK.corr2brdc_vtec = [];
 if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && settings.ORBCLK.bool_brdc && ~settings.INPUT.bool_realtime
     corr2brdc_path = settings.ORBCLK.file_corr2brdc;
@@ -224,18 +224,29 @@ if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && settings.ORBCLK.bool_
     if ~contains(corr2brdc_mat, '.mat')   % make sure, "filename" denotes the .mat version
         corr2brdc_mat = [corr2brdc_mat, '.mat'];
     end
+    bool_read = true;       % true if the stream has to be read from the original file
     if exist(corr2brdc_mat,'file') && ~settings.INPUT.bool_realtime      % load .mat-file, if available
-        load(corr2brdc_mat, 'corr2brdc_GPS', 'corr2brdc_GLO', 'corr2brdc_GAL', 'corr2brdc_BDS', 'corr2brdc_vtec');	% load .mat-file
-    else                                                    % no .mat-file so read-in correction-stream
+        load(corr2brdc_mat, 'corr2brdc_GPS', 'corr2brdc_GLO', 'corr2brdc_GAL', 'corr2brdc_BDS', 'corr2brdc_QZSS', 'corr2brdc_vtec');	% load .mat-file
+        % .mat-files which were created before QZSS was implemented do not
+        % contain corr2brdc_QZSS -> read the original file again. If the
+        % original file is gone, continue without QZSS corrections.
+        if exist('corr2brdc_QZSS', 'var')
+            bool_read = false;
+        else
+            corr2brdc_QZSS = [];
+            bool_read = isfile(corr2brdc_path);
+        end
+    end
+    if bool_read                                            % no (suitable) .mat-file so read-in correction-stream
         if bool_print; fprintf('Reading corrections to broadcast ephemerides (this may take up to several minutes)\n'); end
         % open and read file file
         fid = fopen(corr2brdc_path);
         lines = textscan(fid,'%s', 'delimiter','\n', 'whitespace','');
         lines = lines{1};
         fclose(fid);
-        [corr2brdc_GPS, corr2brdc_GLO, corr2brdc_GAL, corr2brdc_BDS, ...
+        [corr2brdc_GPS, corr2brdc_GLO, corr2brdc_GAL, corr2brdc_BDS, corr2brdc_QZSS, ...
             corr2brdc_vtec] = read_corr2brdc_stream(lines);
-        save(corr2brdc_mat, 'corr2brdc_GPS', 'corr2brdc_GLO', 'corr2brdc_GAL', 'corr2brdc_BDS', 'corr2brdc_vtec')   % save as .mat-file for next processing (faster loading)
+        save(corr2brdc_mat, 'corr2brdc_GPS', 'corr2brdc_GLO', 'corr2brdc_GAL', 'corr2brdc_BDS', 'corr2brdc_QZSS', 'corr2brdc_vtec')   % save as .mat-file for next processing (faster loading)
         %         delete(erase(filename,'.mat'));   % delete the original file (only wastes disk space)
     end
     input.ORBCLK.corr2brdc_vtec = corr2brdc_vtec;
@@ -244,6 +255,7 @@ if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && settings.ORBCLK.bool_
     if settings.INPUT.use_GLO;   input.ORBCLK.corr2brdc_GLO  = corr2brdc_GLO;    end
     if settings.INPUT.use_GAL;   input.ORBCLK.corr2brdc_GAL  = corr2brdc_GAL;    end
     if settings.INPUT.use_BDS;   input.ORBCLK.corr2brdc_BDS  = corr2brdc_BDS;    end
+    if settings.INPUT.use_QZSS;  input.ORBCLK.corr2brdc_QZSS = corr2brdc_QZSS;   end
 end
 if strcmp(settings.ORBCLK.CorrectionStream, 'manually') && contains(settings.ORBCLK.file_corr2brdc, 'CLK22') && ~strcmp(obs.GPS.L1, 'L1W') && strcmp(obs.GPS.L1, 'L2W') && settings.AMBFIX.bool_AMBFIX
     errordlg('No phase biases: CLK22-Stream contains phase biases for L1W and L2W only!', 'Error');
@@ -272,14 +284,14 @@ bool_mfw = ~strcmpi(settings.TROPO.zwd,'no');
 if strcmpi(settings.TROPO.zhd,'VMF3') || strcmpi(settings.TROPO.zwd,'VMF3') || ...
         (bool_mfh && strcmpi(settings.TROPO.mfh,'VMF3') ) || (bool_mfw && strcmpi(settings.TROPO.mfw,'VMF3')) || ...
         strcmpi(settings.TROPO.Gh,'GRAD') || strcmpi(settings.TROPO.Gw,'GRAD')
-    input = get_V3GR(obs, input, settings);
+    input = get_V3GR(obs, input, settings.TROPO.vmf_version, ~settings.INPUT.bool_parfor, [0; 0; 0]);
 end
 
 
 % get and read the files for VMF1
 if strcmpi(settings.TROPO.zhd,'VMF1') || strcmpi(settings.TROPO.zwd,'VMF1') || ...
         (bool_mfh && strcmpi(settings.TROPO.mfh,'VMF1')) || (bool_mfw && strcmpi(settings.TROPO.mfw,'VMF1'))
-    input = get_VMF1(obs, input, settings);
+    input = get_VMF1(obs, input, settings.TROPO.vmf_version, ~settings.INPUT.bool_parfor, [0; 0; 0]);
 end
 
 
@@ -484,6 +496,7 @@ end
 %% Models - Other corrections
 
 % Read ANTEX/atx-file (PCOs and PVCs for receiver and satellites)
+% ||| check antex version (new: 2.0) and write a new read-in function for 2.0
 input = readAntex(input, settings, obs.startdate_jd, obs.antenna_type);
 % Check read-in of ANTEX file
 input = checkAntex(input, settings, obs.antenna_type);
@@ -494,6 +507,16 @@ if settings.OTHER.ocean_loading
     if isempty(input.OTHER.OcLoad)
         fprintf(2, '\nStation was not found in OceanLoading.blq!\n')
     end
+end
+
+
+
+%% Models - Kinematic
+
+% Read IMU data 
+if settings.KINE.bool_kinematic && settings.KINE.bool_IMU
+    input.IMU = readIMUcsv(settings.KINE.file_IMU);
+    input.IMU.timestamp = input.IMU.timestamp + obs.leap_sec;
 end
 
 
@@ -565,7 +588,7 @@ if bool_print
     fprintf('  %s%s %s\n','zwd: ', settings.TROPO.zwd, detectGridSiteWise(settings.TROPO.zwd, input, settings.TROPO.vmf_version));
     if strcmpi(settings.TROPO.zwd,'e (in situ) + Askne')
         fprintf('    %s%5.2f%s\n','q: ', settings.TROPO.q,' %');
-        fprintf('    %s%6.2f%s\n','T: ', settings.TROPO.T,' °C')
+        fprintf('    %s%6.2f%s\n','T: ', settings.TROPO.T,' Â°C')
     end
     if bool_mfh
         fprintf('  %s%s %s\n','mfh: ', settings.TROPO.mfh, detectGridSiteWise(settings.TROPO.mfh, input, settings.TROPO.vmf_version));

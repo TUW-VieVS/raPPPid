@@ -73,10 +73,10 @@ lon_GNP = lon_GNP / 180 * pi;       % [°] to [rad]
 lat_m = asin(sin(lat_IPP)*sin(lat_GNP) + cos(lat_IPP)*cos(lat_GNP)*cos(lon_IPP-lon_GNP));
 lat_m_deg = lat_m / pi * 180;
 
-% calculate solar deklination angle [rad]
+% calculate solar declination angle [rad]
 decl = 23.44*sin(0.9856*(doy-80.7)*pi/180)*pi/180;    
 
-% calculate solar zenith angle dependences []
+% calculate solar zenith angle dependencies []
 cosX___ = cos(lat_IPP-decl) + 0.4;
 cosX__  = cos(lat_IPP-decl) - 2/pi*lat_IPP*sin(decl);
 
@@ -90,7 +90,7 @@ V_SA = 4*pi*(doy-doy_SA)/365.25;    % semi-annual variation
 EC_1 = - (lat_m_deg - lat_c1)^2 / (2*s_c1^2);   % all in [°]
 EC_2 = - (lat_m_deg - lat_c2)^2 / (2*s_c2^2);
 
-% effective ionisation level in [sfu] = solar flux units, 1 flux unit = 
+% effective ionization level in [sfu] = solar flux units, 1 flux unit = 
 % 10^-22 W m^-2 Hz^-1
 GlAzpar = sqrt(a0^2 + 1633.33*a1^2 + 4802000*a2^2 + 3266.67*a0*a2); 
 

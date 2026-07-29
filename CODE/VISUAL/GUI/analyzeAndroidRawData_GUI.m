@@ -12,6 +12,7 @@ function [rheader] = analyzeAndroidRawData_GUI(sensorlog_path, rheader)
 % Revision:
 %   2023/11/08, MFWG: adding QZSS
 %   2024/01/15, MFWG: repairing missing CodeType
+%   2026/07/01, MFWG: adding Galileo E5b and BeiDou B1AC
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -54,8 +55,8 @@ bool_GPS = false; bool_GLO = false; bool_GAL = false; bool_BDS = false; bool_QZS
 obstypes_gps = ''; obstypes_glo = ''; obstypes_gal = ''; obstypes_bds = ''; obstypes_qzss = '';
 isGPS_L1  = false;      isGPS_L5  = false;  
 isGLO_G1  = false; 
-isGAL_E1  = false;      isGAL_E5a = false; 
-isBDS_B1  = false;      isBDS_B2a = false;
+isGAL_E1  = false;      isGAL_E5a = false;      isGAL_E5b = false;
+isBDS_B1  = false;      isBDS_B2a = false;      isBDS_B1AC = false;
 isQZSS_L1 = false;      isQZSS_L5 = false;
 
 
@@ -98,15 +99,10 @@ while true
            TimeOffsetNanos = line_data{strcmp(vars_Raw, 'TimeOffsetNanos')};
            % build gps time and week
            [gpsweek, gpstime] = generateGpsTimeWeek(TimeNanos, FullBiasNanos, BiasNanos, ReceivedSvTimeNanos, TimeOffsetNanos);
-           % convert to julian date and then to calendar data
-           start_jd = gps2jd_GT(gpsweek,gpstime);
-           [startdate(1), startdate(2), dd] = jd2cal_GT(start_jd);
-           startdate(3) = floor(dd);
-           ss = mod(dd,1)*86400;                % decimal part of day in [s]
-           startdate(4) = floor(ss/3600);       % calculate hour
-           startdate(5) = mod(floor(ss/60),60); % calculate minute
-           startdate(6) = mod(ss,60);           % calculate second + fractional part
+           % convert to calendar date
+           startdate = datevec(gpstime2cal(gpsweek, gpstime));
            % detect leap seconds with observation startdate
+           start_jd = 2400000.5 + 44244 + gpsweek*7 + gpstime/86400;
            leap_sec = GetLeapSec_UTC_GPS(start_jd);
        end
        
@@ -134,20 +130,24 @@ while true
            bool_GAL = true;
            isE1  = round(CarrierFrequencyHz/1e4) == round(Const.GAL_F1/1e4);
            isE5a = round(CarrierFrequencyHz/1e4) == round(Const.GAL_F5a/1e4);
-           frq_char = char('1'*isE1 + '5'*isE5a);
+           isE5b = round(CarrierFrequencyHz/1e4) == round(Const.GAL_F5b/1e4);
+           frq_char = char('1'*isE1 + '5'*isE5a + '7'*isE5b);
            CodeType = checkSignalType(CodeType, 'E', frq_char);
            obstypes_gal = [obstypes_gal CodeType{1}];
            isGAL_E1 = isGAL_E1  || isE1;
            isGAL_E5a= isGAL_E5a || isE5a;
+           isGAL_E5b= isGAL_E5b || isE5b;
        elseif idx_gnss == 5                 % BeiDou
            bool_BDS = true;
-           isB1  = round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3);
-           isB2a = round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2a/1e3);
-           frq_char = char('1'*isB1 + '5'*isB2a);
+           isB1   = round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3);
+           isB2a  = round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2a/1e3);
+           isB1AC = round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1AC/1e3);
+           frq_char = char('1'*(isB1 || isB1AC) + '5'*isB2a);
            CodeType = checkSignalType(CodeType, 'C', frq_char);
            obstypes_bds = [obstypes_bds CodeType{1}];
-           isBDS_B1  = isBDS_B1  || isB1;
-           isBDS_B2a = isBDS_B2a || isB2a;
+           isBDS_B1   = isBDS_B1   || isB1;
+           isBDS_B2a  = isBDS_B2a  || isB2a;
+           isBDS_B1AC = isBDS_B1AC || isB1AC;
        elseif idx_gnss == 4                 % QZSS
            bool_QZSS = true;
            isL1 = round(CarrierFrequencyHz/1e3) == round(Const.QZSS_F1/1e3);
@@ -163,7 +163,7 @@ while true
     end
     
     
-    if i > 200 || (isGPS_L1 && isGPS_L5 && isGLO_G1 && isGAL_E1 && isGAL_E5a && isBDS_B1 && isBDS_B2a)
+    if i > 200 || (isGPS_L1 && isGPS_L5 && isGLO_G1 && isGAL_E1 && isGAL_E5a && isGAL_E5b && isBDS_B1 && isBDS_B2a && isBDS_B1AC)
         % stop analyzing if all GNSS have been detected or 200 lines of
         % data have been analyzed
         % QZSS is ignored in this check
@@ -207,15 +207,23 @@ if bool_GLO
     end
 end
 if bool_GAL
-    if isGAL_E1 && isGAL_E5a
+    if isGAL_E1 && isGAL_E5a && isGAL_E5b
+        ind_gal_freq = [1 2 3];
+    elseif isGAL_E1 && isGAL_E5a
         ind_gal_freq = [1 2];
+    elseif isGAL_E1 && isGAL_E5b
+        ind_gal_freq = [1 3];
     elseif isGAL_E1
         ind_gal_freq = 1;
     end
 end
 if bool_BDS
-    if isBDS_B1 && isBDS_B2a
+    if isBDS_B1 && isBDS_B2a && isBDS_B1AC
+        ind_bds_freq = [1 5 4];
+    elseif isBDS_B1 && isBDS_B2a
         ind_bds_freq = [1 5];
+    elseif isBDS_B1 && isBDS_B1AC
+        ind_bds_freq = [1 4];
     elseif isBDS_B1
         ind_bds_freq = 1;
     end

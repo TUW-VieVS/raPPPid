@@ -5,7 +5,7 @@ function handles = GUI_enable_onoff(handles)
 % INPUT:
 %	handles         struct, from raPPPid GUI
 % OUTPUT:
-%	handles         struct, updated (e.g., Visiblity, Enable)
+%	handles         struct, updated (e.g., Visibility, Enable)
 %
 % Revision:
 %   ...
@@ -62,17 +62,6 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
     set(handles.edit_obs, 'Enable', onoff);
     set(handles.pushbutton_obs_file, 'Enable', onoff);
 	set(handles.pushbutton_analyze_rinex, 'Enable', onoff);
-    % approximate coordinates
-    set(handles.text_koord, 'Enable', onoff);
-    set(handles.text_x, 'Enable', onoff);
-    set(handles.text_y, 'Enable', onoff);
-    set(handles.text_z, 'Enable', onoff);
-    set(handles.edit_x, 'Enable', onoff);
-    set(handles.edit_y, 'Enable', onoff);
-    set(handles.edit_z, 'Enable', onoff);
-    set(handles.text40, 'Enable', onoff);
-    set(handles.text41, 'Enable', onoff);
-    set(handles.text42, 'Enable', onoff);
     % processed GNSS and frequencies
     set(handles.text_proc_freq, 'Enable', onoff);
     set(handles.checkbox_GPS, 'Enable', onoff);
@@ -231,20 +220,6 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
             handles.text_qzss_time_offset_m.Enable = 'Off';
         end        
     end
-
-    % approximate position is not used for satellite PPP
-    if ~batch_proc && bool_satellite
-        set(handles.text_koord, 'Enable', 'Off');
-        set(handles.text_x, 'Enable', 'Off');
-        set(handles.text_y, 'Enable', 'Off');
-        set(handles.text_z, 'Enable', 'Off');
-        set(handles.edit_x, 'Enable', 'Off');
-        set(handles.edit_y, 'Enable', 'Off');
-        set(handles.edit_z, 'Enable', 'Off');
-        set(handles.text40, 'Enable', 'Off');
-        set(handles.text41, 'Enable', 'Off');
-        set(handles.text42, 'Enable', 'Off');
-    end
     
     % analyze RINEX is only possible if observation file is defined
     if strcmpi(handles.pushbutton_analyze_rinex.Enable, 'on')
@@ -265,6 +240,18 @@ if strcmp(handles.uipanel_setInputFile.Visible, 'on')
     handles.text_RT_to.Enable     = onoff; handles.text_RT_to.Visible     = onoff;
     handles.text_RT_format.Enable = onoff; handles.text_RT_format.Visible = onoff;
     
+    % disable buttongroup time span if ... is enabled
+    % ... batch processing
+    % ... real-time processing
+    onoff = 'On';     
+    if batch_proc || handles.checkbox_realtime.Value; onoff = 'Off';  end
+    set(handles.edit_timeFrame_from, 'Enable', onoff);
+    set(handles.edit_timeFrame_to, 'Enable', onoff);
+    set(handles.text62, 'Enable', onoff);
+    set(handles.radiobutton_timeSpan_format_epochs, 'Enable', onoff);
+    set(handles.radiobutton_timeSpan_format_time, 'Enable', onoff);
+    set(handles.radiobutton_timeSpan_format_SOD, 'Enable', onoff);
+    set(handles.radiobutton_timeSpan_format_HOD, 'Enable', onoff);    
     
 end         % end of panel "Input-File"
 
@@ -491,8 +478,8 @@ end
 
 
 
-%% Other Corrections
-if strcmpi(handles.uipanel_otherCorrections.Visible, 'on')
+%% Other Corrections AND Quality Checks
+if strcmpi(handles.uipanel_otherCorrections.Visible, 'on') || strcmpi(handles.uipanel_checks.Visible, 'on')
     
     % disable satellite PCO and PCV for stream with APC as reference point
         handles.checkbox_sat_pco.Enable = 'on';
@@ -571,13 +558,17 @@ if strcmpi(handles.uipanel_kinematic.Visible, 'on')
 
 
 
-    % Offsets
+    % Offsets and Orientation Mode
     if kinematic
         handles.checkbox_offsets.Enable   = 'On';
         handles.uibuttongroup_orientation_mode.Enable = 'On';
+        handles.uibuttongroup_ant_orientation_mode.Enable = 'On';
+        handles.checkbox_satellite.Enable = 'On';
     else
         handles.checkbox_offsets.Enable   = 'Off';
         handles.uibuttongroup_orientation_mode.Enable = 'Off';
+        handles.uibuttongroup_ant_orientation_mode.Enable = 'Off';
+        handles.checkbox_satellite.Enable = 'Off';
     end
     if kinematic && handles.checkbox_offsets.Value
         handles.text_offset_x.Enable  = 'On';
@@ -626,6 +617,27 @@ if strcmpi(handles.uipanel_kinematic.Visible, 'on')
         handles.radiobutton_or_orbex.Enable	= 'Off';
     end
 
+    % IMU
+    if kinematic
+        handles.checkbox_IMU.Visible = 'On';
+        handles.edit_IMU.Visible = 'On';
+        handles.pushbutton_IMU.Visible = 'On';
+        if handles.checkbox_IMU.Value
+            handles.edit_IMU.Visible = 'On';
+            handles.edit_IMU.Enable = 'On';
+            handles.pushbutton_IMU.Visible = 'On';
+            handles.pushbutton_IMU.Enable = 'On';
+        end
+    else
+        handles.checkbox_IMU.Visible = 'Off';
+        handles.edit_IMU.Visible = 'Off';
+        handles.pushbutton_IMU.Visible = 'Off';
+            handles.edit_IMU.Visible = 'Off';
+            handles.edit_IMU.Enable = 'Off';
+            handles.pushbutton_IMU.Visible = 'Off';
+            handles.pushbutton_IMU.Enable = 'Off';
+    end
+    
 end
 
 
@@ -1133,20 +1145,7 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
     handles.text_reset_epoch.Enable = onoff;
     handles.edit_reset_epoch.Enable = onoff;
     
-
-    % disable buttongroup time span if ... is enabled
-    % ... batch processing
-    % ... real-time processing
-    onoff = 'On';     
-    if batch_proc || handles.checkbox_realtime.Value; onoff = 'Off';  end
-    set(handles.edit_timeFrame_from, 'Enable', onoff);
-    set(handles.edit_timeFrame_to, 'Enable', onoff);
-    set(handles.text62, 'Enable', onoff);
-    set(handles.radiobutton_timeSpan_format_epochs, 'Enable', onoff);
-    set(handles.radiobutton_timeSpan_format_time, 'Enable', onoff);
-    set(handles.radiobutton_timeSpan_format_SOD, 'Enable', onoff);
-    set(handles.radiobutton_timeSpan_format_HOD, 'Enable', onoff);
-    
+   
     % check omc
     onoff = 'Off';     if handles.checkbox_check_omc.Value; onoff = 'On'; end
     set(handles.text_omc_thresh_c, 'Enable', onoff);

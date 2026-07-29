@@ -33,7 +33,7 @@ if nargin == 6
   [a,b,e2]=refell_GT('grs80');
 end
 
-[X1,Y1,Z1]=ell2utm_GT(lat1,lon1,h1,a,e2);
+[X1,Y1,Z1]=ell2xyz_GT(lat1,lon1,h1,a,e2);
 [dx,dy,dz]=sph2xyz_GT(az,va,d);
 [dX,dY,dZ]=lg2ct_GT(dx,dy,dz,lat1,lon1);
 X2=X1+dX;

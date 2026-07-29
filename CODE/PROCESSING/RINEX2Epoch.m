@@ -61,11 +61,9 @@ if r_version == 2
     Epoch.time = datetime(2000+lvalues{1}, lvalues{2}, lvalues{3}, lvalues{4}, lvalues{5}, lvalues{6}, ...
         'Format', 'dd MMM yyyy HH:mm:ss.SSS');
 
-    % convert date into mjd and GPS time [sow]
-    h = lvalues{4} + lvalues{5}/60 + lvalues{6}/3600;               % fractional hour
-    jd = cal2jd_GT(2000+lvalues{1}, lvalues{2}, lvalues{3} + h/24); % julian date
-    mjd = jd - 2400000.5;                                           % modified Julian date
-    [gps_week, gps_time] = cal2gpstime([lvalues{1}, lvalues{2}, lvalues{3}, lvalues{4}, lvalues{5}, lvalues{6}]);
+    % convert date into GPS time [sow] and mjd
+    [gps_week, gps_time] = cal2gpstime([2000+lvalues{1}, lvalues{2}, lvalues{3}, lvalues{4}, lvalues{5}, lvalues{6}]);
+    mjd = 44244 + gps_week*7 + gps_time/86400;                      % modified Julian date
 
     % check if epoch is usable
     usable = true;
@@ -100,7 +98,7 @@ if r_version == 2
     is_bds = (sys' == 'C');         % (BeiDou does not exist in RINEX 2)
     is_qzss= (sys' == 'J');         % (QZSS does not exist in RINEX 2)
     is_other = ~is_gps & ~is_glo & ...
-        ~is_gal&~is_bds&~is_qzss;   % (other GNSS don´t exist in RINEX 2)
+        ~is_gal&~is_bds&~is_qzss;   % (other GNSS do not exist in RINEX 2)
     % get satellite numbers
     sats = [epoch_sats(2:3:end)', epoch_sats(3:3:end)'];
     sats = str2num(sats);                       % str2num is slow but exclusively works here
@@ -158,11 +156,9 @@ elseif r_version == 3 || r_version == 4
     Epoch.time = datetime(lvalues{1}, lvalues{2}, lvalues{3}, lvalues{4}, lvalues{5}, lvalues{6}, ...
         'Format', 'dd MMM yyyy HH:mm:ss.SSS');
 
-    % convert date into mjd and GPS time [sow]
-    h = lvalues{4} + lvalues{5}/60 + lvalues{6}/3600;          	% fractional hour
-    jd = cal2jd_GT(lvalues{1}, lvalues{2}, lvalues{3} + h/24); 	% Julian date
-    mjd = jd - 2400000.5;                                     	% modified Julian date	
+    % convert date into GPS time [sow] and mjd
     [gps_week, gps_time] = cal2gpstime([lvalues{1}, lvalues{2}, lvalues{3}, lvalues{4}, lvalues{5}, lvalues{6}]);
+    mjd = 44244 + gps_week*7 + gps_time/86400;                 	% modified Julian date
 
     % check if epoch is usable or number of satellites is zero
     usable = true;

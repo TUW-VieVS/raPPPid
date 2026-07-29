@@ -25,15 +25,8 @@ success = false;        % initialize
 obs = recover_obs(folderpath);
 
 
-% load storeData from results_float.csv and results_fixed.csv
-[storeData, success] = read_results_csv(folderpath);
-
-
-if ~success
-    % load storeData from results_float.txt and results_fixed.txt
-    % (less complete)
-    [storeData, success] = recover_storeData(folderpath);   % e.g., no data4plot.mat file
-end
+% load storeData from text files
+[storeData, success] = recover_storeData(folderpath);   % e.g., no data4plot.mat file
 
 
 if ~success

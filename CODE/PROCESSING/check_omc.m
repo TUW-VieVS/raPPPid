@@ -1,4 +1,4 @@
-function [Epoch, Adjust] = check_omc(Epoch, model, Adjust, settings, obs_intval)
+function [Epoch, Adjust] = check_omc(model_code, model_phase, Epoch, Adjust, settings, obs_intval)
 % This function performs a simple check of the pre-fit residuals using the
 % predicted parameters and checks the observed minus computed, for example,
 % for extreme outliers which could be multipath (code observations) or 
@@ -6,8 +6,9 @@ function [Epoch, Adjust] = check_omc(Epoch, model, Adjust, settings, obs_intval)
 % omc are assumed as outliers and excluded from the parameter estimation.
 %
 % INPUT:
+%   model_code  modeled code observations 
+%   model_phase modeled phase observations
 %   Epoch       struct, contains epoch-specific data
-%   model       struct, models of observations
 %   Adjust      struct, variables for adjustment/filtering
 %   settings    struct, processing settings from GUI   
 %   obs_intval  interval of observations
@@ -64,7 +65,7 @@ if time_last_reset/obs_intval >= w
 end
 
 % calc omc which will be checked
-omc_code =  (obs_code   - model.model_code)  .*  ~exclude;
+omc_code =  (obs_code   - model_code)  .*  ~exclude;
 omc_code(omc_code==0) = NaN;
 % subtract median for bias on all satellites, goes into receiver clock, but
 % if more than 50% of the satellites of the epoch have a big omc this
@@ -112,12 +113,9 @@ end
 
 
 %% PHASE
-if bool_phase
-    s_f = no_sats*no_frqs;
-    N_idx = (Adjust.NO_PARAM+1) : (Adjust.NO_PARAM+s_f);
-    
+if bool_phase && Adjust.float
     % calc omc which will be checked
-    omc_phase = (obs_phase  - model.model_phase) .*  ~exclude;
+    omc_phase = (obs_phase  - model_phase) .*  ~exclude;
     % ignore 0s, cycle slips and NaNs for the median
     omc_phase(omc_phase==0 | cs_found) = NaN;  
     % subtract median for bias on all satellites, goes into receiver clock
@@ -139,7 +137,7 @@ if bool_phase
     end    
 
     % check which ambiguities already have an estimation
-    N = reshape(Adjust.param(N_idx), no_sats, no_frqs); 	
+    N = reshape(GetAmbiguitiesFromParam(Adjust.param, Adjust.NO_PARAM, no_sats, no_frqs), no_sats, no_frqs);
     bool_N = N ~=0 & ~isnan(N);         % ambiguity is currently estimated    
 
     % detect for outliers of phase observations, which 

@@ -30,4 +30,6 @@ switch frq
         CodeType{1} = 'I';      % BDS B1
     case '5'
         CodeType{1} = 'Q';      % GPS L5, GAL E5a, BDS B2a, QZSS L5
+    case '7'
+        CodeType{1} = 'Q';      % GAL E5b
 end

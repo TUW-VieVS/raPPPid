@@ -12,9 +12,9 @@ clc;
 
 if isfile('Path.m') && isfolder(Path.DATA) && isfolder(Path.RESULTS) && isfolder(Path.CODE)            
     % check if all paths are correct
-    addpath(pwd)                    % add current path where RUN.m and Path.m are located
+    addpath(pwd)                    % add current path where raPPPid.m and Path.m are located
     addpath(genpath(Path.CODE));	% add directory of source code
-    % print info to command windo
+    % print info to command window
     fprintf('\n----------------------------------------------------------------\n')
     fprintf(['| raPPPid, ' DEF.version '                              |\n'])
     fprintf('| GitHub: https://github.com/TUW-VieVS/raPPPid                 |\n')
@@ -25,6 +25,10 @@ if isfile('Path.m') && isfolder(Path.DATA) && isfolder(Path.RESULTS) && isfolder
 
 else
     % start of raPPPid failed
+    if ~contains(pwd, 'WORK')
+        errordlg('Please change the Matlab work folder to raPPPid/WORK/', 'Error')
+        return
+    end
     if ~isfile('Path.m')
         errordlg({'The file raPPPid/WORK/Path.m is missing.' 'Please consider reinstalling raPPPid.'}, 'Huge Error')
         return
@@ -40,8 +44,5 @@ else
     if ~isfolder(Path.CODE)
         errordlg({'The filepath defined by Path.CODE is not existing.' 'Be careful when manipulating the folder structure of raPPPid.'}, 'Error')
         return
-    end
-    if ~contains(pwd, 'WORK')
-        errordlg('Please change the Matlab work folder to raPPPid/WORK/', 'Error')
     end
 end

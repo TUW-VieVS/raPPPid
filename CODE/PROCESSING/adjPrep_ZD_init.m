@@ -41,7 +41,7 @@ bool_doppler = contains(settings.PROC.method,'+ Doppler');
 
 % Get and create some variables
 NO_PARAM = Adjust.NO_PARAM;             % number of estimated parameters
-no_sats = Epoch.no_sats;                % number of satellites of current epoch
+no_sats = numel(Epoch.sats);            % number of satellites of current epoch
 s_f = no_sats*proc_freq;               	% #satellites x #frequencies
 no_ambiguities = s_f * bool_phase;	% number of estimated ambiguities
 
@@ -50,12 +50,7 @@ no_ambiguities = s_f * bool_phase;	% number of estimated ambiguities
 %% Parameter vector
 param_vec = zeros(NO_PARAM + no_ambiguities, 1);    % 23 + #ambiguities
 % insert approximate position (X,Y,Z)
-if ~settings.KINE.bool_kinematic
-    param_vec(1:3) = settings.INPUT.pos_approx;       % approximate position 
-end
-if settings.KINE.bool_kinematic || norm(param_vec(1:3)) == 0
-    param_vec(1:3) = ApproximatePosition(Epoch, input, obs, settings);
-end
+param_vec(1:3) = ApproximatePosition(Epoch, input, obs, settings);
 %  insert approximate velocity (X,Y,Z) and receiver clock drift
 if settings.KINE.bool_kinematic && bool_doppler
     [param_vec(4:6), param_vec(23)] = ApproximateVelocity(Epoch, input, obs, settings, param_vec(1:3));

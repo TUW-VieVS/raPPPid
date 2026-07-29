@@ -5,7 +5,7 @@ function [Epoch, Adjust] = NL_fixing_2xIF(Epoch, Adjust, elevs, settings)
 % INPUT:
 %   Epoch         epoch-specific data for current epoch [struct]
 %   Adjust        adjustment data and matrices for current epoch [struct]
-%   elevs             elevations of all satellites of this epoch [°]
+%   elevs             elevations of all satellites of this epoch [Â°]
 %   settings          struct, settings for processing (from GUI)
 % OUTPUT:
 %   Epoch         updated with (integer fixed) NL and EN Ambiguities [struct]
@@ -35,7 +35,7 @@ l1 = Epoch.l1;
 l2 = Epoch.l2;
 
 % Get and split estimated float Ambiguities
-param_N = Adjust.param((NO_PARAM+1):(NO_PARAM+2*no_sats));      % all ambiguities
+[param_N, idx_N] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, 2);      % all ambiguities
 param_N1 = param_N(1:no_sats);                      % ambiguities of 1st IF LC
 param_N2 = param_N((no_sats+1):(2*no_sats));        % ambiguities of 2nd IF LC
 param_N1_gps = param_N1(bool_gps);
@@ -45,7 +45,7 @@ param_N2_gal = param_N2(bool_gal);
 no_N = numel(param_N);      % number of ambiguities (2*no_sats)
 
 % get covariance matrix of all ambiguities
-Q_NN = Adjust.param_sigma((NO_PARAM+1):(NO_PARAM+no_N), (NO_PARAM+1):(NO_PARAM+no_N));
+Q_NN = Adjust.param_sigma(idx_N, idx_N);
 
 
 
@@ -111,7 +111,7 @@ if isempty(NL_float) || numel(NL_float) < 2
 end
 
 % integer fixing with LAMBDA 
-[afixed, sqnorm] = LAMBDA(NL_float, Q_NN_SD, 5, 3, DEF.AR_THRES_SUCCESS_RATE);
+[afixed, sqnorm] = LAMBDA(N_float, Q_NN_SD, 5, 3, DEF.AR_THRES_SUCCESS_RATE);
 % take best solution
 N_best = afixed(:,1);
 % take only those ambiguities which are integer

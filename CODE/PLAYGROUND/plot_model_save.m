@@ -1,6 +1,6 @@
-% Script to plot the modelled error sources from the struct 'model_save'
+% Script to plot the modeled error sources from the struct 'model_save'
 % which has to be in the workspace. Useful for finding bugs.
-% It is possible to plot the modelled values, the difference between two
+% It is possible to plot the modeled values, the difference between two
 % consecutive epochs or the difference of the difference between two
 % consecutive epochs
 
@@ -13,36 +13,35 @@ derivation = 1;
 
 
 %% ENABLE PLOTS:
-modelled_code       =   false; 
-modelled_phase      =   false; 
-theoretic_range     =   false; 
-cutoff_plot         =   false; 
-sat_pos             =   false; 
-sat_vel             =   false; 
-code_IFLC_plot       = 	false; 
-phase_IFLC_plot      = 	false; 
-satellite_clock     =   false; 
-relativistic_clock  =   false; 
-signal_runtime      =   false; 
-brdc_ephemeris      =   false; 
-signal_emission     =   false; 
-tropo_plot          =   false; 
-ZTD_plot            =   false; 
-ZHD_plot            =   false; 
-ZWD_plot            =   false; 
-iono_plot           =   false; 
-wmf_plot            =   false; 
-hmf_plot            =   false; 
+modelled_code       =   true; 
+modelled_phase      =   true; 
+theoretic_range     =   true; 
+cutoff_plot         =   true; 
+sat_pos             =   true; 
+sat_vel             =   true; 
+code_IFLC_plot       = 	true; 
+phase_IFLC_plot      = 	true; 
+satellite_clock     =   true; 
+relativistic_clock  =   true; 
+signal_runtime      =   true; 
+brdc_ephemeris      =   true; 
+signal_emission     =   true; 
+tropo_plot          =   true;
+ZHD_plot            =   true;
+ZWD_plot            =   true; 
+iono_plot           =   true; 
+wmf_plot            =   true; 
+hmf_plot            =   true; 
 windup              =   true; 
-solid_tides         =   false; 
-ocean_loading       =   false;
-polar_tides         =   false;
-rec_PCOPCV          =   false; 
-rec_ARP             =   false; 
-sat_PCOPCV          =   false; 
-sat_orbs_3d         = 	false;
-code_obs_plot       =   false; 
-phase_obs_plot      =   false; 
+solid_tides         =   true; 
+ocean_loading       =   true;
+polar_tides         =   true;
+rec_PCOPCV          =   true; 
+rec_ARP             =   true; 
+sat_PCOPCV          =   true; 
+sat_orbs_3d         = 	true;
+code_obs_plot       =   true; 
+phase_obs_plot      =   true; 
 
 
 %% PLOTS
@@ -132,11 +131,6 @@ if tropo_plot
     simplePlot(model_save.trop, hsv_color, 'Troposphere Delay [m]', derivation)
 end
 
-% troposphere total zenith delay
-if ZTD_plot
-    simplePlot(model_save.ZTD, hsv_color, 'Troposphere Total Zenith Delay [m]', derivation)
-end
-
 % hydrostatic zenith delay
 if ZHD_plot
     simplePlot(model_save.zhd, hsv_color, 'Hydrostatic Zenith Delay [m]', derivation)
@@ -215,10 +209,10 @@ if sat_orbs_3d
     earth_sphere(h1,'m')
     hold on
     
-    % plot approximate receiver position
-    rec_pos = settings.INPUT.pos_approx;
-    scatter3(rec_pos(1), rec_pos(2), rec_pos(3),'MarkerEdgeColor','k', 'MarkerFaceColor','r' )
-    view(rec_pos)
+    % % plot approximate receiver position
+    % rec_pos = approx_pos;
+    % scatter3(rec_pos(1), rec_pos(2), rec_pos(3),'MarkerEdgeColor','k', 'MarkerFaceColor','r' )
+    % view(rec_pos)
     
     % plot gps satellite orbits
     X_sat = model_save.Rot_X(:,:,1);

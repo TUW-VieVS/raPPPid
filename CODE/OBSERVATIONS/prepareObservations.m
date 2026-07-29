@@ -60,7 +60,7 @@ end
 % set zeros (=missing observations) in Epoch.C3/L3/S3 to NaN
 Epoch.C3(Epoch.C3 == 0) = NaN;
 Epoch.L3(Epoch.L3 == 0) = NaN;
-Epoch.S3(Epoch.L3 == 0) = NaN;
+Epoch.S3(Epoch.S3 == 0) = NaN;
 
 
 
@@ -86,10 +86,6 @@ Epoch.fixable = true(m, num_freq);          % boolean, satellite usable for fixi
 if isempty(Epoch.L1); Epoch.L1 = zeros(m,1); end
 if isempty(Epoch.L2); Epoch.L2 = zeros(m,1); end
 if isempty(Epoch.L3); Epoch.L3 = zeros(m,1); end
-
-% number of satellites in current epoch
-Epoch.no_sats = numel(Epoch.sats);
-
 
 %% (5) wavelength and frequency
 % frequency

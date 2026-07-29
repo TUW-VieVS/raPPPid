@@ -22,7 +22,6 @@ bool_print = ~settings.INPUT.bool_parfor;
 NO_PARAM = Adjust.NO_PARAM;
 no_sats = numel(Epoch.sats);          	% number of satellites in current epoch
 proc_frqs = settings.INPUT.proc_freqs; 	% number of processed frequencies
-s_f = no_sats*proc_frqs;             	% #satellites x #frequencies
 var_amb = settings.ADJ.filter.var_amb;  % initial variance of ambiguities
 
 %% get float ambiguities and covariance matrices
@@ -31,12 +30,10 @@ var_amb = settings.ADJ.filter.var_amb;  % initial variance of ambiguities
 param = Adjust.param(1:NO_PARAM);
 param_pred = Adjust.param(1:NO_PARAM);
 
-% create indices of float ambiguities
-idx_N = NO_PARAM+1 : NO_PARAM+s_f;              % indices of float ambiguities
-idx_N_ = reshape(idx_N, no_sats, proc_frqs);    % ... (#sats x #frequencies)
 % get float ambiguities (all processed frequencies)
-N = Adjust.param(idx_N);
+[N, idx_N] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, proc_frqs);
 N = reshape(N, no_sats, proc_frqs);             % #sats x #frequencies
+idx_N_ = reshape(idx_N, no_sats, proc_frqs);    % ... (#sats x #frequencies)
 % get predicted float ambiguities (all processed frequencies)
 N_pred = Adjust.param_pred(idx_N);
 N_pred = reshape(N_pred, no_sats, proc_frqs);	% #sats x #frequencies
@@ -179,7 +176,7 @@ if settings.INPUT.use_QZSS && Epoch.refSatQZS ~= 0
         % recalculate ambiguities and (covariances)
         [N, N_pred, param, param_pred, bool_zero] = recalc_param(N, N_pred, param, param_pred, ...
             idx_now_J, isqzs, idx_old_J, idx_L2, idx_L3, idx_rec_clk_phase, n_frqs_QZS);
-        [Q_x, Q_x_pred] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_C, isqzs, ...
+        [Q_x, Q_x_pred] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_J, isqzs, ...
             var_amb, no_sats, NO_PARAM, n_frqs_QZS, idx_L2, idx_L3, idx_rec_clk_phase);
         if bool_print; fprintf('\tChange of Reference Satellite QZSS: %03d                           \n', Epoch.refSatQZS); end
     
@@ -197,7 +194,7 @@ end
 
 % get updated reduced parameter vector and predicted parameter vector
 Adjust.param(1:NO_PARAM) = param;
-Adjust.param(1:NO_PARAM) = param_pred;
+Adjust.param_pred(1:NO_PARAM) = param_pred;
 
 % save updated float ambiguities
 Adjust.param(idx_N) = N(:);

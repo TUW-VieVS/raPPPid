@@ -7,7 +7,7 @@ function [X, V, dT_rel, exclude, status] = ...
 % 	Ttr         transmission time, sow (GPS time)
 % 	Eph         30x1, current navigation message of this satellite
 %   isGPS       boolean, GPS satellite
-%   isGLO       boolean, Glonass satellite
+%   isGLO       boolean, GLONASS satellite
 %   isGAL       boolean, Galileo satellite
 %   isBDS       boolean, BeiDou satellite
 %   isQZSS      boolean, QZSS satellite

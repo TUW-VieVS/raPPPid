@@ -2,6 +2,7 @@
 Software for Precise Point Positioning (PPP) based on the signals of Global Navigation Satellite Systems (GNSS)
 
 Written by Marcus Franz Wareyka-Glaner (TU Wien, Higher Geodesy)
+Contributions by Hoor Bano (TU Wien), Sermet Ogutcu (Necmettin Erbakan University), and Paul Dohnal (TU Wien)
 
 Contact: rapppid@geo.tuwien.ac.at
 

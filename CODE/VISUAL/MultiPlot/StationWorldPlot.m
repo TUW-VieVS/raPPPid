@@ -39,7 +39,7 @@ stat = string([cellfun(@(a) a(1,1), stations), cellfun(@(a) a(1,2), stations), c
 plotlist = TABLE(keep,:);            % keep only unique rows
 
 % detect receiver type for 
-[rec, ~, idx_rec] = unique(TABLE(:,20));        % check for different receivers
+[rec, ~, idx_rec] = unique(TABLE(:,17));        % check for different receivers
 n = numel(rec);                                 % number of different receivers
 colors = createDistinguishableColors(1+n);      % create colors
 colors(all(colors == [0 1 0], 2), :) = [];      % remove green
@@ -59,7 +59,7 @@ for i = 1:n     % loop over receivers to plot them in different colors
 
     % loop over all points to convert cartesian to ellipsoidal coordinates
     for ii = 1:n
-        xyz = cell2mat(plotlist_(ii,3:5));
+        xyz = cell2mat(plotlist_(ii,19:21));
         [lat(ii), lon(ii), h] = xyz2ell_GT(xyz(1), xyz(2), xyz(3), Const.WGS84_A, Const.WGS84_E_SQUARE);
     end
     % convert to [°]

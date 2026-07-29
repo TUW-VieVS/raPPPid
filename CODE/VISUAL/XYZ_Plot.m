@@ -27,6 +27,7 @@ dxyz = xyz - xyz_true';
 dx = dxyz(:,1);
 dy = dxyz(:,2);
 dz = dxyz(:,3);
+d3D = sqrt(dx.^2 + dy.^2 + dz.^2);
 
 seconds = seconds(1:numel(dx));    % if last epochs of processing delivered no results
 
@@ -35,21 +36,23 @@ seconds = seconds(1:numel(dx));    % if last epochs of processing delivered no r
 RMS_x = calculate_rms(dx);
 RMS_y = calculate_rms(dy);
 RMS_z = calculate_rms(dz);
+RMS_3D =  calculate_rms(d3D);
 
-isnan_x = isnan(dx); isnan_dy = isnan(dx); isnan_dz = isnan(dx);
-dx(isnan_x) = 0;     dy(isnan_dy) = 0;     dz(isnan_dz) = 0;
+isnan_x = isnan(dx); isnan_dy = isnan(dy); isnan_dz = isnan(dz); isnan_3D = isnan(d3D);
+dx(isnan_x) = 0; dy(isnan_dy) = 0; dz(isnan_dz) = 0; d3D(isnan_3D) = 0;
 
 % remove suspicious data
 bool_0 = seconds(2:end) == 0;       % always true for seconds(1)
 bool = isnan(seconds) | [false; bool_0];    % remove suspicious data, but keep first epoch
-dx(bool) = []; dy(bool) = []; dz(bool) = [];
+dx(bool) = []; dy(bool) = []; dz(bool) = []; d3D(bool) = [];
 
 % plot
 fig_3coord = figure('Name','XYZ Plot', 'NumberTitle','off');
 hold on
-plot(seconds,dx, 'color', [0.8500 0.3250 0.0980], 'LineWidth', 1);
-plot(seconds,dy, 'color', [0      0.4470 0.7410], 'LineWidth', 1);
-plot(seconds,dz, 'color', [0.4660 0.6740 0.1880], 'LineWidth', 1);
+plot(seconds,dx,  'Color', [0.8500 0.3250 0.0980], 'LineWidth', 1);
+plot(seconds,dy,  'Color', [0      0.4470 0.7410], 'LineWidth', 1);
+plot(seconds,dz,  'Color', [0.4660 0.6740 0.1880], 'LineWidth', 1);
+plot(seconds,d3D, 'Color', [0.3529 0.3529 0.3529], 'LineWidth', 1, 'LineStyle', ':');
 if ~isempty(resets); vline(resets, 'k:'); end	% plot vertical lines for resets
 none = dz==0 | dx==0 | dy==0;	% plot black line where no solution
 xAxis_black = seconds;
@@ -62,10 +65,12 @@ unit = 'cm)';
 str_dX = sprintf('%.3f', RMS_x*100);
 str_dY = sprintf('%.3f', RMS_y*100);
 str_dZ = sprintf('%.3f', RMS_z*100);
+str_3D = sprintf('%.3f', RMS_3D*100);
 str_dX_ = ['dX (rms = ' str_dX ' ' unit];
 str_dY_ = ['dY (rms = ' str_dY ' ' unit];
 str_dZ_ = ['dZ (rms = ' str_dZ ' ' unit];
-legend(str_dX_, str_dY_, str_dZ_, 'Location', 'Best')
+str_3D_ = ['3D (rms = ' str_dZ ' ' unit];
+legend(str_dX_, str_dY_, str_dZ_, str_3D_, 'Location', 'Best')
 
 % % create simple legend
 % legend('dX','dY','dZ', 'Location', 'Best')        

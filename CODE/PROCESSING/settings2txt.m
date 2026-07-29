@@ -33,9 +33,6 @@ bool_DCM = strcmp(settings.IONO.model, 'Estimate, decoupled clock');
 fprintf(fileID,'%s\n','Input Data:');
 
 fprintf(fileID,'  %s%s\n','Obs-File: ', settings.INPUT.file_obs);
-if ~settings.KINE.satellite.bool
-    fprintf(fileID,'  %s%.3f%s%.3f%s%.3f\n','Approx Pos [m]: ',settings.INPUT.pos_approx(1),' | ',settings.INPUT.pos_approx(2),' | ',settings.INPUT.pos_approx(3));
-end
 fprintf(fileID,'  %s%s\n','Coordinate System: ', obs.coordsyst);
 if settings.INPUT.bool_realtime
     fprintf(fileID,'  %s\n', ['Real-Time processing from ' settings.INPUT.realtime_start_GUI ' to ' settings.INPUT.realtime_ende_GUI]);
@@ -56,7 +53,10 @@ switch settings.PROC.method
     case 'Code + Phase'
         fprintf(fileID,'%s\n\n','Processing Method: Phase + Code');
     case 'Code (Doppler Smoothing)'
-        fprintf(fileID,'%s\n\n','Processing Method: Code (Doppler Smoothing)');
+        fprintf(fileID,'%s\n','Processing Method: Code (Doppler Smoothing)');
+        fprintf(fileID,'%s%.3f\n\n','  Smoothing factor: ',settings.PROC.smooth_fac);
+    case 'Code + Phase + Doppler'
+        fprintf(fileID,'%s\n\n','Processing Method: Code + Phase + Doppler');
     otherwise
         fprintf(fileID,'%s\n\n','Processing Method: Error');
 end
@@ -121,6 +121,7 @@ else
         fprintf(fileID,'    %s%s\n','GPS Navigation file: ',settings.ORBCLK.file_nav_GPS);
         fprintf(fileID,'    %s%s\n','GLONASS Navigation file: ',settings.ORBCLK.file_nav_GLO);
         fprintf(fileID,'    %s%s\n','Galileo Navigation file: ',settings.ORBCLK.file_nav_GAL);
+        fprintf(fileID,'    %s%s\n','BeiDou Navigation file: ',settings.ORBCLK.file_nav_BDS);
     end
     
     if ~strcmpi(settings.ORBCLK.CorrectionStream,'off')
@@ -202,7 +203,7 @@ end
 fprintf(fileID,'  %s%s %s\n','zwd: ', settings.TROPO.zwd, detectGridSiteWise(settings.TROPO.zwd, input, settings.TROPO.vmf_version));
 if strcmpi(settings.TROPO.zwd,'e (in situ) + Askne')
     fprintf(fileID,'    %s%5.2f%s\n','q: ', settings.TROPO.q,' %');
-    fprintf(fileID,'    %s%6.2f%s\n','T: ', settings.TROPO.T,' °C');
+    fprintf(fileID,'    %s%6.2f%s\n','T: ', settings.TROPO.T,' Â°C');
 elseif strcmpi(settings.TROPO.zwd,'Tropo file') && strcmpi(settings.TROPO.tropo_file,'manually')
     fprintf(fileID,'    %s: %s\n', 'manually', settings.TROPO.tropo_filepath);    
 end
@@ -235,6 +236,7 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint')   ||   strcmpi
         else
             fprintf(fileID,'    %s%s%s\n',settings.IONO.model_ionex,' ',settings.IONO.file_ionex);
         end
+		fprintf(fileID,'    %s%s\n','IONEX product type: ',settings.IONO.type_ionex);
 		fprintf(fileID,'    %s%s\n','TEC-Interpolation: ',settings.IONO.interpol);
     end
 end
@@ -336,9 +338,14 @@ if settings.OTHER.CS.l1c1 || settings.OTHER.CS.DF || settings.OTHER.CS.Doppler
 else
     fprintf(fileID,'  %s\n','No Cycle-Slip-Detection');
 end
-if settings.OTHER.mp_detection
+if settings.OTHER.mp_detection || settings.OTHER.mp_doppler
     fprintf(fileID,'  %s\n','Multipath Detection is on:');
-    fprintf(fileID,'    %s%.2f%s%.2f%s%d%s%d\n','Code difference: threshold = ',settings.OTHER.mp_thresh,' [m], degree = ',settings.OTHER.mp_degree,', cooldown = ', settings.OTHER.mp_cooldown);
+    if settings.OTHER.mp_detection
+        fprintf(fileID,'    %s%.2f%s%.2f%s%d%s%d\n','Code time-difference: threshold = ',settings.OTHER.mp_thresh,' [m], degree = ',settings.OTHER.mp_degree,', cooldown = ', settings.OTHER.mp_cooldown);
+    end
+    if settings.OTHER.mp_doppler
+        fprintf(fileID,'    %s%.2f\n','Code range rate with Doppler: threshold = ',settings.OTHER.mp_doppler_thresh);
+    end
 end
 
 fprintf(fileID,'\n');
@@ -350,12 +357,18 @@ fprintf(fileID,'\n');
 if settings.KINE.bool_kinematic || settings.KINE.satellite.bool
 
     fprintf(fileID,'%s\n','Kinematic:');
+    if settings.KINE.bool_IMU
+        fprintf(fileID,'  %s%s\n', 'IMU data is used: ', settings.KINE.file_IMU);
+    else
+        fprintf(fileID,'  %s\n', 'No IMU data is used.');
+    end
     if settings.KINE.bool_offset
         fprintf(fileID,'  %s%.4f, %.4f, %.4f\n', 'Offsets are applied [m]: ', settings.KINE.offset(1), settings.KINE.offset(2), settings.KINE.offset(3));
     else
         fprintf(fileID,'  %s\n', 'No offsets applied');
     end
-	fprintf(fileID,'    %s%s\n', 'Orientation mode: ', settings.KINE.orient_mode);
+	fprintf(fileID,'    %s%s\n', 'Orientation mode: ',    settings.KINE.orient_mode);
+    fprintf(fileID,'    %s%s\n', 'Antenna orientation: ', settings.KINE.ant_orient );
 
     if settings.KINE.satellite.bool
         fprintf(fileID,'  %s\n', 'Satellite, dynamic model is applied');
@@ -511,7 +524,7 @@ if settings.AMBFIX.bool_AMBFIX
     if ~bool_DCM
         fprintf(fileID,'  %s%.2f%s%.2f%s%.0f%s\n','HMW fixing: threshold = ', settings.AMBFIX.HMW_thresh, ' [cy], releasing threshold = ', settings.AMBFIX.HMW_release, ' [cy], window = ', settings.AMBFIX.HMW_window, ' [s]');
     end
-    fprintf(fileID,'  %s%d\n','Fixing cutoff [°]: ', settings.AMBFIX.cutoff);
+    fprintf(fileID,'  %s%d\n','Fixing cutoff [Â°]: ', settings.AMBFIX.cutoff);
     fprintf(fileID,'  %s%s\n','Choice of Reference Satellite: ', settings.AMBFIX.refSatChoice);
     if strcmp(settings.AMBFIX.refSatChoice, 'manual choice (list):')
         fprintf(fileID,'    %s%d\n','GPS: ', settings.AMBFIX.refSatGPS);
@@ -645,7 +658,7 @@ if ~bool
 end
 
 fprintf(fileID,'  Satellite Exclusion Criteria:\n');
-fprintf(fileID,'    %s%d%s\n', 'Elevation Cutoff: ',settings.PROC.elev_mask,' [°]');
+fprintf(fileID,'    %s%d%s\n', 'Elevation Cutoff: ',settings.PROC.elev_mask,' [Â°]');
 fprintf(fileID,'    %s%s%s\n', 'C/N0 Cutoff: ', num2str(settings.PROC.SNR_mask),' [db-Hz]');
 fprintf(fileID,'    %s%d\n', 'Signal Strength Threshold: ',settings.PROC.ss_thresh);
 
@@ -716,6 +729,18 @@ if settings.EXP.results_csv && settings.AMBFIX.bool_AMBFIX
 end
 if settings.EXP.results_csv && settings.EXP.bool_csv_utc
     fprintf(fileID,'      UTC timestamps are included in CSV\n');
+end
+if settings.EXP.tropo_est
+    fprintf(fileID,'    TRO is exported\n');
+end
+if settings.EXP.nmea
+    fprintf(fileID,'    NMEA file is exported\n');
+end
+if settings.EXP.kml
+    fprintf(fileID,'    KML file is exported\n');
+end
+if settings.EXP.sp3
+    fprintf(fileID,'    sp3 file is exported\n');
 end
 % Variables: obs
 fprintf(fileID,'  Variables\n');

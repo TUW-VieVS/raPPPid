@@ -1,14 +1,14 @@
 function [Epoch, Adjust] = NL_fixing_IF(Epoch, Adjust, b_WL, b_NL, elevs, settings)
 % This function fixes the NL abiguities for the ionosphere-free linear 
 % combination. The WL ambiguities have already been fixed in the function
-% WL_fixing.m (using the HMW LC).
+% HMW_fixing.m (using the HMW LC).
 % 
 % INPUT:
 %   Epoch    	epoch-specific data for current epoch [struct]
 %   Adjust    	adjustment data and matrices for current epoch [struct]
 %   b_WL        WL UPDs for satellites of current epoch, single-differenced
 %   b_NL        NL UPDs for satellites of current epoch, single-differenced
-%   elevs   	elevations of all satellites of this epoch [°]
+%   elevs   	elevations of all satellites of this epoch [Â°]
 %   settings 	struct, settings for processing (from GUI)
 % OUTPUT:
 %   Epoch     	updated with (integer fixed) NL Ambiguities [struct]
@@ -48,8 +48,7 @@ refSatJ_idx = Epoch.refSatQZS_idx;
 fixable = Epoch.fixable;
 
 % get float ambiguities
-idx = (NO_PARAM+1):(NO_PARAM+no_sats);
-param_N = Adjust.param(idx);    % float ambiguities
+[param_N, idx] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, 1);    % float ambiguities
 param_N_gps = param_N(Epoch.gps);       % GPS float ambiguities
 param_N_gal = param_N(Epoch.gal);       % Galileo float ambiguities
 param_N_bds = param_N(Epoch.bds);       % BeiDou float ambiguities

@@ -17,8 +17,9 @@ function [PR] = generateCodePseudorange(gnssRaw, leap_seconds)
 %
 % Revision:
 %   2024/01/08, MFWG: improving PR generation, adding BDS B2a and QZSS
-%   2024/01/16, MFWG: repairing GPS week rollover 
+%   2024/01/16, MFWG: repairing GPS week rollover
 %   2025/08/12, MFWG: moving detection of frequency into the function
+%   2026/07/24, MFWG: adding Galileo E5b and BeiDou B1AC
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -48,8 +49,10 @@ GPS_L5 = (gnssRaw.ConstellationType == 1) & (round(gnssRaw.CarrierFrequencyHz/1e
 GLO_G1 = (gnssRaw.ConstellationType == 3) & (round(gnssRaw.CarrierFrequencyHz/1e7) == round(Const.GLO_F1 /1e7));
 GAL_E1 = (gnssRaw.ConstellationType == 6) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GAL_F1 /1e4));
 GAL_E5a= (gnssRaw.ConstellationType == 6) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GAL_F5a/1e4));
+GAL_E5b= (gnssRaw.ConstellationType == 6) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.GAL_F5b/1e4));
 BDS_B1 = (gnssRaw.ConstellationType == 5) & (round(gnssRaw.CarrierFrequencyHz/1e3) == round(Const.BDS_F1 /1e3));
 BDS_B2a= (gnssRaw.ConstellationType == 5) & (round(gnssRaw.CarrierFrequencyHz/1e3) == round(Const.BDS_F2a/1e3));
+BDS_B1AC=(gnssRaw.ConstellationType == 5) & (round(gnssRaw.CarrierFrequencyHz/1e3) == round(Const.BDS_F1AC/1e3));
 QZS_L1 = (gnssRaw.ConstellationType == 4) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.QZSS_F1/1e4));
 QZS_L5 = (gnssRaw.ConstellationType == 4) & (round(gnssRaw.CarrierFrequencyHz/1e4) == round(Const.QZSS_F5/1e4));
 
@@ -87,14 +90,16 @@ keep_L1 = (GPS_L1 | BDS_B1 | QZS_L1 ) & CODE_LOCK & (TOW_DECODED | TOW_KNOWN);
 % GLONASS G1
 keep_G1 = GLO_G1 & GLO_STRING_SYNC & GLO_TOD_DECODED;
 % Galileo E1
-keep_E1 = GAL_E1 & GAL_E1BC_CODE_LOCK | GAL_E1C_2ND_CODE_LOCK;
+keep_E1 = GAL_E1 & (GAL_E1BC_CODE_LOCK | GAL_E1C_2ND_CODE_LOCK);
 % GPS L5, BeiDou B2a, QZSS L5, Galileo E5a
-keep_L5 = (GPS_L5 | GAL_E5a | BDS_B2a | QZS_L5) & CODE_LOCK;
+keep_L5 = (GPS_L5 | GAL_E5a | GAL_E5b | BDS_B2a | BDS_B1AC | QZS_L5) & CODE_LOCK;
+% Galileo E5b, BeiDou B1AC
+keep_E5b_B1AC = (GAL_E5b | BDS_B1AC) & CODE_LOCK;     % ||| check this condition for 3rd frequency
 % put together
-keep = keep_L1 | keep_G1 | keep_E1 | keep_L5;
+keep = keep_L1 | keep_G1 | keep_E1 | keep_L5 | keep_E5b_B1AC;
 remove = remove & ~keep;
 
-% consider different GNSS time systems, everyting is calculated in [ns]:
+% consider different GNSS time systems, everything is calculated in [ns]:
 % - GPS, Galileo, QZSS
 GEJ = - gps_week_ns;                            
 bool_GEJ = (ConstellationType == 1 | ConstellationType == 4 | ConstellationType == 6);

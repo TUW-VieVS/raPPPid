@@ -11,6 +11,7 @@ function [obs] = analyzeAndroidRawData(sensorlog_path, settings)
 %
 % Revision:
 %   2023/11/08, MFWG: adding QZSS
+%   2026/07/01, MFWG: adding Galileo E5b and BeiDou B1AC
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -53,8 +54,8 @@ fid = fopen(sensorlog_path,'rt');     	% open observation-file
 i = 0; formatSpec = '';
 isGPS_L1  = false;      isGPS_L5  = false;  
 isGLO_G1  = false; 
-isGAL_E1  = false;      isGAL_E5a = false; 
-isBDS_B1  = false;      isBDS_B2a = false;
+isGAL_E1  = false;      isGAL_E5a = false;      isGAL_E5b = false;
+isBDS_B1  = false;      isBDS_B2a = false;      isBDS_B1AC = false;
 isQZSS_L1 = false;      isQZSS_L5 = false;
 
 while true
@@ -96,15 +97,10 @@ while true
            TimeOffsetNanos = line_data{strcmp(vars_Raw, 'TimeOffsetNanos')};
            % build gps time and week
            [gpsweek, gpstime] = generateGpsTimeWeek(TimeNanos, FullBiasNanos, BiasNanos, ReceivedSvTimeNanos, TimeOffsetNanos);
-           % convert to julian date and then to calendar data
-           start_jd = gps2jd_GT(gpsweek,gpstime);
-           [startdate(1), startdate(2), dd] = jd2cal_GT(start_jd);
-           startdate(3) = floor(dd);
-           ss = mod(dd,1)*86400;                % decimal part of day in [s]
-           startdate(4) = floor(ss/3600);       % calculate hour
-           startdate(5) = mod(floor(ss/60),60); % calculate minute
-           startdate(6) = mod(ss,60);           % calculate second + fractional part
+           % convert to calendar date
+           startdate = datevec(gpstime2cal(gpsweek, gpstime));
            % detect leap seconds with observation startdate
+           start_jd = 2400000.5 + 44244 + gpsweek*7 + gpstime/86400;
            leap_sec = GetLeapSec_UTC_GPS(start_jd);
        end
        
@@ -181,13 +177,14 @@ while true
        elseif idx_gnss == 6             % Galileo
            isGAL_E1 = (round(CarrierFrequencyHz/1e4) == round(Const.GAL_F1/1e4));
            isGAL_E5a= (round(CarrierFrequencyHz/1e4) == round(Const.GAL_F5a/1e4));
-           frq_char = char('1'*isGAL_E1 + '5'*isGAL_E5a);
+           isGAL_E5b= (round(CarrierFrequencyHz/1e4) == round(Const.GAL_F5b/1e4));
+           frq_char = char('1'*isGAL_E1 + '5'*isGAL_E5a + '7'*isGAL_E5b);
            CodeType = checkSignalType(CodeType, 'E', frq_char);
            L = ['L' frq_char CodeType{1}];
            C = ['C' frq_char CodeType{1}];
            S = ['S' frq_char CodeType{1}];
            D = ['D' frq_char CodeType{1}];
-           if (isempty(C_gal_3) || ~contains(C_gal_3, C)) && (isGAL_E1 || isGAL_E5a)
+           if (isempty(C_gal_3) || ~contains(C_gal_3, C)) && (isGAL_E1 || isGAL_E5a || isGAL_E5b)
                L_gal_3 = [L_gal_3 L];
                C_gal_3 = [C_gal_3 C];
                S_gal_3 = [S_gal_3 S];
@@ -207,15 +204,16 @@ while true
            end
            
        elseif idx_gnss == 5             % BeiDou
-           isBDS_B1  = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3));
-           isBDS_B2a = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2a/1e3));
-           frq_char = char('1'*isBDS_B1 + '5'*isBDS_B2a);
+           isBDS_B1   = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1/1e3));
+           isBDS_B2a  = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F2a/1e3));
+           isBDS_B1AC = (round(CarrierFrequencyHz/1e3) == round(Const.BDS_F1AC/1e3));
+           frq_char = char('1'*(isBDS_B1 || isBDS_B1AC) + '5'*isBDS_B2a);
            CodeType = checkSignalType(CodeType, 'C', frq_char);
            L = ['L' frq_char CodeType{1}];
            C = ['C' frq_char CodeType{1}];
            S = ['S' frq_char CodeType{1}];
            D = ['D' frq_char CodeType{1}];
-           if (isempty(C_bds_3) || ~contains(C_bds_3, C)) && (isBDS_B1 || isBDS_B2a)
+           if (isempty(C_bds_3) || ~contains(C_bds_3, C)) && (isBDS_B1 || isBDS_B2a || isBDS_B1AC)
                L_bds_3 = [L_bds_3 L];
                C_bds_3 = [C_bds_3 C];
                S_bds_3 = [S_bds_3 S];
@@ -268,7 +266,7 @@ while true
     end
     
     
-    if i > 200 || (isGPS_L1 && isGPS_L5 && isGLO_G1 && isGAL_E1 && isGAL_E5a && isBDS_B1 && isBDS_B2a)
+    if i > 200 || (isGPS_L1 && isGPS_L5 && isGLO_G1 && isGAL_E1 && isGAL_E5a && isGAL_E5b && isBDS_B1 && isBDS_B2a && isBDS_B1AC)
         % stop analyzing if all GNSS have been detected or 200 lines of
         % data have been analzed
         % QZSS is ignored in this check

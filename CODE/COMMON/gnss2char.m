@@ -23,8 +23,8 @@ switch string_gnss
     case 'BeiDou'
         char = 'C';
     case 'QZSS'
-        char = 'J';      
-    otherwise 
+        char = 'J';
+    otherwise
         char = [];
         errordlg('ERROR: gnss2char.m', 'Error');
 end

@@ -1,4 +1,4 @@
-function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
+function [klob, nequ, klob_BDS, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
     read_nav_multi(NAV, leap_sec)
 % Function to read in a multi GNSS broadcast message file (only for RINEX 3
 % navigation files). GLONASS time is converted in GPS time, while BDS time 
@@ -13,10 +13,10 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 % OUTPUT:
 %   klob            2x4, coefficients of Klobuchar Model (GPS ionosphere model)
 %   nequ            1x3, coefficients of Nequick Model (Galileo ionosphere model)
-%   BDGIM           coefficients of BeiDou global broadcast ionosphere
-%                   delay correction model (BeiDou ionosphere model)
+%   BDGIM           nx7, Klobuchar coefficients broadcasted by BeiDou (BeiDou ionosphere model)
+%                   format: alpha (1) or beta(2), alpha/beta_0 - 4, hour (BDT), GMT
 %   Eph_GPS         GPS navigation data
-%   Eph_GLO         Glonass navigation data
+%   Eph_GLO         GLONASS navigation data
 %   Eph_GAL         Galileo navigation data
 %   Eph_BDS         BeiDou navigation data
 %
@@ -27,10 +27,9 @@ function [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
-% ||| read in of BDS iono model coefficients is only experimental
 
 % check if data to read (real-time processing)
-klob = []; nequ = []; BDGIM = []; 
+klob = []; nequ = []; klob_BDS = []; 
 Eph_GPS = []; Eph_GLO = []; Eph_GAL = []; Eph_BDS = [];
 if isempty(NAV)
     return
@@ -40,14 +39,15 @@ end
 %% LOOP OVER HEADER
 iHeadBegin = 0;
 iHeadEnd   = 0;
-coeff_alpha = [];       coeff_beta  = [];
+coeff_alpha = [];       coeff_beta  = [];       % Klobuchar model
 nequ  = [];
-BDGIM_alpha = [];       BDGIM_beta = [];
+BDS_alpha = [];       BDS_beta = [];            % BeiDou coefficients for Klobuchar
 
 for i = 1:length(NAV)     % find header start and version
     if contains(NAV{i}, 'RINEX VERSION')
-        temp = NAV{i};
+        temp = strip(NAV{i});
         version = str2double(temp(1));
+        if floor(version) ~= 3; fprintf(2, 'Error in read_nav_multi.m!\n'); end
         iHeadBegin = i;
         break;
     end
@@ -75,21 +75,20 @@ for i = iHeadBegin:iHeadEnd  % Read header info
         if contains(NAV{i},'GAL')         % Nequick-Model-Coefficients
             nequ = cell2mat(textscan(NAV{i},'%*s %f %f %f'));
         end
-        if contains(NAV{i},'BDSA')     	% BDGIM, alpha coefficients
+        if contains(NAV{i},'BDSA')     	% BDS, alpha coefficients for Klobuchar
             lData = textscan(NAV{i},'%*s %f %f %f %f %s %f');
-            % convert char to start of hour of transmission time [sow] 
-            % ||| BDT or GPST?!
-            char = lData{5}{1};
-            hour = upper(char) - 65;
-            BDGIM_alpha(end+1,:) = [1, cell2mat(lData(1:3)), hour, lData{6}];
+            char = lData{5}{1};         % transmission time converted to hours of day and then to A-X
+            hour = upper(char) - 65;    %  A = BDT 00h-01h or X = BDT 23h-24h
+            % row: alpha0, alpha1, alpha2, alpha3, BDT hour, GMT hour
+            BDS_alpha(end+1,:) = [1, cell2mat(lData(1:4)), hour, lData{6}];
         end
-        if contains(NAV{i},'BDSB')     	% BDGIM, alpha coefficients
+        if contains(NAV{i},'BDSB')     	% BDS, beta coefficients for Klobuchar
             lData = textscan(NAV{i},'%*s %f %f %f %f %s %f');
-            % convert char to start of hour of transmission time [sow] 
-            % ||| BDT or GPST?!
+            % similar to case 'BDSA'
             char = lData{5}{1};
             hour = upper(char) - 65;
-            BDGIM_beta(end+1,:) = [2, cell2mat(lData(1:3)), hour, lData{6}];
+            % row: beta0, beta1, beta2, beta3, BDT hour, GMT hour
+            BDS_beta(end+1,:) = [2, cell2mat(lData(1:4)), hour, lData{6}];
         end        
     end
     %     if contains(fData{i},'CORR TO SYSTEM TIME')     % NOT IMPLEMENTED
@@ -99,7 +98,7 @@ for i = iHeadBegin:iHeadEnd  % Read header info
     %     end
 end     % end of read header info
 klob = [coeff_alpha; coeff_beta];     % save Klobuchar coefficients
-BDGIM = [BDGIM_alpha; BDGIM_beta];
+klob_BDS = [BDS_alpha; BDS_beta];
 
 
 %% Initialize Navigation Data Variables
@@ -124,6 +123,7 @@ while i <= length(NAV)            % loop from END OF HEADER to end of file
     
     if isempty(strtrim(line))
         % jump over empty lines
+        i = i + 1;
         continue
     end
     

@@ -10,7 +10,7 @@ function [Adjust, Epoch, model, obs] = ZD_processing(Adjust, Epoch, settings, in
 % 	Adjust      adjustment data and matrices for current epoch [struct]
 %	Epoch       epoch-specific data for current epoch [struct]
 %	settings    settings from GUI [struct]
-%	input       input data e.g. ephemerides and additional data  [struct]
+%	input       input data e.g. ephemeris and additional data  [struct]
 %   obs         observation-specific data [struct]
 % OUTPUT:
 %	Adjust      adjustment data and matrices for current epoch [struct]
@@ -36,7 +36,7 @@ switch settings.IONO.model
         [Epoch, Adjust] = adjPrep_ZD(settings, Adjust, Epoch, Epoch.old.sats, obs, input);
 end
 
-% estimation of float paramaters
+% estimation of float parameters
 [Epoch, Adjust, model] = calc_float_solution(input, obs, Adjust, Epoch, settings);
 
 

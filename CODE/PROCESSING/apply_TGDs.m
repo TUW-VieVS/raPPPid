@@ -64,11 +64,11 @@ end
 % - Beidou
 if settings.INPUT.use_BDS
     if     strcmp(settings.INPUT.bds_freq{1}, 'B1')
-        C1_TGD_C = input.ORBCLK.Eph_BDS(tgd1_C,k_C)';
+        C1_TGD_C = input.ORBCLK.Eph_BDS(tgd1_C,k_C(bool_C))';
     elseif strcmp(settings.INPUT.bds_freq{1}, 'B2')
-        C1_TGD_C = input.ORBCLK.Eph_BDS(tgd1_C,k_C)' * Const.BDS_F1^2 / Const.BDS_F2^2;
+        C1_TGD_C = input.ORBCLK.Eph_BDS(tgd1_C,k_C(bool_C))' * Const.BDS_F1^2 / Const.BDS_F2^2;
     elseif strcmp(settings.INPUT.bds_freq{1}, 'B3')
-        C1_TGD_C = input.ORBCLK.Eph_BDS(tgd2_C,k_C)' * Const.BDS_F1^2 / Const.BDS_F3^2;
+        C1_TGD_C = input.ORBCLK.Eph_BDS(tgd2_C,k_C(bool_C))' * Const.BDS_F1^2 / Const.BDS_F3^2;
     end
     % convert TGD to [m] and save
     Epoch.C1_bias(Epoch.bds & valid) = - Const.C * C1_TGD_C;
@@ -101,7 +101,7 @@ if settings.INPUT.num_freqs > 1
             C2_TGD_E = input.ORBCLK.Eph_GAL(tgd2_E,k_E(bool_E))' * Const.GAL_F1^2 / Const.GAL_F5b^2;
         end
         % convert TGD to [m] and save
-        Epoch.C1_bias(Epoch.gal & valid) = - Const.C * C2_TGD_E;
+        Epoch.C2_bias(Epoch.gal & valid) = - Const.C * C2_TGD_E;
     end
     % - Beidou
     if settings.INPUT.use_BDS

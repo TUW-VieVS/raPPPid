@@ -31,11 +31,26 @@ while true      % loop to read new data lines of textfile
     % read new data
     pos_now = ftell(fid_navmess); line = fgetl(fid_navmess); i = i + 1;
     NAVMESS{end+1,1} = line;
+
+    % check for version of broadcast navigation message
+    if isempty(input.ORBCLK.Eph_version) && contains(line, 'RINEX VERSION')
+        temp = strip(line);
+        input.ORBCLK.Eph_version = str2double(temp(1));
+    end
     
-    % check for epoch header in current line
-    if line(1) == 'G' || line(1) == 'R' || line(1) == 'E' || line(1) == 'C' 
+    % check for epoch header of navigation message block
+    if input.ORBCLK.Eph_version == 4
+        % RINEX 4: epoch headers are marked by "> EPH G/R/E/C"
+        is_record_start = numel(line) >= 5 && strcmp(line(1:5), '> EPH');
+    else
+        % RINEX 3: epoch headers start with GNSS letter
+        is_record_start = line(1) == 'G' || line(1) == 'R' || line(1) == 'E' || line(1) == 'C';
+    end
+
+    % check if current lines starts a new navigation message block
+    if is_record_start
         pos_nav = pos_now;  % save position (beginning of line) and ...
-        i_nav = i;          % line of current epoch header 
+        i_nav = i;          % line of current epoch header
     end
     
     % check for end of file
@@ -55,11 +70,16 @@ while true      % loop to read new data lines of textfile
 end
 
 % read-in new navigation message data
-% ||| check rinex version (e.g., 4!)
-[klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi(NAVMESS, obs.leap_sec);
+if input.ORBCLK.Eph_version == 3
+    [klob, nequ, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi(NAVMESS, obs.leap_sec);
+elseif input.ORBCLK.Eph_version == 4
+    [klob, nequ, klob_BDS, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi_r4(NAVMESS, obs.leap_sec);
+else
+    fprintf(2, 'Error in RealTimeEphCorr2Brdc.m!\n')
+end
 
 % ||| how to obtain broadcasted ionosphere models?
-% input.IONO.klob_coeff, input.nequ_coeff, input.BDGIM_coeff
+% input.IONO.klob_coeff, input.IONO.nequ_coeff, input.BDGIM_coeff
 
 if settings.INPUT.use_GPS && ~isempty(Eph_GPS)
     input.ORBCLK.Eph_GPS = EphAppendSortUnique(input.ORBCLK.Eph_GPS, Eph_GPS, [1,21]);
@@ -110,7 +130,7 @@ if strcmp(settings.ORBCLK.CorrectionStream, 'manually')
     
     if ~isempty(CORR2BRDC)
         % read new stream data
-        [corr_G, corr_R, corr_E, corr_C, corr_vtec] = read_corr2brdc_stream(CORR2BRDC);
+        [corr_G, corr_R, corr_E, corr_C, corr_J, corr_vtec] = read_corr2brdc_stream(CORR2BRDC);
         
         xxx = 120;   % keep only last xxx epochs of data
         
@@ -132,6 +152,10 @@ if strcmp(settings.ORBCLK.CorrectionStream, 'manually')
             input.ORBCLK.corr2brdc_BDS  = ...
                 OrbClkAppendDelete(input.ORBCLK.corr2brdc_BDS, corr_C, xxx);
         end
+        if settings.INPUT.use_QZSS
+            input.ORBCLK.corr2brdc_QZSS = ...
+                OrbClkAppendDelete(input.ORBCLK.corr2brdc_QZSS, corr_J, xxx);
+        end
         
         % Handle new code and phase biases: save biases and delete outdated 
         % correction (variable xxx), little complicated but in this way
@@ -140,6 +164,7 @@ if strcmp(settings.ORBCLK.CorrectionStream, 'manually')
         if settings.INPUT.use_GLO;   input_.ORBCLK.corr2brdc_GLO  = corr_R;    end
         if settings.INPUT.use_GAL;   input_.ORBCLK.corr2brdc_GAL  = corr_E;    end
         if settings.INPUT.use_BDS;   input_.ORBCLK.corr2brdc_BDS  = corr_C;    end
+        if settings.INPUT.use_QZSS;  input_.ORBCLK.corr2brdc_QZSS = corr_J;    end
         % assign biases (||| function could be simplified for RT)
         [obs_] = assign_corr2brdc_biases(obs, input_, settings);
         if settings.BIASES.code_corr2brdc_bool  && ~isempty(obs_.C_corr_time) 	% code biases
@@ -218,7 +243,7 @@ New.c2      = [ Old.c2;       Update.c2 ];
 % take the interval into account)
 n_orb = numel(New.t_orb);
 if n_orb > xxx
-    idx = n_orb-60 : n_orb;
+    idx = n_orb-xxx : n_orb;
     New.t_orb = New.t_orb(idx);
     New.IOD_orb = New.IOD_orb(idx,:);
     New.radial = New.radial(idx,:);
