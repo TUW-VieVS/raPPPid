@@ -69,7 +69,7 @@ str_3D = sprintf('%.3f', RMS_3D*100);
 str_dX_ = ['dX (rms = ' str_dX ' ' unit];
 str_dY_ = ['dY (rms = ' str_dY ' ' unit];
 str_dZ_ = ['dZ (rms = ' str_dZ ' ' unit];
-str_3D_ = ['3D (rms = ' str_dZ ' ' unit];
+str_3D_ = ['3D (rms = ' str_3D ' ' unit];
 legend(str_dX_, str_dY_, str_dZ_, str_3D_, 'Location', 'Best')
 
 % % create simple legend

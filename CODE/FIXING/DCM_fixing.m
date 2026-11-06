@@ -76,7 +76,7 @@ Q_NN = (Q_NN + Q_NN')./2;   % due to numerical reasons after the division
 
 
 %% exclude unfixable ambiguities
-fixit = Epoch.fixable & ~Epoch.exclude; 	% boolean, can phase ambiguity be fixed?
+fixit = Epoch.fixable & Epoch.useCode; 	% boolean, can phase ambiguity be fixed?
 
 % exclude reference satellites from fixing
 fixit(Epoch.refSatGPS_idx,:) = false;

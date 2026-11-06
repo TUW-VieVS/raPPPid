@@ -1,11 +1,12 @@
 function [code_model, phase_model, doppler_model] = ...
-    model_observations(model, Adjust, settings, Epoch)          
+    model_observations(param_, Adjust, model, settings, Epoch)          
 % Building the modeled observation including all correction models for
 % code, phase, and Doppler observations.
 %
 % INPUT:
+%   param_      [vector], (predicted) parameter vector
+%   Adjust  	[struct], containing all adjustment related data
 % 	model       [struct], model corrections for all visible satellites
-%	Adjust  	[struct], containing all adjustment related data
 %   settings    [struct], settings of processing from GUI
 % 	Epoch 		[struct], epoch-specific data
 % OUTPUT:
@@ -21,12 +22,12 @@ function [code_model, phase_model, doppler_model] = ...
 f1 = Epoch.f1;      % frequencies 1
 f2 = Epoch.f2;
 f3 = Epoch.f3;
-exclude = Epoch.exclude;
+useCode = Epoch.useCode;
 proc_freq = settings.INPUT.proc_freqs;      % number of processed frequencies
-param_ = Adjust.param_pred;               	% vector with unknowns, predictions
-NO_PARAM = Adjust.NO_PARAM;
 zwd = param_(7);              	% float zenith wet delay
 no_sats = numel(Epoch.sats);   	% number of satellites
+NO_PARAM = Adjust.NO_PARAM;
+ORDER_PARAM = Adjust.ORDER_PARAM;
 
 
 % If ionosphere is estimated use estimated ionospheric delay instead of 
@@ -63,7 +64,7 @@ code_model = model.rho...                                 	% theoretical range
     - model.dX_ARP_ECEF_corr;                           	% Antenna Reference Point correction
 
 % eliminate code observations because of, for example, cutoff angle:
-code_model = code_model .* ~exclude;
+code_model = code_model .* useCode;
 
 
 
@@ -90,7 +91,7 @@ if contains(settings.PROC.method,'+ Phase')
         + model.windup + ambig;                          	% Phase Wind-Up and ambiguities
     
     % eliminate phase observations because of, for example, cutoff angle:
-    phase_model = phase_model .* ~exclude .* ~Epoch.cs_found;
+    phase_model = phase_model .* useCode .* Epoch.usePhase;
 end   
 
 
@@ -100,11 +101,11 @@ doppler_model = [];
 if contains(settings.PROC.method, '+ Doppler')
     pos_r = param_(1:3);        % receiver position  [m]
     vel_r = param_(4:6);        % receiver velocity  [m/s]
-    pos_s = model.ECEF_X;       % satellite position [m]
-    vel_s = model.ECEF_V;       % satellite velocity [m/s]
+    pos_s = model.Rot_X;        % satellite position [m]
+    vel_s = model.Rot_V;        % satellite velocity [m/s]
 
     % get receiver clock drift
-    rec_clk_drift = param_(strcmp(Adjust.ORDER_PARAM, 'rec_clk_drift'));
+    rec_clk_drift = param_(strcmp(ORDER_PARAM, 'rec_clk_drift'));
     
     % calculate velocity and position part for observation equation, check
     % e.g. PhD thesis Glaner (p.13)
@@ -116,6 +117,6 @@ if contains(settings.PROC.method, '+ Doppler')
     doppler_model = dot_r_v  + rec_clk_drift;
     
     % exclude satellites because of, for example, cutoff angle:
-    doppler_model(exclude) = 0;
+    doppler_model(~Epoch.useDoppler) = 0;
 end
 

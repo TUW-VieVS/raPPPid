@@ -114,9 +114,13 @@ for i = loop
         ylabel('[m]')
         xlim([min(x(x~=0)) max(x(x~=0))])           % set x-axis
         ylim([-4*tresh, 4*tresh])                   % set y-axis
-        % find those CS which are outside zoom
-        idx = abs(y_cs) > 4*tresh;      
+        % find those CS which are positive outside zoom
+        idx = y_cs > 4*tresh;
         y = 4*tresh*idx;
+        plot(x_cs(idx),  y(y~=0),  'ro', 'MarkerSize',8)        % highlight CS outside of zoom window
+        % find those CS which are negative outside zoom
+        idx = y_cs < -4*tresh;
+        y = -4*tresh*idx;
         plot(x_cs(idx),  y(y~=0),  'ro', 'MarkerSize',8)        % highlight CS outside of zoom window
         hold off
     end

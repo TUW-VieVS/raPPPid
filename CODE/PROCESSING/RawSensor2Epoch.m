@@ -95,6 +95,7 @@ SNR = gnssRaw.Cn0DbHz;
 % frequency determined by the smartphone deviates from the nominal values, 
 % which are not yet calculated!
 Doppler = -gnssRaw.PseudorangeRateMetersPerSecond;    % [m/s]
+Doppler(gnssRaw.PseudorangeRateUncertaintyMetersPerSecond > 1e6) = NaN;     % remove really bad Doppler observations
 
 
 %% save everything into Epoch
@@ -172,7 +173,7 @@ Epoch.obs = rearranGeNSS(Epoch.obs, obs, Epoch.qzss,use_column(5,3:3:12), [3 6 9
 %% IMU DATA FOR CURRENT EPOCH
 
 epoch_utc = Epoch.time - seconds(leap_sec);
-dt_imu    = 1.0;
+dt_imu    = Const.IMU_SYNC_WINDOW;
 
 % initialize blank values (e.g, no sensor data, no time overlap for interpolation)
 Epoch.IMU.acc_raw = NaN(0,3); Epoch.IMU.acc = NaN(1,3);
@@ -209,8 +210,8 @@ if settings.KINE.bool_IMU && isfield(IMURAW, 'UncalAccel') && ~isempty(IMURAW.Un
     % --- Synchronization & Resampling ---
     if ~isempty(TT_acc) && ~isempty(TT_gyr)
 
-        % Create a common time vector (0.01s steps) spanning the overlapping time range of both sensors
-        t_common = (max(TT_acc.t(1), TT_gyr.t(1)):seconds(0.01):min(TT_acc.t(end), TT_gyr.t(end)))';
+        % Create a common time vector spanning the overlapping time range of both sensors
+        t_common = (max(TT_acc.t(1), TT_gyr.t(1)):seconds(1/Const.IMU_SAMPLE_RATE_HZ):min(TT_acc.t(end), TT_gyr.t(end)))';
         if numel(t_common) >= 2
 
             % resample both sensors using linear interpolation
@@ -266,6 +267,13 @@ if settings.KINE.bool_IMU && isfield(IMURAW, 'OrientationDeg') && ~isempty(IMURA
                    IMURAW.OrientationDeg.t <= epoch_utc + seconds(dt_imu);
     end
 
+    if ~any(mask_ori)
+        [~, ix] = min(abs(IMURAW.OrientationDeg.t - epoch_utc));
+        Epoch.IMU.OrientationDeg = [IMURAW.OrientationDeg.yawDeg(ix), ...
+            IMURAW.OrientationDeg.rollDeg(ix), IMURAW.OrientationDeg.pitchDeg(ix)];
+        Epoch.IMU.yaw_deg = IMURAW.OrientationDeg.yawDeg(ix);
+    end
+
     if any(mask_ori)
         % extract orientation angles [°]
         yaw_masked   = IMURAW.OrientationDeg.yawDeg(mask_ori);
@@ -273,7 +281,7 @@ if settings.KINE.bool_IMU && isfield(IMURAW, 'OrientationDeg') && ~isempty(IMURA
         pitch_masked = IMURAW.OrientationDeg.pitchDeg(mask_ori);
         Epoch.IMU.OrientationDeg = [yaw_masked, roll_masked, pitch_masked];
     
-        % save last attitude of this epoch [°]
+        % save last attitude of this epoch [°], taken from Android's OrientationDeg
         Epoch.IMU.yaw_deg   = yaw_masked(end);
         Epoch.IMU.pitch_deg = pitch_masked(end);
         Epoch.IMU.roll_deg  = roll_masked(end);

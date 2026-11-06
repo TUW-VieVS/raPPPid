@@ -190,7 +190,7 @@ bool_nav_iono = strcmp(settings.IONO.source, 'Klobuchar model') || ...
 input.ORBCLK.Eph_version = [];
 input.ORBCLK.Eph_GPS = [];     input.ORBCLK.Eph_GLO = [];     
 input.ORBCLK.Eph_GAL = [];     input.ORBCLK.Eph_BDS = []; 
-input.ORBCLK.Eph_QZSS = [];     % ||| not implemented
+input.ORBCLK.Eph_QZSS = [];
 % start read-in
 if (settings.ORBCLK.bool_brdc || glo_channels || bool_nav_iono) && ~settings.INPUT.bool_realtime
     [input] = read_nav_brdc(settings, input, obs.leap_sec, glo_channels);
@@ -514,9 +514,9 @@ end
 %% Models - Kinematic
 
 % Read IMU data 
-if settings.KINE.bool_kinematic && settings.KINE.bool_IMU
-    input.IMU = readIMUcsv(settings.KINE.file_IMU);
-    input.IMU.timestamp = input.IMU.timestamp + obs.leap_sec;
+if settings.KINE.bool_kinematic && settings.KINE.bool_IMU && ~settings.INPUT.rawDataAndroid
+    % read IMU data from separate file (timestamps are converted to sow)
+    input.IMU = readIMUcsv(settings.KINE.file_IMU, obs.leap_sec);
 end
 
 

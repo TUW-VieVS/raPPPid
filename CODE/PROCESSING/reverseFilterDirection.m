@@ -30,4 +30,11 @@ if settings.OTHER.CS.TimeDifference
     Epoch.cs_phase_obs(2:end,:) = NaN;
     Epoch.cs_time_obs(2:end,:) = NaN;
 end
+if settings.OTHER.CS.HMW
+    Epoch.cs_HMW_k(:,:)   = 0;
+    Epoch.cs_HMW_av(:,:)  = 0;
+    Epoch.cs_HMW_var(:,:) = 0;
+end
+Epoch.tracked(:) = 0;           % reset number of epochs each satellite was tracked 
+
 % ||| complete?

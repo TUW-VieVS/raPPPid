@@ -29,17 +29,17 @@ vec = storeData.gpstime(1) + vec;
 
 % plot cycle slip detector
 if isfield(storeData, 'cs_WL_12_diff') && ~isempty(storeData.cs_WL_12_diff)
-    plotit(storeData.gpstime, storeData.cs_WL_12_diff, storeData.cs_var_12, storeData.cs_found, tresh, fac, vec, ticks,  [' HMW 12 ' sys], mod(reset_sow,86400))
+    plotit(storeData.gpstime, storeData.cs_WL_12_diff, storeData.cs_var_12, storeData.excludePhase, tresh, fac, vec, ticks,  [' HMW 12 ' sys], mod(reset_sow,86400))
 end
 if isfield(storeData, 'cs_WL_13_diff') && ~isempty(storeData.cs_WL_13_diff)
-    plotit(storeData.gpstime, storeData.cs_WL_13_diff, storeData.cs_var_13, storeData.cs_found, tresh, fac, vec, ticks,  [' HMW 13 ' sys], mod(reset_sow,86400))
+    plotit(storeData.gpstime, storeData.cs_WL_13_diff, storeData.cs_var_13, storeData.excludePhase, tresh, fac, vec, ticks,  [' HMW 13 ' sys], mod(reset_sow,86400))
 end
 if isfield(storeData, 'cs_WL_23_diff') && ~isempty(storeData.cs_WL_23_diff)
-    plotit(storeData.gpstime, storeData.cs_WL_23_diff, storeData.cs_var_23, storeData.cs_found, tresh, fac, vec, ticks,  [' HMW 23 ' sys], mod(reset_sow,86400))
+    plotit(storeData.gpstime, storeData.cs_WL_23_diff, storeData.cs_var_23, storeData.excludePhase, tresh, fac, vec, ticks,  [' HMW 23 ' sys], mod(reset_sow,86400))
 end   
 
 
-function [] = plotit(time, HMW_diff, var, cs_found, thresh, fac, vec, ticks, sys, resets)
+function [] = plotit(time, HMW_diff, var, excludePhase, thresh, fac, vec, ticks, sys, resets)
 % create loop index
 if sys(end) == 'G'       	% GPS
     loop = 1:99;
@@ -98,7 +98,7 @@ for i = loop
         threshold(threshold > thresh) = thresh;
         threshold(threshold == 0) = NaN;
 
-        cs_ = full(cs_found(:,i));
+        cs_ = full(excludePhase(:,i));
 
         % prepare plot
         subplot(4, 4, ii)

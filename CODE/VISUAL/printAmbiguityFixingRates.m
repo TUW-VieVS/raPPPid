@@ -15,11 +15,9 @@ function [] = printAmbiguityFixingRates(storeData, settings, satellites)
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
+
 % ||| GLONASS is not implemented
 
-if ~strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && ~strcmp(settings.IONO.model, 'Estimate, decoupled clock')
-    return
-end
 
 % booleans for GNSS fixed during the PPP processing
 fix_GPS = settings.INPUT.use_GPS;
@@ -41,7 +39,7 @@ FIXABLE = elev > settings.AMBFIX.cutoff;
 FIXABLE(~storeData.fixed, :) = false;
 
 
-if strcmp(settings.IONO.model, '2-Frequency-IF-LCs')
+if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') 
     % prepare calculation
     WL = full(storeData.N_WL_12);
     NL = full(storeData.N_NL_12);
@@ -99,6 +97,80 @@ if strcmp(settings.IONO.model, '2-Frequency-IF-LCs')
         perc_NL_QZS = calcFixingRate(NL_fix, FIXABLE, idx_J, storeData.refSatQZS);
         fprintf('QZS WL/NL: ')
         fprintf('%05.2f / %05.2f', perc_WL_QZS, perc_NL_QZS)
+        fprintf(' [%%]   \n')
+        fprintf('QZS satellites: ')
+        fprintf('%05.2f', perc_QZS)
+        fprintf(' [%%]   \n\n')
+    end
+
+elseif strcmp(settings.IONO.model, '3-Frequency-IF-LC')
+    % prepare calculation
+    WL = full(storeData.N_WL_12);
+    EW = full(storeData.N_WL_23);
+    NL = full(storeData.N_NL_12);
+    WL(WL==0) = NaN;            % NaN were replaced with 0 to use sparse
+    EW(EW==0) = NaN;
+    NL(NL==0) = NaN;
+    WL(WL==0.1) = 0;            % 0 were replaced with 0.1 to use sparse
+    EW(EW==0.1) = 0;
+    NL(NL==0.1) = 0;
+
+    % check if WL fixed
+    WL_fix = ~isnan(WL);
+
+    % check if EW fixed
+    EW_fix = ~isnan(EW);
+
+    % check if NL fixed
+    NL_fix = ~isnan(NL);
+
+    % fixed satellites
+    SAT_fixed = WL_fix & EW_fix & NL_fix;
+
+    % print percentage to command window
+    if fix_GPS
+        perc_GPS = calcFixingRate(SAT_fixed, FIXABLE, idx_G, storeData.refSatGPS);
+        perc_WL_GPS = calcFixingRate(WL_fix, FIXABLE, idx_G, storeData.refSatGPS);
+        perc_EW_GPS = calcFixingRate(EW_fix, FIXABLE, idx_G, storeData.refSatGPS);
+        perc_NL_GPS = calcFixingRate(NL_fix, FIXABLE, idx_G, storeData.refSatGPS);
+        fprintf('GPS WL/EW/N1: ')
+        fprintf('%05.2f / %05.2f / %05.2f', perc_WL_GPS, perc_EW_GPS, perc_NL_GPS)
+        fprintf(' [%%]   \n')
+        fprintf('GPS satellites: ')
+        fprintf('%05.2f', perc_GPS)
+        fprintf(' [%%]   \n\n')
+    end
+    if fix_GAL
+        perc_GAL = calcFixingRate(SAT_fixed, FIXABLE, idx_E, storeData.refSatGAL);
+        perc_WL_GAL = calcFixingRate(WL_fix, FIXABLE, idx_E, storeData.refSatGAL);
+        perc_EW_GAL = calcFixingRate(EW_fix, FIXABLE, idx_E, storeData.refSatGAL);
+        perc_NL_GAL = calcFixingRate(NL_fix, FIXABLE, idx_E, storeData.refSatGAL);
+        fprintf('GAL WL/EW/N1: ')
+        fprintf('%05.2f / %05.2f / %05.2f', perc_WL_GAL, perc_EW_GAL, perc_NL_GAL)
+        fprintf(' [%%]   \n')
+        fprintf('GAL satellites: ')
+        fprintf('%05.2f', perc_GAL)
+        fprintf(' [%%]   \n\n')
+    end
+    if fix_BDS
+        perc_BDS = calcFixingRate(SAT_fixed, FIXABLE, idx_C, storeData.refSatBDS);
+        perc_WL_BDS = calcFixingRate(WL_fix, FIXABLE, idx_C, storeData.refSatBDS);
+        perc_EW_BDS = calcFixingRate(EW_fix, FIXABLE, idx_C, storeData.refSatBDS);
+        perc_NL_BDS = calcFixingRate(NL_fix, FIXABLE, idx_C, storeData.refSatBDS);
+        fprintf('BDS WL/EW/N1: ')
+        fprintf('%05.2f / %05.2f / %05.2f', perc_WL_BDS, perc_EW_BDS, perc_NL_BDS)
+        fprintf(' [%%]   \n')
+        fprintf('BDS satellites: ')
+        fprintf('%05.2f', perc_BDS)
+        fprintf(' [%%]   \n\n')
+    end
+    if fix_QZS
+        perc_QZS = calcFixingRate(SAT_fixed, FIXABLE, idx_J, storeData.refSatQZS);
+        perc_WL_QZS = calcFixingRate(WL_fix, FIXABLE, idx_J, storeData.refSatQZS);
+        perc_EW_QZS = calcFixingRate(EW_fix, FIXABLE, idx_J, storeData.refSatQZS);
+        perc_NL_QZS = calcFixingRate(NL_fix, FIXABLE, idx_J, storeData.refSatQZS);
+        fprintf('QZS WL/EW/N1: ')
+        fprintf('%05.2f / %05.2f / %05.2f', perc_WL_QZS, perc_EW_QZS, perc_NL_QZS)
         fprintf(' [%%]   \n')
         fprintf('QZS satellites: ')
         fprintf('%05.2f', perc_QZS)
@@ -171,12 +243,15 @@ function perc = calcFixingRate(SAT_fixed, FIXABLE, idx_GNSS, refSat)
 % calculate number of satellites which are not under fixing cutoff angle
 total_nr_fixable_sats = sum(sum(FIXABLE(:,idx_GNSS)));
 
-% calculate number of actually fixed satellites
-total_nr_fixed_sats = sum(sum(SAT_fixed(:,idx_GNSS)));
+% calculate number of actually fixed satellites (only where fixable)
+total_nr_fixed_sats = sum(sum(SAT_fixed(:,idx_GNSS) & FIXABLE(:,idx_GNSS)));
 
-% remove reference satellite from this calculation
-total_nr_fixable_sats = total_nr_fixable_sats - sum(refSat~=0);
-total_nr_fixed_sats = total_nr_fixed_sats - sum(refSat~=0);
+% remove reference satellite from this calculation (only where fixable)
+refSat = full(refSat(:));
+q_ref = find(refSat ~= 0);
+nr_refSat = sum(FIXABLE(sub2ind(size(FIXABLE), q_ref, refSat(q_ref))));
+total_nr_fixable_sats = total_nr_fixable_sats - nr_refSat;
+total_nr_fixed_sats = total_nr_fixed_sats - nr_refSat;
 
 % calculate percentage of fixed satellites
 perc = total_nr_fixed_sats/total_nr_fixable_sats*100;

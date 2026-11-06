@@ -1,5 +1,4 @@
 function settings = PPP_main(settings)
-
 % Main function for PPP processing and calculations
 % 
 % raPPPid intern numbering of frequencies:
@@ -118,7 +117,7 @@ end
 [Epoch, satellites, storeData, obs, model_save, Adjust] = initProcessing(settings, obs);
 
 % create init_ambiguities
-init_ambiguities = NaN(3, 410);     % columns = satellites, rows = frequencies
+init_ambiguities = NaN(3, DEF.SATS);     % columns = satellites, rows = frequencies
 
 % Creating q for loop of epoch calculations, q is used for indexing the epochs
 q_range = 1:settings.PROC.epochs(2)-settings.PROC.epochs(1)+1; % all epochs from settings.PROC.epochs(1) to (2), both included
@@ -217,10 +216,8 @@ for q = q_range         % loop over epochs
     
     % ----- check usability of epoch -----
     if ~Epoch.usable
-        if bool_print
-            fprintf('Epoch %d is skipped (not usable based on RINEX header)            \n', q)
-        end
-        [Epoch, storeData, Adjust] = SkipEpoch(Epoch, storeData, Adjust, false);
+        reason = sprintf('Epoch %d is skipped (not usable based on RINEX header)            \n', q);
+        [Epoch, storeData, Adjust] = SkipEpoch(Epoch, storeData, Adjust, settings, reason, false);
         continue
     end
     
@@ -253,10 +250,8 @@ for q = q_range         % loop over epochs
     bool_enough_sats = check_min_sats(settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, settings.INPUT.use_QZSS, ...
         sum(Epoch.gps), sum(Epoch.glo), sum(Epoch.gal), sum(Epoch.bds), sum(Epoch.qzss), settings.INPUT.use_GNSS);
     if ~bool_enough_sats 	% ||| better check the number of available observations
-        if bool_print
-            fprintf('Less than %d usable satellites in epoch %d (%s)        \n', DEF.MIN_SATS, q, Epoch.rinex_header);
-        end
-        [Epoch, storeData, Adjust] = SkipEpoch(Epoch, storeData, Adjust, false);
+        reason = sprintf('Less than %d usable satellites in epoch %d (%s)        \n', DEF.MIN_SATS, q, Epoch.rinex_header);
+        [Epoch, storeData, Adjust] = SkipEpoch(Epoch, storeData, Adjust, settings, reason, false);
         continue
     end
 
@@ -276,7 +271,7 @@ for q = q_range         % loop over epochs
     [Epoch] = check_SNR(Epoch, settings, obs.use_column);
         
     % --- perform Cycle-Slip detection ---
-    if contains(settings.PROC.method,'Phase')   &&   (settings.OTHER.CS.l1c1 || settings.OTHER.CS.DF || settings.OTHER.CS.Doppler || settings.OTHER.CS.TimeDifference || settings.PROC.LLI)
+    if contains(settings.PROC.method,'Phase')   &&   (settings.OTHER.CS.l1c1 || settings.OTHER.CS.DF || settings.OTHER.CS.Doppler || settings.OTHER.CS.TimeDifference || settings.PROC.LLI || settings.OTHER.CS.HMW)
         [Epoch] = cycleSlip(Epoch, settings, obs.use_column);
     end
     
@@ -320,22 +315,20 @@ for q = q_range         % loop over epochs
     % --- check change of code observations with Doppler shift ---
     if ~isempty(Epoch.old.gps_time) && Adjust.float && settings.OTHER.mp_doppler
         [Epoch.mp_DopplerPR, flagged] = DopplerCheckPR(Epoch, settings.INPUT.num_freqs, settings.OTHER.mp_doppler_thresh, settings.IONO.model);
-        Epoch.exclude = Epoch.exclude | flagged;
+        Epoch.useCode = Epoch.useCode & ~flagged;
         Epoch.sat_status(flagged) = 18;
     end
     
     % --- Build LCs and processed observations -> Epoch.code/.phase ---
     [Epoch, storeData] = create_LC_observations(Epoch, settings, storeData, q);
     
-    % --- make sure that gridwise VMF data is available and up-to-date ---
-    check_pos_change = false;
-    bool_pos_change = check_pos_change && norm(Adjust.param(1:3) - input.TROPO.V3GR.xyz) > 100;
+    % --- make sure that gridwise VMF data is available ---
     if isfield(input, 'TROPO') && isfield(input.TROPO, 'V3GR') && strcmp(input.TROPO.V3GR.version, 'gridwise') && ...
-            (~isfield(input.TROPO.V3GR, 'data') || bool_pos_change)
+            ~isfield(input.TROPO.V3GR, 'data')
         input = get_V3GR(obs, input, settings.TROPO.vmf_version, ~settings.INPUT.bool_parfor, ApproximatePosition(Epoch, input, obs, settings));
     end
     if isfield(input, 'TROPO') && isfield(input.TROPO, 'VMF1') && strcmp(input.TROPO.VMF1.version, 'gridwise') && ...
-            (~isfield(input.TROPO.VMF1, 'data') || bool_pos_change)
+            ~isfield(input.TROPO.VMF1, 'data')
         input = get_VMF1(obs, input, settings.TROPO.vmf_version, ~settings.INPUT.bool_parfor, ApproximatePosition(Epoch, input, obs, settings));
     end
 
@@ -378,7 +371,7 @@ for q = q_range         % loop over epochs
         realtime_ende = settings.INPUT.bool_realtime && Epoch.gps_time >= ende_sow;
         if STOP_CALC || realtime_ende
             settings.PROC.epochs(2) = q + (settings.PROC.epochs(1)-1);
-            if settings.INPUT.bool_realtime || strcmp(settings.ADJ.filter.direction, 'Forward')
+            if settings.INPUT.bool_realtime || contains(settings.ADJ.filter.direction, 'Forwards')
                 % only shrink q_range for real-time or forward processing
                 q_range(q+1:end) = [];     % remove not-processed epochs for creating output
             end
@@ -387,6 +380,28 @@ for q = q_range         % loop over epochs
     end
  
 end             % end of loop over epochs / epoch-wise calculations
+
+
+
+%% -+-+-+-+-+- POST-PROCESSING: RTS SMOOTHER -+-+-+-+-+-
+
+if strcmp(settings.ADJ.filter.direction, 'Forwards + RTS')
+    if bool_print;   fprintf('\n\nStarting RTS Smoother...\n');   end
+    if bool_print && ishandle(WBAR);  waitbar(1, WBAR, 'RTS Smoother is running...');  end
+
+    % Execute RTS Smoother over all processed forward epochs
+    storeData = RTS_Smoother(storeData, Adjust.NO_PARAM, satellites.sats, bool_print);
+
+    % Map smoothed estimates to storeData fields for downstream evaluation/plotting
+    storeData = map_smoothed_results(storeData, Adjust.NO_PARAM);
+
+    % Integer ambiguity fixing with the smoothed float solution
+    if settings.AMBFIX.bool_AMBFIX
+        storeData = PPPAR_RTS(storeData, satellites, settings, input, obs, Adjust.NO_PARAM, ...
+            unique([Adjust.float_reset_epochs, Adjust.fixed_reset_epochs]));
+    end
+end
+
 
 
 %% -+-+-+-+-+-VISUALS AND OUTPUT-+-+-+-+-+-
@@ -426,6 +441,40 @@ end
 if settings.EXP.settings
     save(fullfile(settings.PROC.output_dir, 'settings.mat'),'settings')
 end
+
+% apply lever arm on results: shift the estimated coordinates (and velocities)
+% from the GNSS antenna to the desired reference point.
+if settings.KINE.bool_offset && settings.KINE.bool_kinematic
+    storeData.param(:, 1:3)      = storeData.param(:, 1:3)      + storeData.leverarm_ECEF;
+    storeData.param_pred(:, 1:3) = storeData.param_pred(:, 1:3) + storeData.leverarm_ECEF;
+    if isfield(storeData, 'param_fix')
+        % fixed solution: only correct epochs with a fix
+        fix = storeData.fixed;
+        storeData.param_fix(fix, 1:3) = storeData.param_fix(fix, 1:3) + storeData.leverarm_ECEF(fix, :);
+    end
+    if isfield(storeData, 'param_fwd')
+        % RTS smoother: float solution of forward run
+        storeData.param_fwd(:, 1:3) = storeData.param_fwd(:, 1:3) + storeData.leverarm_ECEF;
+    end
+    % apply lever arm on velocity (rigid-body rotation)
+    if contains(settings.PROC.method, '+ Doppler')
+        t = storeData.gpstime;                      % epoch time [seconds of week], monotonic
+        L = storeData.leverarm_ECEF;                % [n x 3] ECEF lever arm per epoch
+        dLdt = [gradient(L(:,1), t), gradient(L(:,2), t), gradient(L(:,3), t)];
+        storeData.param(:, 4:6)      = storeData.param(:, 4:6)      + dLdt;
+        storeData.param_pred(:, 4:6) = storeData.param_pred(:, 4:6) + dLdt;
+        if isfield(storeData, 'param_fwd')
+            storeData.param_fwd(:, 4:6) = storeData.param_fwd(:, 4:6) + dLdt;
+        end
+    end
+end
+
+
+% transform estimated coordinates to desired coordinate system and Epoch
+if strcmp(settings.EXP.coord_sys, 'EPSG Code:')
+    [storeData, obs] = CoordinateTrafo(storeData, obs, settings.EXP.epsg_code);
+end
+
 
 % Create Output Files
 [storeData] = create_output(storeData, obs, settings, q_range); 

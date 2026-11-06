@@ -9,7 +9,7 @@ function [Epoch] = checkMultipath(Epoch, settings, use_column, obs_int, last_res
 %   obs_int     integer, interval of observations in seconds
 %   last_reset  [sow], time of last reset of PPP solution
 % OUTPUT:
-%   Epoch       struct, .exclude updated
+%   Epoch       struct, .useCode updated
 %
 % Revision:
 %   2023/11/03, MFWG: adding QZSS
@@ -24,7 +24,7 @@ function [Epoch] = checkMultipath(Epoch, settings, use_column, obs_int, last_res
 c1_gps = use_column{1, 4};      % column of C1-observations in observation-matrix (Epoch.obs)
 c2_gps = use_column{1, 5};      % column of C2-observations in observation-matrix (Epoch.obs)
 c3_gps = use_column{1, 6};
-% get columns of observations for Glonass
+% get columns of observations for GLONASS
 c1_glo = use_column{2, 4};      % column of C1-observations in observation-matrix (Epoch.obs)
 c2_glo = use_column{2, 5};      % ...
 c3_glo = use_column{2, 6};
@@ -110,10 +110,6 @@ C_diff_n_(Epoch.qzss) = abs(C_diff_n_(Epoch.qzss) - median(C_diff_n_(Epoch.qzss)
 above_thresh = C_diff_n_ > mp_thresh;
 mp_found = ~mp_cooldown & above_thresh;
 
-% make sure that dimension are correct when saving results (e.g., IF LC processing)
-j_ = j;
-if j > settings.INPUT.proc_freqs;       j_ = 1;     end
-
 % save results: code difference
 Epoch.mp_C_diff(j,Epoch.sats) = C_diff_n_;      
 
@@ -123,14 +119,23 @@ end
 
 
 
+% map multipath flags of input frequency j to the processed frequencies
+n_input = settings.INPUT.num_freqs;
+% create matrix to prepare the mapping
+excl_cooldown = false(numel(Epoch.sats), n_input);      excl_cooldown(:,j) = mp_cooldown(:);
+excl_found    = false(numel(Epoch.sats), n_input);      excl_found(:,j)    = mp_found(:);
+% map the input frequencies to the processed frequencies
+excl_cooldown = Map2ProcFrqs(excl_cooldown, n_input, settings.IONO.model);
+excl_found    = Map2ProcFrqs(excl_found,    n_input, settings.IONO.model);
+
 % save results: on multipath cooldown
-Epoch.exclude(:,j_) = Epoch.exclude(:,j_) | mp_cooldown';	% exclude observations on cooldown
-Epoch.sat_status(mp_cooldown,j_) = 14; 	% save satellite status (multipath cooldown)
+Epoch.useCode = Epoch.useCode & ~excl_cooldown;	% exclude observations on cooldown
+Epoch.sat_status(excl_cooldown) = 14;
 
 % save results: multipath detected in current epoch
-Epoch.exclude(:,j_) = Epoch.exclude(:,j_) | mp_found';	    % exclude observations where multipath was detected
-Epoch.mp_last(j,Epoch.sats(mp_found)) = Epoch.gps_time;     % save time of MP events
-Epoch.sat_status(mp_found,j_) = 4;     	% save satellite status (multipath detected)
+Epoch.useCode = Epoch.useCode & ~excl_found;	% exclude observations where multipath was detected
+Epoch.mp_last(j, Epoch.sats(mp_found)) = Epoch.gps_time;     % save time of MP events
+Epoch.sat_status(excl_found) = 4; 
 
 % % print information about detected multipath
 % if any(mp_found)

@@ -1,17 +1,27 @@
-function [R] = YawPitchRoll2ECEF(yaw, pitch, roll, lat, lon)
+function [R] = YawPitchRoll2ECEF(yaw, pitch, roll, lat, lon, flu)
 % This function calculates the orientation in ECEF using yaw, pitch, roll
 % as an input. Roll, pitch, and yaw are defined here in the conventional
-% way. The output is the rotation matrix from the body frame to the ECEF.
-% ATTENTION: uses NED (North-East-DOWN)
+% (NED) way. The output is the rotation matrix from the body frame to the
+% ECEF.
 % 
+% The body frame is selected with the boolean flu:
+%   flu = true  (default): FLU (Forward-Left-Up)
+%   flu = false          : NED (North-East-Down)
+% The FLU body axes relate to the NED body axes as: 
+% Forward = North, Left = -East, Up = -Down.
+% 
+% NOTE: Only the body-axis labeling changes; yaw, pitch and roll always keep
+% their NED sense (identical physical attitude). 
+%
 % INPUT:
 %   yaw     [°], yaw rotates around the vertical axis.
 %   pitch   [°], pitch rotates around the transverse axis
-%   roll    [°], roll rotates around the longitudinal axis 
+%   roll    [°], roll rotates around the longitudinal axis
 %   lat     [rad], latitude
 %   lon     [rad], longitude
+%   flu     [bool], optional, true = FLU, false = NED
 % OUTPUT:
-%	R       rotation matrix
+%	R       rotation matrix (body -> ECEF)
 %
 % Revision:
 %   ...
@@ -19,6 +29,10 @@ function [R] = YawPitchRoll2ECEF(yaw, pitch, roll, lat, lon)
 % This function belongs to raPPPid, Copyright (c) 2026, M.F. Wareyka-Glaner
 % *************************************************************************
 
+% default to FLU body frame
+if nargin < 6 || isempty(flu)
+    flu = true;
+end
 
 % convert yaw/pitch/roll from degrees to radians
 yaw = yaw/180*pi;
@@ -58,5 +72,11 @@ Ren = [ -slat*clon, -slon, -clat*clon;
         -slat*slon,  clon, -clat*slon;
         clat,          0,     -slat ];
 
-% final rotation: body -> ECEF
+% rotation: NED body -> ECEF
 R = Ren * Rnb;
+
+% relabel the body axes from NED to FLU (Forward=North, Left=-East, Up=-Down)
+if flu
+    M = diag([1, -1, -1]);
+    R = R * M;
+end

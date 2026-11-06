@@ -1,5 +1,8 @@
 function vis_plotFixedAmbiguities(settings, GPS_on, GAL_on, BDS_on, QZS_on, storeData, xAxis_str, satellites)
-% vizualization of fixed  Ambiguities (EW, WL, NL and all)
+% Creates a visualization of the fixed ambiguities.
+% 2-frequency IF LC: WL, NL 
+% 3-frequency IF LC: WL, EW, NL
+% uncombined model:  N1, N2, N3
 %
 % INPUT:
 %   settings        processing settings from GUI
@@ -23,30 +26,31 @@ j = settings.INPUT.proc_freqs;              % number of processed frequencies
 n = GPS_on+GAL_on+BDS_on;                   % number of rows of plot
 
 %% Ionosphere-Free Linear Combination
-if contains(settings.IONO.model,'IF-LC')
+if contains(settings.IONO.model, '2-Frequency-IF-LCs')
+    % get variables of WL and NL from storeData
     try
-        WL = full(storeData.N_WL_12)';          % sats x epochs
-        NL = full(storeData.N_NL_12)';          % sats x epochs
+        WL_12 = full(storeData.N_WL_12)';          % sats x epochs
+        NL_12 = full(storeData.N_NL_12)';          % sats x epochs
     catch
-        WL = full(storeData.N_WL)';             % sats x epochs
-        NL = full(storeData.N_NL)';             % sats x epochs
+        WL_12 = full(storeData.N_WL)';             % sats x epochs
+        NL_12 = full(storeData.N_NL)';             % sats x epochs
     end
-    WL(WL==0) = NaN;            % NaN were replaced with 0 to use sparse
-    NL(NL==0) = NaN;
-    WL(WL==0.1) = 0;            % 0 were replaced with 0.1 to use sparse
-    NL(NL==0.1) = 0;
+    WL_12(WL_12==0) = NaN;            % NaN were replaced with 0 to use sparse
+    NL_12(NL_12==0) = NaN;
+    WL_12(WL_12==0.1) = 0;            % 0 were replaced with 0.1 to use sparse
+    NL_12(NL_12==0.1) = 0;
     if j > 1
         try
-            EW = full(storeData.N_WL_23)';      % sats x epochs
-            EN = full(storeData.N_NL_23)';    	% sats x epochs
+            WL_23 = full(storeData.N_WL_23)';      % sats x epochs
+            NL_23 = full(storeData.N_NL_23)';      % sats x epochs
         catch
-            EW = full(storeData.N_EW)';         % sats x epochs
-            EN = full(storeData.N_EN)';         % sats x epochs
+            WL_23 = full(storeData.N_EW)';         % sats x epochs
+            NL_23 = full(storeData.N_EN)';         % sats x epochs
         end
-        EW(EW==0) = NaN;        % NaN were replaced with 0 to use sparse
-        EN(EN==0) = NaN;
-        EW(EW==0.1) = 0;        % 0 were replaced to use sparse
-        EN(EN==0.1) = 0;
+        WL_23(WL_23==0) = NaN;        % NaN were replaced with 0 to use sparse
+        NL_23(NL_23==0) = NaN;
+        WL_23(WL_23==0.1) = 0;        % 0 were replaced to use sparse
+        NL_23(NL_23==0.1) = 0;
     end
     
     if GPS_on
@@ -67,11 +71,11 @@ if contains(settings.IONO.model,'IF-LC')
         set(dcm, 'updatefcn', @vis_customdatatip_fixed_amb)
         
         % Wide-lane plot for GPS
-        WL_GPS = WL(idx_GPS,:);
+        WL_GPS = WL_12(idx_GPS,:);
         plot_fixed_ambs(WL_GPS, Inv_GPS, Cutoff_GPS, refSatGPS, 'Fixed Wide-Lane GPS', xAxis_str, 3, 1, j)
         
         % Narrow-lane plot for GPS
-        NL_GPS = NL(idx_GPS,:);        % one additional row for pcolor plot
+        NL_GPS = NL_12(idx_GPS,:);        % one additional row for pcolor plot
         plot_fixed_ambs(NL_GPS, Inv_GPS, Cutoff_GPS, refSatGPS, 'Fixed Narrow-Lane GPS', xAxis_str, 3, 2, j)
         
         % Fixed satellites plot for GPS
@@ -82,12 +86,12 @@ if contains(settings.IONO.model,'IF-LC')
         if j > 1
             
             % Extra-Wide-lane plot for GPS
-            EW_GPS = EW(idx_GPS,:);
+            EW_GPS = WL_23(idx_GPS,:);
             Inv_GPS(isnan(EW_GPS)) = 1;   % necessary because not all GPS send on three frequencies
             plot_fixed_ambs(EW_GPS, Inv_GPS, Cutoff_GPS, refSatGPS, 'Fixed Extra-Wide GPS', xAxis_str, 3, 4, j)
             
             % Extra-Narrow-lane plot for GPS
-            EN_GPS = EN(idx_GPS,:);        % one additional row for pcolor plot
+            EN_GPS = NL_23(idx_GPS,:);        % one additional row for pcolor plot
             plot_fixed_ambs(EN_GPS, Inv_GPS, Cutoff_GPS, refSatGPS, 'Fixed Extra-Narrow GPS', xAxis_str, 3, 5, j)
             
             % Fixed satellites plot for GPS
@@ -122,11 +126,11 @@ if contains(settings.IONO.model,'IF-LC')
         set(dcm, 'updatefcn', @vis_customdatatip_fixed_amb)
         
         % Wide-lane plot for Galileo
-        WL_GAL = WL(idx_GAL,:);
+        WL_GAL = WL_12(idx_GAL,:);
         plot_fixed_ambs(WL_GAL, Inv_GAL, Cutoff_GAL, refSatGAL, 'Fixed Wide-Lane Galileo', xAxis_str, 3, 1, j)
         
         % Narrow-lane plot for Galileo
-        NL_GAL = NL(idx_GAL,:);
+        NL_GAL = NL_12(idx_GAL,:);
         plot_fixed_ambs(NL_GAL, Inv_GAL, Cutoff_GAL, refSatGAL, 'Fixed Narrow-Lane Galileo', xAxis_str, 3, 2, j)
         
         % Fixed satellites plot for Galileo
@@ -136,11 +140,11 @@ if contains(settings.IONO.model,'IF-LC')
         
         if j > 1
             % Extra-Wide-lane plot for Galileo
-            EW_GAL = EW(idx_GAL,:);
+            EW_GAL = WL_23(idx_GAL,:);
             plot_fixed_ambs(EW_GAL, Inv_GAL, Cutoff_GAL, refSatGAL, 'Fixed Extra-Wide Galileo', xAxis_str, 3, 4, j)
             
             % Extra-Narrow plot for Galileo
-            EN_GAL = EN(idx_GAL,:);
+            EN_GAL = NL_23(idx_GAL,:);
             plot_fixed_ambs(EN_GAL, Inv_GAL, Cutoff_GAL, refSatGAL, 'Fixed Extra-Narrow Galileo', xAxis_str, 3, 5, j)
             
             % Fixed satellites plot for Galileo
@@ -173,11 +177,11 @@ if contains(settings.IONO.model,'IF-LC')
         set(dcm, 'updatefcn', @vis_customdatatip_fixed_amb)
         
         % Wide-lane plot for BeiDou
-        WL_BDS = WL(idx_BDS,:);
+        WL_BDS = WL_12(idx_BDS,:);
         plot_fixed_ambs(WL_BDS, Inv_BDS, Cutoff_BDS, refSatBDS, 'Fixed Wide-Lane BeiDou', xAxis_str, 3, 1, j)
         
         % Narrow-lane plot for BeiDou
-        NL_BDS = NL(idx_BDS,:);
+        NL_BDS = NL_12(idx_BDS,:);
         plot_fixed_ambs(NL_BDS, Inv_BDS, Cutoff_BDS, refSatBDS, 'Fixed Narrow-Lane BeiDou', xAxis_str, 3, 2, j)
         
         % Fixed satellites plot for BeiDou
@@ -187,11 +191,11 @@ if contains(settings.IONO.model,'IF-LC')
         
         if j > 1
             % Extra-Wide-lane plot for BeiDou
-            EW_BDS = EW(idx_BDS,:);
+            EW_BDS = WL_23(idx_BDS,:);
             plot_fixed_ambs(EW_BDS, Inv_BDS, Cutoff_BDS, refSatBDS, 'Fixed Extra-Wide BeiDou', xAxis_str, 3, 4, j)
             
             % Extra-Narrow plot for BeiDou
-            EN_BDS = EN(idx_BDS,:);
+            EN_BDS = NL_23(idx_BDS,:);
             plot_fixed_ambs(EN_BDS, Inv_BDS, Cutoff_BDS, refSatBDS, 'Fixed Extra-Narrow BeiDou', xAxis_str, 3, 5, j)
             
             % Fixed satellites plot for BeiDou
@@ -224,11 +228,11 @@ if contains(settings.IONO.model,'IF-LC')
         set(dcm, 'updatefcn', @vis_customdatatip_fixed_amb)
 
         % Wide-lane plot for QZSS
-        WL_QZS = WL(idx_QZS,:);
+        WL_QZS = WL_12(idx_QZS,:);
         plot_fixed_ambs(WL_QZS, Inv_QZS, Cutoff_QZS, refSatQZS, 'Fixed Wide-Lane QZSS', xAxis_str, 3, 1, j)
 
         % Narrow-lane plot for BeiDou
-        NL_QZS = NL(idx_QZS,:);
+        NL_QZS = NL_12(idx_QZS,:);
         plot_fixed_ambs(NL_QZS, Inv_QZS, Cutoff_QZS, refSatQZS, 'Fixed Narrow-Lane QZSS', xAxis_str, 3, 2, j)
 
         % Fixed satellites plot for BeiDou
@@ -238,11 +242,11 @@ if contains(settings.IONO.model,'IF-LC')
 
         if j > 1
             % Extra-Wide-lane plot for QZSS
-            EW_QZS = EW(idx_QZS,:);
+            EW_QZS = WL_23(idx_QZS,:);
             plot_fixed_ambs(EW_QZS, Inv_QZS, Cutoff_QZS, refSatQZS, 'Fixed Extra-Wide QZSS', xAxis_str, 3, 4, j)
 
             % Extra-Narrow plot for BeiDou
-            EN_QZS = EN(idx_QZS,:);
+            EN_QZS = NL_23(idx_QZS,:);
             plot_fixed_ambs(EN_QZS, Inv_QZS, Cutoff_QZS, refSatQZS, 'Fixed Extra-Narrow QZSS', xAxis_str, 3, 5, j)
 
             % Fixed satellites plot for QZSS
@@ -257,6 +261,165 @@ if contains(settings.IONO.model,'IF-LC')
         %     obs_QZS = observ(:,idx_QZS);
         %     plot_no_fixed(bool_EW_QZS, bool_WL_QZS, bool_NL_QZS, obs_QZS, 'QZSS', xAxis_str, 5:6)
     end
+
+
+elseif strcmp(settings.IONO.model, '3-Frequency-IF-LC')
+%% 3-frequency ionosphere-free linear combination
+
+% get variables of WL and NL from storeData
+WL_12 = full(storeData.N_WL_12)';          % sats x epochs
+WL_23 = full(storeData.N_WL_23)';      % sats x epochs
+NL_12 = full(storeData.N_NL_12)';          % sats x epochs
+
+% NaN were replaced with 0 to use sparse
+WL_12(WL_12==0) = NaN;
+WL_23(WL_23==0) = NaN;
+NL_12(NL_12==0) = NaN;
+
+% 0 were replaced to use sparse
+WL_12(WL_12==0.1) = 0;
+WL_23(WL_23==0.1) = 0;
+NL_12(NL_12==0.1) = 0;
+
+if GPS_on
+    % prepare some variables
+    refSatGPS = storeData.refSatGPS;
+    idx_GPS = 1:DEF.SATS_GPS;
+    Inv_GPS = Elev(:, idx_GPS)';    % elevation of GPS-sats, sats x epochs
+    Inv_GPS(Inv_GPS>0) = NaN;
+    Inv_GPS(Inv_GPS==0) = 1;        % true if satellite invisible
+    Cutoff_GPS = double((Elev(:,idx_GPS)' < settings.AMBFIX.cutoff & Inv_GPS~=1));
+    Cutoff_GPS(Cutoff_GPS == 0) = NaN; 	% true if satellite under fixing cutoff
+
+    % create figure
+    fig_fig_gps = figure('Name', 'Fixed Ambiguities GPS', 'NumberTitle','off', 'units','normalized', 'outerposition',[0 0 1 1]);
+    % add customized datatip
+    dcm = datacursormode(fig_fig_gps);
+    datacursormode on
+    set(dcm, 'updatefcn', @vis_customdatatip_fixed_amb)
+
+    % Wide-lane plot for GPS
+    WL_GPS = WL_12(idx_GPS,:);
+    plot_fixed_ambs(WL_GPS, Inv_GPS, Cutoff_GPS, refSatGPS, 'Fixed WL GPS', xAxis_str, 4, 1, 1)
+
+    % Extra Wide-lane plot for GPS
+    EW_GPS = WL_23(idx_GPS,:);
+    plot_fixed_ambs(EW_GPS, Inv_GPS, Cutoff_GPS, refSatGPS, 'Fixed EWL GPS', xAxis_str, 4, 2, 1)    
+
+    % Narrow-lane plot for GPS
+    NL_GPS = NL_12(idx_GPS,:);        % one additional row for pcolor plot
+    plot_fixed_ambs(NL_GPS, Inv_GPS, Cutoff_GPS, refSatGPS, 'Fixed N1 GPS', xAxis_str, 4, 3, 1)
+
+    % Fixed satellites plot for GPS
+    fixd_sats = double(~isnan(WL_GPS) & ~isnan(EW_GPS) & ~isnan(NL_GPS));
+    fixd_sats(fixd_sats==0) = NaN;
+    plot_fixed_ambs(double(fixd_sats), Inv_GPS, Cutoff_GPS, refSatGPS, 'Fixed GPS Satellites', xAxis_str, 4, 4, 1)
+end
+
+if GAL_on
+    % prepare some variables
+    refSatGAL = mod(storeData.refSatGAL,100);
+    idx_GAL = 201:200+DEF.SATS_GAL;
+    Inv_GAL = Elev(:, idx_GAL)';    % elevation of Galileo-sats, sats x epochs
+    Inv_GAL(Inv_GAL>0) = NaN;
+    Inv_GAL(Inv_GAL==0) = 1;        % true if satellite invisible
+    Cutoff_GAL = double((Elev(:,idx_GAL)' < settings.AMBFIX.cutoff & Inv_GAL~=1));
+    Cutoff_GAL(Cutoff_GAL == 0) = NaN; 	% true if satellite under fixing cutoff
+
+    % create figure
+    fig_fig_gal = figure('Name', 'Fixed Ambiguities Galileo', 'NumberTitle','off', 'units','normalized', 'outerposition',[0 0 1 1]);
+    % add customized datatip
+    dcm = datacursormode(fig_fig_gal);
+    datacursormode on
+    set(dcm, 'updatefcn', @vis_customdatatip_fixed_amb)
+
+    % Wide-lane plot for Galileo
+    WL_GAL = WL_12(idx_GAL,:);
+    plot_fixed_ambs(WL_GAL, Inv_GAL, Cutoff_GAL, refSatGAL, 'Fixed WL Galileo', xAxis_str, 4, 1, 1)
+
+    % Extra Wide-lane plot for Galileo
+    EW_GAL = WL_23(idx_GAL,:);
+    plot_fixed_ambs(EW_GAL, Inv_GAL, Cutoff_GAL, refSatGAL, 'Fixed EWL Galileo', xAxis_str, 4, 2, 1)
+
+    % Narrow-lane plot for Galileo
+    NL_GAL = NL_12(idx_GAL,:);
+    plot_fixed_ambs(NL_GAL, Inv_GAL, Cutoff_GAL, refSatGAL, 'Fixed N1 Galileo', xAxis_str, 4, 3, 1)
+
+    % Fixed satellites plot for Galileo
+    fixd_sats = double(~isnan(WL_GAL) & ~isnan(EW_GAL) & ~isnan(NL_GAL));
+    fixd_sats(fixd_sats==0) = NaN;
+    plot_fixed_ambs(double(fixd_sats), Inv_GAL, Cutoff_GAL, refSatGAL, 'Fixed Galileo Satellites', xAxis_str, 4, 4, 1)
+end
+
+if BDS_on
+    % prepare some variables
+    refSatBDS = mod(storeData.refSatBDS,100);
+    idx_BDS = 301:300+DEF.SATS_BDS;
+    Inv_BDS = Elev(:, idx_BDS)';    % elevation of BeiDou-sats, sats x epochs
+    Inv_BDS(Inv_BDS>0) = NaN;
+    Inv_BDS(Inv_BDS==0) = 1;        % true if satellite invisible
+    Cutoff_BDS = double((Elev(:,idx_BDS)' < settings.AMBFIX.cutoff & Inv_BDS~=1));
+    Cutoff_BDS(Cutoff_BDS == 0) = NaN; 	% true if satellite under fixing cutoff
+
+    % create figure
+    fig_fig_bds = figure('Name', 'Fixed Ambiguities BeiDou', 'NumberTitle','off', 'units','normalized', 'outerposition',[0 0 1 1]);
+    % add customized datatip
+    dcm = datacursormode(fig_fig_bds);
+    datacursormode on
+    set(dcm, 'updatefcn', @vis_customdatatip_fixed_amb)
+
+    % Wide-lane plot for BeiDou
+    WL_BDS = WL_12(idx_BDS,:);
+    plot_fixed_ambs(WL_BDS, Inv_BDS, Cutoff_BDS, refSatBDS, 'Fixed WL BeiDou', xAxis_str, 4, 1, 1)
+
+    % Extra Wide-lane plot for BeiDou
+    EW_BDS = WL_23(idx_BDS,:);
+    plot_fixed_ambs(EW_BDS, Inv_BDS, Cutoff_BDS, refSatBDS, 'Fixed EWL BeiDou', xAxis_str, 4, 2, 1)
+
+    % Narrow-lane plot for BeiDou
+    NL_BDS = NL_12(idx_BDS,:);
+    plot_fixed_ambs(NL_BDS, Inv_BDS, Cutoff_BDS, refSatBDS, 'Fixed N1 BeiDou', xAxis_str, 4, 3, 1)
+
+    % Fixed satellites plot for BeiDou
+    fixd_sats = double(~isnan(WL_BDS) & ~isnan(EW_BDS) & ~isnan(NL_BDS));
+    fixd_sats(fixd_sats==0) = NaN;
+    plot_fixed_ambs(double(fixd_sats), Inv_BDS, Cutoff_BDS, refSatBDS, 'Fixed BeiDou Satellites', xAxis_str, 4, 4, 1)
+end
+
+if QZS_on
+    % prepare some variables
+    refSatQZS = mod(storeData.refSatQZS,100);
+    idx_QZS = 401:400+DEF.SATS_QZSS;
+    Inv_QZS = Elev(:, idx_QZS)';    % elevation of QZSS-sats, sats x epochs
+    Inv_QZS(Inv_QZS>0) = NaN;
+    Inv_QZS(Inv_QZS==0) = 1;        % true if satellite invisible
+    Cutoff_QZS = double((Elev(:,idx_QZS)' < settings.AMBFIX.cutoff & Inv_QZS~=1));
+    Cutoff_QZS(Cutoff_QZS == 0) = NaN; 	% true if satellite under fixing cutoff
+
+    % create figure
+    fig_fig_qzs = figure('Name', 'Fixed Ambiguities QZSS', 'NumberTitle','off', 'units','normalized', 'outerposition',[0 0 1 1]);
+    % add customized datatip
+    dcm = datacursormode(fig_fig_qzs);
+    datacursormode on
+    set(dcm, 'updatefcn', @vis_customdatatip_fixed_amb)
+
+    % Wide-lane plot for QZSS
+    WL_QZS = WL_12(idx_QZS,:);
+    plot_fixed_ambs(WL_QZS, Inv_QZS, Cutoff_QZS, refSatQZS, 'Fixed WL QZSS', xAxis_str, 4, 1, 1)
+
+    % Extra Wide-lane plot for QZSS
+    EW_QZS = WL_23(idx_QZS,:);
+    plot_fixed_ambs(EW_QZS, Inv_QZS, Cutoff_QZS, refSatQZS, 'Fixed EWL QZSS', xAxis_str, 4, 2, 1)
+
+    % Narrow-lane plot for QZSS
+    NL_QZS = NL_12(idx_QZS,:);
+    plot_fixed_ambs(NL_QZS, Inv_QZS, Cutoff_QZS, refSatQZS, 'Fixed N1 QZSS', xAxis_str, 4, 3, 1)
+
+    % Fixed satellites plot for QZSS
+    fixd_sats = double(~isnan(WL_QZS) & ~isnan(EW_QZS) & ~isnan(NL_QZS));
+    fixd_sats(fixd_sats==0) = NaN;
+    plot_fixed_ambs(double(fixd_sats), Inv_QZS, Cutoff_QZS, refSatQZS, 'Fixed QZSS Satellites', xAxis_str, 4, 4, 1)
+end
 
 
 else

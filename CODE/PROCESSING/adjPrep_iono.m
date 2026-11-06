@@ -58,13 +58,11 @@ s_f = no_sats*num_freq;               	% #satellites x #frequencies
 no_ambiguities = s_f * bool_code_phase;	% number of estimated ambiguities
 N_eye = eye(s_f);                       % square unit matrix, size = number of ambiguities
 N_idx = (NO_PARAM+1):(NO_PARAM+s_f);  	% indices of the ambiguities
+imu_available = false;
 
 iono_idx = ...      % indices of the ionospheric delay
     (1+NO_PARAM+no_ambiguities):(NO_PARAM+no_ambiguities+no_sats);
 iono_eye = eye(numel(iono_idx));
-
-
-
 
 
 %% Changes in satellite constellation
@@ -89,6 +87,7 @@ if Adjust.float
                 Epoch.NL_12(prns_old(del_idx)) = NaN;
                 Epoch.WL_12(prns_old(del_idx)) = NaN;
                 Epoch.WL_23(prns_old(del_idx)) = NaN;
+                Epoch.WL_13(prns_old(del_idx)) = NaN;
                 Epoch.NL_23(prns_old(del_idx)) = NaN;
             end
             no_sats_old = length(prns_old);
@@ -140,6 +139,11 @@ end
 if bool_filter
     dt = abs(Epoch.gps_time - Epoch.old.gps_time);      % absolute time difference between last and current epoch
 
+    % IMU first-time initialization and mechanization (strap-down prediction)
+    if settings.KINE.bool_kinematic && settings.KINE.bool_IMU  && settings.INPUT.rawDataAndroid
+        [Adjust, imu_available, S_fn] = adjPrep_IMU(Adjust, Epoch);
+    end
+
     % ----- Noise Matrix -----
     Noise = Adjust.Noise_0;
     % add noise of float ambiguities
@@ -153,7 +157,26 @@ if bool_filter
         Noise(7,7) = FILTER.Q_zwd;
     end
     Noise = Noise * dt/3600;    % scale process noise from 1 hour to observation interval
-    Adjust.Noise = Noise;  	    % save Noise Matrix of current epoch
+
+    if imu_available
+        Noise(24:26, 24:26) = eye(3) * Const.IMU_Q_ATT * dt;
+        Noise(27:29, 27:29) = eye(3) * Const.IMU_Q_BIAS * dt;
+        Noise(30:32, 30:32) = eye(3) * Const.IMU_Q_GYRO * dt;
+    end
+
+    % adaptive process noise for coordinates, velocity and attitude from IMU motion state
+    if imu_available && isfield(Epoch,'ZUPT_prob') && ~isnan(Epoch.ZUPT_prob)
+        if Epoch.ZUPT_prob > Const.IMU_ZUPT_THRESH_STATIC       % static
+            f_Q = Const.IMU_FQ_STATIC; f_att = Const.IMU_FATT_STATIC;
+        elseif Epoch.ZUPT_prob > Const.IMU_ZUPT_THRESH_QUASI    % quasi-static
+            f_Q = Const.IMU_FQ_QUASI;  f_att = Const.IMU_FATT_QUASI;
+        else                                                    % walking
+            f_Q = Const.IMU_FQ_WALK;   f_att = Const.IMU_FATT_WALK;
+        end
+        Noise(1:3,1:3) = Noise(1:3,1:3) * f_Q;
+        Noise(4:6,4:6) = Noise(4:6,4:6) * f_Q;
+        Noise(24:26,24:26) = Noise(24:26,24:26) * f_att;
+    end
     
     
     % ----- Transition Matrix -----
@@ -171,7 +194,26 @@ if bool_filter
     end
     % add dynamic model of ionospheric delays
     Transition(iono_idx,iono_idx) = iono_eye*FILTER.dynmodel_iono;
-    Adjust.Transition = Transition;  	% save Transition Matrix in Adjust
+    
+    % IMU F matrix coupling
+    if imu_available
+        Transition(1,4) = dt;
+        Transition(2,5) = dt;
+        Transition(3,6) = dt;
+        C_bn = quat2rotm(Adjust.quat');
+        pos_ecef_0 = Adjust.param(1:3);
+        [lat0, lon0, ~] = ecef2geodetic(wgs84Ellipsoid, pos_ecef_0(1), pos_ecef_0(2), pos_ecef_0(3));
+
+        R_enu2ecef = [-sind(lon0),  -sind(lat0)*cosd(lon0),  cosd(lat0)*cosd(lon0); ...
+                       cosd(lon0),  -sind(lat0)*sind(lon0),  cosd(lat0)*sind(lon0); ...
+                       0,            cosd(lat0),             sind(lat0)];
+        Transition(4:6, 24:26) = -R_enu2ecef * S_fn * dt;
+        % TODO: velocity<->accel-bias coupling disabled for now, revisit
+        % Transition(4:6, 27:29) = -R_enu2ecef * C_bn * dt;
+        % Transition(24:26, 30:32) = -C_bn * dt;   % gyro bias feeds attitude error
+        Adjust.vel_imu = R_enu2ecef' * Adjust.param(4:6);
+    end
+
     
     
     % ----- covariance matrix -----
@@ -184,11 +226,26 @@ if bool_filter
     
     % ----- predict parameter vector -----
     Adjust.param_pred = Transition * Adjust.param;
-    
+    if settings.KINE.satellite.bool
+        % use dynamic prediction for satellite PPP
+        [Adjust.param_pred(1:6), Transition] = DynamicPredictionPosVel(...
+            Adjust.param, Epoch, obs, settings, Transition, Adjust.float);
+    end
+
+    % overriding position prediction with IMU result
+    % ||| TODO: add sanity check
+    if imu_available && norm(Adjust.param(1:3)) > 0 
+        delta_ecef = R_enu2ecef * Adjust.pos_imu_step;  
+        Adjust.param_pred(1:3) = pos_ecef_0 + delta_ecef;
+    end
     
     % ----- predict covariance matrix of parameters -----
     % cf. [00]: p.31, (2.39) or [01]: p.247, (7.122)
     Adjust.param_sigma_pred = Transition * Adjust.param_sigma * Transition' + Noise;
     Adjust.P_pred = inv(Adjust.param_sigma_pred);	% cholinv was used before
+
+    % ----- save Noise and Transition Matrix -----
+    Adjust.Noise = Noise;
+    Adjust.Transition = Transition; 
 end
 

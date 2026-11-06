@@ -15,6 +15,7 @@ function fixed = HMW_fixing(HMW, Epoch, elev, intv, settings, fixed)
 % Revision:
 %   2026/03/09, MFWG: improving code for fwd-bwd and readability
 %   2026/07/28, MFWG: improving fixing behavior (e.g., 2nd run, bwd)
+%   2026/10/23, MFWG: bug fixed for observation intervals < 1 s
 % 
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -23,7 +24,7 @@ function fixed = HMW_fixing(HMW, Epoch, elev, intv, settings, fixed)
 %% Preparations
 
 n = size(HMW,1);                                    % number of epochs of HMW LC
-eps2fix = settings.AMBFIX.HMW_window/round(intv);   % consider HMW fixing window
+eps2fix = round(settings.AMBFIX.HMW_window/intv);   % consider HMW fixing window [epochs]
 
 % make sure that HMW is sorted over epochs in the case of backwards first
 if ~Epoch.bool_2nd && (strcmp(settings.ADJ.filter.direction, 'Backwards') || strcmp(settings.ADJ.filter.direction, 'Bwd-Fwd'))
@@ -51,25 +52,34 @@ end
 
 % GPS
 if settings.INPUT.use_GPS && any(Epoch.gps) && Epoch.refSatGPS ~= 0
-    fixed = fix_EW_MW(HMW, Epoch.sats(Epoch.gps), Epoch.refSatGPS, elev(Epoch.gps), settings, fixed, q_curr, eps2fix, Epoch.bool_2nd);
+    fixed = fix_HMW(HMW, Epoch.sats(Epoch.gps), Epoch.refSatGPS, elev(Epoch.gps), settings, fixed, q_curr, eps2fix, Epoch.bool_2nd);
 end
 % Galileo
 if settings.INPUT.use_GAL && any(Epoch.gal) && Epoch.refSatGAL ~= 0
-    fixed = fix_EW_MW(HMW, Epoch.sats(Epoch.gal), Epoch.refSatGAL, elev(Epoch.gal), settings, fixed, q_curr, eps2fix, Epoch.bool_2nd);
+    fixed = fix_HMW(HMW, Epoch.sats(Epoch.gal), Epoch.refSatGAL, elev(Epoch.gal), settings, fixed, q_curr, eps2fix, Epoch.bool_2nd);
 end
 % BeiDou
 if settings.INPUT.use_BDS && any(Epoch.bds) && Epoch.refSatBDS ~= 0
-    fixed = fix_EW_MW(HMW, Epoch.sats(Epoch.bds), Epoch.refSatBDS, elev(Epoch.bds), settings, fixed, q_curr, eps2fix, Epoch.bool_2nd);
+    fixed = fix_HMW(HMW, Epoch.sats(Epoch.bds), Epoch.refSatBDS, elev(Epoch.bds), settings, fixed, q_curr, eps2fix, Epoch.bool_2nd);
 end
 % QZSS
 if settings.INPUT.use_QZSS && any(Epoch.qzss) && Epoch.refSatQZS ~= 0
-    fixed = fix_EW_MW(HMW, Epoch.sats(Epoch.qzss), Epoch.refSatQZS, elev(Epoch.qzss), settings, fixed, q_curr, eps2fix, Epoch.bool_2nd);
+    fixed = fix_HMW(HMW, Epoch.sats(Epoch.qzss), Epoch.refSatQZS, elev(Epoch.qzss), settings, fixed, q_curr, eps2fix, Epoch.bool_2nd);
 end
 
 
 
 
-function fixed = fix_EW_MW(HMW, prns, refSat, elev, settings, fixed, q_curr, eps2fix, bool_2nd)
+function fixed = fix_HMW(HMW, prns, refSat, elev, settings, fixed, q_curr, eps2fix, bool_2nd)
+% Fix the HMW LC by averaging. Only the continuous HMW arc containing 
+% the current epoch is used, for the satellites and for the reference 
+% satellite. If a satellite is lost (e.g., for one or some epoch(s)) the 
+% averaging is not done across the gap. For a forward-backward or 
+% backward-forward processing this means:
+% - 1st run: q_curr is the last row -> gap-free up to the current epoch
+% - 2nd run: q_curr lies inside the matrix -> the complete satellite arc
+%   (before and after the current epoch) is used
+% 
 % INPUT:
 %   HMW        	n x 410, Hatch-Melbourne-Wübbena LC [cyc]
 %   prns        sats x 1, satellites of current GNSS and epoch
@@ -94,13 +104,15 @@ n = size(HMW_gnss, 1);              % number of epochs with HMW data
 % replace zeros with NaN for reference satellite and other satellites
 HMW_refSat(HMW_refSat == 0) = NaN;
 HMW_gnss(HMW_gnss == 0)     = NaN;
+% keep only the reference satellite's arc containing the current epoch
+nn_ref = ~isnan(HMW_refSat);
+keep_ref = zeros(size(HMW_refSat));
+keep_ref(1:q_curr)   = flipud(cumprod(flipud(nn_ref(1:q_curr))));
+keep_ref(q_curr:end) = cumprod(nn_ref(q_curr:end));
+HMW_refSat(~keep_ref) = NaN;
 
-% keep only the continuous HMW arc that contains the current epoch (q_curr): 
-% if a satellite is lost for one (or more) epoch(s) the averaging
-% must not reach across the gap.
-% - 1st run: q_curr is the last row -> gap-free tail up to the current epoch
-% - 2nd run: q_curr lies inside the matrix -> the complete satellite arc
-%   (before and after the current epoch) is used
+
+% keep only the continuous HMW arc containing the current epoch
 notnan = ~isnan(HMW_gnss);
 keep = zeros(size(HMW_gnss));
 keep(1:q_curr,:)   = flipud(cumprod(flipud(notnan(1:q_curr,:)), 1));    % contiguous run up to the current epoch
@@ -108,7 +120,7 @@ keep(q_curr:end,:) = cumprod(notnan(q_curr:end,:), 1);                  % contig
 HMW_gnss(~keep) = NaN;
 
 % number of continuous HMW samples per satellite
-n_used = sum(keep, 1);
+n_used = sum(keep & keep_ref, 1);   % epochs where satellite AND reference satellite are kept
 
 % condition which satellites are of interest for fixing:
 % 1) satellites need enough continuous HMW samples: more than half the moving

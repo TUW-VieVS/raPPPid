@@ -157,6 +157,50 @@ switch settings.ORBCLK.CorrectionStream
         settings.BIASES.code_file  = [target dcmpr_bia];
         settings.BIASES.phase_file = [target dcmpr_bia];
 
+    case 'WUM Archive'
+        % WUM real-time service (RTS) archive from Wuhan University.
+        % check (IGSMAIL-8424) or [IGS-BAR], July 16, 2026
+        file_sp3 = ['WUM0MGXRTS_' yyyy doy '0000_01D_05M_ORB.SP3.gz'];
+        file_clk = ['WUM0MGXRTS_' yyyy doy '0000_01D_05S_CLK.CLK.gz'];
+        file_bia = ['WUM0MGXRTS_' yyyy doy '0000_01D_05M_OSB.BIA.gz'];
+
+        % type, archive name, and subfolder on igs.gnsswhu.cn
+        file_types   = {'sp3',      'clk',      'bia'};
+        file_names   = {file_sp3,   file_clk,   file_bia};
+        file_folders = {'orbit',    'clock',    'bias'};
+
+        % primary source: ftp://igs.gnsswhu.cn (each file in its own folder)
+        ftp_host    = 'igs.gnsswhu.cn:21';
+        % alternative source: ftps://bdspride.com (all files in one folder)
+        curl_host   = 'ftps://bdspride.com/';
+        curl_folder = ['wum/' gpsweek '/'];
+
+        avail_file = struct();      % path to the decompressed file for each type
+        for i = 1:numel(file_names)
+            type      = file_types{i};
+            file      = file_names{i};
+            ftp_folder = ['/pub/whu/phasebias/' yyyy '/' file_folders{i} '/'];
+            % try primary source first (ftp://igs.gnsswhu.cn) 
+            file_status = ftp_download(ftp_host, ftp_folder, file, target, false);
+            % fall back to alternative source (ftps://bdspride.com)
+            if file_status == 0
+                file_status = CurlDownload([target file], [curl_host curl_folder file], false);
+            end
+            if file_status == 0
+                errordlg({['No WUM real-time ' type ' found in archive.'], 'Please specify different source!'}, 'Error');
+            end
+            % unzip if download was successful (or archive was already there)
+            decompressed = unzip_and_delete({file}, {target});
+            avail_file.(type) = decompressed{1};
+        end
+
+        % orbit and clock handling like with "Precise Products" (sp3 and clk-file)
+        settings.ORBCLK.file_sp3 = avail_file.sp3;
+        settings.ORBCLK.file_clk = avail_file.clk;
+        % use .bia-file
+        settings.BIASES.code_file  = avail_file.bia;
+        settings.BIASES.phase_file = avail_file.bia;
+
 end
 
 % orbit and clock handling like with "Precise Products": sp3, clk

@@ -17,6 +17,7 @@ function [dT_clk, noclock] = satelliteClockBrdc(Ttr, Eph, isGPS, isGLO, isGAL, i
 %   2025/09/13, MFWG: change structure
 %   2025/10/02, MFWG: separate from satelliteClock.m
 %   2025/11/10, MFWG: input changed
+%   2026/09/17, MFWG: added QZSS 
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -27,7 +28,7 @@ dT_clk = 0;
 
 
 % coefficients for navigation clock correction
-if isGPS || isGAL || isBDS
+if isGPS || isGAL || isBDS || isQZSS
     toc = Eph(21);
     a2 = Eph(2);        a1 = Eph(20);        a0 = Eph(19);
     Ttr_ = Ttr;

@@ -28,7 +28,7 @@ var_amb = settings.ADJ.filter.var_amb;  % initial variance of ambiguities
 
 % get reduced parameter vector and predicted parameter vector
 param = Adjust.param(1:NO_PARAM);
-param_pred = Adjust.param(1:NO_PARAM);
+param_pred = Adjust.param_pred(1:NO_PARAM);
 
 % get float ambiguities (all processed frequencies)
 [N, idx_N] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, proc_frqs);
@@ -41,6 +41,9 @@ N_pred = reshape(N_pred, no_sats, proc_frqs);	% #sats x #frequencies
 % get covariance matrice and predicted covariance matrix
 Q_x = Adjust.param_sigma;
 Q_x_pred = Adjust.param_sigma_pred;
+
+% transformation matrix of the parameter vector for all GNSS
+T = eye(size(Q_x));
 
 
 
@@ -57,17 +60,19 @@ if settings.INPUT.use_GPS && Epoch.refSatGPS ~= 0
         idx_L2 = find(strcmp(Adjust.ORDER_PARAM, 'L2_bias_G'));
         idx_L3 = find(strcmp(Adjust.ORDER_PARAM, 'L3_bias_G'));
         idx_rec_clk_phase = find(strcmp(Adjust.ORDER_PARAM, 'rec_clk_phase_G'));        
-        % recalculate ambiguities and (covariances)
+        % recalculate ambiguities and covariances
         [N, N_pred, param, param_pred, bool_zero] = recalc_param(N, N_pred, param, param_pred, ...
             idx_now_G, isgps, idx_old_G, idx_L2, idx_L3, idx_rec_clk_phase, n_frqs_GPS);
-        [Q_x, Q_x_pred] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_G, isgps, ...
+        [Q_x, Q_x_pred, C] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_G, isgps, ...
             var_amb, no_sats, NO_PARAM, n_frqs_GPS, idx_L2, idx_L3, idx_rec_clk_phase);
+        T = C * T;          % accumulate transformation
         if bool_print; fprintf('\tChange of Reference Satellite GPS: %03d                           \n', Epoch.refSatGPS); end
     
     elseif newRefSat(1)
         % reset ambiguities and their covariances (to be on the safe side)
         [N, N_pred] = reset_N(N, N_pred, Epoch.gps);
         [Q_x, Q_x_pred] = reset_Q(Q_x, Q_x_pred, Epoch.gps, idx_N_, settings.ADJ.filter.var_amb);
+        T(idx_N_(Epoch.gps,:), :) = 0;     % reset ambiguities also in transformation
         if bool_print; fprintf('\tNew Reference Satellite GPS: %03d                 \n', Epoch.refSatGPS); end
     end
 end
@@ -86,17 +91,19 @@ if settings.INPUT.use_GLO && Epoch.refSatGLO ~= 0
         idx_L2 = find(strcmp(Adjust.ORDER_PARAM, 'L2_bias_R'));
         idx_L3 = find(strcmp(Adjust.ORDER_PARAM, 'L3_bias_R'));
         idx_rec_clk_phase = find(strcmp(Adjust.ORDER_PARAM, 'rec_clk_phase_R'));
-        % recalculate ambiguities and (covariances)
+        % recalculate ambiguities and covariances
         [N, N_pred, param, param_pred, bool_zero] = recalc_param(N, N_pred, param, param_pred, ...
             idx_now_R, isglo, idx_old_R, idx_L2, idx_L3, idx_rec_clk_phase, n_frqs_GLO);
-        [Q_x, Q_x_pred] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_R, isglo, ...
+        [Q_x, Q_x_pred, C] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_R, isglo, ...
             var_amb, no_sats, NO_PARAM, n_frqs_GLO, idx_L2, idx_L3, idx_rec_clk_phase);
+        T = C * T;          % accumulate transformation
         if bool_print; fprintf('\tChange of Reference Satellite GLONASS: %03d                           \n', Epoch.refSatGLO); end
     
     elseif newRefSat(2)
         % reset ambiguities and their covariances (to be on the safe side)
         [N, N_pred] = reset_N(N, N_pred, Epoch.glo);
         [Q_x, Q_x_pred] = reset_Q(Q_x, Q_x_pred, Epoch.glo, idx_N_, settings.ADJ.filter.var_amb);
+        T(idx_N_(Epoch.glo,:), :) = 0;     % reset ambiguities also in transformation
         if bool_print; fprintf('\tNew Reference Satellite GLONASS: %03d                 \n', Epoch.refSatGLO); end
     end
 end
@@ -115,17 +122,19 @@ if settings.INPUT.use_GAL && Epoch.refSatGAL ~= 0
         idx_L2 = find(strcmp(Adjust.ORDER_PARAM, 'L2_bias_E'));
         idx_L3 = find(strcmp(Adjust.ORDER_PARAM, 'L3_bias_E'));
         idx_rec_clk_phase = find(strcmp(Adjust.ORDER_PARAM, 'rec_clk_phase_E'));
-        % recalculate ambiguities and (covariances)
+        % recalculate ambiguities and covariances
         [N, N_pred, param, param_pred, bool_zero] = recalc_param(N, N_pred, param, param_pred, ...
             idx_now_E, isgal, idx_old_E, idx_L2, idx_L3, idx_rec_clk_phase, n_frqs_GAL);
-        [Q_x, Q_x_pred] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_E, isgal, ...
+        [Q_x, Q_x_pred, C] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_E, isgal, ...
             var_amb, no_sats, NO_PARAM, n_frqs_GAL, idx_L2, idx_L3, idx_rec_clk_phase);
+        T = C * T;          % accumulate transformation
         if bool_print; fprintf('\tChange of Reference Satellite Galileo: %03d                           \n', Epoch.refSatGAL); end
     
     elseif newRefSat(3)
         % reset ambiguities and their covariances (to be on the safe side)
         [N, N_pred] = reset_N(N, N_pred, Epoch.gal);
         [Q_x, Q_x_pred] = reset_Q(Q_x, Q_x_pred, Epoch.gal, idx_N_, settings.ADJ.filter.var_amb);
+        T(idx_N_(Epoch.gal,:), :) = 0;     % reset ambiguities also in transformation
         if bool_print; fprintf('\tNew Reference Satellite Galileo: %03d                 \n', Epoch.refSatGAL); end
     end
 end
@@ -144,17 +153,19 @@ if settings.INPUT.use_BDS && Epoch.refSatBDS ~= 0
         idx_L2 = find(strcmp(Adjust.ORDER_PARAM, 'L2_bias_C'));
         idx_L3 = find(strcmp(Adjust.ORDER_PARAM, 'L3_bias_C'));
         idx_rec_clk_phase = find(strcmp(Adjust.ORDER_PARAM, 'rec_clk_phase_C'));
-        % recalculate ambiguities and (covariances)
+        % recalculate ambiguities and covariances
         [N, N_pred, param, param_pred, bool_zero] = recalc_param(N, N_pred, param, param_pred, ...
             idx_now_C, isbds, idx_old_C, idx_L2, idx_L3, idx_rec_clk_phase, n_frqs_BDS);
-        [Q_x, Q_x_pred] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_C, isbds, ...
+        [Q_x, Q_x_pred, C] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_C, isbds, ...
             var_amb, no_sats, NO_PARAM, n_frqs_BDS, idx_L2, idx_L3, idx_rec_clk_phase);
+        T = C * T;          % accumulate transformation
         if bool_print; fprintf('\tChange of Reference Satellite BeiDou: %03d                           \n', Epoch.refSatBDS); end
     
     elseif newRefSat(4)
         % reset ambiguities and their covariances (to be on the safe side)
         [N, N_pred] = reset_N(N, N_pred, Epoch.bds);
         [Q_x, Q_x_pred] = reset_Q(Q_x, Q_x_pred, Epoch.bds, idx_N_, settings.ADJ.filter.var_amb);
+        T(idx_N_(Epoch.bds,:), :) = 0;     % reset ambiguities also in transformation
         if bool_print; fprintf('\tNew Reference Satellite BeiDou: %03d                 \n', Epoch.refSatBDS); end
     end
 end
@@ -173,17 +184,19 @@ if settings.INPUT.use_QZSS && Epoch.refSatQZS ~= 0
         idx_L2 = find(strcmp(Adjust.ORDER_PARAM, 'L2_bias_J'));
         idx_L3 = find(strcmp(Adjust.ORDER_PARAM, 'L3_bias_J'));
         idx_rec_clk_phase = find(strcmp(Adjust.ORDER_PARAM, 'rec_clk_phase_J'));
-        % recalculate ambiguities and (covariances)
+        % recalculate ambiguities and covariances
         [N, N_pred, param, param_pred, bool_zero] = recalc_param(N, N_pred, param, param_pred, ...
             idx_now_J, isqzs, idx_old_J, idx_L2, idx_L3, idx_rec_clk_phase, n_frqs_QZS);
-        [Q_x, Q_x_pred] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_J, isqzs, ...
+        [Q_x, Q_x_pred, C] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_now_J, isqzs, ...
             var_amb, no_sats, NO_PARAM, n_frqs_QZS, idx_L2, idx_L3, idx_rec_clk_phase);
+        T = C * T;          % accumulate transformation
         if bool_print; fprintf('\tChange of Reference Satellite QZSS: %03d                           \n', Epoch.refSatQZS); end
     
     elseif newRefSat(5)
         % reset ambiguities and their covariances (to be on the safe side)
         [N, N_pred] = reset_N(N, N_pred, Epoch.qzss);
         [Q_x, Q_x_pred] = reset_Q(Q_x, Q_x_pred, Epoch.qzss, idx_N_, settings.ADJ.filter.var_amb);
+        T(idx_N_(Epoch.qzss,:), :) = 0;     % reset ambiguities also in transformation
         if bool_print; fprintf('\tNew Reference Satellite QZSS: %03d                 \n', Epoch.refSatQZS); end
     end
 end
@@ -204,6 +217,12 @@ Adjust.param_pred(idx_N) = N_pred(:);
 Adjust.param_sigma = Q_x;
 Adjust.param_sigma_pred = Q_x_pred;
 Adjust.P_pred = inv(Adjust.param_sigma_pred);
+
+% transform x_pred_IEKF, which is the pseudo-observation of the parameter 
+% vector (IEKF) to the new datum satellite
+if isfield(Adjust, 'x_pred_IEKF') && ~isempty(Adjust.x_pred_IEKF)
+    Adjust.x_pred_IEKF = T * Adjust.x_pred_IEKF;
+end
 
 
 
@@ -280,13 +299,14 @@ N(bool_zero) = 0;
 N_(bool_zero) = 0;
 
 
-function [Q_x, Q_x_pred] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_new, gnss, ...
+function [Q_x, Q_x_pred, C] = recalc_Q(Q_x, Q_x_pred, bool_zero, idx_new, gnss, ...
     var, no_sats, NO_PARAM, frqs, idx_L2, idx_L3, idx_clk)
 % This function transforms the covariance matrix and its prediction to the
 % new reference satellite.
 %
 % Q_x           covariance matrix
 % Q_x_pred      predicted covariance matrix
+% C             transformation matrix (output)
 % bool_zero     boolean, FALSE = ambiguity estimated, TRUE = ambiguity is 0
 % idx_new       index of new reference satellite in Epoch.sats
 % gnss          boolean (e.g., true if satellite belongs to GNSS)
@@ -366,6 +386,10 @@ end
 % recalculate covariance matrix for the new reference satellite
 Q_x      = C * Q_x      * C';
 Q_x_pred = C * Q_x_pred * C';
+
+% avoid numerical issues and make sure that covariance matrices are symmetric
+Q_x      = (Q_x      + Q_x')      / 2; 
+Q_x_pred = (Q_x_pred + Q_x_pred') / 2; 
 
 % set the variance of the reference satellite's ambiguities to initial
 % variance of the ambiguities (specified in the GUI), otherwise matrix is

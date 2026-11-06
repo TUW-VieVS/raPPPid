@@ -23,7 +23,7 @@ function [] = SinglePlotting(satellites, storeData, obs, settings)
 %% Preparations
 
 fprintf('\n');      % Print empty line
-global STOP_CALC
+global STOP_CALC    %#ok<GVMIS>
 STOP_CALC = 0;
 
 if ~any(storeData.float)
@@ -39,19 +39,25 @@ end
 bool_phase = contains(settings.PROC.method,'+ Phase');     % phase observation processed?
 
 
-% correct time variables for receiver clock error, which was estimated
-% during processing
-if settings.INPUT.use_GPS
-    rec_clk_error = storeData.param(:, 8)/Const.C;
-elseif settings.INPUT.use_GLO
-    rec_clk_error = storeData.param(:, 9)/Const.C;
-elseif settings.INPUT.use_GAL
-    rec_clk_error = storeData.param(:,10)/Const.C;
-elseif settings.INPUT.use_BDS
-    rec_clk_error = storeData.param(:,11)/Const.C;
-elseif settings.INPUT.use_QZSS
-    rec_clk_error = storeData.param(:,12)/Const.C;
+% define indices for receiver (code) clock error to correct time variables 
+% for the estimated receiver clock error
+clk_idx = [8 11 14 17 20];      % IF or UC 
+if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+    clk_idx = [8 9 10 11 12];
 end
+% extract receiver clock error
+if settings.INPUT.use_GPS
+    rec_clk_error = storeData.param(:,clk_idx(1))/Const.C;
+elseif settings.INPUT.use_GLO
+    rec_clk_error = storeData.param(:,clk_idx(2))/Const.C;
+elseif settings.INPUT.use_GAL
+    rec_clk_error = storeData.param(:,clk_idx(3))/Const.C;
+elseif settings.INPUT.use_BDS
+    rec_clk_error = storeData.param(:,clk_idx(4))/Const.C;
+elseif settings.INPUT.use_QZSS
+    rec_clk_error = storeData.param(:,clk_idx(5))/Const.C;
+end
+% correct time variables
 storeData.gpstime = storeData.gpstime - rec_clk_error;
 storeData.time = storeData.time - seconds(rec_clk_error);
 
@@ -94,8 +100,9 @@ if isa(settings.PLOT.pos_true, 'double') || ~isfile(settings.PLOT.pos_true)
     xyz_true = settings.PLOT.pos_true;          % reference coordinates
     bool_true_pos = true;
     if any(isnan(xyz_true) | xyz_true == 0 | xyz_true == 1)     % no valid true position
-        pos_cart(bool_zero, :) = [];        % remove those
-        xyz_true = median(pos_cart, 1, 'omitnan')'; 	% take median position for coordinate differences
+        % take median position for coordinate differences and keep correct
+        % number of epochs
+        xyz_true = median(pos_cart(~bool_zero, :), 1, 'omitnan')';
         bool_true_pos = false;
     end
     % transform true positions in phi, lambda, h of WGS84 and into UTM
@@ -176,11 +183,11 @@ if STOP_CALC; return; end
 
 % -+-+-+-+- Figure: Map Plot -+-+-+-+-
 if settings.PLOT.map
-    try
-        MapMoviePlot(pos_geo(:,1)*180/pi, pos_geo(:,2)*180/pi, bool_true_pos, pos_true_geo.lat*180/pi, pos_true_geo.lon*180/pi, station_date, ff, settings.KINE.bool_kinematic, storeData.time)
-    catch
-        vis_MaPlot(pos_geo(:,1)*180/pi, pos_geo(:,2)*180/pi, bool_true_pos, pos_true_geo.lat*180/pi, pos_true_geo.lon*180/pi, station_date, ff)
-    end
+    % try
+    MapMoviePlot(pos_geo(:,1)*180/pi, pos_geo(:,2)*180/pi, bool_true_pos, pos_true_geo.lat*180/pi, pos_true_geo.lon*180/pi, station_date, ff, settings.KINE.bool_kinematic, storeData.time)
+    % catch
+    %     vis_MaPlot(pos_geo(:,1)*180/pi, pos_geo(:,2)*180/pi, bool_true_pos, pos_true_geo.lat, pos_true_geo.lon, station_date, ff)
+    % end
 end
 if STOP_CALC; return; end
 
@@ -239,10 +246,17 @@ if STOP_CALC; return; end
 
 % -+-+-+-+- Figure: Standard Deviation of Parameters -+-+-+-+-
 if settings.PLOT.cov_info
-    std_parameters = sqrt(storeData.param_var)';
+    if settings.PLOT.float;      std_parameters = sqrt(GetParamVarFromSigma(storeData.param_sigma,     storeData.NO_PARAM))';
+    elseif settings.PLOT.fixed;  std_parameters = sqrt(GetParamVarFromSigma(storeData.param_sigma_fix, storeData.NO_PARAM))';  end
     covParaPlot(hours, std_parameters, label_x_h, storeData.NO_PARAM, storeData.ORDER_PARAM, settings);
 end
 if STOP_CALC; return; end
+
+
+% -+-+-+-+- Figure: Attitude Plot -+-+-+-+-
+if settings.PLOT.attitude && settings.KINE.bool_kinematic && settings.KINE.bool_IMU
+    AttitudePlot(storeData, settings)
+end
 
 
 %% START PLOTTING FIGURES OF SAT SPECIFIC RESULTS
@@ -261,19 +275,19 @@ if bool_phase && settings.PLOT.amb
     %     -+-+-+-+- Figure: Float Ambiguity Plots -+-+-+-+-
     if settings.PLOT.float
         if isGPS    % GPS processed
-            FloatAmbPlot(hours, storeData, 1:DEF.SATS_GPS,       settings, label_x_h, 'G', reset_h, rgb);
+            FloatAmbPlot(hours, storeData, satellites, 1:DEF.SATS_GPS,       settings, label_x_h, 'G', reset_h, rgb);
         end
         if isGLO
-            FloatAmbPlot(hours, storeData, 101:100+DEF.SATS_GLO, settings, label_x_h, 'R', reset_h, rgb)
+            FloatAmbPlot(hours, storeData, satellites, 101:100+DEF.SATS_GLO, settings, label_x_h, 'R', reset_h, rgb)
         end
         if isGAL
-            FloatAmbPlot(hours, storeData, 201:200+DEF.SATS_GAL, settings, label_x_h, 'E', reset_h, rgb)
+            FloatAmbPlot(hours, storeData, satellites, 201:200+DEF.SATS_GAL, settings, label_x_h, 'E', reset_h, rgb)
         end
         if isBDS
-            FloatAmbPlot(hours, storeData, 301:300+DEF.SATS_BDS, settings, label_x_h, 'C', reset_h, rgb)
+            FloatAmbPlot(hours, storeData, satellites, 301:300+DEF.SATS_BDS, settings, label_x_h, 'C', reset_h, rgb)
         end
         if isQZSS
-            FloatAmbPlot(hours, storeData, 401:400+DEF.SATS_QZSS,settings, label_x_h, 'J', reset_h, rgb)
+            FloatAmbPlot(hours, storeData, satellites, 401:400+DEF.SATS_QZSS,settings, label_x_h, 'J', reset_h, rgb)
         end
     elseif settings.PLOT.fixed
         %     -+-+-+-+- Figure: Fixed Ambiguity Plots -+-+-+-+-
@@ -304,9 +318,12 @@ if STOP_CALC; return; end
 
 %     -+-+-+-+- Figure: Standard Deviation of Ambiguities  -+-+-+-+-
 if settings.PLOT.cov_amb && bool_phase
-    std_amb = sqrt(full(storeData.N_var_1));      % standard deviations of estimated ambiguities
-    if settings.INPUT.proc_freqs > 1; std_amb(:,:,2) = sqrt(full(storeData.N_var_2)); end
-    if settings.INPUT.proc_freqs > 2; std_amb(:,:,3) = sqrt(full(storeData.N_var_3)); end
+    % get standard deviations of estimated ambiguities from param_sigma
+    std_amb = zeros(numel(storeData.gpstime), DEF.SATS, settings.INPUT.proc_freqs);
+    for j = 1:settings.INPUT.proc_freqs
+        [~, N_var_j] = GetAmbiguityMatrix(storeData, satellites.sats, settings.INPUT.proc_freqs, j);
+        std_amb(:,:,j) = sqrt(N_var_j);
+    end
     vis_covAmbPlot(hours, std_amb, settings.ADJ.filter.var_amb, label_x_h, rgb, satellites.obs, isGPS, isGLO, isGAL, isBDS, isQZSS)
 end
 if STOP_CALC; return; end
@@ -343,8 +360,8 @@ if STOP_CALC; return; end
 if settings.PLOT.iono
     if strcmpi(settings.IONO.model,'Correct with ...')   ||   contains(settings.IONO.model,'Estimate')
         obs_bool = logical(full(satellites.obs));
-        vis_iono_plot(settings, storeData, label_x_h, hours, reset_h, obs_bool, rgb);
-        vis_ionodiff_histo(settings, storeData, obs_bool, full(satellites.elev));
+        vis_iono_plot(settings, storeData, satellites, label_x_h, hours, reset_h, obs_bool, rgb);
+        vis_ionodiff_histo(settings, storeData, satellites, obs_bool, full(satellites.elev));
     else
         fprintf('No Ionosphere correction was used.\n');
     end

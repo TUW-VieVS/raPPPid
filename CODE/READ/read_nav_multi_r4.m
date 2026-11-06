@@ -1,4 +1,4 @@
-function [klob, nequ, klob_BDS, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
+function [klob, nequ, klob_BDS, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS, Eph_QZS] = ...
     read_nav_multi_r4(NAV, leap_sec)
 % Function to read in a RINEX 4 multi GNSS broadcast message file.
 % GLONASS time is converted in GPS time, while BDS time is considered 
@@ -20,6 +20,7 @@ function [klob, nequ, klob_BDS, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 %   Eph_GLO         GLONASS navigation data
 %   Eph_GAL         Galileo navigation data
 %   Eph_BDS         BeiDou navigation data
+%   Eph_QZS         QZSS navigation data
 %
 %   Revision:
 %       2025/02/21, MFWG: slight format change, save nav.message type
@@ -32,7 +33,7 @@ function [klob, nequ, klob_BDS, BDGIM, Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = ...
 
 % check if data to read (real-time processing)
 klob = []; nequ = []; klob_BDS = []; BDGIM = [];
-Eph_GPS = []; Eph_GLO = []; Eph_GAL = []; Eph_BDS = [];
+Eph_GPS = []; Eph_GLO = []; Eph_GAL = []; Eph_BDS = []; Eph_QZS = [];
 if isempty(NAV)
     return
 end
@@ -63,11 +64,13 @@ no_eph_gps = sum(contains(NAV, '> EPH G'));
 no_eph_glo = sum(contains(NAV, '> EPH R'));
 no_eph_gal = sum(contains(NAV, '> EPH E'));
 no_eph_bds = sum(contains(NAV, '> EPH C'));
+no_eph_qzs = sum(contains(NAV, '> EPH J'));
 % initialize navigation message variables
 Eph_GPS = zeros(30, no_eph_gps);
 Eph_GLO = zeros(20, no_eph_glo);
 Eph_GAL = zeros(30, no_eph_gal);
 Eph_BDS = zeros(30, no_eph_bds);
+Eph_QZS = zeros(30, no_eph_qzs);
 
 % count number of ionosphere messages for each GNSS
 no_ion_gps = sum(contains(NAV, '> ION G'));
@@ -83,7 +86,7 @@ BDGIM    = zeros(no_ion_bds, 10);
 
 
 % ----- LOOP OVER DATA RECORDS -----
-i_gps = 1;      i_glo = 1;      i_gal = 1;     i_bds = 1;
+i_gps = 1;      i_glo = 1;      i_gal = 1;     i_bds = 1;      i_qzs = 1;
 n_NAV = length(NAV);
 
 % loop over lines
@@ -116,7 +119,11 @@ while i < n_NAV         % loop from END OF HEADER to end of file
                 case 'C'        % BeiDou ephemerides
                     [Eph_BDS, i] = save_eph_BDS(Eph_BDS, NAV, i, i_bds, leap_sec, type);
                     i_bds = i_bds + 1;
-                    
+
+                case 'J'        % QZSS ephemerides
+                    [Eph_QZS, i] = save_eph_QZS(Eph_QZS, NAV, i, i_qzs, type);
+                    i_qzs = i_qzs + 1;
+
                 otherwise
                     continue
             end
@@ -270,6 +277,113 @@ Eph_GPS(27,i_gps) = weekno;     % gps-week, continuos number
 Eph_GPS(28,i_gps) = accuracy;   % [m], sat in space accuracy
 Eph_GPS(29,i_gps) = tom;        % transmission time of message [sow]
 Eph_GPS(30,i_gps) = sum(type);	% type of navigation message
+
+
+
+
+function [Eph_QZS, i] = save_eph_QZS(Eph_QZS, NAV, i, i_qzs, type)
+% read QZSS data record
+% -+-+- line 0 -+-+-
+line = NAV{i};
+line = line(2:end);
+lData = textscan(line,'%f'); lData = lData{1};
+prn  = lData(1);            % PRN number of sat
+year = lData(2);            % year
+if year < 1900
+    if year > 80
+        year = year + 1900;
+    else
+        year = year + 2000;
+    end
+end
+month  = lData(3);                          % month
+day    = lData(4);                          % day
+hour   = lData(5);                          % hour
+minute = lData(6);                          % min
+second = lData(7);                          % sec of clock
+af0    = lData(8);                          % sv clock bias [s]
+af1    = lData(9);                          % sv clock drift [s/s]
+af2    = lData(10);                         % sv clock drift rate [s/s^2]
+[~, toc] = cal2gpstime([year month day hour minute second]);
+% -+-+- line 1 -+-+-
+i = i+1; line = NAV{i};
+lData = textscan(line,'%f'); lData = lData{1};
+IODE   = lData(1);          % Issue of Data (IOD)
+crs    = lData(2);          % [m]
+Delta_n= lData(3);      	% [rad/s]
+M0     = lData(4);          % [rad]
+% -+-+- line 2 -+-+-
+i = i+1; line = NAV{i};
+lData = textscan(line,'%f'); lData = lData{1};
+cuc   = lData(1);           % [rad]
+ecc   = lData(2);           % Eccentricity
+cus   = lData(3);           % [rad]
+roota = lData(4);           % sqrt(a) [sqrt(m)]
+% -+-+- line 3 -+-+-
+i = i+1; line = NAV{i};
+lData = textscan(line,'%f'); lData = lData{1};
+toe = lData(1);             % time of ephemeris [sow]
+cic = lData(2);             % [rad]
+Omega0 = lData(3);          % [rad]
+cis = lData(4);             % [rad]
+% -+-+- line 4 -+-+-
+i = i+1; line = NAV{i};
+lData = textscan(line,'%f'); lData = lData{1};
+i0       = lData(1);        % [rad]
+crc      = lData(2);        % [m]
+omega    = lData(3);        % [rad]
+Omegadot = lData(4);        % [rad/s]
+% -+-+- line 5 -+-+-
+i = i+1; line = NAV{i};
+lData = textscan(line,'%f'); lData = lData{1};
+idot = lData(1);            % [rad/s]
+codes = int64(lData(2));    % QZSS: codes on L2 channel
+weekno = lData(3);          % GPS week
+if size(lData,1) == 4
+    L2flag = lData(4);      % QZSS: L2P data flag
+end
+% -+-+- line 6 -+-+-
+i = i+1; line = NAV{i};
+lData = textscan(line,'%f'); lData = lData{1};
+accuracy = lData(1);        % sat in space accuracy [m]
+svhealth = int64(lData(2)); % QZSS: bits 17-22 w 3 sf 1
+tgd = lData(3);             % QZSS: time group delay [s]
+IODC = lData(4);            % QZSS: IOD clocks
+% -+-+- line 7 -+-+-
+i = i+1; line = NAV{i};
+lData = textscan(line,'%f'); lData = lData{1};
+tom = lData(1);             % transmission time of message [sow]
+% save data
+Eph_QZS( 1,i_qzs) = prn;        % satellite number
+Eph_QZS( 2,i_qzs) = af2;        % [s/s^2], sv clock drift rate
+Eph_QZS( 3,i_qzs) = M0;         % [rad]
+Eph_QZS( 4,i_qzs) = roota;      % [sqrt(m)]
+Eph_QZS( 5,i_qzs) = Delta_n;    % [rad/s]
+Eph_QZS( 6,i_qzs) = ecc;        % Eccentricity
+Eph_QZS( 7,i_qzs) = omega;      % [rad]
+Eph_QZS( 8,i_qzs) = cuc;        % [rad]
+Eph_QZS( 9,i_qzs) = cus;        % [rad]
+Eph_QZS(10,i_qzs) = crc;        % [m]
+Eph_QZS(11,i_qzs) = crs;        % [m]
+Eph_QZS(12,i_qzs) = i0;         % [rad]
+Eph_QZS(13,i_qzs) = idot;       % [rad/s]
+Eph_QZS(14,i_qzs) = cic;        % [rad]
+Eph_QZS(15,i_qzs) = cis;        % [rad]
+Eph_QZS(16,i_qzs) = Omega0;     % [rad]
+Eph_QZS(17,i_qzs) = Omegadot;   % [rad/s]
+Eph_QZS(18,i_qzs) = toe;        % [sow], time of ephemeris
+Eph_QZS(19,i_qzs) = af0;        % [s], sv clock bias
+Eph_QZS(20,i_qzs) = af1;        % [s/s], sv clock drift
+Eph_QZS(21,i_qzs) = toc;        % [s], seconds of gps-week
+Eph_QZS(22,i_qzs) = tgd;        % [s], time group delay
+Eph_QZS(23,i_qzs) = svhealth;   % bits 17-22 w 3 sf 1
+Eph_QZS(24,i_qzs) = IODE;       % Issue of Data Ephemeris
+Eph_QZS(25,i_qzs) = IODC;       % Issue of Data Clocks
+Eph_QZS(26,i_qzs) = codes;      % codes on L2 channel
+Eph_QZS(27,i_qzs) = weekno;     % gps-week, continuos number
+Eph_QZS(28,i_qzs) = accuracy;   % [m], sat in space accuracy
+Eph_QZS(29,i_qzs) = tom;        % transmission time of message [sow]
+Eph_QZS(30,i_qzs) = sum(type);	% type of navigation message
 
 
 

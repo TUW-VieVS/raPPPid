@@ -22,23 +22,23 @@ function [] = PlotPseudorangeRateCheck(storeData, settings, satellites, epochs, 
 
 
 num_freqs = settings.INPUT.num_freqs;      % number of input frequencies
-thresh = settings.OTHER.mp_doppler_thresh; % threshold for pseudorange rate check
+thresh = settings.OTHER.mp_doppler_thresh; % threshold(s) for pseudorange rate check
 gpstime = storeData.gpstime;               % time of epoch [sow], for datatip
 
 % plot 1st frequency
 if isfield(storeData, 'mp_DopplerPR_1')
     DopplerPR_1 = zero2nan(storeData.mp_DopplerPR_1);
-    plot_DopplerPR(epochs, DopplerPR_1, label_x, rgb, 'PR Rate Check, Frequency 1', settings, satellites.obs, thresh, gpstime)
+    plot_DopplerPR(epochs, DopplerPR_1, label_x, rgb, 'PR Rate Check, Frequency 1', settings, satellites.obs, thresh(min(1, numel(thresh))), gpstime)
 end
 % plot 2nd frequency
 if num_freqs >= 2 && isfield(storeData, 'mp_DopplerPR_2')
     DopplerPR_2 = zero2nan(storeData.mp_DopplerPR_2);
-    plot_DopplerPR(epochs, DopplerPR_2, label_x, rgb, 'PR Rate Check, Frequency 2', settings, satellites.obs, thresh, gpstime)
+    plot_DopplerPR(epochs, DopplerPR_2, label_x, rgb, 'PR Rate Check, Frequency 2', settings, satellites.obs, thresh(min(2, numel(thresh))), gpstime)
 end
 % plot 3rd frequency
 if num_freqs >= 3 && isfield(storeData, 'mp_DopplerPR_3')
     DopplerPR_3 = zero2nan(storeData.mp_DopplerPR_3);
-    plot_DopplerPR(epochs, DopplerPR_3, label_x, rgb, 'PR Rate Check, Frequency 3', settings, satellites.obs, thresh, gpstime)
+    plot_DopplerPR(epochs, DopplerPR_3, label_x, rgb, 'PR Rate Check, Frequency 3', settings, satellites.obs, thresh(min(3, numel(thresh))), gpstime)
 end
 
 

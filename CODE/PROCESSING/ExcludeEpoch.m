@@ -52,12 +52,13 @@ if any(q == settings.PROC.excl_epochs_reset)
         Adjust.fixed_reset_epochs = [Adjust.fixed_reset_epochs, q];     % save fixed reset
         Epoch.WL_23(:) = NaN;       % reset EW, WL and NL ambiguities
         Epoch.WL_12(:) = NaN;
-        Epoch.NL_12(:) = NaN;
+        Epoch.WL_13(:) = NaN;
+        Epoch.NL_12(:) = NaN;       % reset ambiguities of NLs
         Epoch.NL_23(:) = NaN;
 		% reset reference satellites
         Epoch.refSatGPS = 0; Epoch.refSatGLO = 0; Epoch.refSatGAL = 0; Epoch.refSatBDS = 0; Epoch.refSatQZS = 0;
         Epoch.refSatGPS_idx = []; Epoch.refSatGLO_idx = []; Epoch.refSatGAL_idx = []; Epoch.refSatBDS_idx = []; Epoch.refSatQZS_idx = [];
-        % reset Hatch-Melboure-Wübbena LCs (ATTENTION: values of MW are overwritten!)
+        % reset Hatch-Melbourne-Wübbena LCs (ATTENTION: values of MW are overwritten!)
         Adjust.HMW_12(1:q,:) = 0; 
         Adjust.HMW_23(1:q,:) = 0; 
         Adjust.HMW_13(1:q,:) = 0;

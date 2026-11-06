@@ -40,7 +40,8 @@ posFloat = storeData.param(:,1:3);      % estimated float position (x, y, z)
 
 if settings.AMBFIX.bool_AMBFIX
     posFixed = storeData.param_fix(:,1:3);                      % estimated fixed position
-    sigma_posFixed = sqrt(storeData.param_var_fix(:,1:3));      % fixed coordinates variances
+    param_var_fix = GetParamVarFromSigma(storeData.param_sigma_fix, storeData.NO_PARAM);
+    sigma_posFixed = sqrt(param_var_fix(:,1:3));                % fixed coordinates variances
 end
 
 % get time of calculated epochs (when printing to file with fprintf this 
@@ -355,7 +356,8 @@ function writeFloatResults(settings, storeData, line_2nd, fid, ...
 posFloat         = storeData.param(:,1:3);  	% float position, x-y-z
 posFloat_geo     = storeData.posFloat_geo;      % float position, lat-lon-height
 posFloat_utm     = storeData.posFloat_utm;      % float position, UTM_x - UTM_y
-sigma_posFloat   = sqrt(storeData.param_var(:,1:3));	% sigma estimated float position
+param_var        = GetParamVarFromSigma(storeData.param_sigma, storeData.NO_PARAM);
+sigma_posFloat   = sqrt(param_var(:,1:3));	% sigma estimated float position
 delta_zwd        = storeData.param(:,7);        % estimated Zenith Wet Delay
 % estimated receiver clock error / time offsets
 rec_dt_GPS       = storeData.param(:, 8);       % estimated receiver clock error for GPS
@@ -363,10 +365,10 @@ rec_dt_GLO       = storeData.param(:,11);       % estimated time offset / receiv
 rec_dt_GAL       = storeData.param(:,14);    	% estimated time offset / receiver clock error for Galileo
 rec_dt_BDS       = storeData.param(:,17);    	% time offset / estimated receiver clock error for BeiDou
 % variances of time offsets / receiver clock error:
-sigma_rec_dt_GPS = sqrt(storeData.param_var(:, 8));
-sigma_rec_dt_GLO = sqrt(storeData.param_var(:,11));
-sigma_rec_dt_GAL = sqrt(storeData.param_var(:,14));
-sigma_rec_dt_BDS = sqrt(storeData.param_var(:,17));
+sigma_rec_dt_GPS = sqrt(param_var(:, 8));
+sigma_rec_dt_GLO = sqrt(param_var(:,11));
+sigma_rec_dt_GAL = sqrt(param_var(:,14));
+sigma_rec_dt_BDS = sqrt(param_var(:,17));
 % estimated DCBs
 rec_dcb_12_GPS = storeData.param(:, 9);        % estimated DCB between GPS frequency 1 and 2
 rec_dcb_13_GPS = storeData.param(:,10);        % estimated DCB between GPS frequency 1 and 3
@@ -460,7 +462,8 @@ function writeFloatResults_DCM(settings, storeData, line_2nd, fid, ...
 posFloat         = storeData.param(:,1:3);  	% float position, x-y-z
 posFloat_geo     = storeData.posFloat_geo;      % float position, lat-lon-height
 posFloat_utm     = storeData.posFloat_utm;      % float position, UTM_x - UTM_y
-sigma_posFloat   = sqrt(storeData.param_var(:,1:3));	% sigma estimated float position
+param_var        = GetParamVarFromSigma(storeData.param_sigma, storeData.NO_PARAM);
+sigma_posFloat   = sqrt(param_var(:,1:3));	% sigma estimated float position
 delta_zwd        = storeData.param(:,7);        % estimated Zenith Wet Delay
 % read the a priori zwd and zhd, those are equal for all satellites
 zwd_model = storeData.zwd;

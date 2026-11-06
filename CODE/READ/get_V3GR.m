@@ -102,6 +102,15 @@ else                    % station is not part of VMF3 stationlist
     % use gridwise V3GR
     input.TROPO.V3GR.version = 'gridwise';
     input.TROPO.V3GR.xyz = approx_pos;
+    approx_h = cart2geo(approx_pos).h;
+    input.TROPO.V3GR.H = approx_h;
+
+    % Pressure, Water vapor pressure, Temperature of the standard
+    % atmosphere at reference height
+    if ~isnan(approx_h)
+        [p0, e0, T0] = isa_atmosphere(approx_h);
+        input.TROPO.V3GR.atm = [p0, e0, T0];
+    end    
 
     % determine all necessary mjd's
     input.TROPO.V3GR.data{2} = unique(V3GR_data{2});

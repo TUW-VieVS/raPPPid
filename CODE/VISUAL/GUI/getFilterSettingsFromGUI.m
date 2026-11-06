@@ -15,7 +15,7 @@ function [filtersetts] = getFilterSettingsFromGUI(handles)
 % values of dropdown menus (popupmenus) have to be taken - 1 to have [0;1]
 value = get(handles.popupmenu_filter, 'Value');
 string_all = get(handles.popupmenu_filter, 'String');
-filtersetts.ADJ.filter.type = string_all{value};		% 'No Filter' or 'Kalman Filter' or 'Kalman Filter Iterative'
+filtersetts.ADJ.filter.type = string_all{value};		% 'No Filter' or 'Kalman Filter' or 'Iterated Extended Kalman Filter'
 
 % Direction of Filter
 value = get(handles.popupmenu_filter_direction, 'Value');

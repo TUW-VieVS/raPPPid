@@ -5,18 +5,21 @@ function [sod_true, lat_wgs84, lon_wgs84, h_wgs84, North_true, East_true, bool_i
 % the same extension, the header of the file is used additionally.
 % 
 % Currently supported formats:
-%   *.nmea          NMEA
-%   *.txt           RTK point export (e.g., Leica Infinity)
-%                   log file of Google's GnssLogger App (Android)
-%                   simple format with columns gpstime | X | Y | Z
-%   *.text          columns: gpstime | latitude | longitude | height
-%   *.pos           RTKLIB solution 
-%                   CSRS-PPP (NRCan Online PPP)
-%   *.gpx           GPS Exchange Format
-%   *.csv           raPPPid results
-%                   ground truth of the Google Smartphone Decimeter Challenge
-%                   CSRS-PPP (NRCan Online PPP)
-%   *.sp3, *.pre    precise orbit file
+%   *.nmea          - NMEA
+%   *.txt           - RTK point export (e.g., Leica Infinity)
+%                   - RTK point export with Easting/Northing only, no height
+%                   - log file of Google's GnssLogger App (Android), the
+%                     rows "Fix,GPS," are used
+%                   - simple format with columns gpstime | X | Y | Z
+%   *.text          - columns: gpstime | latitude | longitude | height
+%   *.pos           - RTKLIB solution 
+%                   - CSRS-PPP (NRCan Online PPP)
+%   *.gpx           - GPS Exchange Format
+%   *.csv           - raPPPid results
+%                   - ground truth of the Google Smartphone Decimeter Challenge
+%                   - CSRS-PPP (NRCan Online PPP)
+%                   - csv point/orbit export (*.llhx.csv, *.pofx.csv)
+%   *.sp3, *.pre    - precise orbit file
 %
 % INPUT:
 %   filepath        string, filepath to reference trajectory
@@ -68,10 +71,11 @@ switch ext
         firstline(firstline == 0) = [];     % UTF-16 files: remove null bytes
 
         if contains(firstline, 'Point') && contains(firstline, 'Id') && contains(firstline, 'Role')
-            % RTK reference trajectory (point export, e.g. Leica Infinity)
-            % time stamps refer to local time zone. To convert to UTC,
-            % winter/summer time is considered automatically
+            % RTK reference trajectory: time stamps refer to local time 
+            % zone. To convert to UTC winter/summer time is considered automatically
             LOCAL_TIMEZONE = 'Europe/Vienna';   % ||| adapt if data is from another zone
+            UTM_ZONE = 33;                      % ||| adapt if Easting/Northing is from another UTM zone
+            DUMMY_HEIGHT = 250;                 % [m] used when the file has no height column (Easting/Northing-only)
 
             % detect file encoding (these exports are usually UTF-16)
             fid = fopen(filepath); bom = fread(fid, 2, '*uint8')'; fclose(fid);
@@ -81,14 +85,30 @@ switch ext
             end
 
             % create import options and find the relevant columns
+            % (VariableNamesLine is forced to 1: some exports have one more
+            % data column than header column, e.g. a trailing satellite
+            % count, which otherwise makes MATLAB fail to detect the header)
             opts = detectImportOptions(filepath, 'FileType','text', ...
-                'Delimiter', {char(9)}, 'Encoding', enc, 'VariableNamingRule','modify');
+                'Delimiter', {char(9)}, 'Encoding', enc, 'VariableNamingRule','modify', ...
+                'VariableNamesLine', 1);
             vars = opts.VariableNames;
             i_X = find(contains(vars,'WGS84') & contains(vars,'X'), 1);
             i_Y = find(contains(vars,'WGS84') & contains(vars,'Y'), 1);
             i_Z = find(contains(vars,'WGS84') & contains(vars,'Z'), 1);
+            i_E = find(contains(vars,'Easting'), 1);
+            i_N = find(contains(vars,'Northing'), 1);
             i_t = find(contains(vars,'Date'), 1);
             i_r = find(contains(vars,'Role'), 1);
+            is_cartesian = ~isempty(i_X) && ~isempty(i_Y) && ~isempty(i_Z);
+            if is_cartesian
+                i_pos = [i_X i_Y i_Z];
+            elseif ~isempty(i_E) && ~isempty(i_N)
+                % no WGS84 X/Y/Z columns, fall back to Easting/Northing
+                % (e.g., posi-app export) - no height is provided
+                i_pos = [i_E i_N];
+            else
+                return       % neither WGS84 X/Y/Z nor Easting/Northing found
+            end
             % coordinates might use a comma or a period as decimal separator,
             % auto-detect it from the first data line of the file
             dec_sep = '.';                          % default: period
@@ -99,17 +119,17 @@ switch ext
             if ischar(dataline)
                 dataline(dataline == 0) = [];       % UTF-16: remove null bytes
                 fields = strsplit(dataline, char(9), 'CollapseDelimiters', false);
-                if numel(fields) >= i_X && contains(fields{i_X}, ',')
+                if numel(fields) >= i_pos(1) && contains(fields{i_pos(1)}, ',')
                     dec_sep = ',';                  % comma decimal separator
                 end
             end
-            opts = setvartype(opts, vars([i_X i_Y i_Z]), 'double');
-            opts = setvaropts(opts, vars([i_X i_Y i_Z]), 'DecimalSeparator', dec_sep, ...
+            opts = setvartype(opts, vars(i_pos), 'double');
+            opts = setvaropts(opts, vars(i_pos), 'DecimalSeparator', dec_sep, ...
                 'ThousandsSeparator', '');
             opts = setvartype(opts, vars(i_t), 'datetime');
             opts = setvaropts(opts, vars(i_t), 'InputFormat', 'dd.MM.yyyy HH:mm:ss');
             opts = setvartype(opts, vars(i_r), 'char');
-            opts.SelectedVariableNames = vars([i_X i_Y i_Z i_t i_r]);
+            opts.SelectedVariableNames = vars([i_pos i_t i_r]);
             T = readtable(filepath, opts);
 
             % keep only high-quality carrier-phase / RTK solutions
@@ -127,20 +147,29 @@ switch ext
             t_gps = t_gps + seconds(leap_sec);  % UTC -> gps time
             SecondsSinceStart = seconds(t_gps - datetime(1980, 1, 6, 0, 0, 0));
             sod_true = mod(SecondsSinceStart, 86400);
-            % get coordinates
-            X = T.(vars{i_X});
-            Y = T.(vars{i_Y});
-            Z = T.(vars{i_Z});
-            % convert coordinates
-            n = numel(X);
+            % get coordinates and convert them
+            n = height(T);
             lat_wgs84 = NaN(n,1); lon_wgs84 = lat_wgs84; h_wgs84 = lat_wgs84;
             North_true = lat_wgs84; East_true = lat_wgs84;
-            for i = 1:n
-                temp_geo = cart2geo([X(i), Y(i), Z(i)]);
-                [North_true(i), East_true(i)] = ell2utm_GT(temp_geo.lat, temp_geo.lon);
-                lat_wgs84(i) = temp_geo.lat;
-                lon_wgs84(i) = temp_geo.lon;
-                h_wgs84(i) = temp_geo.h;
+            if is_cartesian
+                X = T.(vars{i_X});
+                Y = T.(vars{i_Y});
+                Z = T.(vars{i_Z});
+                for i = 1:n
+                    temp_geo = cart2geo([X(i), Y(i), Z(i)]);
+                    [North_true(i), East_true(i)] = ell2utm_GT(temp_geo.lat, temp_geo.lon);
+                    lat_wgs84(i) = temp_geo.lat;
+                    lon_wgs84(i) = temp_geo.lon;
+                    h_wgs84(i) = temp_geo.h;
+                end
+            else
+                % Easting/Northing-only export: no height available, so a
+                % dummy ellipsoidal height is used (only the horizontal
+                % North/East reference is meaningful for this file)
+                East_true = T.(vars{i_E});
+                North_true = T.(vars{i_N});
+                [lat_wgs84, lon_wgs84] = utm2ell_GT(North_true, East_true, UTM_ZONE);
+                h_wgs84(:) = DUMMY_HEIGHT;
             end
 
 
@@ -148,7 +177,7 @@ switch ext
             % *.txt logged with Google's GnssLogger App (Android)
             % take position fixes of one location provider:
             % (e.g., FLP = Fused Location, GPS = raw GNSS, NLP = Network)
-            PROVIDER = 'FLP';
+            PROVIDER = 'GPS';
 
             % read the complete file line by line
             fid = fopen(filepath, 'r');
@@ -210,14 +239,14 @@ switch ext
 
     case '.text'
         % simple text file with columns:
-        %       gpstime | latitude | longitude | height
+        %       gpstime | latitude [degree] | longitude [degree] | height [m]
         fid = fopen(filepath);
         DATA = textscan(fid,'%f %f %f %f');
         fclose(fid);
         % save data
         sod_true  = DATA{:,1};
-        lat_wgs84 = DATA{:,2};
-        lon_wgs84 = DATA{:,3};
+        lat_wgs84 = DATA{:,2} / 180 * pi;   % convert [degree] to [rad]
+        lon_wgs84 = DATA{:,3} / 180 * pi;   % convert [degree] to [rad]
         h_wgs84   = DATA{:,4};
         % convert coordinates
         n = numel(sod_true);
@@ -329,8 +358,8 @@ switch ext
             bool_lat = contains(vars, 'latitude');
             bool_lon = contains(vars, 'longitude');
             bool_h = contains(vars, 'height');
-            lat_wgs84 = table2array(csv_data(:, bool_lat));
-            lon_wgs84 = table2array(csv_data(:, bool_lon));
+            lat_wgs84 = table2array(csv_data(:, bool_lat)) / 180 * pi;   % convert [degree] to [rad]
+            lon_wgs84 = table2array(csv_data(:, bool_lon)) / 180 * pi;   % convert [degree] to [rad]
             h_wgs84 = table2array(csv_data(:, bool_h));
             % get North and East
             bool_North = contains(vars, 'x_utm');
@@ -389,6 +418,27 @@ switch ext
             lat_wgs84 = csv_data.latitude_decimal_degree  / 180 * pi;   	% convert [degree] to [rad]
             lon_wgs84 = csv_data.longitude_decimal_degree / 180 * pi;   	% convert [degree] to [rad]
             h_wgs84 = csv_data.ellipsoidal_height_m;
+            [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
+
+        elseif any(contains(vars, 'latitude')) && any(contains(vars, 'height')) && ...
+                any(contains(vars, 'latitude')) && any(contains(vars, 'timestamp'))
+            % csv point/orbit export (e.g., *.llhx.csv, *.pofx.csv)
+            % columns: timestamp | latitude | longitude | height
+            % time is seconds of day in UTC, lat/lon in [degree], height in [m]
+
+            % get column indices
+            bool_lat = contains(vars, 'latitude');
+            bool_lon = contains(vars, 'longitude');
+            bool_h   = contains(vars, 'height');
+            bool_t   = contains(vars, 'timestamp');
+            % get latitude, longitude, and height
+            lat_wgs84 = table2array(csv_data(:, bool_lat)) / 180 * pi;   % convert [degree] to [rad]
+            lon_wgs84 = table2array(csv_data(:, bool_lon)) / 180 * pi;   % convert [degree] to [rad]
+            h_wgs84   = table2array(csv_data(:, bool_h));
+            % get time: seconds of day in UTC -> gps time
+            sod_utc = table2array(csv_data(:, bool_t));
+            sod_true = mod(sod_utc + leap_sec, 86400);
+            % convert to UTM coordinates
             [North_true, East_true] = ell2utm_GT(lat_wgs84, lon_wgs84);
 
         else

@@ -11,6 +11,9 @@ function [handles] = setFilterSettingsToGUI(filtersetts, handles)
 % *************************************************************************
 
 % Filter Type
+if strcmp(filtersetts.ADJ.filter.type, 'Kalman Filter Iterative')
+    filtersetts.ADJ.filter.type = 'Iterated Extended Kalman Filter';  % old settings file, renamed 2026/09
+end
 string_all = get(handles.popupmenu_filter,'String');
 value = find(strcmp(string_all,filtersetts.ADJ.filter.type));
 set(handles.popupmenu_filter, 'Value', value);

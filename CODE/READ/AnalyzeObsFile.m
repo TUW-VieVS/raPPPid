@@ -80,7 +80,7 @@ fprintf('\n%s%.3f', 'Observation interval [s]: ', obs.interval);      % observat
 fprintf('\n%s%.2f\n', 'Approximate length [hours]: ', n*obs.interval/3600);    % length of RINEX file in hours
 
 % hardcode some settings
-settings.PROC.timeFrame(2) = 1; settings.PROC.timeFrame(2) = n;
+settings.PROC.timeFrame(1) = 1; settings.PROC.timeFrame(2) = n;
 settings.PROC.epochs(1) = 1; settings.PROC.epochs(2) = n;
 settings.INPUT.num_freqs = max([ ... 
     settings.INPUT.use_GPS *numel(settings.INPUT.gps_freq (~strcmpi(settings.INPUT.gps_freq, 'OFF'))), ...
@@ -105,8 +105,9 @@ obs = find_obs_col(obs, settings);
 obs = SavePrintObsType(obs, settings);
 fprintf('\n');
 
-obs_count = zeros(5, max([length(obs.types_gps_3), length(obs.types_glo_3), length(obs.types_gal_3), length(obs.types_bds_3), length(obs.types_qzss_3)])/3);
-obs_missing = obs_count; 
+% number of observation-type columns is the maximum over all GNSS
+obs_count = zeros(5, max(obs.no_obs_types));
+obs_missing = obs_count;
 
 %% LOOP OVER OBSERVATION DATA
 for q = 1:n
@@ -129,6 +130,23 @@ for q = 1:n
         storeData.gpstime(q,1) = Epoch.gps_time;
         continue
     end
+    if isempty(Epoch.gps_time)
+        storeData.gpstime(q,1) = NaN;
+        continue
+    end
+
+    % count observations for all observation types and each GNSS (this has 
+    % to be done here!)
+    if size(Epoch.obs, 2) > size(obs_count, 2)
+        n_add = size(Epoch.obs, 2) - size(obs_count, 2);
+        obs_count(:,   end+1:end+n_add) = 0;
+        obs_missing(:, end+1:end+n_add) = 0;
+    end
+    [obs_count, obs_missing] = countObservations(obs_count, obs_missing, 1, Epoch.gps, Epoch.obs);
+    [obs_count, obs_missing] = countObservations(obs_count, obs_missing, 2, Epoch.glo, Epoch.obs);
+    [obs_count, obs_missing] = countObservations(obs_count, obs_missing, 3, Epoch.gal, Epoch.obs);
+    [obs_count, obs_missing] = countObservations(obs_count, obs_missing, 4, Epoch.bds, Epoch.obs);
+    [obs_count, obs_missing] = countObservations(obs_count, obs_missing, 5, Epoch.qzss,Epoch.obs);
 
     obs.glo_channel(isnan(obs.glo_channel)) = 0;
     % -> frequency of GLONASS satellites is not correct but otherwise
@@ -145,17 +163,14 @@ for q = 1:n
     if ~isempty(Epoch.S2); satellites.SNR_2(q,prns) = Epoch.S2'; end
     if ~isempty(Epoch.S3); satellites.SNR_3(q,prns) = Epoch.S3'; end
     % save Doppler measurements
-    if ~isempty(Epoch.D1)
-        Epoch.D1 = Epoch.D1 ./ Epoch.l1;        % convert back to [Hz]
-        satellites.D1(q,prns) = Epoch.D1'; 
+    if ~isempty(Epoch.D1)  && any(~isnan(Epoch.D1))
+        satellites.D1(q,prns) = (Epoch.D1 ./ Epoch.l1)';    % convert back to [Hz]
     end
-    if ~isempty(Epoch.D2) 
-        Epoch.D2 = Epoch.D2 ./ Epoch.l2;        % convert back to [Hz]
-        satellites.D2(q,prns) = Epoch.D2'; 
+    if ~isempty(Epoch.D2) && any(~isnan(Epoch.D2))
+        satellites.D2(q,prns) = (Epoch.D2 ./ Epoch.l2)';    % convert back to [Hz]
     end
-    if ~isempty(Epoch.D3) 
-        Epoch.D3 = Epoch.D3 ./ Epoch.l3;        % convert back to [Hz]
-        satellites.D3(q,prns) = Epoch.D3'; 
+    if ~isempty(Epoch.D3) && any(~isnan(Epoch.D3))
+        satellites.D3(q,prns) = (Epoch.D3 ./ Epoch.l3)';    % convert back to [Hz]
     end
     % observations
     storeData.C1(q,prns) = Epoch.C1;
@@ -178,16 +193,6 @@ for q = 1:n
         if settings.INPUT.num_freqs >= 3; storeData.mp_DopplerPR_3(q,prns) = Epoch.mp_DopplerPR(3,:); end
     end
 
-    % count observations for all observation types and each GNSS
-    if q == 1 && size(Epoch.obs, 2) > size(obs_count, 2)
-        obs_count = zeros(5, size(Epoch.obs, 2)); obs_missing = obs_count;
-    end
-    [obs_count, obs_missing] = countObservations(obs_count, obs_missing, 1, Epoch.gps, Epoch.obs);
-    [obs_count, obs_missing] = countObservations(obs_count, obs_missing, 2, Epoch.glo, Epoch.obs);
-    [obs_count, obs_missing] = countObservations(obs_count, obs_missing, 3, Epoch.gal, Epoch.obs);
-    [obs_count, obs_missing] = countObservations(obs_count, obs_missing, 4, Epoch.bds, Epoch.obs);
-    [obs_count, obs_missing] = countObservations(obs_count, obs_missing, 5, Epoch.qzss,Epoch.obs);
-    
     % handle waitbar
     if mod(q,5) == 0
         % Check for clicked Cancel button
@@ -264,10 +269,11 @@ vis_plotSatConstellation(hours, epochs, label_x_h, satellites, storeData.exclude
 if obs.interval <= 15 	% this plots make only sense for high-rate observation data
     
     print_std = true;       % true to print observation difference standard devation
-    
+    nnn = DEF.SATS;         % number of satellite columns
+
     % -+-+-+-+- Figure: Code Difference  -+-+-+-+-
     degree_C = settings.OTHER.mp_degree;
-    mp_C1_diff_n = NaN(n,410); mp_C2_diff_n = NaN(n,410); mp_C3_diff_n = NaN(n,410);   	
+    mp_C1_diff_n = NaN(n,nnn); mp_C2_diff_n = NaN(n,nnn); mp_C3_diff_n = NaN(n,nnn);
     mp_C1_diff_n(degree_C+1:end,:) = diff(C1, degree_C,1); % code difference (C1) of last n epochs
     PlotObsDiff(epochs, mp_C1_diff_n, label_x_epc, rgb, 'C1' , settings, satellites.obs, settings.OTHER.mp_thresh, settings.OTHER.mp_degree, '[m]', print_std, obs);
     mp_C2_diff_n(degree_C+1:end,:) = diff(C2, degree_C,1);
@@ -277,7 +283,7 @@ if obs.interval <= 15 	% this plots make only sense for high-rate observation da
     
     % -+-+-+-+- Figure: Phase Difference  -+-+-+-+-
     degree_L = settings.OTHER.CS.TD_degree;	
-    cs_L1_diff = NaN(n,410); cs_L2_diff = NaN(n,410); cs_L3_diff = NaN(n,410); 
+    cs_L1_diff = NaN(n,nnn); cs_L2_diff = NaN(n,nnn); cs_L3_diff = NaN(n,nnn);
     cs_L1_diff(degree_L+1:end,:) = diff(L1, degree_L,1); % phase (L1) difference of last n epochs
     PlotObsDiff(epochs, cs_L1_diff, label_x_epc, rgb, 'L1' , settings, satellites.obs, settings.OTHER.CS.TD_threshold, settings.OTHER.CS.TD_degree, '[m]', print_std, obs);
     cs_L2_diff(degree_L+1:end,:) = diff(L2, degree_L,1);
@@ -289,19 +295,19 @@ if obs.interval <= 15 	% this plots make only sense for high-rate observation da
     degree_D = 3;
     if isfield(satellites, 'D1')
         D1 = satellites.D1; D1(D1==0) = NaN;
-        D1_diff = NaN(n,410);
+        D1_diff = NaN(n,nnn);
         D1_diff(degree_D+1:end,:) = diff(D1, degree_D,1);  	% Doppler (D1) difference of last n epochs
         PlotObsDiff(epochs, D1_diff, label_x_epc, rgb, 'D1' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std, obs);
     end
     if isfield(satellites, 'D2')
         D2 = satellites.D2; D2(D2==0) = NaN;
-        D2_diff = NaN(n,410);
+        D2_diff = NaN(n,nnn);
         D2_diff(degree_D+1:end,:) = diff(D2, degree_D,1);
         PlotObsDiff(epochs, D2_diff, label_x_epc, rgb, 'D2' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std, obs);
     end
     if isfield(satellites, 'D3')
         D3 = satellites.D3; D3(D3==0) = NaN;
-        D3_diff = NaN(n,410);
+        D3_diff = NaN(n,nnn);
         D3_diff(degree_D+1:end,:) = diff(D3, degree_D,1);
         PlotObsDiff(epochs, D3_diff, label_x_epc, rgb, 'D3' , settings, satellites.obs, NaN, settings.OTHER.CS.TD_degree, '[Hz]', print_std, obs);
     end

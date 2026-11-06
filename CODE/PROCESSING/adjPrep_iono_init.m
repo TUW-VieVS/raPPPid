@@ -20,7 +20,10 @@ function [Epoch, Adjust] = adjPrep_iono_init(settings, Adjust, Epoch, obs, input
 % This function belongs to raPPPid, Copyright (c) 2025, M.F. Wareyka-Glaner
 % *************************************************************************
 
-
+% IMU state indices
+imu_idx_att  = 24:26;
+imu_idx_bias = 27:29;
+imu_idx_gyro = 30:32;
 
 %% Get variables
 % extract needed settings from structs
@@ -58,6 +61,14 @@ param_vec(1:3) = ApproximatePosition(Epoch, input, obs, settings);
 if settings.KINE.bool_kinematic && bool_doppler
     [param_vec(4:6), param_vec(23)] = ApproximateVelocity(Epoch, input, obs, settings, param_vec(1:3));
 end
+
+if settings.KINE.bool_kinematic && settings.KINE.bool_IMU && settings.INPUT.rawDataAndroid
+    % IMU states 24:29 initialized to zero (attitude error = 0, bias = 0)
+    param_vec(imu_idx_att)  = 0;
+    param_vec(imu_idx_bias) = 0;
+    param_vec(imu_idx_gyro) = 0;
+end
+
 % other parameters don´t have/need approximate values so they stay zero
 param_pred = param_vec;         % no prediction in first epoch
 
@@ -134,7 +145,12 @@ end
 iono_idx = (1+NO_PARAM+no_ambig):(NO_PARAM+no_ambig+no_sats);   % indices
 param_sigma(iono_idx,iono_idx) = eye(no_sats)*FILTER.var_iono;
 
-
+% add IMU related parameters
+if settings.KINE.bool_kinematic && settings.KINE.bool_IMU && settings.INPUT.rawDataAndroid
+    param_sigma(imu_idx_att,  imu_idx_att)  = eye(3) * Const.IMU_INIT_VAR_ATT;    % attitude error
+    param_sigma(imu_idx_bias, imu_idx_bias) = eye(3) * Const.IMU_INIT_VAR_BIAS;   % accel bias random walk
+    param_sigma(imu_idx_gyro, imu_idx_gyro) = eye(3) * Const.IMU_INIT_VAR_GYRO;   % gyro drift
+end
 
 if bool_filter
     %% Noise Matrix
@@ -173,7 +189,7 @@ if bool_filter
         Noise(23,23) = FILTER.Q_rclk_drift;             % receiver clock drift
     end
 
-
+   
 
     %% Transition Matrix
     Transition = eye(NO_PARAM);      % initialize
@@ -202,6 +218,11 @@ if bool_filter
     Transition(21,21)  	= FILTER.dynmodel_DCB;  	% QZSS DCB between frequency 1 and 2
     Transition(22,22) 	= FILTER.dynmodel_DCB;  	% QZSS DCB between frequency 1 and 3
     Transition(23,23) 	= FILTER.dynmodel_rclk_drift;       % receiver clock drift 
+    if settings.KINE.bool_kinematic && settings.KINE.bool_IMU  && settings.INPUT.rawDataAndroid
+        Transition(imu_idx_att,  imu_idx_att)  = eye(3);    % attitude error
+        Transition(imu_idx_bias, imu_idx_bias) = eye(3);    % accel bias random walk
+        Transition(imu_idx_gyro, imu_idx_gyro) = eye(3);    % gyro drift
+    end
     
 else
     % Transition and Noise Matrix are not needed

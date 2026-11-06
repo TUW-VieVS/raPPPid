@@ -9,7 +9,7 @@ function SATS = AnalyzeSatelliteMetadataFileIGS(year, doy)
 % 
 % INPUT:
 %   year        number, specified year
-%   doy         number, specified day of year (can include fractions od day)
+%   doy         number, specified day of year (can include fractions of day)
 % OUTPUT:
 %   SATS        cell, containing (columns):
 %                PRN | raPPPid number | SVN | satellite block | description | plane
@@ -50,7 +50,7 @@ MDATA = textscan(fid,'%s', 'delimiter','\n', 'whitespace','');
 MDATA = MDATA{1};
 fclose(fid);
 
-% extract specifix SINEX blocks
+% extract specific SINEX blocks
 SAT_ID = getBlock(MDATA, 'SATELLITE/IDENTIFIER');
 SAT_PRN = getBlock(MDATA, 'SATELLITE/PRN');
 SAT_PLANE = getBlock(MDATA, 'SATELLITE/PLANE');
@@ -64,21 +64,14 @@ for i = 1:n_PRN     % loop over lines
 
     tline = SAT_PRN{i};     % get current line
     
-    if tline(1) == '*' || tline(1) == '+'  || tline(1) == '-'  
+    if isSkipLine(tline)
         continue;   % jump over unnecessary lines
     end
     
     C = strsplit(strip(tline));     % get data of current line
     
-    if strcmp(C{3}, '0000:000:00000')
-        C{3} = '2500:000:00000';        % be careful: this works only until year 2500
-    end
-    
     % convert launch and decomission date to julian date
-    yeardoy_1 = convertTimeStamp(C{2});
-    yeardoy_2 = convertTimeStamp(C{3});
-    jd_1 = doy2jd_GT(yeardoy_1(1), yeardoy_1(2));
-    jd_2 = doy2jd_GT(yeardoy_2(1), yeardoy_2(2));
+    [jd_1, jd_2] = validityToJD(C{2}, C{3});
     
     % determine and save only prns active on the specified date
     if (jd_1 <= curr_jd && curr_jd < jd_2)
@@ -92,8 +85,15 @@ for i = 1:n_PRN     % loop over lines
     end
 end
 
+% no active satellites found on the specified date
+if isempty(SATS)
+    return
+end
+
 % sort table with raPPPid internal satellite number
-SATS = sortrows(SATS, 2);
+% (sortrows does not work on numeric cell columns)
+[~, idx] = sort([SATS{:,2}]);
+SATS = SATS(idx,:);
 
 
 
@@ -104,7 +104,7 @@ for i = 1:n_ID          % loop over lines
     
     tline = SAT_ID{i};      % get current line
     
-    if tline(1) == '*' || tline(1) == '+'  || tline(1) == '-'
+    if isSkipLine(tline)
         continue;   % jump over unnecessary lines
     end
     
@@ -113,7 +113,7 @@ for i = 1:n_ID          % loop over lines
     block = C{4};   % information about satellite block
     
     % save information if satellite belongs to prns active on the specified day
-    bool = contains(SATS(:,3), C{1});
+    bool = strcmp(SATS(:,3), C{1});
     if any(bool)
         SATS(bool, 4) = cellstr(block);
         SATS(bool, 5) = cellstr(block2descr(block)); 	% get description of block
@@ -129,16 +129,22 @@ for i = 1:n_PLANE           % loop over lines
     
     tline = SAT_PLANE{i};       % get current line
     
-    if tline(1) == '*' || tline(1) == '+'  || tline(1) == '-'
+    if isSkipLine(tline)
         continue;   % jump over unnecessary lines
     end
     
     C = strsplit(strip(tline));     % get data of current line
     
-    plane = C{4};   % information about satellite block
+    plane = C{4};   % information about satellite plane
+    
+    % check if this plane entry is valid on the specified date
+    [jd_1, jd_2] = validityToJD(C{2}, C{3});
+    if ~(jd_1 <= curr_jd && curr_jd < jd_2)
+        continue
+    end
     
     % save information if satellite belongs to prns active on the specified day
-    bool = contains(SATS(:,3), C{1});
+    bool = strcmp(SATS(:,3), C{1});
     if any(bool)
         SATS(bool, 6) = cellstr(plane2descr(plane));    % get description of plane
     end
@@ -146,6 +152,22 @@ end
 
 
 
+
+function bool = isSkipLine(tline)
+% true for empty, comment ('*') and block start/end ('+', '-') lines
+bool = isempty(tline) || any(tline(1) == '*+-');
+
+function [jd_1, jd_2] = validityToJD(str_from, str_to)
+% This function converts the validity timestamps (YYYY:DDD:SSSSS) of a
+% SINEX line to julian dates. An open end ('0000:000:00000') is set to Inf.
+yeardoy_1 = convertTimeStamp(str_from);
+jd_1 = doy2jd_GT(yeardoy_1(1), yeardoy_1(2));
+if strcmp(str_to, '0000:000:00000')
+    jd_2 = Inf;
+else
+    yeardoy_2 = convertTimeStamp(str_to);
+    jd_2 = doy2jd_GT(yeardoy_2(1), yeardoy_2(2));
+end
 
 function [] = download_IGS_SatelliteMetadataFile()
 % This function downloads the IGS satellite metadata file from the IGS site

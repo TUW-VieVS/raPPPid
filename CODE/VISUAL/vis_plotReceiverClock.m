@@ -53,13 +53,8 @@ isQZSS = settings.INPUT.use_QZSS;
 
 m2ns = 1e9 / Const.C;       % convert from [m] to [ns]
 
-% consider shift in parameter vector if new parameters were added
+% consider potential shift in parameter vector if new parameters were added
 d = 0;
-if DecoupledClockModel && NO_PARAM > DEF.NO_PARAM_DCM
-    d = NO_PARAM - DEF.NO_PARAM_DCM;
-elseif NO_PARAM > DEF.NO_PARAM_ZD
-    d = NO_PARAM - DEF.NO_PARAM_ZD;
-end
 
 
 % extract estimated receiver errors for each GNSS [m]
@@ -138,11 +133,11 @@ end
 % plot QZSS
 if isQZSS
     if ~strcmp(settings.IONO.model, 'Estimate, decoupled clock')
-        m = 1; rec_clk_QZS = param(17,:) * m2ns;
+        m = 1; rec_clk_QZS = param(20+d,:) * m2ns;
     else
         m = 2;
-        rec_clk_QZS(1,:) = param( 9,:) * m2ns;
-        rec_clk_QZS(2,:) = param(14,:) * m2ns;
+        rec_clk_QZS(1,:) = param(12+d,:) * m2ns;
+        rec_clk_QZS(2,:) = param(17+d,:) * m2ns;
     end
     i = plot_clk(rec_clk_QZS, i, n, m, resets_h, hours, ff, strXAxis, ['QZSS ' strYAxis], DEF.COLOR_J);
 end

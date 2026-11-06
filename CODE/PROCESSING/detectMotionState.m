@@ -25,11 +25,11 @@ function [motionState, ZUPT_prob] = detectMotionState(Epoch)
 
 
 % define some constants
-tol_acc = 0.3;              % [m/s^2], tolerance for gravity magnitude deviation
-tol_ang = 10/180*pi;        % [°] to [rad], tolerance for angular velocity 
-thresh_acc = 0.1;           % [m/s^2], maximum stdev for acceleration on any axis
-thresh_ang = 0.01;          % [rad], maximum stdev for angular velocity on any axis
-thresh_linear_acc = 0.25;   % [m/s^2], threshold for linear acceleration
+tol_acc = Const.IMU_TOL_ACC;                % [m/s^2], tolerance for gravity magnitude deviation
+tol_ang = Const.IMU_TOL_ANG;                % [rad], tolerance for angular velocity
+thresh_acc = Const.IMU_THRESH_ACC_STD;      % [m/s^2], maximum stdev for acceleration on any axis
+thresh_ang = Const.IMU_THRESH_ANG_STD;      % [rad], maximum stdev for angular velocity on any axis
+thresh_linear_acc = Const.IMU_THRESH_LIN_ACC; % [m/s^2], threshold for linear acceleration
 
 
 % set defaults assuming most active state
@@ -43,7 +43,7 @@ if ~isfield(Epoch, 'IMU') || ...
     return
 end
 
-% get variables
+% get accelerometer and gyroscope measurements
 acc  = Epoch.IMU.acc_raw;   % [N×3] m/s^2
 gyro = Epoch.IMU.gyr_raw;   % [N×3] rad/s
 

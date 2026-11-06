@@ -45,6 +45,7 @@ obs.QZSS.D1 = [];   obs.QZSS.D2 = [];   obs.QZSS.D3 = [];
 
 % --- GPS ---
 if settings.INPUT.use_GPS
+    if bool_print; PrintFrequencies('  GPS', settings.INPUT.gps_freq); end
     if ~strcmpi(settings.INPUT.gps_freq(1),'OFF')
         idx_L = obs.use_column{1, 1};
         idx_C = obs.use_column{1, 4};
@@ -61,7 +62,7 @@ if settings.INPUT.use_GPS
             obs.GPS.S1 = obs.types_gps(2*idx_S-1:2*idx_S);
             obs.GPS.D1 = obs.types_gps(2*idx_D-1:2*idx_D);
         end
-        if bool_print; fprintf('  GPS 1: %s, %s, %s, %s\n', obs.GPS.C1, obs.GPS.L1, obs.GPS.S1, obs.GPS.D1); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.GPS.C1, obs.GPS.L1, obs.GPS.S1, obs.GPS.D1); end
     end
     if ~strcmpi(settings.INPUT.gps_freq(2),'OFF')
         idx_L = obs.use_column{1, 2};
@@ -79,7 +80,7 @@ if settings.INPUT.use_GPS
             obs.GPS.S2 = obs.types_gps(2*idx_S-1:2*idx_S);
             obs.GPS.D2 = obs.types_gps(2*idx_D-1:2*idx_D);
         end
-        if bool_print; fprintf('  GPS 2: %s, %s, %s, %s\n', obs.GPS.C2, obs.GPS.L2, obs.GPS.S2, obs.GPS.D2); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.GPS.C2, obs.GPS.L2, obs.GPS.S2, obs.GPS.D2); end
     end
     if ~strcmpi(settings.INPUT.gps_freq(3),'OFF')
         idx_L = obs.use_column{1, 3};
@@ -93,12 +94,13 @@ if settings.INPUT.use_GPS
             obs.GPS.S3 = obs.types_gps_3(3*idx_S-2:3*idx_S);
             obs.GPS.D3 = obs.types_gps_3(3*idx_D-2:3*idx_D);
         end
-        if bool_print; fprintf('  GPS 3: %s, %s, %s, %s\n', obs.GPS.C3, obs.GPS.L3, obs.GPS.S3, obs.GPS.D3); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.GPS.C3, obs.GPS.L3, obs.GPS.S3, obs.GPS.D3); end
     end
 end
 
 % --- GLONASS ---
 if settings.INPUT.use_GLO
+    if bool_print; PrintFrequencies('  GLO', settings.INPUT.glo_freq); end
     if ~strcmpi(settings.INPUT.glo_freq(1),'OFF')
         idx_L = obs.use_column{2, 1};
         idx_C = obs.use_column{2, 4};
@@ -116,7 +118,7 @@ if settings.INPUT.use_GLO
             obs.GLO.S1 = obs.types_glo(2*idx_S-1:2*idx_S);
             obs.GLO.D1 = obs.types_glo(2*idx_D-1:2*idx_D);
         end
-        if bool_print; fprintf('  GLO 1: %s, %s, %s, %s\n', obs.GLO.C1, obs.GLO.L1, obs.GLO.S1, obs.GLO.D1); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.GLO.C1, obs.GLO.L1, obs.GLO.S1, obs.GLO.D1); end
     end
     if ~strcmpi(settings.INPUT.glo_freq(2),'OFF')
         idx_L = obs.use_column{2, 2};
@@ -135,7 +137,7 @@ if settings.INPUT.use_GLO
             obs.GLO.S2 = obs.types_glo(2*idx_S-1:2*idx_S);
             obs.GLO.D2 = obs.types_glo(2*idx_D-1:2*idx_D);
         end
-        if bool_print; fprintf('  GLO 2: %s, %s, %s, %s\n', obs.GLO.C2, obs.GLO.L2, obs.GLO.S2, obs.GLO.D2); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.GLO.C2, obs.GLO.L2, obs.GLO.S2, obs.GLO.D2); end
     end
     if ~strcmpi(settings.INPUT.glo_freq(3),'OFF')
         idx_L = obs.use_column{2, 3};
@@ -149,12 +151,13 @@ if settings.INPUT.use_GLO
             obs.GLO.S3 = obs.types_glo_3(3*idx_S-2:3*idx_S);
             obs.GLO.D3 = obs.types_glo_3(3*idx_D-2:3*idx_D);
         end
-        if bool_print; fprintf('  GLO 3: %s, %s, %s, %s\n', obs.GLO.C3, obs.GLO.L3, obs.GLO.S3, obs.GLO.D3); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.GLO.C3, obs.GLO.L3, obs.GLO.S3, obs.GLO.D3); end
     end
 end
 
 % --- GALILEO ---
 if settings.INPUT.use_GAL
+    if bool_print; PrintFrequencies('  GAL', settings.INPUT.gal_freq); end
     if ~strcmpi(settings.INPUT.gal_freq(1),'OFF')
         idx_L = obs.use_column{3, 1};
         idx_C = obs.use_column{3, 4};
@@ -167,7 +170,7 @@ if settings.INPUT.use_GAL
             obs.GAL.S1 = obs.types_gal_3(3*idx_S-2:3*idx_S);
             obs.GAL.D1 = obs.types_gal_3(3*idx_D-2:3*idx_D);
         end
-        if bool_print; fprintf('  GAL 1: %s, %s, %s, %s\n', obs.GAL.C1, obs.GAL.L1, obs.GAL.S1, obs.GAL.D1); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.GAL.C1, obs.GAL.L1, obs.GAL.S1, obs.GAL.D1); end
     end
     if ~strcmpi(settings.INPUT.gal_freq(2),'OFF')
         idx_L = obs.use_column{3, 2};
@@ -181,7 +184,7 @@ if settings.INPUT.use_GAL
             obs.GAL.S2 = obs.types_gal_3(3*idx_S-2:3*idx_S);
             obs.GAL.D2 = obs.types_gal_3(3*idx_D-2:3*idx_D);
         end
-        if bool_print; fprintf('  GAL 2: %s, %s, %s, %s\n', obs.GAL.C2, obs.GAL.L2, obs.GAL.S2, obs.GAL.D2); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.GAL.C2, obs.GAL.L2, obs.GAL.S2, obs.GAL.D2); end
     end
     if ~strcmpi(settings.INPUT.gal_freq(3),'OFF')
         idx_L = obs.use_column{3, 3};
@@ -195,7 +198,7 @@ if settings.INPUT.use_GAL
             obs.GAL.S3 = obs.types_gal_3(3*idx_S-2:3*idx_S);
             obs.GAL.D3 = obs.types_gal_3(3*idx_D-2:3*idx_D);
         end
-        if bool_print; fprintf('  GAL 3: %s, %s, %s, %s\n', obs.GAL.C3, obs.GAL.L3, obs.GAL.S3, obs.GAL.D3); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.GAL.C3, obs.GAL.L3, obs.GAL.S3, obs.GAL.D3); end
     end
 end
 
@@ -204,6 +207,7 @@ end
 % both 1I/Q/X and 2I/Q/X observation codes  should be accepted and treated 
 % the same as 2I/Q/X in the current RINEX standard. 
 if settings.INPUT.use_BDS
+    if bool_print; PrintFrequencies('  BDS', settings.INPUT.bds_freq); end
     if ~strcmpi(settings.INPUT.bds_freq(1),'OFF')
         idx_L = obs.use_column{4, 1};
         idx_C = obs.use_column{4, 4};
@@ -216,7 +220,7 @@ if settings.INPUT.use_BDS
             obs.BDS.S1 = BDS_2_to_1(obs.types_bds_3(3*idx_S-2:3*idx_S));
             obs.BDS.D1 = BDS_2_to_1(obs.types_bds_3(3*idx_D-2:3*idx_D));
         end
-        if bool_print; fprintf('  BDS 1: %s, %s, %s, %s\n', obs.BDS.C1, obs.BDS.L1, obs.BDS.S1, obs.BDS.D1); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.BDS.C1, obs.BDS.L1, obs.BDS.S1, obs.BDS.D1); end
     end
     if ~strcmpi(settings.INPUT.bds_freq(2),'OFF')
         idx_L = obs.use_column{4, 2};
@@ -230,7 +234,7 @@ if settings.INPUT.use_BDS
             obs.BDS.S2 = BDS_2_to_1(obs.types_bds_3(3*idx_S-2:3*idx_S));
             obs.BDS.D2 = BDS_2_to_1(obs.types_bds_3(3*idx_D-2:3*idx_D));
         end
-        if bool_print; fprintf('  BDS 2: %s, %s, %s, %s\n', obs.BDS.C2, obs.BDS.L2, obs.BDS.S2, obs.BDS.D2); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.BDS.C2, obs.BDS.L2, obs.BDS.S2, obs.BDS.D2); end
     end
     if ~strcmpi(settings.INPUT.bds_freq(3),'OFF')
         idx_L = obs.use_column{4, 3};
@@ -244,12 +248,13 @@ if settings.INPUT.use_BDS
             obs.BDS.S3 = BDS_2_to_1(obs.types_bds_3(3*idx_S-2:3*idx_S));
             obs.BDS.D3 = BDS_2_to_1(obs.types_bds_3(3*idx_D-2:3*idx_D));
         end
-        if bool_print; fprintf('  BDS 3: %s, %s, %s, %s\n', obs.BDS.C3, obs.BDS.L3, obs.BDS.S3, obs.BDS.D3); end
+        if bool_print; fprintf('    %s, %s, %s, %s\n', obs.BDS.C3, obs.BDS.L3, obs.BDS.S3, obs.BDS.D3); end
     end
 end
 
 % --- QZSS ---
 if settings.INPUT.use_QZSS
+    if bool_print; PrintFrequencies(' QZSS', settings.INPUT.qzss_freq); end
     if ~strcmpi(settings.INPUT.qzss_freq(1),'OFF')
         idx_L = obs.use_column{5, 1};
         idx_C = obs.use_column{5, 4};
@@ -262,7 +267,7 @@ if settings.INPUT.use_QZSS
             obs.QZSS.S1 = obs.types_qzss_3(3*idx_S-2:3*idx_S);
             obs.QZSS.D1 = obs.types_qzss_3(3*idx_D-2:3*idx_D);
         end
-        if bool_print; fprintf(' QZSS 1: %s, %s, %s, %s\n', obs.QZSS.C1, obs.QZSS.L1, obs.QZSS.S1, obs.QZSS.D1); end
+        if bool_print; fprintf(' %s, %s, %s, %s\n', obs.QZSS.C1, obs.QZSS.L1, obs.QZSS.S1, obs.QZSS.D1); end
     end
     if ~strcmpi(settings.INPUT.qzss_freq(2),'OFF')
         idx_L = obs.use_column{5, 2};
@@ -276,7 +281,7 @@ if settings.INPUT.use_QZSS
             obs.QZSS.S2 = obs.types_qzss_3(3*idx_S-2:3*idx_S);
             obs.QZSS.D2 = obs.types_qzss_3(3*idx_D-2:3*idx_D);
         end
-        if bool_print; fprintf(' QZSS 2: %s, %s, %s, %s\n', obs.QZSS.C2, obs.QZSS.L2, obs.QZSS.S2, obs.QZSS.D2); end
+        if bool_print; fprintf(' %s, %s, %s, %s\n', obs.QZSS.C2, obs.QZSS.L2, obs.QZSS.S2, obs.QZSS.D2); end
     end
     if ~strcmpi(settings.INPUT.qzss_freq(3),'OFF')
         idx_L = obs.use_column{5, 3};
@@ -290,7 +295,7 @@ if settings.INPUT.use_QZSS
             obs.QZSS.S3 = obs.types_qzss_3(3*idx_S-2:3*idx_S);
             obs.QZSS.D3 = obs.types_qzss_3(3*idx_D-2:3*idx_D);
         end
-        if bool_print; fprintf(' QZSS 3: %s, %s, %s, %s\n', obs.QZSS.C3, obs.QZSS.L3, obs.QZSS.S3, obs.QZSS.D3); end
+        if bool_print; fprintf(' %s, %s, %s, %s\n', obs.QZSS.C3, obs.QZSS.L3, obs.QZSS.S3, obs.QZSS.D3); end
     end
 end
 
@@ -343,6 +348,16 @@ if strcmp(proc, digit3)             % check if observation type to change is pro
     vec = (idx*2-1):(idx*2);
     obs_types(vec) = digit2;        % change 2-digit observation code
 end
+
+
+
+function PrintFrequencies(gnss_str, freq)
+% prints the frequencies selected in the GUI for the current GNSS, for
+% example: "  GPS: L1, L2, OFF"
+freq = cellstr(freq);
+freq = freq(:)';                            % strjoin needs a row vector
+freq(strcmpi(freq, 'OFF')) = {'OFF'};       % unify spelling of 'OFF'
+fprintf('%s: %s\n', gnss_str, strjoin(freq, ', '));
 
 
 

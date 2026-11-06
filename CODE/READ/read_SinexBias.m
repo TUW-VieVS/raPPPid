@@ -7,13 +7,13 @@ function [BIAS] = read_SinexBias(BIAS, path, glo_channels)
 % INPUT: 
 %   BIAS            struct to store data
 %   path            string, path to Sinex-Bias-File
-%   glo_channels	channels of glonass satellites, necessary if
-%                   Sinex-Bias-File contains Glonass Biases and they have to
+%   glo_channels	channels of GLONASS satellites, necessary if
+%                   Sinex-Bias-File contains GLONASS Biases and they have to
 %                   be converted from [cy] to [ns]
 % OUTPUT:
 %   BIAS            struct, with 3 fields: DSB, OSB, ISB 
 %                   these three fields are structs with fields for all GPS,  
-%                   Glonass, Galileo and BeiDou satellites and every 
+%                   GLONASS, Galileo and BeiDou satellites and every 
 %                   satellite-field has 5 fields: 
 %                   .value [ns]; .start [sow]; .end [sow]; .start_gpsweek;
 %                   .ende_gpsweek;

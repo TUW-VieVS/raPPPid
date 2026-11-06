@@ -59,15 +59,18 @@ end
 % Doppler measurements
 if settings.EXP.satellites_D
     if ~isempty(Epoch.D1)
-        satellites.D1(q,prns) = Epoch.D1 ./ Epoch.l1;   % convert back to [Hz]
+        satellites.D1(q,prns) = Epoch.D1;       % saved as [m/s]
     end
     if ~isempty(Epoch.D2)
-        satellites.D2(q,prns) = Epoch.D2 ./ Epoch.l2;   % convert back to [Hz]
+        satellites.D2(q,prns) = Epoch.D2;       % saved as [m/s]
     end
     if ~isempty(Epoch.D3)
-        satellites.D3(q,prns) = Epoch.D3 ./ Epoch.l3;   % convert back to [Hz]
+        satellites.D3(q,prns) = Epoch.D3;       % saved as [m/s]
     end
 end
+
+% observed satellites
+satellites.sats{q} = Epoch.sats;
 
 
 
@@ -75,19 +78,15 @@ end
 %% adjustment variables
 storeData.float(q) = bool_float;    % valid float solution in current epoch?
 if bool_phase
-    % float ambiguities
-	[N_temp, idx_N] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, proc_frqs);
-	N_temp = reshape(N_temp, 1, no_sats, proc_frqs);
-    storeData.N_1(q,prns) = N_temp(:,:,1);      
-	if proc_frqs>1; storeData.N_2(q,prns) = N_temp(:,:,2); end
-	if proc_frqs>2; storeData.N_3(q,prns) = N_temp(:,:,3); end
     % residuals from adjustment
     code_rows = 1:2:2*s_f;
 	phase_rows = 2:2:2*s_f;
-    doppler_rows = 2*s_f+1:numel(Adjust.res);
+    % Doppler residuals are the last s_f rows of Adjust.res and ionospheric 
+    % pseudo-observations sit between phase and Doppler
+    doppler_rows = numel(Adjust.res)-s_f+1 : numel(Adjust.res);
     if strcmp(settings.IONO.model, 'GRAPHIC')
         storeData.residuals_code_1(q,prns) = Adjust.res(1:s_f);
-        if bool_doppler; storeData.residuals_doppler_1(q,prns) = Adjust.res(s_f+1:end); end
+        if bool_doppler; storeData.residuals_doppler_1(q,prns) = Adjust.res(end-s_f+1:end); end
     else
         temp_code_res    = reshape(Adjust.res(code_rows),    1, no_sats, proc_frqs);
         temp_phase_res   = reshape(Adjust.res(phase_rows),   1, no_sats, proc_frqs);
@@ -125,7 +124,7 @@ else        % code only processing
     if proc_frqs > 1; storeData.residuals_code_2(q,prns) = temp_res_code(:,:,2); end
     if proc_frqs > 2; storeData.residuals_code_3(q,prns) = temp_res_code(:,:,3); end
     if bool_doppler
-        temp_res_doppler = reshape(Adjust.res(s_f+1:end), 1, no_sats, proc_frqs);
+        temp_res_doppler = reshape(Adjust.res(end-s_f+1:end), 1, no_sats, proc_frqs);
         storeData.residuals_doppler_1(q,prns) = temp_res_doppler(:,:,1);
         if proc_frqs > 1; storeData.residuals_doppler_2(q,prns) = temp_res_doppler(:,:,2); end
         if proc_frqs > 2; storeData.residuals_doppler_3(q,prns) = temp_res_doppler(:,:,3); end
@@ -135,14 +134,6 @@ end
 
 % covariance matrix of parameters, cell as matrix changes size over time
 storeData.param_sigma{q} = Adjust.param_sigma;
-
-if ~strcmp(settings.ADJ.filter.type,'No Filter')   &&   bool_phase
-    temp1 = diag( Adjust.param_sigma(idx_N, idx_N) );
-	temp2 = reshape(temp1, 1, no_sats, proc_frqs);
-    storeData.N_var_1(q,prns) = temp2(:,:,1);
-	if proc_frqs > 1;	storeData.N_var_2(q,prns) = temp2(:,:,2); end
-	if proc_frqs > 2;	storeData.N_var_3(q,prns) = temp2(:,:,3); end
-end
 
 % save epochs which are fixed
 if Adjust.fixed
@@ -159,11 +150,8 @@ switch settings.IONO.model
     % case: OFF, 2 or 3-Frequency-IF-LC has no ionospheric information
     case 'Estimate with ... as constraint'
         storeData.constraint(q) = Adjust.constraint;
-        numel_param = numel(Adjust.param);
         % calculated ionospheric pseudo-observations:
         storeData.iono_corr(q,prns) = model.iono(:,1);
-        % estimated ionospheric delay:
-        storeData.iono_est(q,prns) = Adjust.param((numel_param-no_sats+1):numel_param);
         if strcmp(settings.IONO.source, 'IONEX File')
             % ionospheric mapping function and VTEC values
             storeData.iono_mf(q,prns)   = model.iono_mf;
@@ -175,10 +163,6 @@ switch settings.IONO.model
             storeData.iono_mf(q,prns)   = model.iono_mf;
             storeData.iono_vtec(q,prns) = model.iono_vtec;
         end
-    case {'Estimate', 'Estimate, decoupled clock'}
-        numel_param = numel(Adjust.param);
-        % estimated ionospheric delay:
-        storeData.iono_est(q,prns,1) = Adjust.param((numel_param-no_sats+1):numel_param);  
 end
 
     
@@ -250,14 +234,14 @@ if settings.AMBFIX.bool_AMBFIX || decoupled_clock_model
 end
 
 
-%% PPP-AR variables: save fixed ambiguites and HMW LC
+%% PPP-AR variables: save fixed ambiguities and HMW LC
 if settings.AMBFIX.bool_AMBFIX
 
     % save fixed ambiguities
     if contains(settings.IONO.model,'IF-LC')
         storeData.N_WL_12(q,:) = Epoch.WL_12';        % fixed Wide-Lane
         storeData.N_NL_12(q,:) = Epoch.NL_12';        % fixed Narrow-Lane
-        if proc_frqs >= 2
+        if proc_frqs >= 2 || strcmp(settings.IONO.model, '3-Frequency-IF-LC')
             storeData.N_WL_23(q,:) = Epoch.WL_23';        % fixed Extra-Wide-Lane
             storeData.N_NL_23(q,:) = Epoch.NL_23';        % fixed Extra-Narrow-Lane
         end
@@ -269,7 +253,7 @@ if settings.AMBFIX.bool_AMBFIX
     end
     % save Hatch-Melbourne-Wübbena LCs
     storeData.HMW_12(q,prns) = Adjust.HMW_12(q,prns);
-    if proc_frqs >= 2
+    if proc_frqs >= 2 || strcmp(settings.IONO.model, '3-Frequency-IF-LC')
         storeData.HMW_23(q,prns) = Adjust.HMW_23(q,prns);
         storeData.HMW_13(q,prns) = Adjust.HMW_13(q,prns);
     end
@@ -316,15 +300,37 @@ storeData.time(q,1) = Epoch.time;
 storeData.dt_last_reset(q) = Epoch.gps_time-Adjust.reset_time;      % [s], time since last reset
 storeData.param(q,:) = Adjust.param(1:NO_PARAM);
 storeData.param_pred(q,:) = Adjust.param_pred(1:NO_PARAM);
+storeData.param_full{q} = Adjust.param;                % full parameter vector x_{k|k}
+
+% variables needed for the RTS smoother
+if strcmp(settings.ADJ.filter.direction, 'Forwards + RTS')
+    % save full predicted parameter vector x_{k|k-1}
+    param_pred = Adjust.param_pred;
+    if strcmp(settings.ADJ.filter.type, 'Iterated Extended Kalman Filter') && ~isempty(Adjust.x_pred_IEKF)
+        % param_pred is overwritten while iterating -> rebuild using x_pred_IEKF
+        param_pred = Adjust.param + Adjust.x_pred_IEKF;
+    end
+    storeData.param_pred_full{q} = param_pred;
+    % save covariance matrix P_{k|k-1}
+    storeData.param_sigma_pred{q} = Adjust.param_sigma_pred;
+    % save transition matrix x_{k-1} -> x_k
+    if ~isempty(Adjust.Transition)
+        storeData.Transition{q} = sparse(Adjust.Transition);
+    else
+        storeData.Transition{q} = speye(numel(Adjust.param));
+    end
+end
+
+% save lever arm
+if settings.KINE.bool_offset && settings.KINE.bool_kinematic
+    storeData.leverarm_ECEF(q,:) = Epoch.leverarm_ECEF';    % [1x3], ECEF lever arm of this epoch
+end
 
 if Adjust.fixed
     storeData.param_fix(q,:)     = Adjust.param_fix(1:NO_PARAM);
-    storeData.param_var_fix(q,:) = diag(Adjust.param_sigma_fix(1:3,1:3));
+    % covariance matrix of fixed parameters, cell as matrix changes size over time
+	storeData.param_sigma_fix{q} = Adjust.param_sigma_fix;
 end
-
-% store (co)variance information
-variances = diag(Adjust.param_sigma);
-storeData.param_var(q,:) = variances(1:NO_PARAM);
 
 % --- Quality Values ---
 A = Adjust.A;                   % get Design-Matrix
@@ -333,7 +339,7 @@ Q_all = pinv(A'*A); 	        % without weights
 Qxyz  = Q_all(1:3,1:3);
 
 % get functional dependence in local coordinates (East, North, Up)
-H = inv(model.R_LL2ECEF);       % transformation matrix from ECEF to ENU
+H = inv(model.R2ECEF);       % rotation matrix from ECEF to body frame
 Qneu = H*Qxyz*H';               % [m]
 
 % Dilutions of Precision (DOPs)
@@ -341,22 +347,20 @@ storeData.PDOP(q) = sqrt(Qxyz(1,1) + Qxyz(2,2) + Qxyz(3,3));    % Position DOP
 storeData.HDOP(q) = sqrt(Qneu(1,1) + Qneu(2,2));                % Horizontal DOP
 storeData.VDOP(q) = sqrt(Qneu(3,3));                            % Vertical DOP
 
-% ||| loses information! cs_found and exclude have #columns = processed frqs
-storeData.cs_found(q,prns) = any(Epoch.cs_found, 2); 	% true if cycle slip found on any frequency
-storeData.exclude(q,prns)  = any(Epoch.exclude, 2);     % true if satellite's observation excluded on any frequency
+% ||| loses information! excludePhase and exclude have #columns = processed frqs
+storeData.excludePhase(q,prns) = ~all(Epoch.usePhase, 2); 	% true if phase observation had to be excluded on any frequency
+storeData.exclude(q,prns)  = ~all(Epoch.useCode, 2);        % true if code observation had to be excluded on any frequency
 
 
 %% IMU related variables
-if settings.KINE.bool_IMU && settings.INPUT.rawDataAndroid
-    storeData.triad(:,q) = Adjust.z_triad;
-    storeData.fn(:,q) = Adjust.a_n;
-    storeData.quat(:,q) = Adjust.quat;
-    storeData.motionState(:,q) = Epoch.motionState;
-    storeData.up_axis(:,q) = Adjust.up_axis;
-    storeData.z_yaw(1,q) = Adjust.z_yaw;
-    storeData.forward_body(:,q) = Adjust.forward_body;
-    storeData.gnss_bearing(:,q) = Adjust.gnss_bearing;
-    storeData.yaw_forward(:,q) = Adjust.yaw_forward;
+if settings.KINE.bool_kinematic && settings.KINE.bool_IMU && ~isempty(Epoch.motionState) && ~isempty(Epoch.ZUPT_prob)
+    storeData.motionState(q,:) = Epoch.motionState;
+    storeData.ZUPT_prob(q,:) = Epoch.ZUPT_prob;
+end
+if settings.KINE.bool_kinematic && settings.KINE.bool_IMU && settings.INPUT.rawDataAndroid && ...
+        isfield(Adjust,'quat_initialized') && Adjust.quat_initialized
+    storeData.fn(q,:) = Adjust.a_n;
+    storeData.quat(q,:) = Adjust.quat;
 end
 
 %% save satellite status

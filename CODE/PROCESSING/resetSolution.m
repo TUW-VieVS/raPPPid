@@ -72,8 +72,9 @@ if resetnow
         Adjust.float = false;
         Adjust.float_reset_epochs = [Adjust.float_reset_epochs, q];
         Adjust.reset_time = Epoch.gps_time;
+        Adjust.N_est_epochs(:,:) = 0;     % reset number of epochs each ambiguity is estimated
     end
-        
+
     % reset fixed solution
     if bool_fixed && settings.AMBFIX.bool_AMBFIX
         Adjust.fixed = false;

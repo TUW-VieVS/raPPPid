@@ -22,7 +22,7 @@ function [obs] = anheader(settings)
 %   obs.time_system   	string, time system of the observations
 %   obs.leap_sec      	leap seconds of observation-file
 % 	obs.antenna_type  	antenna type, string
-% 	obs.rec_type        receiver type, string
+% 	obs.receiver_type   receiver type, string
 %  	obs.rec_ant_delta	1x3, antenna offset [H,E,N]
 %   obs.glo_channel  	channel numbers for all Glonass satellites
 % 
@@ -171,7 +171,8 @@ while 1
             nextline = fgetl(fid);
             obs_line = [obs_line, nextline(7:58)];
         end
-        obs_types_3 = regexprep(obs_line, ' ', '');     % delete empty spaces
+        obs_line = strrep(obs_line, 'X1 ', 'XXX');  % protect against X1 channel numbers
+        obs_types_3 = regexprep(obs_line, ' ', ''); % delete empty spaces
         for i = 3:3:length(obs_types_3)         % loop over observation types
             type3 = obs_types_3(i-2:i);            
             [type2, rank] = obs_convert(type3, system, settings);

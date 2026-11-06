@@ -20,7 +20,11 @@ outfile = websave(filename, url, varargin{:});
 
 % websave changed the filename -> server returned unexpected content type
 % (typically an HTML error page saved as *.html)
-if ~strcmp(outfile, filename)
+% compare only name and extension: websave returns an absolute path, while
+% filename can be relative (e.g., Path.DATA = '../DATA/') or use other slashes
+[~, name_req, ext_req] = fileparts(filename);
+[~, name_out, ext_out] = fileparts(outfile);
+if ~strcmp([name_out ext_out], [name_req ext_req])
     if isfile(outfile)
         delete(outfile);
     end

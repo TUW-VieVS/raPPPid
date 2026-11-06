@@ -51,8 +51,8 @@ if isfield(SinexBias.DSB, station)
     DSB_station = SinexBias.DSB.(station);
     
     %% - GPS:
-    % All observation are converted to C1C (with obs.rec_DCB_gps_C1/C2(C3)
-    % and then to the IF-LC of C1W-C2W (with obs.rec_DCB_gps_IF)
+    % All observation are converted to C1C (with obs.rec_bias_gps_C1/C2(C3)
+    % and then to the IF-LC of C1W-C2W (with obs.rec_bias_gps_IF)
     if settings.INPUT.use_GPS
         % bias xxx minus yyy:
         dsb_12_G = ['G', 'C1C', obs.GPS.C2];        % C1C - C2
@@ -166,8 +166,8 @@ if isfield(SinexBias.DSB, station)
     
     
     %% - Galileo:
-    % All observation are converted to C1C (with obs.rec_DCB_gal_C1/C2(C3)
-    % and then to the IF-LC of C1C-C5Q (with obs.rec_DCB_gal_IF)
+    % All observation are converted to C1C (with obs.rec_bias_gal_C1/C2(C3)
+    % and then to the IF-LC of C1C-C5Q (with obs.rec_bias_gal_IF)
     if settings.INPUT.use_GAL 	% bias xxx minus yyy:
         dsb_12_E = ['E', 'C1C', obs.GAL.C2];        % C1C - C2
         dsb_21_E = ['E', 'C1C', obs.GAL.C2];        % C2 - C1C

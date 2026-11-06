@@ -78,11 +78,18 @@ if sum( ~isnan(N_fixed(:)) ) >= 3  	% ||| check condition
     % part of covariance matrix corresponding to all non-ambiguity parameters
     idx = [1:NO_PARAM, idx_iono];
     Q_bn = Adjust.param_sigma(idx, idx_N);
+    Q_bb = Adjust.param_sigma(idx, idx);        % float covariance of these parameters
 
 
     % update float position with fixed ambiguities [23], equation (1):
     Q_bn_ = Q_bn(:,keep); Q_NN_ = Q_NN(keep, keep); N_diff_ = N_diff(keep);
     Adjust.param_fix(idx) = Adjust.param(idx) - Q_bn_ * (Q_NN_ \ N_diff_);
+
+    % covariance matrix of the fixed parameters, conditional least-squares
+    % solution assuming the fixed ambiguities are non-stochastic, reference
+    % [24]: equation (7)
+    Q_fix = Q_bb - Q_bn_ * (Q_NN_ \ Q_bn_');
+    Q_fix = (Q_fix + Q_fix') / 2;               % remove numerical asymmetry
 
     % save results
     Adjust.fixed = true;
@@ -93,11 +100,11 @@ if sum( ~isnan(N_fixed(:)) ) >= 3  	% ||| check condition
     Adjust.res_fix(:,1) = codephase((1            ) : (2*no_sats));
     Adjust.res_fix(:,2) = codephase((1 + 2*no_sats) : (4*no_sats));
     Adjust.res_fix(:,3) = codephase((1 + 4*no_sats) : (6*no_sats));
-    % ||| covariance matrix of fixed parameters
-    Adjust.param_sigma_fix = NaN(3);
+    % covariance matrix of fixed parameters (1:NO_PARAM and ionospheric delays)
+    Adjust.param_sigma_fix = Q_fix;
 
 else
-    % not enough ambiguities fixed to calcute fixed solution
+    % not enough ambiguities fixed to calculate fixed solution
     Adjust.param_fix(1:3) = NaN;
     Adjust.fixed = false;
 end

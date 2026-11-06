@@ -1,8 +1,10 @@
 function Epoch = cycleSlip_Doppler(Epoch, use_column, settings)
 % This function performs cycle-slip detection with Doppler observations of
 % the current and the last epoch on the raw observations directly from
-% the observation matrix. The following formula is used (geometric mean):
-% L(t+1) = L(t) + sqrt(D(t-1)*D(t)) * dt
+% the observation matrix. The following formula is used (arithmetic mean,
+% trapezoidal integration of the Doppler):
+% L(t+1) = L(t) -/+ (D(t-1) + D(t))/2 * dt
+% The sign is chosen for all satellites within the epoch.
 %
 % INPUT:
 %   Epoch       data from current epoch
@@ -16,18 +18,18 @@ function Epoch = cycleSlip_Doppler(Epoch, use_column, settings)
 %   11 Nov 2020, MFG: implementation extended for GLO and BDS
 %   11 Nov 2023, MFWG: adding QZSS
 %   19 June 2026, MFWG: removing bug when processing linear combination
+%   30 Sep 2026, MFWG: merged terrestrial and satellite case
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
 %% Preparations
-Epoch.cs_L1D1_diff = NaN(1,410);
-Epoch.cs_L2D2_diff = NaN(1,410);
-Epoch.cs_L3D3_diff = NaN(1,410);
+Epoch.cs_L1D1_diff = NaN(1, DEF.SATS);
+Epoch.cs_L2D2_diff = NaN(1, DEF.SATS);
+Epoch.cs_L3D3_diff = NaN(1, DEF.SATS);
 thresh = settings.OTHER.CS.D_threshold;
 bool_print = ~settings.INPUT.bool_parfor;
-bool_sat = settings.KINE.satellite.bool;
 dt = Epoch.gps_time - Epoch.old.gps_time;       % time difference between epochs
 % satellite prns of current epoch
 G_now = Epoch.sats(Epoch.gps);
@@ -81,12 +83,13 @@ D1_J = use_column{5,10};
     G_now, G_old, R_now, R_old, E_now, E_old, C_now, C_old, J_now, J_old);
 % make sure that everything is in the correct unit
 if settings.INPUT.rawDataAndroid        % smartphone raw data processing
-    f1 = NaN(1,410);   f1(Epoch.sats) = Epoch.f1;   % get frequency         
+    f1 = NaN(1, DEF.SATS);   f1(Epoch.sats) = Epoch.f1;   % get frequency         
     [L1_now, L1_old, D1_now, D1_old] = convert2cycles(L1_now, L1_old, D1_now, D1_old, Const.C ./ f1);
 end
 % detect cycles slips
-[Epoch.cs_found, L1_diff] = ...
-    detect_CS_Doppler(L1_now, L1_old, D1_now, D1_old, dt, 1, Epoch, thresh, bool_print, bool_sat);
+new_cs = false(numel(Epoch.sats), settings.INPUT.num_freqs);    % per input frequency
+[new_cs(:,1), L1_diff] = ...
+    detect_CS_Doppler(L1_now, L1_old, D1_now, D1_old, dt, 1, Epoch, thresh, bool_print);
 Epoch.cs_L1D1_diff = L1_diff;
 
 % --- 2nd frequency
@@ -102,11 +105,11 @@ if settings.INPUT.num_freqs > 1
         L2_G, L2_R, L2_E, L2_C, L2_J, D2_G, D2_R, D2_E, D2_C, D2_J, ...
         G_now, G_old, R_now, R_old, E_now, E_old, C_now, C_old, J_now, J_old);
     if settings.INPUT.rawDataAndroid  
-        f2 = NaN(1,410);   f2(Epoch.sats) = Epoch.f2;  
+        f2 = NaN(1, DEF.SATS);   f2(Epoch.sats) = Epoch.f2;  
         [L2_now, L2_old, D2_now, D2_old] = convert2cycles(L2_now, L2_old, D2_now, D2_old, Const.C ./ f2);
     end
-    [Epoch.cs_found, L2_diff] = ...
-        detect_CS_Doppler(L2_now, L2_old, D2_now, D2_old, dt, 2, Epoch, thresh, bool_print, bool_sat);
+    [new_cs(:,2), L2_diff] = ...
+        detect_CS_Doppler(L2_now, L2_old, D2_now, D2_old, dt, 2, Epoch, thresh, bool_print);
     Epoch.cs_L2D2_diff = L2_diff;
 end
 
@@ -123,22 +126,16 @@ if settings.INPUT.num_freqs > 2
         L3_G, L3_R, L3_E, L3_C, L3_J, D3_G, D3_R, D3_E, D3_C, D3_J, ...
         G_now, G_old, R_now, R_old, E_now, E_old, C_now, C_old, J_now, J_old);
     if settings.INPUT.rawDataAndroid
-        f3 = NaN(1,410);   f3(Epoch.sats) = Epoch.f3;
+        f3 = NaN(1, DEF.SATS);   f3(Epoch.sats) = Epoch.f3;
         [L3_now, L3_old, D3_now, D3_old] = convert2cycles(L3_now, L3_old, D3_now, D3_old, Const.C ./ f3);
     end
-    [Epoch.cs_found, L3_diff] = ...
-        detect_CS_Doppler(L3_now, L3_old, D3_now, D3_old, dt, 3, Epoch, thresh, bool_print, bool_sat);
+    [new_cs(:,3), L3_diff] = ...
+        detect_CS_Doppler(L3_now, L3_old, D3_now, D3_old, dt, 3, Epoch, thresh, bool_print);
     Epoch.cs_L3D3_diff = L3_diff;
 end
 
-% % reduce exclusion vector depending on processed linear combination
-% if strcmp(IONO_model, '2-Frequency-IF-LCs') && n == 2
-%     exclude = exclude(:,1) | exclude(:,2);
-% elseif strcmp(IONO_model, '2-Frequency-IF-LCs') && n == 3
-%     exclude = [exclude(:,1) | exclude(:,2), exclude(:,2) | exclude(:,3)];
-% elseif strcmp(IONO_model, '3-Frequency-IF-LC')
-%     exclude = exclude(:,1) | exclude(:,2) | exclude(:,3);
-% end
+% map cycle slips of input frequencies to processed frequencies
+Epoch.cs_found = Epoch.cs_found | Map2ProcFrqs(new_cs, settings.INPUT.num_freqs, settings.IONO.model);
 
 
 
@@ -153,8 +150,8 @@ function [L_now, L_old, D_now, D_old] =  getPhaseDoppler(...
     l_gps, l_glo, l_gal, l_bds, l_qzss, d_gps, d_glo, d_gal, d_bds, d_qzss, ...
     gps_now, gps_old, glo_now, glo_old, gal_now, gal_old, bds_now, bds_old, qzss_now, qzss_old)
 % initialize
-L_old = NaN(1,410);   L_now = NaN(1,410);
-D_old = NaN(1,410);   D_now = NaN(1,410);
+L_old = NaN(1, DEF.SATS);   L_now = NaN(1, DEF.SATS);
+D_old = NaN(1, DEF.SATS);   D_now = NaN(1, DEF.SATS);
 % extract observations
 if ~isempty(l_gps) && ~isempty(d_gps)
     L_now(gps_now) = obs_now_gps(:,l_gps);      % Phase-observations of current epoch
@@ -186,7 +183,9 @@ if ~isempty(l_qzss) && ~isempty(d_qzss)
     D_now(qzss_now) = obs_now_qzss(:,d_qzss);
     D_old(qzss_old) = obs_old_qzss(:,d_qzss);
 end
-
+% replace zeros with NaN to avoid problems later-on
+L_now(L_now==0) = NaN; L_old(L_old==0) = NaN; 
+D_now(D_now==0) = NaN; D_old(D_old==0) = NaN;
 
 function [L_now, L_old, D_now, D_old] = convert2cycles(L_now, L_old, D_now, D_old, wl)
 % in the case of smartphone raw gnss data processing phase and Doppler have
@@ -199,55 +198,30 @@ D_old = D_old ./ wl;
 
 
 % check for cycle-slips
-function [cs_found, L_diff] = detect_CS_Doppler(L_now, L_old, D_now, D_old, dt, freq, Epoch, thresh, bool_print, bool_sat)
-% % ---- predict with arithmetic mean:
-% % predict with positive sign:
-% L_pred = L_old + dt*(D_now + D_old)/2;      % predict L1 observation with last epoch and Doppler observations
-% L_diff = abs(L_now - L_pred);               % calculate difference between observed and predicted
-% new_cs_found = L_diff > thresh;          	% check for cycle-slip
-% % predict with negative sign:
-% L_pred_ = L_old - dt*(D_now + D_old)/2;
-% L_diff_ = abs(L_now - L_pred_);
-% new_cs_found_ = L_diff_ > thresh;
-% % take the right prediction (+ or -), this is different for each receiver
-% if nansum(L_diff_) < nansum(L_diff)			% nansum should not be used
-%     new_cs_found = new_cs_found_;
-%     L_diff = L_diff_;
-% end
+function [idx_cs, L_diff] = detect_CS_Doppler(L_now, L_old, D_now, D_old, dt, freq, Epoch, thresh, bool_print)
+% Predict the phase observation with the arithmetic mean of the Doppler 
+% shift using trapezoidal integration. Sign changes of Doppler (satellite 
+% case) are handled and it works for the forward and backward run.
 
-if ~bool_sat
-    % ---- prediction with geometric mean, which is more robust
-    % predict with positive sign:
-    L_pred = L_old + dt*sqrt(D_now.*D_old);      % predict L1 observation with last epoch and Doppler observations
-    L_diff2 = abs(L_now - L_pred);               % calculate difference between observed and predicted
-    % predict with negative sign:
-    L_pred_ = L_old - dt*sqrt(D_now.*D_old);
-    L_diff_2 = abs(L_now - L_pred_);
-    % take 'correct' difference which changes for each satellite
-    L_diff = min([L_diff2; L_diff_2], [], 'omitnan');
-    new_cs_found = L_diff > thresh;
-    
-else        % receiver is placed on a satellite, considers acceleration
-    Davg   = (D_now - D_old)/dt;
-    L_pred  = L_old - D_now*dt + 0.5*Davg * dt*dt;
-    
-    L_diff = abs(L_now - L_pred);
-    new_cs_found = L_diff > thresh;
+% calculate mean of Doppler observations
+D_mean = (D_now + D_old)/2;
+% predict with negative sign
+L_diff_neg = abs(L_now - (L_old - dt*D_mean));
+% predict with positive sign
+L_diff_pos = abs(L_now - (L_old + dt*D_mean));
+% choose sign once for all satellites (usually, receiver dependent)
+L_diff = L_diff_neg;        % RINEX convention
+if median(L_diff_pos, 'omitnan') < median(L_diff_neg, 'omitnan')
+    L_diff = L_diff_pos;
 end
+% check for cycle slips
+new_cs_found = L_diff > thresh;
 
-
-
-cs_found = Epoch.cs_found;
+idx_cs = false(numel(Epoch.sats), 1);       % cycle slips on this input frequency
 % print information about detected cycle-slips
 if any(new_cs_found)
     idx_cs = new_cs_found(Epoch.sats);
-    if size(cs_found, 2) >= freq    
-        % flag detected cycle-slips on corresponding frequency
-        cs_found(:,freq) = cs_found(:,freq) | idx_cs';    
-    else         
-        % linear combination is processed: flag cycle slip on all frequencies
-        cs_found = cs_found | idx_cs';    
-    end
+    idx_cs = idx_cs(:);
     if bool_print
         fprintf('Cycle-Slip found on frequency %1.0f with Doppler in epoch %d:           \n', ...
             freq, Epoch.q);

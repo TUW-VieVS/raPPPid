@@ -41,7 +41,7 @@ i = 1;      % number of current subplot
 
 m2ns = 1e9 / Const.C;               % convert from [m] to [ns]
 
-d = NO_PARAM - DEF.NO_PARAM_DCM;	% shift in index due to new parameters
+d = 0;								% potential shift in index due to new parameters
 
 
 %% Get variables to plot

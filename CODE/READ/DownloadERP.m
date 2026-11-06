@@ -305,8 +305,10 @@ switch settings.ORBCLK.prec_prod
         end
         download = false;
         % decompress
-        if isempty(decompressed_cddis)
+        if isempty(decompressed_cddis) && ~isfile([target{1} decomp{1}])
             decompressed = unzip_and_delete(file(1), target(1));
+        elseif isfile([target{1} decomp{1}])
+            decompressed{1} = [target{1} decomp{1}];
         else
             decompressed = decompressed_cddis;
         end

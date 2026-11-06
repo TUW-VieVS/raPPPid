@@ -235,9 +235,9 @@ if PLOT.satvisibility
     l_sat{end+1} = 'obs';
 end
 if PLOT.amb && PLOT.float       % Float Ambiguity plots
-    l_sto{end+1} = 'N_1';
-    l_sto{end+1} = 'N_2';
-    l_sto{end+1} = 'N_3';
+    l_sto{end+1} = 'param_full';
+    l_sto{end+1} = 'param_sigma';
+    l_sat{end+1} = 'sats';
 end
 if PLOT.amb && PLOT.fixed       % Fixed Ambiguity plots
     l_sto{end+1} = 'refSatGPS';
@@ -250,9 +250,6 @@ if PLOT.amb && PLOT.fixed       % Fixed Ambiguity plots
     l_sto{end+1} = 'N_NL_12';
     l_sto{end+1} = 'N_WL_23';
     l_sto{end+1} = 'N_NL_23';
-    l_sto{end+1} = 'N_3';
-    l_sto{end+1} = 'N_2';
-    l_sto{end+1} = 'N_1';
     l_sat{end+1} = 'obs';
     l_sat{end+1} = 'elev';
 end
@@ -268,13 +265,13 @@ if PLOT.wet_tropo
     l_sto{end+1} = 'zwd';
 end
 if PLOT.cov_info
-    l_sto{end+1} = 'param_var';
+    l_sto{end+1} = 'param_sigma';
 end
 if PLOT.cov_amb
     l_sat{end+1} = 'obs';
-    l_sto{end+1} = 'N_var_1';
-    l_sto{end+1} = 'N_var_2';
-    l_sto{end+1} = 'N_var_3';
+    l_sat{end+1} = 'sats';
+    l_sto{end+1} = 'param_full';
+    l_sto{end+1} = 'param_sigma';
 end
 if PLOT.corr
     l_sto{end+1} = 'param_sigma';
@@ -301,7 +298,9 @@ if PLOT.skyplot
     l_sto{end+1} = 'mp1';
     l_sto{end+1} = 'mp2';
     l_sto{end+1} = 'iono_corr';
-    l_sto{end+1} = 'iono_est';
+    l_sto{end+1} = 'param_full';
+    l_sto{end+1} = 'constraint';
+    l_sat{end+1} = 'sats';
 end
 if PLOT.residuals
     l_sto{end+1} = 'residuals_code_1';
@@ -334,7 +333,9 @@ if PLOT.MPLC
 end
 if PLOT.iono
     l_sto{end+1} = 'iono_corr';
-    l_sto{end+1} = 'iono_est';
+    l_sto{end+1} = 'param_full';
+    l_sto{end+1} = 'constraint';
+    l_sat{end+1} = 'sats';
     l_sat{end+1} = 'obs';    
     l_sat{end+1} = 'elev';
 end

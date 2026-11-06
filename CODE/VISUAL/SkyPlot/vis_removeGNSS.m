@@ -59,7 +59,7 @@ if ~isBDS
         overwrite_all(AZ, EL, SNR, C_res, P_res, I_res, MP, idx_S, idx_E);
 end
 if ~isQZSS
-    idx_S = 401;    idx_E = 410;
+    idx_S = 401;    idx_E = DEF.SATS;
     [AZ, EL, SNR, C_res, P_res, I_res, MP] = ...
         overwrite_all(AZ, EL, SNR, C_res, P_res, I_res, MP, idx_S, idx_E);
 end

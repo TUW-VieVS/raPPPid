@@ -46,7 +46,7 @@ end
 ZTD = storeData.zhd + storeData.zwd + zwd_estimation;
 
 % delete epochs without any data
-ZTD(storeData.zhd ==0 & storeData.zwd == 0 & storeData.param(:,idx_zwd)==0) = NaN;  
+ZTD(storeData.zhd ==0 & storeData.zwd == 0 & zwd_estimation==0) = NaN;
 
 % prepare some variables
 date = obs.startdate;               % observation startdate

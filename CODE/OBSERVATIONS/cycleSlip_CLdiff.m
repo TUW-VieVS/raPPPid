@@ -72,7 +72,7 @@ for i = 1:length(Epoch.sats)
     % --- Test for cycle-slip ---
     L1C1_diff = abs(Epoch.cs_L1C1(1,prn) - pred_L1C1);
     if L1C1_diff > thresh  	% over threshold -> cycle-slip
-        Epoch.cs_found(i) = 1;
+        Epoch.cs_found(i) = true;
         if ~settings.INPUT.bool_parfor
             fprintf('SF Cycle-Slip found in epoch: %04.d, sat %d: (%.3fm [%.2fm])             \n', ...
                 q, prn, L1C1_diff, thresh);

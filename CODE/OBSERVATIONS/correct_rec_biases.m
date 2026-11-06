@@ -1,7 +1,7 @@
 function [Epoch] = correct_rec_biases(Epoch, obs)
 % Correct observations for receiver biases (e.g. DCBs) which is necessary
 % e.g. for handling the ionosphere with ionex constraint
-% obs.rec_DCB_gps_C2,... are already converted in [m]
+% obs.rec_bias_gps_C2,... are already converted in [m]
 %
 % INPUT:
 % 	Epoch:   	epoch-specific data for current epoch, [struct]

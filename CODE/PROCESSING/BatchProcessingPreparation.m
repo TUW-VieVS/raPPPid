@@ -111,7 +111,14 @@ settings.INPUT.glo_ranking  =  ROW{ 8};
 settings.INPUT.gal_ranking  =  ROW{11};
 settings.INPUT.bds_ranking  =  ROW{14};
 settings.PROC.timeFrame     = [ROW{15}, ROW{16}];
+settings.PROC.timeFrameFrom = num2str(ROW{15});
+if ROW{16} == 999999       % processing till end of RINEX file
+    settings.PROC.timeFrameTo = 'end';
+else
+    settings.PROC.timeFrameTo = num2str(ROW{16});
+end
 settings.PROC.timeSpan_format_epochs = true;
+settings.PROC.timeSpan_format_time = false;
 settings.PROC.timeSpan_format_SOD = false;
 settings.PROC.timeSpan_format_HOD = false;
 settings.PROC.name = replacePseudoCode(settings, settings.PROC.name_GUI, true);

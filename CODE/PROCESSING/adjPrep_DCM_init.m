@@ -87,16 +87,16 @@ if velo;    param_sigma(4:6,4:6) = eye(3)*FILTER.var_velocity;	end % velocity
 param_sigma(7,7)        = FILTER.var_zwd;               % zenith wet delay
 % code receiver clock error
 if GPS;     param_sigma( 8, 8) = FILTER.var_rclk_gps;       end
-if GLO;     param_sigma( 9, 9) = FILTER.var_rclk_gal;       end
-if GAL;     param_sigma(10,10) = FILTER.var_rclk_gps;       end
-if BDS;     param_sigma(11,11) = FILTER.var_rclk_gal;       end
-if QZS;     param_sigma(12,12) = FILTER.var_rclk_gps;       end
+if GLO;     param_sigma( 9, 9) = FILTER.var_rclk_glo;       end
+if GAL;     param_sigma(10,10) = FILTER.var_rclk_gal;       end
+if BDS;     param_sigma(11,11) = FILTER.var_rclk_bds;       end
+if QZS;     param_sigma(12,12) = FILTER.var_rclk_qzss;      end
 % phase receiver clock error
 if GPS;     param_sigma(13,13) = FILTER.var_rclk_gps;       end
-if GLO;     param_sigma(14,14) = FILTER.var_rclk_gal;       end
-if GAL;     param_sigma(15,15) = FILTER.var_rclk_gps;       end
-if BDS;     param_sigma(16,16) = FILTER.var_rclk_gal;       end
-if QZS;     param_sigma(17,17) = FILTER.var_rclk_gps;       end
+if GLO;     param_sigma(14,14) = FILTER.var_rclk_glo;       end
+if GAL;     param_sigma(15,15) = FILTER.var_rclk_gal;       end
+if BDS;     param_sigma(16,16) = FILTER.var_rclk_bds;       end
+if QZS;     param_sigma(17,17) = FILTER.var_rclk_qzss;      end
 % Interfrequency Bias (IFB)
 if GPS_3f;  param_sigma(18,18) = FILTER.var_DCB;            end
 if GLO_3f;  param_sigma(19,19) = FILTER.var_DCB;            end

@@ -29,8 +29,8 @@ if contains(funstring, 'option')
    return
 end
 
-% check string for valid beginning for conversion
-if funstring(1) ~= '@' || ~strcmp(funstring, '@(e)')
+% add function head if missing (e.g., "sin(e).^2" -> "@(e)sin(e).^2")
+if ~startsWith(funstring, '@')
     funstring = ['@(e)' funstring];
 end
 

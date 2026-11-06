@@ -34,7 +34,7 @@ fixable = Epoch.fixable | Epoch.glo;
 bool_all = check_all_obs(Epoch, settings.INPUT.n_gnss_freqs, settings.INPUT.use_GPS, settings.INPUT.use_GLO, settings.INPUT.use_GAL, settings.INPUT.use_BDS, settings.INPUT.use_QZSS);
 
 % check some criteria for irregularities which should not occur for ref sat
-bad = any(Epoch.exclude | Epoch.cs_found | ~fixable | ~bool_all, 2); 
+bad = any(~Epoch.useCode | ~Epoch.usePhase | ~fixable | ~bool_all, 2); 
 
 
 %% check reference satellites

@@ -57,11 +57,14 @@ end
 % Thereby, remove Satellites with specific observations of value 0 or NaN.
 [Epoch] = get_obs(Epoch, obs, settings);
 
-% set zeros (=missing observations) in Epoch.C3/L3/S3 to NaN
+% set zeros (=missing observations) in Epoch.C3/L3 to NaN
 Epoch.C3(Epoch.C3 == 0) = NaN;
 Epoch.L3(Epoch.L3 == 0) = NaN;
-Epoch.S3(Epoch.S3 == 0) = NaN;
 
+% make sure that all missing C/N0 are not zeros
+Epoch.S1(Epoch.S1 == 0) = NaN;
+Epoch.S2(Epoch.S2 == 0) = NaN;
+Epoch.S3(Epoch.S3 == 0) = NaN;
 
 
 %% (4) Update the struct Epoch
@@ -77,7 +80,9 @@ Epoch.C3_bias = zeros(m,1);
 Epoch.L1_bias = zeros(m,1);
 Epoch.L2_bias = zeros(m,1);
 Epoch.L3_bias = zeros(m,1);
-Epoch.exclude  = false(m, num_freq);
+Epoch.useCode  = true(m, num_freq);
+Epoch.useDoppler = true(m, num_freq);
+Epoch.usePhase  = true(m, num_freq);
 Epoch.cs_found  = false(m, num_freq);
 Epoch.sat_status  = ones(m,num_freq);
 Epoch.fixable = true(m, num_freq);          % boolean, satellite usable for fixing?

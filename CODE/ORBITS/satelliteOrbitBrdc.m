@@ -29,6 +29,7 @@ function [X, V, dT_rel, exclude, status] = ...
 %   2025/09/13, MFWG: change structure
 %   2025/10/02, MFWG: separate from satelliteOrbit.m
 %   2025/11/10, MFWG: input changed
+%   2026/09/17, MFWG: added QZSS
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -49,13 +50,14 @@ elseif isBDS
     GM = Const.GM_BDS;
     we_dot = Const.WE_BDS;
 elseif isQZSS
-    % ||| GM, we_dot
+    GM = Const.GM_QZSS;
+    we_dot = Const.WE_QZSS;
 end
 
 
 %%  Calculations
 
-if isGPS || isGAL
+if isGPS || isGAL || isQZSS
     [X, V, dT_rel] = SatPos_brdc(Ttr,  Eph, GM, we_dot);
 elseif isBDS
     Ttr_ = Ttr - Const.BDST_GPST;        % convert GPST to BDT

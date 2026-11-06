@@ -97,7 +97,8 @@ else
     
     % use gridwise VMF1
     input.TROPO.VMF1.version = 'gridwise';
-    input.TROPO.V3GR.xyz = approx_pos;
+    input.TROPO.VMF1.xyz = approx_pos;
+    input.TROPO.VMF1.H = cart2geo(approx_pos).h;
     
     % determine all necessary mjd's
     input.TROPO.VMF1.data{2} = unique(VMF1_data{2});

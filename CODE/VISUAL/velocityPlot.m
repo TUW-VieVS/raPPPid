@@ -29,7 +29,7 @@ xyz(xyz==0) = NaN;
 
 
 
-%% Calculate velocities
+%% Calculate velocities and acceleration
 
 % calculate velocity in x, y, z from one epoch to next [m]
 vx = gradient(xyz(:,1), seconds);
@@ -51,30 +51,42 @@ speed_pos  =  speed_pos * 3.6;
 speed_vel  =  speed_vel * 3.6;
 speed_true = speed_true * 3.6;
 
+% calculate acceleration in x, y, z from one epoch to next [m/s^2]
+acc_x = gradient(vel(:,1), seconds);
+acc_y = gradient(vel(:,2), seconds);
+acc_z = gradient(vel(:,3), seconds);
+acc = sqrt(acc_x.^2 + acc_y.^2 + acc_z.^2);
 
 
-%% Plot velocities over time
+
+%% Plot over time
 % prepare figure
 fig = figure('Name', '3D velocity', 'NumberTitle','off');
+
+% plot speed
+ax1 = subplot(2, 1, 1);
 hold on
-
-% plot
-p1 = plot(seconds, speed_vel, 'Color', [0.96, 0.42, 0.26], 'LineWidth', 1);
-p2 = plot(seconds, speed_pos, 'Color', [0.35, 0.42, 0.26], 'LineWidth', 1);
+p1 = plot(seconds, speed_vel, 'Color', [0.96, 0.42, 0.26], 'LineWidth', 1, 'DisplayName', 'velocity est.');
+p2 = plot(seconds, speed_pos, 'Color', [0.35, 0.42, 0.26], 'LineWidth', 1, 'DisplayName', '\Delta position est.');
 if ~isempty(speed_true)
-    p3 = plot(seconds, speed_true, 'Color', [0.20, 0.69, 0.93], 'LineWidth', 1);
+    p3 = plot(seconds, speed_true, 'Color', [0.20, 0.69, 0.93], 'LineWidth', 1, 'DisplayName', '\Delta reference');
 end
-
-% style plot
 title('3D Speed over time')
-xlabel(label_x_sec)
 ylabel('Speed [km/h]')
 xlim([0 Inf])
-if ~isempty(speed_true)
-    legend([p1; p2; p3], {'velocity est.', '\Delta position est.', '\Delta reference'})
-else
-    legend([p1; p2], {'velocity est.', '\Delta position est.'})
-end
+legend
+
+% plot acceleration
+ax2 = subplot(2, 1, 2);
+p4 = plot(seconds, acc, 'Color', [0.49, 0.18, 0.56], 'LineWidth', 1, 'DisplayName', 'acceleration');
+title('3D Acceleration over time')
+xlabel(label_x_sec)
+ylabel('Acceleration [m/s^2]')
+xlim([0 Inf])
+legend
+
+% keep both subplots synchronized when zooming/panning
+linkaxes([ax1, ax2], 'x')
 
 % add customized datatip
 dcm = datacursormode(fig);
@@ -118,8 +130,8 @@ if ~isempty(speed_true)
     yyaxis left
 
     % calculate standard deviation and bias
-    stdev = std(valid_diff, 'omitmissing');
-    bias = mean(valid_diff, 'omitmissing');
+    stdev = std(valid_diff, 'omitnan');
+    bias = mean(valid_diff, 'omitnan');
     % style plot
     title('Speed Difference')
     xlim([0 3])
@@ -149,12 +161,16 @@ function output_txt = vis_customdatatip_vel(obj,event_obj)
 % get position of click (x-value = time [sod], y-value = depends on plot)
 pos = get(event_obj,'Position');
 second = pos(1);
-velocity = pos(2);
+value = pos(2);
 
 % create cell with strings as output (which will be shown when clicking)
 output_txt{1} = event_obj.Target.DisplayName;           % name of line
 output_txt{2} = ['Second: ', sprintf('%.0f', second)];  % epoch
-output_txt{3} = [sprintf('%.3f', velocity) ' km/h'];    % value
+if strcmp(event_obj.Target.DisplayName, 'acceleration')
+    output_txt{3} = [sprintf('%.3f', value) ' m/s^2'];  % value
+else
+    output_txt{3} = [sprintf('%.3f', value) ' km/h'];   % value
+end
 
 
 function output_txt = vis_customdatatip_histo(obj, event_obj)

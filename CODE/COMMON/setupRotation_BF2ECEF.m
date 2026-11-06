@@ -33,6 +33,7 @@ elseif strcmp(orientation_mode, 'radial')
     z_axis = pos/norm(pos);         % pointing away from Earth center
 else
     errordlg('Error in setupRotation_BF2ECEF!', 'Error');
+    z_axis = pos/norm(pos);         % fallback: pointing away from Earth center
 end
 
 % create second axis y with cross product (orthogonal to the direction of

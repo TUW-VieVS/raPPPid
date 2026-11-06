@@ -1,4 +1,4 @@
-function P_diag = createWeights(Epoch, elev, settings, bore)
+function P_diag = createWeights(Epoch, model, settings)
 % Function to create the weights of the observations for the diagonal of
 % the weighting matrix P or, in other words, the weight factors for the
 % variance of the observations.
@@ -8,10 +8,9 @@ function P_diag = createWeights(Epoch, elev, settings, bore)
 % -) weight the observations depending on their signal strength on 1st frequency
 %
 % INPUT:
-%   Epoch           containing epoch-specific data
-%   elev            elevation to GNSS satellites of current epoch [°]
-%   settings        setting of processing from GUI
-%   bore            boresight angle to GNSS satellites of current epoch [°]
+%   Epoch           struct, containing epoch-specific data
+%   model           struct, model values and corrections for all observations
+%   settings        struct, settings of processing from GUI
 % OUTPUT:
 %   P_diag          [n sats x input freqs], weight for each satellite and frequency
 %
@@ -22,7 +21,9 @@ function P_diag = createWeights(Epoch, elev, settings, bore)
 num_freq = settings.INPUT.num_freqs;        % number of input frequencies
 n_sats = numel(Epoch.sats);                 % # sats in current epoch
 P_diag = ones(n_sats,num_freq);
-elev = elev*pi/180; 	% elevation of satellites of this epoch [rad]
+
+% get elevation [rad]
+elev = model.el*pi/180;
 elev_n = repmat(elev(:,1),1,num_freq);      % elevation is equal on all frequencies
 
 
@@ -43,21 +44,31 @@ if settings.ADJ.weight_elev
 elseif settings.ADJ.weight_sign_str
     % --- Weighting using signal to noise ratio (e.g., low-cost equipment), check [05]
     CN0 = [Epoch.S1, Epoch.S2, Epoch.S3];       % collect C/N0 values for all frequencies
-    CN0_mean = mean(CN0, 2, 'omitmissing');     % calculate mean for weighting
+    CN0_mean = mean(CN0, 2, 'omitnan');     % calculate mean for weighting
     CN0_ = repmat(CN0_mean, 1, size(CN0, 2));
 
     if ischar(settings.ADJ.snr_weight_fun)
-        % hardcoded C/N0 weighting function
+        % hardcoded C/N0 weighting function, inputs (P_diag, SNR, frq, a, s_1, s_0, A)
         switch settings.ADJ.snr_weight_fun
             case 'option_0'
                 if ~isempty(Epoch.S1)
-                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,1), 1);
+                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,1), 1, 30, 50, 20, 30);
                 end
-                if ~isempty(Epoch.S2) && settings.INPUT.proc_freqs >= 2
-                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,2), 2);
+                if ~isempty(Epoch.S2) && num_freq >= 2
+                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,2), 2, 30, 50, 20, 30);
                 end
-                if ~isempty(Epoch.S3) && settings.INPUT.proc_freqs >= 3
-                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,3), 3);
+                if ~isempty(Epoch.S3) && num_freq >= 3
+                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,3), 3, 30, 50, 20, 30);
+                end
+            case 'option_00'
+                if ~isempty(Epoch.S1)
+                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,1), 1, 30, 45, 20, 20);
+                end
+                if ~isempty(Epoch.S2) && num_freq >= 2
+                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,2), 2, 30, 45, 20, 20);
+                end
+                if ~isempty(Epoch.S3) && num_freq >= 3
+                    P_diag = goGPS_SNR_weighting(P_diag, CN0_(:,3), 3, 30, 45, 20, 20);
                 end
             case 'option_1'
                 % option_1 = 10.^-(max([55-snr,0])./10)
@@ -110,8 +121,9 @@ elseif settings.ADJ.weight_sign_str
 
 elseif settings.ADJ.weight_bore
     % --- Weighting according to antenna boresight angle
-    bore(isnan(bore)) = 0;                  % might happen in first epoch
-    w = (1 + cos(pi * bore / 180)) / 2;     % w = 1 for 0°, w = 0 for 180°
+    bore = model.bore;
+    bore(isnan(model.bore)) = 0;            % might happen in first epoch
+    w = (1 + cos(pi * bore / 180)) / 2;     % w = 1 for 0 degree, w = 0 for 180 degree
     P_diag = repmat(w, 1, num_freq);
 
 
@@ -142,10 +154,11 @@ end
 
 
 % --- GNSS weighting
-P_diag(Epoch.gps,:) = P_diag(Epoch.gps,:) / settings.ADJ.fac_GPS;
-P_diag(Epoch.glo,:) = P_diag(Epoch.glo,:) / settings.ADJ.fac_GLO;
-P_diag(Epoch.gal,:) = P_diag(Epoch.gal,:) / settings.ADJ.fac_GAL;
-P_diag(Epoch.bds,:) = P_diag(Epoch.bds,:) / settings.ADJ.fac_BDS;
+P_diag(Epoch.gps, :) = P_diag(Epoch.gps, :) / settings.ADJ.fac_GPS;
+P_diag(Epoch.glo, :) = P_diag(Epoch.glo, :) / settings.ADJ.fac_GLO;
+P_diag(Epoch.gal, :) = P_diag(Epoch.gal, :) / settings.ADJ.fac_GAL;
+P_diag(Epoch.bds, :) = P_diag(Epoch.bds, :) / settings.ADJ.fac_BDS;
+P_diag(Epoch.qzss,:) = P_diag(Epoch.qzss,:) / settings.ADJ.fac_QZSS;
 
 % very low weight for weights which are NaN, zero, or negative
 P_diag(isnan(P_diag)) = 10^-6;
@@ -157,22 +170,23 @@ end
 
 
 
-function P_diag = goGPS_SNR_weighting(P_diag, SNR, frq)
+function P_diag = goGPS_SNR_weighting(P_diag, SNR, frq, a, s_1, s_0, A)
 % Creating weights depending on Carrier-to-Noise density following [05]: (5.1)
+% Using a curve that is forced to go through s_0 and s_1. Constant a
+% defines the bending of the curve.
 %
 % INPUT:
 %   P_diag      values for diagonal of weight matrix P
 %   C/N0        Carrier-to-Noise Density of current frequency
 %   frq         frequency or column of P_diag which should be manipulated
+%   a           constant, defines bending of the curve
+%   s_1         constant, C/N0 > this threshold, weight = 1
+%   s_0         constant, defines C/N0 where function is forced to have the weight defined by A
+%   A           constant, variance factor at C/N0 = s_0 (i.e., weight = 1/A)
 % OUTPUT:
 %   P_diag      calculated weights added
 % *************************************************************************
 
-% some constants
-a = 30;         % defines bending of the curve
-s_1 = 50;       % C/N0 > this threshold, weight = 1
-s_0 = 20;       % defines C/N0 where function is forced to have the weight defined by A
-A = 30;     	% ... however, 1/is used here already
 % calculate weights
 q_R = 10.^(-(SNR-s_1)/a) .* ( (A/10.^(-(s_0-s_1)/a)-1)./(s_0-s_1).*(SNR-s_1)+1 );
 P_diag(:,frq) = P_diag(:,frq) ./ q_R;        	% weight for observations

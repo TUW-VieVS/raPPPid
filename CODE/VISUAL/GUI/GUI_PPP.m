@@ -65,6 +65,12 @@ handles.edit_gal_rank.String  = DEF.RANKING_GAL;
 handles.edit_bds_rank.String  = DEF.RANKING_BDS;
 handles.edit_qzss_rank.String = DEF.RANKING_QZSS;
 
+% lever-arm convention hint (classical strapdown INS/GNSS)
+set([handles.checkbox_offsets handles.edit_offset_x ...
+     handles.edit_offset_y handles.edit_offset_z], 'TooltipString', ...
+    ['Lever arm in the body frame (forward, left, up): vector from the ' ...
+     'reference point (e.g., IMU or vehicle reference point) to the GNSS antenna.']);
+
 % Menu-Items, set data panel at the front when opening GUI
 menu_file_setInputFile_Callback(hObject, eventdata, handles)
 
@@ -1037,11 +1043,12 @@ end
 end
 
 % --- Executes on button press in pushbutton_load_true_kinematic.
+% Load reference trajectory
 function pushbutton_load_true_kinematic_Callback(hObject, eventdata, handles)
 if isempty(handles.edit_plot_path.String);    return;   end
 curr_folder = '';
 if strcmp(handles.edit_x_true.String, 'Reference Trajectory')
-    curr_folder = [handles.edit_y_true.String handles.edit_z_true.String];
+    curr_folder = handles.edit_y_true.String;
 end
 traj_folder = getFolderPath([Path.DATA 'COORDS/'], curr_folder, '');
 [FileName, PathName] = uigetfile({'*.*'}, 'Select the reference trajectory', GetFullPath(traj_folder));
@@ -1084,6 +1091,11 @@ if ~isempty(input_string) && ~strcmp(input_string, 'Reference Trajectory') && is
     else
         errordlg(['Station "' input_string '" not found in Coords.txt.'], 'Error');
     end
+elseif isempty(input_string)
+    % input is empty, delete true x, y, and z
+    set(handles.edit_x_true, 'String', '0');
+    set(handles.edit_y_true, 'String', '0');
+    set(handles.edit_z_true, 'String', '0');
 end
 end
 
@@ -1681,29 +1693,40 @@ switch col      % action depending of column where event happened
             end
         end
     case {3,4,5}   	% X, Y, Z true coordinates
-        if isnan(value)
-            TABLE{row, col} = 1;
+        if ~ischar(value)       % coordinates or path to reference trajectory?
+            if isnan(value)
+                TABLE{row, col} = 1;
+            end
+            if (value == 1 || value == 0) && row ~= 1   % if zero is entered copy coordinate value from above
+                TABLE{row, col} = TABLE{row-1, col};
+            end
+            if bool_all
+                TABLE(:,col) = {eventdata.NewData};
+            elseif bool_identical
+                old = eventdata.PreviousData;
+                idx = cellfun(@(x)x == old, TABLE(:,col));
+                TABLE(idx,col) = {eventdata.NewData};
+            elseif bool_label
+                new = eventdata.NewData;
+                label = TABLE{row,7};
+                idx_label = strcmp(TABLE(:,7), label);
+                TABLE(idx_label,col) = {new};
+            elseif bool_station
+                new = eventdata.NewData;
+                station = TABLE{row,2};
+                idx_station = strcmp(TABLE(:,2), station);
+                TABLE(idx_station,col) = {new};
+            end
+        else
+            % path to reference trajectory
+            if isempty(value)
+                % delete path
+                TABLE{row, 3} = '';
+                TABLE{row, 4} = '';
+                TABLE{row, 5} = '';
+            end
+
         end
-        if (value == 1 || value == 0) && row ~= 1   % if zero is entered copy coordinate value from above
-            TABLE{row, col} = TABLE{row-1, col};
-        end
-        if bool_all
-            TABLE(:,col) = {eventdata.NewData};
-        elseif bool_identical
-            old = eventdata.PreviousData;
-            idx = cellfun(@(x)x == old, TABLE(:,col));
-            TABLE(idx,col) = {eventdata.NewData};
-        elseif bool_label
-            new = eventdata.NewData;
-            label = TABLE{row,7};
-            idx_label = strcmp(TABLE(:,7), label);
-            TABLE(idx_label,col) = {new};
-        elseif bool_station
-            new = eventdata.NewData;
-            station = TABLE{row,2};
-            idx_station = strcmp(TABLE(:,2), station);
-            TABLE(idx_station,col) = {new};
-        end        
     case 6          % logical use was changed
         if bool_all
             new = eventdata.NewData;
@@ -1839,6 +1862,7 @@ while true      % loop to add multiple files
     path_column = cell(1,n);
     row_label = cell(1,n);
     coordsyst = cell(1,n);
+    path_ref_traj = cell(n,1);
     i_fail = [];
     for i = 1:n         % loop over all detected data4plot.mat-files to load date and stationname
         % load in current file
@@ -1875,6 +1899,14 @@ while true      % loop to add multiple files
                 end
             end
         end
+        % ask user for reference trajectory in the case of a kinematic processing
+        if settings.KINE.bool_kinematic
+            [FileName, PathName] = uigetfile('*.*',['Reference trajectory: ' relativepath(path_folder)], [Path.DATA 'COORDS'], 'multiselect', 'off');
+            if ischar(FileName) && ischar(PathName)
+                PathName = relativepath(PathName);
+                path_ref_traj{i} = [PathName FileName];     % store path to reference trajectory
+            end
+        end
         stations{i} = obs.stationname;
         startdates(i,1:3) = obs.startdate(1:3);
         if ~isfield(obs, 'coordsyst'); obs.coordsyst = ''; end      % old processings
@@ -1904,6 +1936,7 @@ while true      % loop to add multiple files
         coordsyst(i_fail) = '';
         path_column(i_fail) = '';
         row_label(i_fail) = '';
+        path_ref_traj(i_fail) = '';
         n = n - numel(i_fail);      % reduce number of files/rows
     end
     
@@ -1919,6 +1952,18 @@ while true      % loop to add multiple files
     TABLE(idx_cell, 3:5) = num2cell(true_coords);
     TABLE(idx_cell, 6) = num2cell(true);
     TABLE(idx_cell, 7) = row_label;
+
+    % overwrite entries of true coordinates with paths to the reference 
+    % trajectory for kinematic processings
+    for i = 1:n
+        if ~isempty(path_ref_traj{i})
+            [fpath, name, ext] = fileparts(path_ref_traj{i}); 
+            TABLE{idx_cell(i), 3} = [fpath '/'];
+            TABLE{idx_cell(i), 4} = name;
+            TABLE{idx_cell(i), 5} = ext;
+        end
+    end
+
     % go to next row and start search for next file at the current place
     row_idx = idx_cell(end) + 1;
     
@@ -2064,7 +2109,11 @@ if isempty(TABLE_use)
     return
 end
 PATHS = TABLE_use(:,1);                	% paths to result-folders
-XYZ_true = cell2mat(TABLE_use(:,3:5));  % true coordinates of these processings
+% true coordinates (static) or paths to the reference trajectory (kinematic)
+bool_traj = cellfun(@ischar, TABLE_use(:,3));       % kinematic: folder | name | extension
+POS_true = cell(size(TABLE_use,1), 1);
+POS_true(~bool_traj) = num2cell(cell2mat(TABLE_use(~bool_traj,3:5)), 2);
+POS_true(bool_traj) = strcat(TABLE_use(bool_traj,3), TABLE_use(bool_traj,4), TABLE_use(bool_traj,5));
 LABELS = TABLE_use(:,7);                % labels for plotting
 MultiPlotStruct = getMultiPlotSelection(handles);
 [boolean, MultiPlotStruct] = checkMultiPlotSelection(MultiPlotStruct, handles);
@@ -2073,7 +2122,7 @@ if boolean
         StationResultPlot(TABLE_use, MultiPlotStruct)       % Station Graph
     end
     if MultiPlotStruct.coord_conv || MultiPlotStruct.histo_conv || MultiPlotStruct.bar || MultiPlotStruct.box || MultiPlotStruct.pos_conv || MultiPlotStruct.ttff || MultiPlotStruct.convaccur || MultiPlotStruct.quant_conv || MultiPlotStruct.tropo
-        MultiPlot(PATHS, XYZ_true, LABELS, MultiPlotStruct);
+        MultiPlot(PATHS, POS_true, LABELS, MultiPlotStruct);
     end
     handles = un_check_multiplot_checkboxes(handles, 0);
     handles.paths.last_multi_plot = MultiPlotStruct;
@@ -3425,7 +3474,7 @@ handles = GUI_enable_onoff(handles);
 guidata(hObject, handles);
 end
 
-% Hatch-Melbourne-W�bbena
+% Hatch-Melbourne-Wuebbena
 function checkbox_CycleSlip_HMW_Callback(hObject, eventdata, handles)
 handles = GUI_enable_onoff(handles);
 guidata(hObject, handles);
@@ -3527,7 +3576,7 @@ end
 
 %% Estimation - Adjustment
 
-% Filter popupmenu (No Filter / Kalman Filter Iterative / Kalman Filter)
+% Filter popupmenu (No Filter / Iterated Extended Kalman Filter / Kalman Filter)
 function popupmenu_filter_Callback(hObject, eventdata, handles)
 handles = GUI_enable_onoff(handles);
 guidata(hObject, handles);
@@ -3892,7 +3941,12 @@ end
 
 % Check observed minus computed
 function checkbox_check_omc_Callback(hObject, eventdata, handles)
-handles = GUI_enable_onoff(handles); 
+handles = GUI_enable_onoff(handles);
+guidata(hObject, handles);
+end
+
+% Check of post-fit residuals
+function checkbox_postfit_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
 end
 
@@ -4481,7 +4535,7 @@ else
         choice = questdlg({'Single Plotting with Multi-Plot Table:',...
             'Multi-Plot Table contains more than one station!'}, ...
             'ATTENTION', ...
-            'Stop', 'Let�s try', 'Stop');
+            'Stop', 'Try anyway', 'Stop');
         if strcmp(choice, 'Stop') || isempty(choice); return; end
     end
     
@@ -4537,6 +4591,10 @@ switch choice
             if isgraphics(all_figs(i))    % might be closed in the meantime
                 close(all_figs(i));
             end
+        end
+        drawnow;                 % let the figure closes complete first
+        if isgraphics(gui_fig)
+            figure(gui_fig);     % raise the GUI to front and give it focus
         end
     case 'No'
 end
@@ -4812,6 +4870,7 @@ PLOT.appl_biases   = get(handles.checkbox_plot_appl_biases,   'Value');
 PLOT.signal_qual   = get(handles.checkbox_plot_signal_qual,   'Value');
 PLOT.res_sats      = get(handles.checkbox_plot_res_sats,      'Value');
 PLOT.stream_corr   = get(handles.checkbox_plot_stream_corr,   'Value');
+PLOT.attitude      = get(handles.checkbox_plot_attitude,      'Value');
 
 % get true coordinates or keep filepath to reference trajectory
 if isfile([handles.edit_y_true.String handles.edit_z_true.String])

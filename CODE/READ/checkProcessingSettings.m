@@ -86,7 +86,7 @@ is_kinematic = settings.KINE.bool_kinematic;
 
 
 %% Check different number of processed frequencies (only for IF LC PPP models)
-if (IF_LC || strcmp(settings.IONO.model,'3-Frequency-IF-LC')) && ~prebatch_check
+if ((IF_LC && num_freq == 2) || strcmp(settings.IONO.model,'3-Frequency-IF-LC')) && ~prebatch_check
     % Different number of processed frequencies for GPS and Galileo
     if GPS_on && GAL_on
         if no_freq_gps ~= no_freq_gal
@@ -254,7 +254,7 @@ end
 
 % No manually selected IONEX file 
 if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Correct with ...')
-    if strcmpi(settings.IONO.model_ionex,'manually') && isempty(settings.IONO.file_ionex)
+    if strcmpi(settings.IONO.model_ionex,'manually:') && isempty(settings.IONO.file_ionex)
         errordlg('Please select an IONEX-File!', windowname);
         valid_settings = false;     return
     end
@@ -312,8 +312,14 @@ if isnan(settings.ADJ.var_code) || isnan(settings.ADJ.var_phase) || isnan(settin
     valid_settings = false; return
 end
 
+% some wrong input for the STD of Doppler observations (NaN or zero)
+if contains(settings.PROC.method, '+ Doppler') && ~(settings.ADJ.var_doppler > 0)
+    errordlg('Check your input for the STD of the Doppler observations!', windowname);
+    valid_settings = false; return
+end
+
 % some wrong input for filter settings
-if strcmp(settings.ADJ.filter.type, 'Kalman Filter') || strcmp(settings.ADJ.filter.type, 'Kalman Filter Iterative')
+if strcmp(settings.ADJ.filter.type, 'Kalman Filter') || strcmp(settings.ADJ.filter.type, 'Iterated Extended Kalman Filter')
     F = settings.ADJ.filter;
     if any(isnan([F.var_coord, F.var_zwd, F.var_rclk_gps, F.var_rclk_glo, ...
             F.var_rclk_gal, F.var_rclk_bds, F.var_DCB, F.var_amb, F.var_iono]))
@@ -532,6 +538,19 @@ if n_SNR_mask ~= 1 && num_freq > n_SNR_mask
     valid_settings = false; return
 end
 
+% Threshold of Code Range Rate Check does not fit to the number of input frequencies
+if settings.OTHER.mp_doppler
+    thr_dop = settings.OTHER.mp_doppler_thresh;
+    if isempty(thr_dop) || any(isnan(thr_dop)) || any(thr_dop <= 0)
+        errordlg({'Code Range Rate Check with Doppler:', 'Please enter sensible threshold value(s) [m/s]!'}, windowname);
+        valid_settings = false; return
+    end
+    if numel(thr_dop) ~= 1 && num_freq > numel(thr_dop)
+        errordlg({'Code Range Rate Check with Doppler:', 'Define a single threshold value or', 'one threshold for each processed frequency!'}, windowname);
+        valid_settings = false; return
+    end
+end
+
 % % Hydrostatic AND wet delay have to be used together from tropo file
 % if strcmp(settings.TROPO.zwd, 'Tropo file') && ~strcmp(settings.TROPO.zhd, 'Tropo file') ...
 %         || strcmp(settings.TROPO.zhd, 'Tropo file') && ~strcmp(settings.TROPO.zwd, 'Tropo file')
@@ -539,9 +558,10 @@ end
 %     valid_settings = false; return
 % end
 
-% Check GNSS weights
-if any([settings.ADJ.fac_GPS settings.ADJ.fac_GLO settings.ADJ.fac_GAL settings.ADJ.fac_BDS] < 1) || ...
-        any([settings.ADJ.fac_GPS settings.ADJ.fac_GLO settings.ADJ.fac_GAL settings.ADJ.fac_BDS] >= 10)
+% Check GNSS weights of processed GNSS
+fac_gnss = [settings.ADJ.fac_GPS settings.ADJ.fac_GLO settings.ADJ.fac_GAL settings.ADJ.fac_BDS settings.ADJ.fac_QZSS];
+gnss_on  = logical([GPS_on GLO_on GAL_on BDS_on QZS_on]);
+if ~all(fac_gnss(gnss_on) >= 1 & fac_gnss(gnss_on) < 10)
     errordlg('Check GNSS weights!', windowname);
     valid_settings = false; return
 end
@@ -556,10 +576,13 @@ end
 
 % check if elevation weighting function is valid
 if isa(settings.ADJ.elev_weight_fun,'function_handle') && (settings.ADJ.weight_elev || strcmpi(settings.IONO.model,'Estimate with ... as constraint'))
-    % check if conversion was successful with elev = 45 degree
-    try 
-        settings.ADJ.elev_weight_fun([pi/4 pi/5]);
+    % check if conversion was successful with elev = 45 and 36 degree
+    try
+        w_test = settings.ADJ.elev_weight_fun([pi/4 pi/5]);
     catch
+        w_test = [];
+    end
+    if ~isnumeric(w_test) || isempty(w_test)     % e.g., error or nested function handle
         errordlg({'Please check the elevation weighting function!', 'To allow elementwise operations, use "."'}, windowname)
         valid_settings = false; return
     end
@@ -574,8 +597,11 @@ if settings.ADJ.weight_sign_str && isa(settings.ADJ.snr_weight_fun,'function_han
     end
     % check if conversion was successful with C/N0 = 30 and 40
     try
-        settings.ADJ.snr_weight_fun([30 40]);
+        w_test = settings.ADJ.snr_weight_fun([30 40]);
     catch
+        w_test = [];
+    end
+    if ~isnumeric(w_test) || isempty(w_test)     % e.g., error or nested function handle
         errordlg({'Please check the C/N0 weighting function!', 'To allow elementwise operations, use "."'}, windowname)
         valid_settings = false; return
     end
@@ -779,12 +805,6 @@ if settings.OTHER.polar_tides && strcmp(settings.ORBCLK.prec_prod, 'manually')
     valid_settings = false; return
 end
 
-% QZSS is implemented only for precise products 
-if settings.INPUT.use_QZSS && ~settings.ORBCLK.bool_precise
-    errordlg({'QZSS is only implemented using precise products.', 'Please change selections of satellite orbits and clocks.'}, windowname);
-    valid_settings = false; return
-end
-
 % Check for negative cycle slip detection thresholds
 if settings.OTHER.CS.l1c1_window <= 0 || settings.OTHER.CS.l1c1_threshold <= 0 || ...
         settings.OTHER.CS.DF_threshold <= 0 || settings.OTHER.CS.D_threshold <= 0 || ...
@@ -824,7 +844,7 @@ if settings.INPUT.bool_realtime && ~strcmp(settings.ADJ.filter.direction, 'Forwa
 end
 
 % Resets of the PPP solution make only sense for forwards filtering
-if settings.PROC.reset_float && ~strcmp(settings.ADJ.filter.direction, 'Forwards')
+if settings.PROC.reset_float && ~contains(settings.ADJ.filter.direction, 'Forwards')
     errordlg({['Filter direction is "' settings.ADJ.filter.direction '".'], 'Please disable resets of the solution or', 'change filter direction to "Forwards".'}, windowname);
     valid_settings = false; return
 end
@@ -885,6 +905,61 @@ if strcmp(settings.IONO.source, 'VTEC from Correction Stream') && ...
     errordlg({'Ionosphere - VTEC from Correction Stream:', 'Select and enable correction stream!'}, windowname);
     valid_settings = false; return
 end 
+
+
+% Offset / lever arm is defined on the kinematic processing panel. This can
+% only be transformed to ECEF if the vehicle orientation is known (velocity 
+% estimation with Doppler or from IMU orientation)
+if is_kinematic && settings.KINE.bool_offset && ...
+        ~contains(settings.PROC.method, '+ Doppler') && ~strcmp(settings.KINE.orient_mode, 'IMU')
+    errordlg({'Kinematic offset (lever arm) is enabled,', 'but no vehicle orientation is available.', '', 'Please enable velocity estimation with Doppler', 'or select IMU orientation mode (Model > Kinematic)!'}, windowname);
+    valid_settings = false; return
+end
+
+
+%
+if (settings.PROC.reset_float || settings.PROC.reset_fixed) && ...
+        (~settings.PROC.reset_bool_epoch && ~settings.PROC.reset_bool_min)
+    errordlg({'Reset of solution is activated.', '', 'Please also select "Minutes" or "Epochs"', '(Run > Processing Options)!'}, windowname);
+    valid_settings = false; return
+end
+
+
+% Coordinate transformation to a specific EPSG code is enabled: check if the
+% entered EPSG code refers to an existing (and not deprecated) transformation
+% in the EPSG dataset
+if strcmp(settings.EXP.coord_sys, 'EPSG Code:') && ~prebatch_check
+    [epsg_valid, epsg_deprecated, epsg_msg] = CheckEPSG(settings.EXP.epsg_code);
+    epsg_str = settings.EXP.epsg_code;
+    if isnumeric(epsg_str); epsg_str = num2str(epsg_str); end
+    if ~epsg_valid
+        errordlg({['EPSG code "' char(epsg_str) '" is not a valid coordinate transformation.'], ...
+            'Please check the EPSG code (Export > Coordinate System)!'}, windowname);
+        valid_settings = false; return
+    elseif epsg_deprecated
+        dlg = {['EPSG code "' char(epsg_str) '" is deprecated in the EPSG dataset.']};
+        if ~isempty(epsg_msg); dlg{end+1} = epsg_msg; end
+        dlg{end+1} = 'Please select a valid EPSG code (Export > Coordinate System)!';
+        errordlg(dlg, windowname);
+        valid_settings = false; return
+    end
+end
+
+
+% Orientation mode "IMU" requires an IMU file as input
+if settings.KINE.bool_kinematic && strcmp(settings.KINE.orient_mode, 'IMU') && (~settings.KINE.bool_IMU || ~isfile(settings.KINE.file_IMU))
+    errordlg({'Orientation Mode "IMU" requires an IMU input file!', 'Please activate "IMU File" on on panel "Kinematic" and select an IMU file.'}, windowname);
+    valid_settings = false; return
+end
+
+
+% IEKF requires a initial standard deviation greater than zero because it
+% is implemented in information form and the inversion of the predicted
+% covariance does not work then.
+if strcmp(settings.ADJ.filter.type, 'Iterated Extended Kalman Filter') && settings.ADJ.filter.var_coord <= 0
+    errordlg({'IEKF requires an initial coordinate stdev > 0 !', 'Change Filter to "Kalman Filter" or', 'set initial stdev of coordinates > 0.'}, windowname);
+    valid_settings = false; return
+end
 
 
 % ||| to be continued
@@ -950,13 +1025,7 @@ if settings.AMBFIX.bool_AMBFIX
         errordlg('PPP-AR is not possible without processing phase observations!', windowname);
         valid_settings = false; return
     end
-    
-    % PPP-AR is not implemented for 3-Frequency-IF-LC only
-    if strcmp(settings.IONO.model,'3-Frequency-IF-LC')
-        errordlg('PPP-AR is not implemented for 3-Frequency-IF-LC!', windowname);
-        valid_settings = false; return
-    end
-    
+       
     % For PPP-AR EW has to start before WL-Fixing and WL before NL-Fixing
     if settings.AMBFIX.start_WL_sec > settings.AMBFIX.start_NL_sec
         errordlg({'Check settings for start of fixing!' 'EW has to start before WL-Fixing and WL before NL-Fixing.'}, windowname);

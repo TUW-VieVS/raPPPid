@@ -1,10 +1,11 @@
-function [] = vis_ionodiff_histo(settings, storeData, bool_obs, elev)
+function [] = vis_ionodiff_histo(settings, storeData, satellites, bool_obs, elev)
 % Creates a histogram for the difference between the estimated and modelled
 % ionospheric delay
 %
 % INPUT:
 %   settings        struct, settings of processing
 %   storeData       struct, data from processing
+%   satellites      struct, satellite-specific data from processing
 %   idx             indices of satellites which should be plotted
 %   xaxis_label 	string, label for x-axis
 %   seconds         vector, time [s] since beginning of processing
@@ -61,7 +62,7 @@ iono_corr = full(storeData.iono_corr(:,obs_prns));
 iono_corr(iono_corr==0) = NaN;
 % get estimated ionospheric delay
 if ~bool_fixed      % estimation from float solution
-    iono_est = full(storeData.iono_est(:,obs_prns));
+    iono_est = GetIonoMatrix(storeData, satellites); iono_est = iono_est(:,obs_prns);
 else                % estimation from fixed solution
     iono_est = full(storeData.iono_fixed(:,obs_prns));
 end

@@ -1,4 +1,4 @@
-function [] = MultiPlot(PATHS, XYZ_true, LABELS, PlotStruct)
+function [] = MultiPlot(PATHS, POS_true, LABELS, PlotStruct)
 % This function creates Multi-Plots which indicate the convergence of the
 % PPP solution. It uses either one or multiple files with resets of the 
 % solution to create plots of coordinate differences and convergence time.
@@ -6,7 +6,9 @@ function [] = MultiPlot(PATHS, XYZ_true, LABELS, PlotStruct)
 % INPUT:
 %   PATHS       cell, each row contains the path to the folder of a
 %               processing from which the data4plot.mat-file is loaded
-%   XYZ_true    matrix, true ECEF coordinates for each processing, #files x 3
+%   POS_true    cell, one row for each processing, contains:
+%               true coordinates (1x3, static, ECEF) 
+%               path to the reference trajectory (string, kinematic)
 %   LABELS      cell, containing string with label in each row
 %   PlotStruct  struct, containing booleans defining the plots which will
 %               be started and thresholds which define convergence
@@ -56,7 +58,7 @@ for i = 1:n_unique
     bool_label = strcmpi(LABELS, curr_label);	% look for the rows of this label
     n_label = sum(bool_label);                  % number of files of current label
     paths = PATHS(bool_label, :);               % cell, paths of current label
-    xyz_true = XYZ_true(bool_label, :);         % cell, true coordinates of current label
+    pos_true = POS_true(bool_label);            % cell, true coordinates or reference trajectories of current label
     
     % initialize variables in struct d for current label
     d.dT = []; d.Time = []; d.FIXED = []; d.N = []; d.E = []; d.H = []; d.ZTD = [];
@@ -70,10 +72,10 @@ for i = 1:n_unique
         if ~success; continue; end
 
         % get position data
-        [pos_3D, pos_UTM] = getPositionData(storeData, obs, curr_label, PlotStruct);
+        [pos_XYZ, pos_UTM] = getPositionData(storeData, obs, curr_label, PlotStruct);
         % get true position
         [~, pos_geo_true, North_true, East_true] = ...
-            getTruePosition(xyz_true(ii,:), pos_3D);
+            getTruePosition(pos_true{ii}, pos_XYZ, storeData.gpstime, obs.leap_sec);
         % calculate coordinate differences for whole processing
         dN = pos_UTM(:,1) - North_true;
         dE = pos_UTM(:,2) - East_true;

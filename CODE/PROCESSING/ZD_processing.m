@@ -56,13 +56,13 @@ if settings.AMBFIX.bool_AMBFIX && ~strcmp(settings.IONO.model, 'Estimate, decoup
         [Epoch, Adjust] = handleRefSats(Epoch, model.el, settings, Adjust);
         
         % --- start fixing depending on PPP model ---
-        % decoupled clock model is handled seperately
+        % decoupled clock model is handled separately
         switch settings.IONO.model
             case '2-Frequency-IF-LCs'
                 [Epoch, Adjust] = PPPAR_IF(Adjust, Epoch, settings, input, obs, model);
                 
-            case '3-Frequency-IF-LCs'
-                [Epoch, Adjust] = PPPAR_3IF(Adjust, Epoch, settings, input, obs, model);
+            case '3-Frequency-IF-LC'
+                [Epoch, Adjust] = PPPAR_3IF(Adjust, Epoch, settings, obs, model);
                 
             case {'Estimate with ... as constraint', 'Estimate', 'off'}     % off: simulated data
                 [Epoch, Adjust] = PPPAR_UC(Adjust, Epoch, settings, obs, model);

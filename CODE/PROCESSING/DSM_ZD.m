@@ -37,8 +37,8 @@ isQZSS = repmat(Epoch.qzss, num_freq, 1);
 
 NO_PARAM = Adjust.NO_PARAM;         % number of estimated parameters
 s_f = no_sats*num_freq;             % satellites x frequencies
-exclude = Epoch.exclude(:);         % satellite excluded?
-usePhase = ~Epoch.cs_found(:);      % use phase observation? (e.g., cycle slip found)
+useCode = Epoch.useCode(:);         % true = use observation
+usePhase = Epoch.usePhase(:);      % use phase observation? (e.g., cycle slip found)
 rho = model.rho(:);                 % geometric distance
 sat_x = repmat(model.Rot_X(1,:)', 1, num_freq);   % satellite ECEF position x
 sat_y = repmat(model.Rot_X(2,:)', 1, num_freq);   % satellite ECEF position y
@@ -54,8 +54,8 @@ code_row = 1:2:2*s_f;   	% rows for code  obs [1,3,5,7,...]
 phase_row = 2:2:2*s_f;  	% rows for phase obs [2,4,6,8,...]
 
 % --- observed minus computed
-omc(code_row,1)	 = (obs_code(:)  - model.model_code(:))  .*  ~exclude;                  % code observations
-omc(phase_row,1) = (obs_phase(:) - model.model_phase(:)) .*  ~exclude .*  usePhase;     % phase observations
+omc(code_row,1)	 = (obs_code(:)  - model.model_code(:))  .*  useCode;                  % code observations
+omc(phase_row,1) = (obs_phase(:) - model.model_phase(:)) .*  useCode .*  usePhase;     % phase observations
 
 % --- Partial derivatives
 % position
@@ -109,8 +109,8 @@ amb_c = zeros(s_f,s_f);     % ambiguity-part of A-Matrix for code
 amb_p = eye(s_f,s_f);       % ambiguity N expressed in meters
 
 % --- Build A-Matrix
-A(code_row,:)  = [dR_dx, dR_dy, dR_dz, dR_dvx, dR_dvy, dR_dvz, dR_dtrop, dR_time_dcb, amb_c] .*  ~exclude;
-A(phase_row,:) = [dR_dx, dR_dy, dR_dz, dR_dvx, dR_dvy, dR_dvz, dR_dtrop, dR_time_dcb, amb_p] .*  ~exclude .* usePhase;
+A(code_row,:)  = [dR_dx, dR_dy, dR_dz, dR_dvx, dR_dvy, dR_dvz, dR_dtrop, dR_time_dcb, amb_c] .*  useCode;
+A(phase_row,:) = [dR_dx, dR_dy, dR_dz, dR_dvx, dR_dvy, dR_dvz, dR_dtrop, dR_time_dcb, amb_p] .*  useCode .* usePhase;
 
 
 %% add ionosphere estimation part to A and omc
@@ -128,10 +128,11 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(set
             A_iono = [A_iono; A_iono_3];
         end
     end
-    A_iono(Epoch.exclude(:), :) = 0;   	% remove iono estimation of excluded satellites
-    A_iono = kron(A_iono,ones(2,1));  	% duplicate for phase observation
-    phase_rows = 2:2:size(A_iono,1);   	% rows of phase observations
+    A_iono(~Epoch.useCode(:), :) = 0;   	        % remove iono estimation of excluded satellites
+    A_iono = kron(A_iono,ones(2,1));  	            % duplicate for phase observation
+    phase_rows = 2:2:size(A_iono,1);   	            % rows of phase observations
     A_iono(phase_rows,:) = -A_iono(phase_rows,:); 	% change sign for phase observations
+    A_iono(phase_rows(~usePhase),:) = 0;            % remove iono estimation of excluded phase observations (e.g., cycle slip)
     % Put Design-Matrix together
     A = [A, A_iono];
     

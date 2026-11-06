@@ -1,24 +1,20 @@
-function dx = KalmanFilterIterative(Adjust, x_pred)
-% Function for Kalman Filter with inner-epoch iteration. 
-% The change of the parameters is estimated as pseudo-observation trough 
-% an inner-epoch iteration. Start of the iteration is the zero-vector as 
-% the change of the parameters is expected to be zero.
+function dx = IteratedExtendedKalmanFilter(Adjust, x_pred)
+% Function for an Iterated Extended Kalman Filter (IEKF), written in 
+% information form (inverse-covariance / normal-equations form). The change 
+% of the parameters is estimated as pseudo-observation trough an inner-
+% epoch iteration. Start of the iteration is the zero-vector as the change 
+% of the parameters is expected to be zero.
+% 
 % Check [01]: p.244, formulas without Gain Matrix
 % 
 % INPUT: 	
-%   Adjust  containing all adjustment relevant data [struct]	 
+%   Adjust      containing all adjustment relevant data [struct]	 
 %  	x_pred      predicted parameters [| vector]
-% OUTPUT:     
-%   struct dx with   
+% OUTPUT:
+%   struct dx with
 %      dx.x        	vector of adjusted parameters [| vector]
-%      dx.sigma2   	empirical variance of parameters
-%      dx.l      	vector of adjusted observations [| vector]
 %      dx.v     	residual vector [| vector]
-%      dx.r         redundancy [scalar]
-%      dx.Qxx       Cofactor Matrix of Parameters
-%      dx.Sxx       Covariance Matrix of Parameters
-%      dx.Qvv       Cofactor Matrix of Residuals
-%      dx.Svv       Covariance Matrix of Residuals
+%      dx.Qxx       posterior Covariance Matrix of Parameters
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -52,7 +48,7 @@ x_pred(zero_columns) = [];
 n = numel(omc);         % number of observations
 m = sum(sum(A)~=0);   	% number of parameters = number of rows in Design-Matrix
 r = n - m;              % Redundancy
-Qxx = cholinv(A'*P_l*A + P_x);              % Updated Cofactor Matrix of Parameters 
+Qxx = cholinv(A'*P_l*A + P_x);              % Updated Covariance Matrix of Parameters (already calibrated, see OUTPUT)
 x_adj = Qxx * (P_x*x_pred + A'*P_l*omc);	% Updated Parameters, [01]: (7.113) with P_x = Q_x^-1 and P_l = Q_l^-1:
 l_adj = A * x_adj;                          % Adjusted Observations
 v = l_adj - omc;                            % Residual vector
@@ -65,9 +61,9 @@ dx.x = zeros(numel(idx), 1);
 dx.x(idx)	= x_adj;        
 % Residuals/Verbesserungen
 dx.v         = v;          	
-% Cofactor Matrix of Parameters
+% Covariance Matrix of Parameters
 dx.Qxx = eye(numel(idx));
-dx.Qxx(idx,idx)	= Qxx;      
+dx.Qxx(idx,idx)	= Qxx;
 
 
 % not used:

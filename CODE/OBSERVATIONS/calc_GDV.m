@@ -96,18 +96,16 @@ dX_GDV_(3) = interp1(GDV(:,1), GDV(:,4), el);
 %% consider processed frequency
 if strcmpi(IONO_model,'2-Frequency-IF-LCs')     % ||| replace with Convert2ProcFrqs.m
     % convert to frequency of 2-Frequency-IF-LCs
-    dX_GDV(1) = -(f1^2*dX_GDV_(j(1))-f2^2*dX_GDV_(j(2))) / (f1^2-f2^2);
+    [k1, k2] = coeff_2IF(f1, f2);   % coefficients of 1st 2-Frequency-IF-LC
+    dX_GDV(1) = -(k1.*dX_GDV_(j(1)) + k2.*dX_GDV_(j(2)));
     if n > 1
-        dX_GDV(2) = (f2^2*dX_GDV_(j(2))-f3^2*dX_GDV_(j(3))) / (f2^2-f3^2);
+        [k3, k4] = coeff_2IF(f2, f3);   % coefficients of 2nd 2-Frequency-IF-LC
+        dX_GDV(2) = k3.*dX_GDV_(j(2)) + k4.*dX_GDV_(j(3));
     end
     dX_GDV(3) = 0;
     
 elseif strcmpi(IONO_model,'3-Frequency-IF-LC')
-    y2 = f1.^2 ./ f2.^2;            % coefficients of 3-Frequency-IF-LC
-    y3 = f1.^2 ./ f3.^2;
-    e1 = (y2.^2 +y3.^2  -y2-y3) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-    e2 = (y3.^2 -y2.*y3 -y2 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-    e3 = (y2.^2 -y2.*y3 -y3 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
+    [e1, e2, e3] = coeff_3IF(f1, f2, f3);   % coefficients of 3-Frequency-IF-LC
     % convert to frequency of 3-Frequency-IF-LC
     dX_GDV(1) = e1.*dX_GDV_(j(1)) + e2.*dX_GDV_(j(2)) + e3.*dX_GDV_(j(3));
     dX_GDV(2) = 0;

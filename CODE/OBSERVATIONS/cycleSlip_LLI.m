@@ -45,8 +45,8 @@ LLI = logical(sum(LLI,2));
 % end
 
 % save detected cycle slips
-Epoch.cs_found(LLI, :) = 1;
-% Epoch.exclude(LLI, :) = 1;         % use this line to exclude also code observation
+Epoch.cs_found(LLI, :) = true;
+% Epoch.useCode(LLI, :) = false;         % use this line to exclude also code observation
 
 
 

@@ -66,11 +66,11 @@ if ~isempty(rec_types)
 %     'CLK'    % ||| implement    
 %     'CRT'    % ||| implement
     if any(contains(rec_types, 'ATT'))
-        ATT.q0 = zeros(m,410); 
-        ATT.q1 = zeros(m,410); 
-        ATT.q2 = zeros(m,410); 
-        ATT.q3 = zeros(m,410); 
-        ATT.sow = zeros(m,1); 
+        ATT.q0 = zeros(m, DEF.SATS); 
+        ATT.q1 = zeros(m, DEF.SATS); 
+        ATT.q2 = zeros(m, DEF.SATS); 
+        ATT.q3 = zeros(m, DEF.SATS); 
+        ATT.sow = zeros(m, 1); 
     end
 end
 

@@ -14,15 +14,22 @@ if isfile('Path.m') && isfolder(Path.DATA) && isfolder(Path.RESULTS) && isfolder
     % check if all paths are correct
     addpath(pwd)                    % add current path where raPPPid.m and Path.m are located
     addpath(genpath(Path.CODE));	% add directory of source code
+    % get information about commit etc. from git
+    git = getGitInfo();
+    commit = '';
+    if ~isempty(git.hash);      commit = git.hash;     end
     % print info to command window
     fprintf('\n----------------------------------------------------------------\n')
     fprintf(['| raPPPid, ' DEF.version '                              |\n'])
     fprintf('| GitHub: https://github.com/TUW-VieVS/raPPPid                 |\n')
     fprintf('| Documentation: https://vievswiki.geo.tuwien.ac.at/en/raPPPid |\n')
+    fprintf(['| Commit: ' commit '             |\n'])
     fprintf('----------------------------------------------------------------\n\n\n')
     % start GUI
     GUI_PPP();
-
+    % delete variables of this script
+    clear git
+    clear commit
 else
     % start of raPPPid failed
     if ~contains(pwd, 'WORK')

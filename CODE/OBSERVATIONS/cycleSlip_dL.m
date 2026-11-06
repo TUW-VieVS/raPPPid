@@ -5,9 +5,9 @@ function Epoch = cycleSlip_dL(settings, Epoch, use_column)
 % file)
 % 
 % INPUT:
-%   settings        settings of processing from GUI
-%   Epoch       data from current epoch
-%   use_column      columns of used observation, from obs.use_column
+%   settings    struct, settings of processing from GUI
+%   Epoch       struct, data from current epoch
+%   use_column  cell,  columns of used observation, from obs.use_column
 % OUTPUT:
 %   Epoch       updated with detected cycle slips
 % 
@@ -149,7 +149,7 @@ Epoch.cs_dL1dL2(isnan(Epoch.cs_dL1dL2)) = 0;
 Epoch.cs_dL1dL3(isnan(Epoch.cs_dL1dL3)) = 0;
 Epoch.cs_dL2dL3(isnan(Epoch.cs_dL2dL3)) = 0;
 
-% check exceedings of threshold
+% check exceeding of threshold
 cs_found_12 = diff_12 > thresh;            % exceeds dL1 - dL2 threshold?
 cs_found_13 = diff_13 > thresh;
 cs_found_23 = diff_23 > thresh;
@@ -162,17 +162,26 @@ cs_found_23(isnan(diff_23)) = true;
 
 % build matrix with detected cycle slips depending on the number of 
 % processed frequencies
-new_cs = cs_found_12';      % e.g. IF LC
+new_cs = cs_found_12';      % IF LC
 if proc_freq == 2
     new_cs = [cs_found_12', cs_found_12'];
 elseif proc_freq == 3
-    % check on which frequency cycle-slip occured and try to exclude only this
-    % frequency
+    % check on which frequency cycle-slip occurred and try to exclude only this
+    % frequency (~isnan(...) avoids flags when there is no difference to test)
     cs_found_L1 = cs_found_12 & cs_found_13 & (~isnan(diff_12) | ~isnan(diff_13));
     cs_found_L2 = cs_found_12 & cs_found_23 & (~isnan(diff_12) | ~isnan(diff_23));
     cs_found_L3 = cs_found_13 & cs_found_23 & (~isnan(diff_13) | ~isnan(diff_23));
     % build matrix
     new_cs = [cs_found_L1', cs_found_L2', cs_found_L3'];
+    % flag satellites with interrupted phase observation
+    interrupted = [...
+        isnan(L1_old) & ~isnan(L1_now); ...
+        isnan(L2_old) & ~isnan(L2_now); ...
+        isnan(L3_old) & ~isnan(L3_now)];
+    interrupted(:, Epoch.tracked <= 1) = false;     % do not flag new satellites
+    new_cs = new_cs | interrupted(:, Epoch.sats)';
+elseif strcmp(settings.IONO.model, '3-Frequency-IF-LC')
+    new_cs = (cs_found_12 | cs_found_23)';          % ignore cs_found_13 here (flags ionospheric changes)
 end
 
 % --- check for found cycle-slips ---
@@ -220,7 +229,7 @@ function [L_now, L_old] = ...
 % *************************************************************************
 
 % initialize
-L_old = NaN(1,410);   L_now = NaN(1,410);
+L_old = NaN(1, DEF.SATS);   L_now = NaN(1, DEF.SATS);
 % extract observations
 if ~isempty(l_gps)
     L_now(gps_now) = obs_now_gps(:,l_gps) .* w_now_gps;     % Phase-observations of current epoch [m]

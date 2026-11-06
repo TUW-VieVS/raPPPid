@@ -53,7 +53,7 @@ if settings.BIASES.code_corr2brdc_bool && ~isempty(obs.C_corr_time)
 
     % initialize
     rows = length(obs.C_corr_time);
-    obs.C1_corr = zeros(rows,410); obs.C2_corr = zeros(rows,410); obs.C3_corr = zeros(rows,410);
+    obs.C1_corr = zeros(rows,DEF.SATS); obs.C2_corr = zeros(rows,DEF.SATS); obs.C3_corr = zeros(rows,DEF.SATS);
 
     % -- GPS --
     if settings.INPUT.use_GPS && ~isempty(input.ORBCLK.corr2brdc_GPS.cbias)
@@ -174,7 +174,7 @@ obs.L_corr_time = unique(t_phase_all);
 if settings.BIASES.phase_corr2brdc_bool && ~isempty(obs.L_corr_time)
 
     rows = length(obs.L_corr_time);
-    obs.L1_corr = zeros(rows,410); obs.L2_corr = zeros(rows,410); obs.L3_corr = zeros(rows,410);
+    obs.L1_corr = zeros(rows,DEF.SATS); obs.L2_corr = zeros(rows,DEF.SATS); obs.L3_corr = zeros(rows,DEF.SATS);
 
     % -- GPS --
     if settings.INPUT.use_GPS && ~isempty(input.ORBCLK.corr2brdc_GPS.pbias)

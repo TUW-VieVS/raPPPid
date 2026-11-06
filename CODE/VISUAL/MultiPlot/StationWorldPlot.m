@@ -14,13 +14,13 @@ function [] = StationWorldPlot(TABLE)
 % *************************************************************************
 
 
-% de/activate colorcoding depending on receiver type
+% de/activate color-coding depending on receiver type
 bool_colorcode_receiver = true;
 
 
-% fontsize of the 4-digit-stationname
+% fontsize of the 4-digit-station-name
 fontsize = 10;
-% distance from the 4-digit-stationname to the marker on the map
+% distance from the 4-digit-station-name to the marker on the map
 shift = 2.5;
 
 % prepare world for plotting stations
@@ -40,8 +40,8 @@ plotlist = TABLE(keep,:);            % keep only unique rows
 
 % detect receiver type for 
 [rec, ~, idx_rec] = unique(TABLE(:,17));        % check for different receivers
-n = numel(rec);                                 % number of different receivers
-colors = createDistinguishableColors(1+n);      % create colors
+n_rec = numel(rec);                                 % number of different receivers
+colors = createDistinguishableColors(1+n_rec);      % create colors
 colors(all(colors == [0 1 0], 2), :) = [];      % remove green
 
 
@@ -50,15 +50,15 @@ if ~bool_colorcode_receiver
 end
 
 
-for i = 1:n     % loop over receivers to plot them in different colors
+for i = 1:n_rec     % loop over receivers to plot them in different colors
 
     plotlist_ = plotlist(idx_rec == i, :);      % extract current receiver type
 
-    n = size(plotlist_,1);
-    lat = zeros(1,n); lon = lat;
+    n_rec = size(plotlist_,1);
+    lat = zeros(1,n_rec); lon = lat;
 
     % loop over all points to convert cartesian to ellipsoidal coordinates
-    for ii = 1:n
+    for ii = 1:n_rec
         xyz = cell2mat(plotlist_(ii,19:21));
         [lat(ii), lon(ii), h] = xyz2ell_GT(xyz(1), xyz(2), xyz(3), Const.WGS84_A, Const.WGS84_E_SQUARE);
     end

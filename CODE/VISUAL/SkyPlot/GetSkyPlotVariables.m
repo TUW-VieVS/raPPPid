@@ -68,8 +68,8 @@ end
 
 % Ionosphere Residual
 iono_res = [];
-if isfield(storeData, 'iono_est') && isfield(storeData, 'iono_corr')
-    iono_res = full(storeData.iono_corr) - full(storeData.iono_est);
+if isfield(storeData, 'constraint') && isfield(storeData, 'iono_corr')    % ionosphere is estimated and modelled
+    iono_res = full(storeData.iono_corr) - GetIonoMatrix(storeData, satellites);
 end
 
 % Multipath-LC

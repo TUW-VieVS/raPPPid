@@ -11,7 +11,7 @@
 classdef DEF
     
     properties (Constant = true)
-        ver     = '5.1';
+        ver     = '5.2';
         version = ['Version ' DEF.ver ' ', char(169), ' TUW 2026'];
         
         % size of many variables due to raPPPid internal satellite numbering
@@ -75,7 +75,7 @@ classdef DEF
         % rec offset BDS,  dcb^C_1, dcb^C_2,                            (3)  
         % rec offset QZSS, dcb^J_1, dcb^J_2,                            (3)
         % rec clock drift                                               (1)
-        NO_PARAM_ZD = 23;	
+        NO_PARAM_ZD = 23;
         PARAM_ZD = ...
             {'x'; 'y'; 'z'; 'v_x'; 'v_y'; 'v_z'; 'zwd'; ...
             'rec_clk_G'; 'dcb_1_G'; 'dcb_2_G'; ...
@@ -102,13 +102,22 @@ classdef DEF
             'L3_bias_G'; 'L3_bias_R'; 'L3_bias_E'; 'L3_bias_C'; 'L3_bias_J'; ...
             'rec_clk_drift'};
 
+        % IMU data, number of estimated parameter
+        NO_PARAM_IMU = 9;
+        % IMU attitude error x, y, z                                    (3)
+        % IMU accelerometer bias x, y, z                                (3)
+        % IMU gyroscope drift x, y, z                                   (3)
+        PARAM_IMU = ...
+            {'att_x'; 'att_y'; 'att_z'; ...
+            'acc_b_x'; 'acc_b_y'; 'acc_b_z'; ...
+            'gyro_d_x'; 'gyro_d_y'; 'gyro_d_z'};
+
         % minimal number of satellites in an epoch to calculate a position
         MIN_SATS = 4;
         
         % some persistent variables for Ambiguity Fixing
         CUTOFF_REF_SAT = 15;    % [degree], try to change reference satellite if below
         AR_THRES_SUCCESS_RATE = 0.99;    % for LAMBDA method
-        PPPAR_IF_LSQ = false;	% LSQ with pseudo-observations for IF LC PPP-AR 
         
         % default thresholds [m] for multi-plot
         % - float solution

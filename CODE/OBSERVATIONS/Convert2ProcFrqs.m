@@ -22,17 +22,16 @@ function corr_ = Convert2ProcFrqs(settings, j, corr, f1, f2, f3, corr_)
 switch settings.IONO.model
 
     case '2-Frequency-IF-LCs'
-        corr_(1) = (f1^2*corr(j(1))-f2^2*corr(j(2))) / (f1^2-f2^2);
-        if settings.INPUT.proc_freqs == 2
-            corr_(2) = (f2^2*corr(j(2))-f3^2*corr(j(3))) / (f2^2-f3^2);
+        [k1, k2] = coeff_2IF(f1, f2);
+        corr_(1) = k1.*corr(j(1)) + k2.*corr(j(2));
+        if settings.INPUT.proc_freqs == 2 && numel(j) >= 3
+            % 2nd IF-LC only if 3rd frequency is processed for this GNSS
+            [k3, k4] = coeff_2IF(f2, f3);
+            corr_(2) = k3.*corr(j(2)) + k4.*corr(j(3));
         end
 
     case '3-Frequency-IF-LC'
-        y2 = f1.^2 ./ f2.^2;            % coefficients of 3-Frequency-IF-LC
-        y3 = f1.^2 ./ f3.^2;
-        e1 = (y2.^2 +y3.^2  -y2-y3) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-        e2 = (y3.^2 -y2.*y3 -y2 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-        e3 = (y2.^2 -y2.*y3 -y3 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
+        [e1, e2, e3] = coeff_3IF(f1, f2, f3);   % coefficients of 3-Frequency-IF-LC
         corr_(1) = e1.*corr(j(1)) + e2.*corr(j(2)) + e3.*corr(j(3));
 
     otherwise        % uncombined signals are processed (no linear combination)

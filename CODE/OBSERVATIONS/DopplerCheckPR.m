@@ -5,11 +5,12 @@ function [DopplerPRate, exclude] = DopplerCheckPR(Epoch, n, thresh, IONO_model)
 % INPUT:
 %   Epoch           struct, epoch-wise data
 %   n               number of input frequencies
-%   thresh          threshold [m/s]
+%   thresh          threshold [m/s], scalar (for all frequencies) or
+%                   vector with one threshold for each frequency
 %   IONO_model      string, PPP model of processing
 % OUTPUT:
-%	exclude         #frqs x # sats, boolean, exclude satellite?
-%   DopplerPRate    #frqs x # sats, difference between pseudorange rate and Doppler
+%	exclude         #sats x #frqs (or #LCs), boolean, exclude satellite?
+%   DopplerPRate    3 x #sats, difference between pseudorange rate and Doppler
 %
 % Revision:
 %   ...
@@ -55,7 +56,7 @@ end
 dt = abs(Epoch.gps_time - Epoch.old.gps_time);      % time difference between epochs
 
 % calculate mean of Doppler, which is used for checking the change of the pseudorange
-Doppler = mean(D_now,1, "omitmissing");
+Doppler = mean(D_now,1, "omitnan");
 
 % calculate the change of the pseudorange (pseudorange rate) [m/s]
 ChangePR = (C_now - C_old) / dt;
@@ -64,8 +65,8 @@ ChangePR = (C_now - C_old) / dt;
 % receiver -> decide sign once for all satellites
 res_plus  = ChangePR + Doppler;
 res_minus = ChangePR - Doppler;
-spread_plus  = sum(abs(res_plus(:)  - median(res_plus(:),  "omitmissing")), "omitmissing");
-spread_minus = sum(abs(res_minus(:) - median(res_minus(:), "omitmissing")), "omitmissing");
+spread_plus  = sum(abs(res_plus(:)  - median(res_plus(:),  "omitnan")), "omitnan");
+spread_minus = sum(abs(res_minus(:) - median(res_minus(:), "omitnan")), "omitnan");
 % take residuals with smaller spread
 residual = res_plus;
 if spread_minus <= spread_plus
@@ -73,11 +74,19 @@ if spread_minus <= spread_plus
 end
 
 % remove median from residuals (e.g., remove receiver clock (drift))
-clk = median(residual, 2, "omitmissing");       % common-mode per frequency [m/s]
+clk = median(residual, 2, "omitnan");       % common-mode per frequency [m/s]
 DopplerPRate = abs(residual - clk);
 
+% prepare threshold for comparison
+thresh_ = NaN(3, 1);
+if isscalar(thresh)
+    thresh_(1:n) = thresh;          % single threshold for all frequencies
+else
+    thresh_(1:n) = thresh(1:n);     % frequency-specific threshold
+end
+
 % compare difference with threshold
-exclude = DopplerPRate > thresh;
+exclude = DopplerPRate > thresh_;
 
 
 
@@ -85,10 +94,4 @@ exclude = DopplerPRate > thresh;
 exclude = exclude(1:n, :)';
 
 % reduce exclusion vector depending on processed linear combination
-if strcmp(IONO_model, '2-Frequency-IF-LCs') && n == 2
-    exclude = exclude(:,1) | exclude(:,2);
-elseif strcmp(IONO_model, '2-Frequency-IF-LCs') && n == 3
-    exclude = [exclude(:,1) | exclude(:,2), exclude(:,2) | exclude(:,3)];
-elseif strcmp(IONO_model, '3-Frequency-IF-LC')
-    exclude = exclude(:,1) | exclude(:,2) | exclude(:,3);
-end
+exclude = Map2ProcFrqs(exclude, n, IONO_model);

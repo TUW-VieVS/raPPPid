@@ -48,9 +48,9 @@ fig_bar = figure('Name', ['Bar Plot of ' floatfix ' Convergences'], 'NumberTitle
 
 % --- Height, 2D
 subplot(2,1,1)
-plot_bar(BARS2plot, 1, ['dH < ', str_ver, 'm'], str_leg, labels, coleurs)
+plot_bar(BARS2plot, 3, ['dH < ', str_ver, 'm'], str_leg, labels, coleurs)
 subplot(2,1,2)
-plot_bar(BARS2plot, 2, ['2D < ', str_2D,  'm'], str_leg, labels, coleurs)
+plot_bar(BARS2plot, 4, ['2D < ', str_2D,  'm'], str_leg, labels, coleurs)
 
 
 % add customized datatip

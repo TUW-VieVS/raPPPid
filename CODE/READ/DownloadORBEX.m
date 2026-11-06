@@ -1,5 +1,5 @@
 function [settings] = DownloadORBEX(settings, gpsweek, dow, yyyy, mm, doy)
-% This function dowloads the ORBEX file from IGS or Analysis Center server.
+% This function downloads the ORBEX file from IGS or Analysis Center server.
 %
 % INPUT:
 %	settings        struct, settings from GUI
@@ -67,10 +67,8 @@ if settings.ORBCLK.MGEX
                     cddis_folder = {['/archive/gnss/products/' gpsweek '/']};
 
                 case 'Rapid'
-                    % only available from CDDIS (uses the "OPS" prefix, not
-                    % "MGX", even though it's requested via the MGEX path)
-                    file = {['COD0OPSRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
-                    cddis_folder = {['/archive/gnss/products/' gpsweek '/']};
+                    errordlg('No ORBEX file for rapid MGEX products from CODE', 'ORBEX Error');
+                    return
 
                 otherwise
                     errordlg('No ORBEX file for this product type from CODE', 'ORBEX Error');
@@ -148,7 +146,10 @@ else
             URL_host = '';
             URL_host_2 = '';
             cddis_folder = {['/archive/gnss/products/' gpsweek '/']};
+        case 'Final'
             file = {['COD0OPSFIN_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
+        case 'Rapid'
+            file = {['COD0OPSRAP_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};            
 
         case 'CNES'
             URL_host = '';
@@ -157,7 +158,7 @@ else
             file = {['GRG0OPSFIN_' yyyy doy '0000_01D_30S_ATT.OBX.gz']};
 
         otherwise
-            errordlg('ORBEX file for non-MGEX products are not implemented!', 'ORBEX Error');
+            errordlg('ORBEX file not implemented!', 'ORBEX Error');
             return
     end
 end

@@ -1,25 +1,24 @@
-function Adjust = createObsCovariance(Adjust, Epoch, settings, elev, bore)
+function Adjust = createObsCovariance(Adjust, Epoch, settings, model)
 % This function calculates the covariance matrix / weight matrix of the
 % observations depending on the used PPP model. This is done with a 
-% covariance propagation from the values for the raw code and phase 
-% observations from the GUI. 
-% Assumption: The raw measurements have the same standard deviation on all 
-% frequencies and are uncorrelated
-% 
+% covariance propagation from the values for the raw code, phase, and
+% Doppler observations from the GUI.
+% Assumption: The raw measurements are uncorrelated
+%
 % inspired by [14]: chapter "Equivalence of the three triple frequency PPP models"
 % 
 % INPUT:
 %   Adjust      struct, containing adjustment relevant data
 % 	Epoch       struct, epoch-specific data
-%   settings 	settings from GUI
-%   elev        GNSS satellites' elevation angle [°]
-%   bore        boresight angle to GNSS satellites of current epoch [°]
+%   settings 	struct, settings from GUI
+%   model       struct, model values and corrections for all observations
 % OUTPUT:
 %   Adjust      updated with P and Q matrix (weight and covariance matrix)
 %
 % Revision:
 %   2023/10/31 by MFWG: implementing frequency-specific weighting, remove
 %              	hardcoded weighting function of iono pseudo-observations
+%   2026/10/08 by MFWG: several bug fixes (e.g., 2x IF LC)
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -29,21 +28,28 @@ function Adjust = createObsCovariance(Adjust, Epoch, settings, elev, bore)
 n_inp  = settings.INPUT.num_freqs;     	% number of input frequencies
 n_proc = settings.INPUT.proc_freqs;   	% number of processed frequencies
 n = numel(Epoch.sats);                  % number of satellites in current epoch
+% get frequencies
 f1 = Epoch.f1;      % 1st frequency 
 f2 = Epoch.f2;      % ...
 f3 = Epoch.f3;
+% get elevation [degree]
+elev = model.el;    
+
 
 % initialize covariance propagation  matrix
 C = zeros(n_proc, 3);
 C = kron(eye(2*n), C);
 
 % get weight factors using the weighting function defined in the GUI
-P_fac = createWeights(Epoch, elev, settings, bore);
+P_fac = createWeights(Epoch, model, settings);
 
 
 %% create covariance matrix for raw observations
 
-if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') || strcmp(settings.IONO.model, '3-Frequency-IF-LC')
+% ionosphere-free LCs processed?
+bool_LC = strcmp(settings.IONO.model, '2-Frequency-IF-LCs') || strcmp(settings.IONO.model, '3-Frequency-IF-LC');
+
+if bool_LC
     % satellite 1 (code 1, code 2, code 3, phase 1, phase 2, phase 3),
     % satellite 2 (code 1, code 2, code 3, phase 1, phase 2, phase 3),
     P_fac_3 = repmat(P_fac(:,1)',3,1);      % initialize all frequencies with weight factor from frequency 1
@@ -59,13 +65,15 @@ if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') || strcmp(settings.IONO.mod
             Epoch.gps  * settings.ADJ.var_code_frq(1, :) + ...
             Epoch.glo  * settings.ADJ.var_code_frq(2, :) + ...
             Epoch.gal  * settings.ADJ.var_code_frq(3, :) + ...
-            Epoch.bds  * settings.ADJ.var_code_frq(4, :);
+            Epoch.bds  * settings.ADJ.var_code_frq(4, :) + ...
+            Epoch.qzss * settings.ADJ.var_code_frq(5, :);
         P_code = VAR_code' ./ P_fac_3;      % scale code variances with weighting function
         VAR_phase = ...     % phase observations' variance matrix, row = satellite, column = frequency
             Epoch.gps  * settings.ADJ.var_phase_frq(1, :) + ...
             Epoch.glo  * settings.ADJ.var_phase_frq(2, :) + ...
             Epoch.gal  * settings.ADJ.var_phase_frq(3, :) + ...
-            Epoch.bds  * settings.ADJ.var_phase_frq(4, :);
+            Epoch.bds  * settings.ADJ.var_phase_frq(4, :) + ...
+            Epoch.qzss * settings.ADJ.var_phase_frq(5, :);
         P_phase = VAR_phase' ./ P_fac_3;    % scale phase variances with weighting function
     end
     
@@ -79,8 +87,7 @@ end
 
 if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && n_inp == 2
     % --- IF-LC ---
-    k1 =  f1.^2 ./ (f1.^2-f2.^2);   % IF-LC coefficients 1st frequency
-    k2 = -f2.^2 ./ (f1.^2-f2.^2);   % IF-LC coefficients 2nd frequency
+    [k1, k2] = coeff_2IF(f1, f2);   % IF-LC coefficients 1st and 2nd frequency
     % insert coefficients ||| could be vectorized
     for i = 0:n-1
         C(1+2*i,1+6*i) = k1(i+1);    C(1+2*i,2+6*i) = k2(i+1);
@@ -90,29 +97,28 @@ if strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && n_inp == 2
 elseif strcmp(settings.IONO.model, '2-Frequency-IF-LCs') && n_inp == 3
     % --- 2 x 2-Frequency-IF-LC ---
     % follows [14]: (4) adapted for the order of observations in raPPPid
-    % which is code 1 all satellites, phase 1 all satellites, code 2 all 
-    % satellites,...
-    a_12_1 =  f1.^2 ./ (f1.^2-f2.^2);   % 1st IF-LC coefficients 1st frequency
-    a_12_2 = -f2.^2 ./ (f1.^2-f2.^2);   % 1st IF-LC coefficients 1st frequency
-    a_23_1 =  f2.^2 ./ (f2.^2-f3.^2);
-    a_23_2 = -f3.^2 ./ (f2.^2-f3.^2);
-    % insert coefficients, [14]: (33) ||| could be vectorized
+    % (DSM_ZD.m), which is code and phase alternating, first all satellites
+    % of the 1st IF-LC, then all satellites of the 2nd IF-LC:
+    % C1 sat1, L1 sat1, ..., C1 satn, L1 satn, C2 sat1, L2 sat1, ...
+    [a_12_1, a_12_2] = coeff_2IF(f1, f2);   % 1st IF-LC coefficients 1st and 2nd frequency
+    [a_23_1, a_23_2] = coeff_2IF(f2, f3);   % 2nd IF-LC coefficients 2nd and 3rd frequency
+    % insert coefficients, [14]: (33)
     for i = 0:n-1
-        C(1+4*i,1+6*i) = a_12_1(i+1);    C(1+4*i,2+6*i) = a_12_2(i+1);
-        C(2+4*i,4+6*i) = a_12_1(i+1);    C(2+4*i,5+6*i) = a_12_2(i+1);
-        C(3+4*i,1+6*i) = a_23_1(i+1);    C(3+4*i,3+6*i) = a_23_2(i+1);
-        C(4+4*i,4+6*i) = a_23_1(i+1);    C(4+4*i,6+6*i) = a_23_2(i+1);
+        r_12 = 2*i;         % row offset of 1st IF-LC of this satellite
+        r_23 = 2*(i+n);     % row offset of 2nd IF-LC of this satellite
+        % 1st IF-LC (frequencies 1 and 2)
+        C(1+r_12,1+6*i) = a_12_1(i+1);    C(1+r_12,2+6*i) = a_12_2(i+1);
+        C(2+r_12,4+6*i) = a_12_1(i+1);    C(2+r_12,5+6*i) = a_12_2(i+1);
+        % 2nd IF-LC (frequencies 2 and 3)
+        C(1+r_23,2+6*i) = a_23_1(i+1);    C(1+r_23,3+6*i) = a_23_2(i+1);
+        C(2+r_23,5+6*i) = a_23_1(i+1);    C(2+r_23,6+6*i) = a_23_2(i+1);
     end
 
     
 elseif strcmp(settings.IONO.model, '3-Frequency-IF-LC')
     % --- 3-Frequency-IF-LC ---
     % follows [14]: (5) again adapted for the order of observations in raPPPid
-    y2 = f1.^2 ./ f2.^2;
-    y3 = f1.^2 ./ f3.^2;
-    e1 = (y2.^2 +y3.^2  -y2-y3) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-    e2 = (y3.^2 -y2.*y3 -y2 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-    e3 = (y2.^2 -y2.*y3 -y3 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
+    [e1, e2, e3] = coeff_3IF(f1, f2, f3);
     % insert coefficients, [14]: (20) ||| could be vectorized
     for i = 0:n-1
         C(1+2*i,1+6*i) = e1(i+1);   C(1+2*i,2+6*i) = e2(i+1);   C(1+2*i,3+6*i) = e3(i+1);
@@ -133,19 +139,25 @@ else
             Epoch.gps  * settings.ADJ.var_code_frq(1, 1:n_inp) + ...
             Epoch.glo  * settings.ADJ.var_code_frq(2, 1:n_inp) + ...
             Epoch.gal  * settings.ADJ.var_code_frq(3, 1:n_inp) + ...
-            Epoch.bds  * settings.ADJ.var_code_frq(4, 1:n_inp);
+            Epoch.bds  * settings.ADJ.var_code_frq(4, 1:n_inp) + ...
+            Epoch.qzss * settings.ADJ.var_code_frq(5, 1:n_inp);
         P_code = VAR_code ./ P_fac;      % scale code variances with weighting function
         P_code = P_code(:)';
         VAR_phase = ...     % phase observations' variance matrix, row = satellite, column = frequency
             Epoch.gps  * settings.ADJ.var_phase_frq(1, 1:n_inp) + ...
             Epoch.glo  * settings.ADJ.var_phase_frq(2, 1:n_inp) + ...
             Epoch.gal  * settings.ADJ.var_phase_frq(3, 1:n_inp) + ...
-            Epoch.bds  * settings.ADJ.var_phase_frq(4, 1:n_inp);
+            Epoch.bds  * settings.ADJ.var_phase_frq(4, 1:n_inp) + ...
+            Epoch.qzss * settings.ADJ.var_phase_frq(5, 1:n_inp);
         P_phase = VAR_phase ./ P_fac;    % scale phase variances with weighting function
         P_phase = P_phase(:)';
     end
-    
-    
+
+    if strcmp(settings.IONO.model, 'GRAPHIC')
+        % GRAPHIC = (C1 + L1) / 2  -> variance is the following
+        P_code = (P_code + P_phase) / 4;    % P_phase will be removed
+    end
+
     fac = [P_code; P_phase];
     Q_UC = diag(fac(:));    % assumption: raw observation are uncorrelated
     C = eye(size(Q_UC));
@@ -154,20 +166,16 @@ end
 
 
 % Covariance propagation
-% C = eye(size(C));
 Q = C * Q_UC * C';      % Covariance Matrix of the observations
-P = inv(Q);             % e.g. [14]: (33)
 
 % remove part of phase observations if phase is not processed
 if ~contains(settings.PROC.method, 'Phase') || strcmp(settings.PROC.method, 'Code (Phase Smoothing)')
     Q(2:2:end,:)=[];     Q(:,2:2:end)=[];
-    P(2:2:end,:)=[];     P(:,2:2:end)=[];
 end
 
 % remove part of matrices in case of GRAPHIC
 if strcmp(settings.IONO.model, 'GRAPHIC')
     Q(2:2:end,:)=[];     Q(:,2:2:end)=[];
-    P(2:2:end,:)=[];     P(:,2:2:end)=[];
 end
 
 
@@ -201,38 +209,49 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') && Adjust.cons
     end
     P_fac_iono(P_fac_iono==0) = v0;             % elev = 0, avoid Inf -> keep default variance
     Q_iono = diag(iono_var ./ P_fac_iono(:,1));
-    % combine to full covariance and weight-matrix
+    % add to covariance matrix
     Q = blkdiag(Q, Q_iono);
-    P = blkdiag(P, inv(Q_iono));
 end
 
 
 
 %% add Doppler part
 if contains(settings.PROC.method, '+ Doppler')
-    % build wavelength vector
-    if strcmp(settings.IONO.model, '2-Frequency-IF-LCs')
-        wavelengths = (Epoch.f1.^2.*Epoch.l1-Epoch.f2.^2.*Epoch.l2) ./ (Epoch.f1.^2-Epoch.f2.^2);
+    % wavelengths of input frequencies [m], row = frequency, column = satellite
+    lambda = [Epoch.l1 Epoch.l2 Epoch.l3]';
+    lambda(isnan(lambda) | isinf(lambda)) = 1;  % e.g., frequency is not observed for this GNSS
+    if bool_LC
+        % variance of raw Doppler observations, converted from [Hz^2] to
+        % [m^2/s^2] and scaled with the weighting function (all frequencies)
+        VAR_doppler = settings.ADJ.var_doppler .* lambda.^2 ./ P_fac_3;
+        % the Doppler LC has the same coefficients as the code LC
+        % -> propagate as for the code
+        fac = [VAR_doppler; zeros(3,n)];            % add dummy phase observations
+        Q_doppler = C * diag(fac(:)) * C';
+        Q_doppler = Q_doppler(1:2:end, 1:2:end);    % remove dummy phase observations
     else
-        wavelengths = [Epoch.l1 Epoch.l2 Epoch.l3];
-        wavelengths = wavelengths(:, 1:n_proc);
+        % variance of raw Doppler observations, converted from [Hz^2] to
+        % [m^2/s^2] and scaled with the weighting function
+        VAR_doppler = settings.ADJ.var_doppler .* lambda(1:n_proc,:)'.^2 ./ P_fac(:, 1:n_proc);
+        Q_doppler = diag(VAR_doppler(:));
     end
-    wavelengths(isnan(wavelengths) | isinf(wavelengths)) = 1;
-    % convert variance from [Hz] to [m^2/s^2]
-    var_doppler_ms = settings.ADJ.var_doppler .* wavelengths.^2;
-    % get weighting factor (depending on chosen weighting function in GUI)
-    fac_doppler = P_fac(:, 1:n_proc);
-    % build covariance matrix of Doppler observations
-    Q_doppler = diag(var_doppler_ms(:) ./ fac_doppler(:));
-    % create covariance and weight-matrix
+    % add to covariance matrix
     Q = blkdiag(Q, Q_doppler);
-    P = blkdiag(P, inv(Q_doppler));
 end
 
 
 
+%% invalid observations
+% remove the co-variances of invalid observations (with a zero row in the 
+% design matrix or a NaN in omc) because they are not used.
+no_obs = all(Adjust.A == 0, 2) | isnan(Adjust.omc(:));
+Q(no_obs, ~no_obs) = 0;
+Q(~no_obs, no_obs) = 0;
+
+
+
 %% save in Adjust
-Adjust.P = P; 
-Adjust.Q = Q;
+Adjust.Q = Q;           % covariance matrix of the observations
+Adjust.P = inv(Q);      % weight matrix of the observations, e.g. [14]: (33)
 
 

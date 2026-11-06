@@ -1,9 +1,10 @@
-function FloatAmbPlot(hours, storeData, idx_gnss, settings, label_x, gnss, resets, rgb)
+function FloatAmbPlot(hours, storeData, satellites, idx_gnss, settings, label_x, gnss, resets, rgb)
 % Plots the estimated float ambiguities of a specific GNSS over time.
 %
 % INPUT:
 % 	hours       hours from beginning of processing
 % 	storeData   struct, data of processing
+%   satellites  struct, satellite-specific data of processing
 %   idx_gnss    satellite indices of GNSS to plot
 %   settings    struct, processing settings from GUI
 % 	label_x     label for the x-axis
@@ -32,9 +33,9 @@ no_frqs = settings.INPUT.proc_freqs;
 
 for j = 1:no_frqs
     
-    % get matrix of ambiguities (e.g. storeData.N_1)
-    field = sprintf('N_%1.0f', j);
-    N_j = full(storeData.(field)(:,idx_gnss));
+    % get matrix of ambiguities of j-th frequency from the parameter vectors
+    N_j = GetAmbiguityMatrix(storeData, satellites.sats, no_frqs, j);
+    N_j = N_j(:,idx_gnss);
     N_j(N_j==0) = NaN;              % replace zeros with NaN
     
     % prepare plotting

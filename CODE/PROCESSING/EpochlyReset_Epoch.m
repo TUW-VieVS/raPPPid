@@ -75,10 +75,12 @@ Epoch.qzss = [];
 Epoch.other_systems = [];
 % other
 Epoch.sats = [];
+Epoch.leverarm_ECEF = [];       % lever arm in ECEF for kinematic processing
 Epoch.delta_windup = [];
 Epoch.rinex_header = '';
 Epoch.usable = [];
-Epoch.exclude = [];
+Epoch.useCode = [];
+Epoch.useDoppler = [];
 Epoch.fixable = [];
 % Multipath LC
 Epoch.mp1 = [];
@@ -88,17 +90,18 @@ Epoch.mp2_var = [];
 Epoch.MP_c = [];
 Epoch.MP_p = [];
 % cycle slip variables
+Epoch.usePhase = [];
 Epoch.cs_found = [];
 Epoch.cs_dL1dL2 = [];               % dLi - dLj
 Epoch.cs_dL1dL3 = [];
 Epoch.cs_dL2dL3 = [];
-Epoch.cs_pred_SF = NaN(410,1);
+Epoch.cs_pred_SF = NaN(DEF.SATS, 1);
 Epoch.cs_HMW = [];                  % HMW LC
 Epoch.cs_L1_diff = [];
 % satellite status
 Epoch.sat_status = [];
 % multipath detection (code time-difference)
-Epoch.mp_C_diff = NaN(3,410);
+Epoch.mp_C_diff = NaN(3, DEF.SATS);
 % multipath detection (pseudorange rate check with Doppler)
 Epoch.mp_DopplerPR = [];
 % motion state and ZUPT probability

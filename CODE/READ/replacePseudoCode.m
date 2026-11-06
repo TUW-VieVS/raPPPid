@@ -121,6 +121,8 @@ if contains(rplcd, '$')
                 dir_str = 'fwd';
             case 'Fwd-Bwd'
                 dir_str = 'fwd-bwd';
+			case 'Forwards + RTS'
+				dir_str = 'fwd-RTS';
             case 'Bwd-Fwd'
                 dir_str = 'bwd-fwd';
             case 'Backwards'

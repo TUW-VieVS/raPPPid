@@ -35,7 +35,7 @@ subplot(1+strcmp(settings.BIASES.code, 'CAS Multi-GNSS DCBs'), noGNSS, 1:noGNSS)
 leg_cell = {};
 diff_gps = []; diff_glo = []; diff_gal = [];  diff_bds = []; 
 
-d = NO_PARAM - DEF.NO_PARAM_ZD;	% shift in index due to new parameters
+d = 0;			% potential shift in index due to new parameters
 
 
 

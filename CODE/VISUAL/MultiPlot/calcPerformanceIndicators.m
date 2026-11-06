@@ -66,7 +66,7 @@ thresh_2D = sprintf('%5.3f', PlotStruct.thresh_2D);     % 2D threshold [m]
 thresh_3D = sprintf('%5.3f', PlotStruct.thresh_3D);     % 3D threshold [m]
 
 % remove outliers
-thresh = 10;                            % [m], seems to be a good value
+thresh = 100;                           % [m], ||| good value ?
 d2D(d2D > thresh) = NaN;
 d3D(d3D > thresh) = NaN;
 

@@ -15,7 +15,7 @@ boolean = ...
     PLOT.DOP || PLOT.iono || ...
     PLOT.cs || PLOT.mp || PLOT.appl_biases || ...
     PLOT.signal_qual || PLOT.MPLC || PLOT.res_sats || ...
-    PLOT.stream_corr;
+    PLOT.stream_corr || PLOT.attitude;
 
 if ~boolean
     if isempty(handles.paths.last_plot)
@@ -48,6 +48,7 @@ if ~boolean
         PLOT.signal_qual   = handles.paths.last_plot.signal_qual;
         PLOT.res_sats      = handles.paths.last_plot.res_sats;
         PLOT.stream_corr   = handles.paths.last_plot.stream_corr;
+        PLOT.attitude      = handles.paths.last_plot.attitude;
         boolean = true;
     end
 end

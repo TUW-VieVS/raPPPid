@@ -1,10 +1,22 @@
-function IMUDATA = readIMUcsv(filepath)
-% Reads IMU data from a CSV file into a struct.
+function IMUDATA = readIMUcsv(filepath, leap_sec)
+% Reads IMU data from a CSV file into a struct. Two file formats are
+% supported and detected automatically from the header:
+%
+%   (1) Columns contain: .pof_roll / _pitch / _yaw / _timestamp.
+%       The timestamps are in UTC seconds of week and are converted to GPS
+%       time seconds of week within this function by adding the leap seconds.
+%
+%   (2) Columns contain: "Roll [deg]", "Pitch [deg]", "Yaw [deg]",
+%       "GPS Week Number" and "GPS Seconds". "GPS Seconds" already carries
+%       GPS time. Rows from the INS initialization phase (GPS Week Number == 0,
+%       placeholder timestamps in 1980) are discarded.
 %
 % INPUT:
 %   filepath        string, file path to CSV file
+%   leap_sec        number, leap seconds (UTC -> GPS), used for format (1) only
 % OUTPUT:
-%	IMUDATA         ...
+%	IMUDATA         struct with fields .sow [s, seconds of day] and
+%	                .roll, .pitch, .yaw [degree]
 %
 % Revision:
 %   ...
@@ -13,78 +25,48 @@ function IMUDATA = readIMUcsv(filepath)
 % *************************************************************************
 
 
-% Create import options from the file header (fast and flexible)
+% Read the whole file as a table, preserving the original column headers
 opts = detectImportOptions(filepath, 'NumHeaderLines', 0);
+opts.VariableNamingRule = 'preserve';   % keep the original column headers
+T = readtable(filepath, opts);
+headers = string(T.Properties.VariableNames);
 
-% Read numeric data (readmatrix uses opts when passed)
-try
-    numericData = readmatrix(filepath, opts);
-catch
-    % Fall back to readtable if readmatrix+opts not available on this MATLAB
-    T = readtable(filepath, opts);
-    tmpStruct = table2struct(T, 'ToScalar', true);
-    IMUDATA = selectAndRenameFields(tmpStruct);
-    return
-end
-
-% Get variable names from options
-varNames = opts.VariableNames;
-
-% If readmatrix returns a vector for single-column case, ensure it's a column
-if isvector(numericData) && isscalar(varNames)
-    numericData = numericData(:);
-end
-
-% If numericData has fewer columns than varNames (some nonnumeric columns),
-% fall back to readtable to preserve nonnumeric columns.
-if size(numericData,2) < numel(varNames)
-    T = readtable(filepath, opts);
-    tmpStruct = table2struct(T, 'ToScalar', true);
-    IMUDATA = selectAndRenameFields(tmpStruct);
-    return
-end
-
-% Desired fields (lowercase)
-desired = {'pitch','roll','yaw','timestamp'};
-
-% Create scalar struct and assign only desired fields (use the header names)
 IMUDATA = struct();
-for k = 1:numel(varNames)
-    % Clean field name to be valid MATLAB identifier
-    fname = matlab.lang.makeValidName(varNames{k});
-    % Remove any leading prefix up to the first underscore (if present)
-    % e.g. 'riegl_pof_latitude' -> 'latitude'
-    unders = regexp(fname, '_');
-    if ~isempty(unders)
-        fname = fname(unders(end)+1:end);
-    end
-    % Use lowercase comparison to match desired list
-    fnameKey = lower(fname);
-    if any(strcmp(fnameKey, desired))
-        IMUDATA.(fnameKey) = numericData(:, k);
-    end
+
+if any(contains(headers, 'GPS Seconds', 'IgnoreCase', true))
+    % ----- Format (2) -----
+    roll  = T.(getColumn(headers, 'Roll'));
+    pitch = T.(getColumn(headers, 'Pitch'));
+    yaw   = T.(getColumn(headers, 'Yaw'));
+    week  = T.(getColumn(headers, 'GPS Week'));     % GPS Week Number
+    % "GPS Seconds" already carries GPS time (seconds of week)
+    sow_week = T.(getColumn(headers, 'GPS Seconds'));
+    % discard INS initialization rows (GPS Week Number == 0, 1980 placeholder)
+    valid = week ~= 0;
+    IMUDATA.roll  = roll(valid) - 180;
+    IMUDATA.pitch = pitch(valid);
+    IMUDATA.yaw   = yaw(valid);
+    IMUDATA.sow   = mod(sow_week(valid), 86400);    % seconds of week -> seconds of day
+else
+    % ----- Format (1) -----
+    IMUDATA.roll  = T.(getColumn(headers, 'roll'));
+    IMUDATA.pitch = T.(getColumn(headers, 'pitch'));
+    IMUDATA.yaw   = T.(getColumn(headers, 'yaw'));
+    % timestamps are UTC -> convert to GPS time, then to seconds of day
+    IMUDATA.sow   = mod(T.(getColumn(headers, 'timestamp')) + leap_sec, 86400);
 end
 
 end
 
 
 
-
-% Local helper to rename/select fields when starting from a struct (table fallback)
-function out = selectAndRenameFields(in)
-    desired = {'pitch','roll','yaw','timestamp'};
-    out = struct();
-    fnames = fieldnames(in);
-    for i = 1:numel(fnames)
-        fname = matlab.lang.makeValidName(fnames{i});
-        % remove any leading prefix up to first underscore
-        unders = regexp(fname, '_', 'once');
-        if ~isempty(unders)
-            fname = fname(unders+1:end);
-        end
-        key = lower(fname);
-        if any(strcmp(key, desired))
-            out.(key) = in.(fnames{i});
-        end
+% Local helper: return the exact header name that contains the given key
+% (case-insensitive). Errors if the column is missing or ambiguous.
+function name = getColumn(headers, key)
+    idx = find(contains(headers, key, 'IgnoreCase', true));
+    if isempty(idx)
+        error('readIMUcsv:missingColumn', ...
+            'Could not find a column matching ''%s'' in the IMU file.', key);
     end
+    name = char(headers(idx(1)));
 end

@@ -25,9 +25,9 @@ function refSat = chooseRefSatManual(refSatList, Epoch, gnss, elev_gnss, setting
 sats_gnss = Epoch.sats(gnss);       % satellite numbers of current GNSS
 
 % check which satellites are healthy
-exclude = any(Epoch.exclude(gnss, :), 2);   
-cs_found = any(Epoch.cs_found(gnss, :), 2);
-take = ~exclude & ~cs_found;
+useCode = all(Epoch.useCode(gnss, :), 2);   
+usePhase = all(Epoch.usePhase(gnss, :), 2);
+take = useCode & usePhase;
 
 % find manually defined reference satellites which are observed and healthy
 idx = ismember(refSatList, sats_gnss(take));

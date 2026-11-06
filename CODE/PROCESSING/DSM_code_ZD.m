@@ -33,7 +33,7 @@ isBDS  = repmat(Epoch.bds,  num_freq, 1);
 isQZSS = repmat(Epoch.qzss, num_freq, 1);  
 
 % position
-exclude = Epoch.exclude(:);         % true = satellite excluded
+useCode = Epoch.useCode(:);         % true = use observation
 rho = model.rho(:);                 % geometric distance
 sat_pos_x = repmat(model.Rot_X(1,:)', 1, num_freq);  	% satellite ECEF position x
 sat_pos_y = repmat(model.Rot_X(2,:)', 1, num_freq);  	% satellite ECEF position y
@@ -45,7 +45,7 @@ dR_dvy = zeros(s_f, 1);
 dR_dvz = zeros(s_f, 1);
 
 % --- observed minus computed
-omc = (obs_code(:) - model.model_code(:)) .* ~exclude;
+omc = (obs_code(:) - model.model_code(:)) .* useCode;
 
 % --- Partial derivatives
 % coordinates
@@ -60,7 +60,7 @@ dR_dtrop =  model.mfw(:);       % wet mapping function
 dR_time_dcb = zeros(s_f, 15);
 % receiver clock error
 if settings.INPUT.use_GPS
-    dR_time_dcb(:, 1) = isGPS + isGLO + isGAL + isBDS;       % GPS receiver clock error
+    dR_time_dcb(:, 1) = isGPS + isGLO + isGAL + isBDS + isQZSS;     % GPS receiver clock error
 end
 % time offsets
 dR_time_dcb(:, 4) = isGLO;       % GLONASS
@@ -90,7 +90,7 @@ if settings.BIASES.estimate_rec_dcbs
 end
 
 % --- Build A-Matrix
-A = [dR_dx, dR_dy, dR_dz, dR_dvx, dR_dvy, dR_dvz, dR_dtrop, dR_time_dcb, zeros(s_f, 1)] .*  ~exclude;
+A = [dR_dx, dR_dy, dR_dz, dR_dvx, dR_dvy, dR_dvz, dR_dtrop, dR_time_dcb, zeros(s_f, 1)] .*  useCode;
 
 % --- add ionosphere estimation part to A and omc
 if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Estimate')
@@ -107,7 +107,7 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(set
             A_iono = [A_iono; A_iono_3];
         end
     end  
-    A_iono(Epoch.exclude(:), :) = 0;   	% remove iono estimation of excluded satellites
+    A_iono(~Epoch.useCode(:), :) = 0;   	% remove iono estimation of excluded satellites
     % Put Design-Matrix together
     A = [A, A_iono];
     if strcmpi(settings.IONO.model,'Estimate with ... as constraint') && Adjust.constraint

@@ -82,8 +82,14 @@ string_all = get(handles.popupmenu_prec_prod, 'String');
 settings.ORBCLK.prec_prod =   string_all{value};
 % get value of checkbox MGEX products
 settings.ORBCLK.MGEX = get(handles.checkbox_MGEX, 'Value');
-% get type of precise products
-settings.ORBCLK.prec_prod_type = handles.uibuttongroup_prec_prod_type.SelectedObject.String;
+% get type of precise products 
+if handles.radiobutton_prec_prod_rapid.Value
+    settings.ORBCLK.prec_prod_type = 'Rapid';
+elseif handles.radiobutton_prec_prod_ultrarapid.Value
+    settings.ORBCLK.prec_prod_type = 'Ultra-Rapid';
+else
+    settings.ORBCLK.prec_prod_type = 'Final';
+end
 % get source of navigation message
 value = get(handles.popupmenu_nav_multi, 'Value');
 string_all = get(handles.popupmenu_nav_multi, 'String');
@@ -282,7 +288,7 @@ settings.OTHER.mp_degree = str2double(get(handles.edit_mp_degree, 'String'));
 settings.OTHER.mp_thresh = str2double(get(handles.edit_mp_thresh, 'String'));
 settings.OTHER.mp_cooldown = str2double(get(handles.edit_mp_cooldown, 'String'));
 settings.OTHER.mp_doppler = get(handles.checkbox_mp_doppler, 'Value');
-settings.OTHER.mp_doppler_thresh = str2double(get(handles.edit_mp_doppler_thresh, 'String'));
+settings.OTHER.mp_doppler_thresh = str2num(get(handles.edit_mp_doppler_thresh, 'String'));
 
 
 %% Model - Kinematic
@@ -292,9 +298,10 @@ settings.KINE.bool_kinematic = get(handles.checkbox_kinematic,  'Value');
 
 % Offsets
 settings.KINE.bool_offset = get(handles.checkbox_offsets,  'Value');
-settings.KINE.offset(1) = str2double(get(handles.edit_offset_x,  'String'));
-settings.KINE.offset(2) = str2double(get(handles.edit_offset_y,  'String'));
-settings.KINE.offset(3) = str2double(get(handles.edit_offset_z,  'String'));
+settings.KINE.leverarm(1) = str2double(get(handles.edit_offset_x,  'String'));
+settings.KINE.leverarm(2) = str2double(get(handles.edit_offset_y,  'String'));
+settings.KINE.leverarm(3) = str2double(get(handles.edit_offset_z,  'String'));
+settings.KINE.leverarm = settings.KINE.leverarm';   % convert to column vector (3x1)
 
 % Orientation Mode
 settings.KINE.orient_mode = handles.uibuttongroup_orientation_mode.SelectedObject.String;
@@ -498,8 +505,11 @@ settings.PROC.ss_thresh = str2double(get(handles.edit_ss_thresh, 'String'));
 settings.PROC.check_omc = handles.checkbox_check_omc.Value;
 settings.PROC.omc_code_thresh = str2double(get(handles.edit_omc_thresh_c, 'String'));
 settings.PROC.omc_phase_thresh = str2double(get(handles.edit_omc_thresh_p, 'String'));
-settings.PROC.omc_factor = str2double(get(handles.edit_omc_fac, 'String'));
-settings.PROC.omc_window = str2double(get(handles.edit_omc_window, 'String'));
+settings.PROC.omc_doppler_thresh = str2double(get(handles.edit_omc_thresh_d, 'String'));
+
+% post-fit residual check
+settings.PROC.check_postfit = handles.checkbox_postfit.Value;
+settings.PROC.postfit_factor = str2double(get(handles.edit_postfit, 'String'));
 
 % detect and compensate receiver clock jump
 settings.PROC.bool_rec_clk_jump = handles.checkbox_rec_clk_jump.Value;
@@ -571,6 +581,10 @@ settings.EXP.satellites = get(handles.checkbox_exp_satellites, 'Value');
 settings.EXP.satellites_D = get(handles.checkbox_exp_satellites_D, 'Value');
 % ||| continue
 
+% Coordinate System
+settings.EXP.coord_sys = handles.uibuttongroup_exp_coord_sys.SelectedObject.String;
+settings.EXP.epsg_code = handles.edit_exp_epsg.String;
+
 
 %% Plotting
 
@@ -609,6 +623,7 @@ settings.PLOT.appl_biases	= get(handles.checkbox_plot_appl_biases, 	'Value');
 settings.PLOT.signal_qual 	= get(handles.checkbox_plot_signal_qual, 	'Value');
 settings.PLOT.res_sats      = get(handles.checkbox_plot_res_sats,       'Value');
 settings.PLOT.stream_corr   = get(handles.checkbox_plot_stream_corr,	'Value');
+settings.PLOT.attitude      = get(handles.checkbox_plot_attitude,       'Value');
 
 % true coordinates
 settings.PLOT.pos_true = [0; 0; 0];    % ||| change at some point

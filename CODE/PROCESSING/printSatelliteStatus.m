@@ -50,8 +50,6 @@ for i = 1:n
                 str_add = 'C/N0 too low';
             case 8
                 str_add = 'SSR digit too low';
-            case 9
-                str_add = 'WindUp issue';
             case 10
                 str_add = 'not fixable';
             case 11
@@ -70,6 +68,8 @@ for i = 1:n
                 str_add = 'satellite clock jump';       
             case 18
                 str_add = 'PR rate check';
+            case 19
+                str_add = 'post-fit residual check';
             otherwise
                 str_add = '';
         end

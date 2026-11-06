@@ -8,7 +8,7 @@ function Epoch = CheckSatellitesFixable(Epoch, settings, model, input)
 %   model       struct, observation model
 %   input       struct, input data
 % OUTPUT:
-%	Epoch       updated (Epoch.fixable and, potentially, Epoch.exclude)
+%	Epoch       updated (Epoch.fixable and, potentially, Epoch.useCode)
 %
 % Revision:
 %   ...
@@ -52,13 +52,13 @@ end
 %% Various reasons for excluding
 
 % excluded satellite are not fixable
-fixable(Epoch.exclude) = false;
+fixable(~Epoch.useCode) = false;
 
 % satellites under the AMBIGUITY FIXING cutoff are not fixable
 fixable(model.el < settings.AMBFIX.cutoff) = false;
 
 % satellites with cycle slips are not fixable
-fixable(Epoch.cs_found) = false;
+fixable(~Epoch.usePhase) = false;
 
 % Satellites excluded from ambiguity fixing
 % from GUI or, for example, CNES WL recovery and clocks are not integer recovered:
@@ -84,13 +84,13 @@ switch settings.BIASES.code
             WL_gal = input.ORBCLK.preciseClk_GAL.WL(Epoch.sats(Epoch.gal)-200)';
             b_WL = [WL_gps; WL_gal];
             excl_pbias = (b_WL == 0 | isnan(b_WL));
-            excl_pbias = frequency_convert(excl_pbias, settings);
+            excl_pbias = Map2ProcFrqs(excl_pbias, settings.INPUT.num_freqs, settings.IONO.model);
             fixable(excl_pbias) = false;
         elseif strcmp(settings.BIASES.phase, 'off')    
             % CODE phase biases are used for PPP-AR:
             % check phase biases in L_bias
             excl_pbias = (L_bias == 0) & L_exists;
-            excl_pbias = frequency_convert(excl_pbias, settings);
+            excl_pbias = Map2ProcFrqs(excl_pbias, settings.INPUT.num_freqs, settings.IONO.model);
             fixable(excl_pbias) = false;
         end
         
@@ -98,22 +98,22 @@ switch settings.BIASES.code
             'CNES postprocessed'}
         % check code biases in C_bias
         excl_cbias = (C_bias == 0) & C_exists;
-        excl_cbias = frequency_convert(excl_cbias, settings);
+        excl_cbias = Map2ProcFrqs(excl_cbias, settings.INPUT.num_freqs, settings.IONO.model);
         fixable(excl_cbias) = false;
         % check phase biases in L_bias
         excl_pbias = (L_bias == 0) & L_exists;
-        excl_pbias = frequency_convert(excl_pbias, settings);
+        excl_pbias = Map2ProcFrqs(excl_pbias, settings.INPUT.num_freqs, settings.IONO.model);
         fixable(excl_pbias) = false;
         
     case 'manually'         % e.g., TUG products
         if settings.BIASES.code_manually_Sinex_bool
             % check code biases in C_bias
             excl_cbias = (C_bias == 0) & C_exists;
-            excl_cbias = frequency_convert(excl_cbias, settings);
+            excl_cbias = Map2ProcFrqs(excl_cbias, settings.INPUT.num_freqs, settings.IONO.model);
             fixable(excl_cbias) = false;
             % check phase biases in L_bias
             excl_pbias = (L_bias == 0) & L_exists;
-            excl_pbias = frequency_convert(excl_pbias, settings);
+            excl_pbias = Map2ProcFrqs(excl_pbias, settings.INPUT.num_freqs, settings.IONO.model);
             fixable(excl_pbias) = false;
         else
             fprintf(2, '\nCheckSatellitesFixable.m, an otherwise occurred!\n');
@@ -123,7 +123,7 @@ switch settings.BIASES.code
     case 'Correction Stream'
             % check code biases in C_bias
             excl_cbias = (C_bias == 0) & C_exists;
-            excl_cbias = frequency_convert(excl_cbias, settings);
+            excl_cbias = Map2ProcFrqs(excl_cbias, settings.INPUT.num_freqs, settings.IONO.model);
             fixable(excl_cbias) = false; 
         
     case 'off'
@@ -155,13 +155,13 @@ if settings.AMBFIX.bool_AMBFIX || DecoupledClock
             b_NL = input.BIASES.NL_UPDs.UPDs(idx, Epoch.sats)';     % (plus is necessary)
             % exclude satellites without WL or NL bias
             excl_pbias = (b_NL == 0  | b_WL == 0 | isnan(b_NL) | isnan(b_WL));
-            excl_pbias = frequency_convert(excl_pbias, settings);
+            excl_pbias = Map2ProcFrqs(excl_pbias, settings.INPUT.num_freqs, settings.IONO.model);
             fixable(excl_pbias) = false;
             
         case 'Correction Stream'
             % check phase biases in L_bias
             excl_pbias = (L_bias == 0)  & L_exists;
-            excl_pbias = frequency_convert(excl_pbias, settings);
+            excl_pbias = Map2ProcFrqs(excl_pbias, settings.INPUT.num_freqs, settings.IONO.model);
             fixable(excl_pbias) = false;
 
         case 'WHU phase/clock biases'
@@ -178,20 +178,10 @@ end
 Epoch.fixable = fixable;
 % if DecoupledClock
 %     % DCM is sensitive to missing biases -> only use satellites with all biases
-%     % Epoch.exclude(~Epoch.fixable & ~Epoch.glo) = true;
+%     % Epoch.useCode(~Epoch.fixable & ~Epoch.glo) = false;
 % end
 
 
-function bool = frequency_convert(bool, settings)
-% this function checks which ambiguities can not be fixed depending on the
-% processed PPP model and number of frequencies
-if settings.INPUT.proc_freqs == 1           % e.g. 2-frequency IF LC
-    % only one frequency is used in the fixing process, therefore exclude
-    % if any of the observations is unfixable
-    bool = any(bool,2);  
-end
-
-% ||| extend for other PPP-AR models
 
 
 

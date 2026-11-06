@@ -15,7 +15,6 @@ function handles = GUI_enable_onoff(handles)
 
 
 batch_proc = handles.checkbox_batch_proc.Value;
-proc_meth = handles.popupmenu_process.String(handles.popupmenu_process.Value);
 bool_satellite = handles.checkbox_satellite.Value;
 iono_model = handles.buttongroup_models_ionosphere.SelectedObject.String;
 bool_DCM = strcmp(iono_model, 'Estimate, decoupled clock');
@@ -43,7 +42,10 @@ if isfield(handles, 'paths') && ~isempty(handles.paths.lastproc) && ...
     set(handles.pushbutton_results, 'Enable','On');
 end
 
-
+% Processing method:
+value = get(handles.popupmenu_process, 'Value');
+string_all = get(handles.popupmenu_process,'String');
+proc_meth = lower(string_all{value});       % to be on the safe side
 
 
 %% Input-File
@@ -478,8 +480,8 @@ end
 
 
 
-%% Other Corrections AND Quality Checks
-if strcmpi(handles.uipanel_otherCorrections.Visible, 'on') || strcmpi(handles.uipanel_checks.Visible, 'on')
+%% Other Corrections
+if strcmpi(handles.uipanel_otherCorrections.Visible, 'on')
     
     % disable satellite PCO and PCV for stream with APC as reference point
         handles.checkbox_sat_pco.Enable = 'on';
@@ -511,8 +513,29 @@ if strcmpi(handles.uipanel_otherCorrections.Visible, 'on') || strcmpi(handles.ui
         handles.checkbox_eclipse.Enable = 'off';
     end
     
+    % en/disable Antenna Reference Point correction in the case of kinematic processing
+    if kinematic
+        handles.checkbox_rec_ARP.Enable = 'off';
+    else
+        handles.checkbox_rec_ARP.Enable = 'on';
+    end
+
+
+
+    
+
+    % ||| implement at some point
+    
+end
+
+
+%% Checks
+
+if strcmpi(handles.uipanel_checks.Visible, 'on')
+
+
     % Cycle-Slip Detection is not relevant for code only processing
-    if contains(proc_meth, '+ Phase');   onoff = 'On';   else;   onoff = 'Off';   end
+    if contains(proc_meth, '+ phase');   onoff = 'On';   else;   onoff = 'Off';   end
     handles.text117.Enable = onoff;                         
     handles.checkbox_CycleSlip_L1C1.Enable = onoff;         % code minus phase
     handles.text116.Enable = onoff;
@@ -537,18 +560,27 @@ if strcmpi(handles.uipanel_otherCorrections.Visible, 'on') || strcmpi(handles.ui
     handles.text_cs_HMW_factor.Enable = onoff;
     handles.edit_cs_HMW_factor.Enable = onoff;
     handles.checkbox_LLI.Enable = onoff;            % LLI
-    
 
-    % en/disable Antenna Reference Point correction in the case of kinematic processing
-    if kinematic
-        handles.checkbox_rec_ARP.Enable = 'off';
-    else
-        handles.checkbox_rec_ARP.Enable = 'on';
+
+    % Residual Checks
+
+    % check omc / pre-fit residual check
+    onoff = 'Off';     if handles.checkbox_check_omc.Value; onoff = 'On'; end
+    set(handles.text_omc_thresh_c, 'Enable', onoff);
+    set(handles.text_omc_thresh_p, 'Enable', onoff);
+    set(handles.text_omc_thresh_d, 'Enable', onoff);
+    set(handles.edit_omc_thresh_c, 'Enable', onoff);
+    set(handles.edit_omc_thresh_p, 'Enable', onoff);
+    set(handles.edit_omc_thresh_d, 'Enable', onoff);
+    if ~contains(proc_meth, '+ phase')
+        set(handles.text_omc_thresh_p, 'Enable', 'Off');
+        set(handles.edit_omc_thresh_p, 'Enable', 'Off');
+    end
+    if ~contains(proc_meth, '+ doppler')
+        set(handles.text_omc_thresh_d, 'Enable', 'Off');
+        set(handles.edit_omc_thresh_d, 'Enable', 'Off');
     end
 
-
-    % ||| implement at some point
-    
 end
 
 
@@ -561,13 +593,13 @@ if strcmpi(handles.uipanel_kinematic.Visible, 'on')
     % Offsets and Orientation Mode
     if kinematic
         handles.checkbox_offsets.Enable   = 'On';
-        handles.uibuttongroup_orientation_mode.Enable = 'On';
-        handles.uibuttongroup_ant_orientation_mode.Enable = 'On';
+        handles.uibuttongroup_orientation_mode.Visible = 'On';
+        handles.uibuttongroup_ant_orientation_mode.Visible = 'On';
         handles.checkbox_satellite.Enable = 'On';
     else
         handles.checkbox_offsets.Enable   = 'Off';
-        handles.uibuttongroup_orientation_mode.Enable = 'Off';
-        handles.uibuttongroup_ant_orientation_mode.Enable = 'Off';
+        handles.uibuttongroup_orientation_mode.Visible = 'Off';
+        handles.uibuttongroup_ant_orientation_mode.Visible = 'Off';
         handles.checkbox_satellite.Enable = 'Off';
     end
     if kinematic && handles.checkbox_offsets.Value
@@ -620,6 +652,7 @@ if strcmpi(handles.uipanel_kinematic.Visible, 'on')
     % IMU
     if kinematic
         handles.checkbox_IMU.Visible = 'On';
+        handles.checkbox_IMU.Enable = 'On';
         handles.edit_IMU.Visible = 'On';
         handles.pushbutton_IMU.Visible = 'On';
         if handles.checkbox_IMU.Value
@@ -627,17 +660,24 @@ if strcmpi(handles.uipanel_kinematic.Visible, 'on')
             handles.edit_IMU.Enable = 'On';
             handles.pushbutton_IMU.Visible = 'On';
             handles.pushbutton_IMU.Enable = 'On';
-        end
-    else
-        handles.checkbox_IMU.Visible = 'Off';
-        handles.edit_IMU.Visible = 'Off';
-        handles.pushbutton_IMU.Visible = 'Off';
+            handles.radiobutton_or_IMU.Enable = 'On';
+        else
             handles.edit_IMU.Visible = 'Off';
             handles.edit_IMU.Enable = 'Off';
             handles.pushbutton_IMU.Visible = 'Off';
             handles.pushbutton_IMU.Enable = 'Off';
+            handles.radiobutton_or_IMU.Enable = 'Off';
+        end
+    else
+        handles.checkbox_IMU.Enable = 'Off';
+        handles.edit_IMU.Visible = 'Off';
+        handles.pushbutton_IMU.Visible = 'Off';
+        handles.edit_IMU.Visible = 'Off';
+        handles.edit_IMU.Enable = 'Off';
+        handles.pushbutton_IMU.Visible = 'Off';
+        handles.pushbutton_IMU.Enable = 'Off';
     end
-    
+
 end
 
 
@@ -810,7 +850,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     end
 
     % estimation of velocity
-    if bool_satellite || kinematic || contains(proc_meth, '+ Doppler')
+    if bool_satellite || kinematic || contains(proc_meth, '+ doppler')
         handles.text_velocity.Enable = 'On';
         handles.edit_filter_velocity_sigma0.Enable = 'On';
         handles.edit_filter_velocity_Q.Enable = 'On';
@@ -939,7 +979,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     end
     
     % receiver clock drift
-    if contains(proc_meth, '+ Doppler')
+    if contains(proc_meth, '+ doppler')
         set(handles.text_rec_clk_drift, 	           'Enable', 'On');
         set(handles.edit_filter_rec_clk_drift_sigma0,  'Enable', 'On');
         set(handles.edit_filter_rec_clk_drift_Q, 	   'Enable', 'On');
@@ -954,7 +994,7 @@ if strcmpi(handles.uipanel_adjustment.Visible, 'on')
     end
 
     % Float ambiguities
-    if contains(proc_meth, '+ Phase')
+    if contains(proc_meth, '+ phase')
         set(handles.text_float_ambiguities, 	           'Enable', 'On');
         set(handles.edit_filter_ambiguities_sigma0,        'Enable', 'On');
         set(handles.edit_filter_ambiguities_Q, 	           'Enable', 'On');
@@ -1022,7 +1062,7 @@ if strcmpi(handles.uipanel_weighting.Visible, 'on')
     % Check if code observations are used
     set(handles.text76,                         'Enable', 'Off');
     set(handles.edit_Std_CA_Code,               'Enable', 'Off');
-    if contains(proc_meth, 'Code')
+    if contains(proc_meth, 'code')
         % phase observations are processed
         set(handles.text76,                     'Enable', 'On');
         set(handles.edit_Std_CA_Code,           'Enable', 'On');
@@ -1031,7 +1071,7 @@ if strcmpi(handles.uipanel_weighting.Visible, 'on')
     % Check if phase observations are used
     set(handles.text81,                         'Enable', 'Off');
     set(handles.edit_Std_Phase,                 'Enable', 'Off');
-    if contains(proc_meth, '+ Phase')
+    if contains(proc_meth, '+ phase')
         % phase observations are processed
         set(handles.text81,                     'Enable', 'On');
         set(handles.edit_Std_Phase,             'Enable', 'On');
@@ -1040,7 +1080,7 @@ if strcmpi(handles.uipanel_weighting.Visible, 'on')
     % Check if Doppler observations are used
     set(handles.text_std_doppler,               'Enable', 'Off');
     set(handles.edit_Std_Doppler,               'Enable', 'Off');
-    if contains(proc_meth, '+ Doppler')
+    if contains(proc_meth, '+ doppler')
         % Doppler observations are processed
         set(handles.text_std_doppler,           'Enable', 'On');
         set(handles.edit_Std_Doppler,           'Enable', 'On');
@@ -1098,10 +1138,7 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
     % ||| implement at some point
     
     
-    % Processing method:
-    value = get(handles.popupmenu_process, 'Value');
-    string_all = get(handles.popupmenu_process,'String');
-    proc_meth = lower(string_all{value});       % to be on the safe side
+
     % activate float ambiguity fields only if code+phase is processed
     if strcmpi(proc_meth,'code only') || strcmpi(proc_meth,'code (doppler smoothing)') ...
             || strcmpi(proc_meth,'code + doppler') || strcmpi(proc_meth,'code (phase smoothing)')
@@ -1130,7 +1167,7 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
         set(handles.edit_smooth,       'Visible', 'Off');
     end
 
-    
+    % Reset of solution
     if handles.checkbox_fixing.Value
         handles.checkbox_reset_fixed.Enable = 'On';
     else
@@ -1144,24 +1181,9 @@ if strcmpi(handles.uipanel_processingOptions.Visible, 'on')
     handles.radiobutton_reset_min.Enable = onoff;
     handles.text_reset_epoch.Enable = onoff;
     handles.edit_reset_epoch.Enable = onoff;
-    
-   
-    % check omc
-    onoff = 'Off';     if handles.checkbox_check_omc.Value; onoff = 'On'; end
-    set(handles.text_omc_thresh_c, 'Enable', onoff);
-    set(handles.text_omc_thresh_p, 'Enable', onoff);
-    set(handles.text_omc_fac, 'Enable', onoff);
-    set(handles.text_omc_window, 'Enable', onoff);
-    set(handles.edit_omc_thresh_c, 'Enable', onoff);
-    set(handles.edit_omc_thresh_p, 'Enable', onoff);
-    set(handles.edit_omc_fac, 'Enable', onoff);
-    set(handles.edit_omc_window, 'Enable', onoff);
-    if ~contains(proc_meth, '+ phase')
-        set(handles.text_omc_thresh_p, 'Enable', 'Off');
-        set(handles.edit_omc_thresh_p, 'Enable', 'Off');
-    end
-    
+        
 end
+
 
 
 %% Export Options
@@ -1220,6 +1242,14 @@ if strcmpi(handles.uipanel_export.Visible, 'on')
     
     % ||| implement at some point
     
+
+    % Coordinate System
+    if handles.radiobutton_exp_no_trafo.Value
+        handles.edit_exp_epsg.Enable = 'off';
+    elseif handles.radiobutton_exp_epsg.Value
+        handles.edit_exp_epsg.Enable = 'on';
+    end
+
 end
 
 

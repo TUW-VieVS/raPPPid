@@ -11,9 +11,10 @@ function [model, Epoch] = modelErrorSources(settings, input, Epoch, model, Adjus
 %   obs             consisting observations and corresponding data   [struct]
 % OUTPUT:
 %   model           extended with modeled corrections to current satellite, [struct]
-%   Epoch           update of .excluded, .sat_status, .tracked,
+%   Epoch           update of .useCode, .sat_status, .tracked,
 %
 % Revision:
+%   2026/08/13, MFWG: fixing lever arm correction
 %   2025/01/22, MFWG: new function calculating the IPP
 %   2023/02/06, MFG: calculate APC correction in los for WL fixing (HMW)
 %
@@ -35,12 +36,6 @@ j_proc = 1:n_num_frq;                   % 1 : # input frequencies
 
 bool_stream_COM = ...       % true = correction stream referring to COM
     settings.ORBCLK.corr2brdc_orb && settings.ORBCLK.CorrectionStream_COM;
-
-% receiver antenna DELTA H/E/N or offsets from GUI (kinematic)
-antenna_delta = obs.rec_ant_delta;
-if settings.KINE.bool_offset && settings.KINE.bool_kinematic
-    antenna_delta = settings.KINE.offset';
-end
 
 % indices of processed frequencies
 idx_frqs_gps  = settings.INPUT.gps_freq_idx(j_proc);
@@ -87,24 +82,35 @@ if model.first_call
         [model.polar_tides_ECEF, ~] = ctpole(Epoch.mjd, pos_XYZ, xp, yp);
     end
 
-    % --- Rotation Matrix from Local Level to ECEF ---
+    % --- Rotation Matrix from Body Frame to ECEF ---
     if ~settings.KINE.bool_kinematic
         % static processing
-        model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
+        model.R2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
     elseif strcmp(settings.KINE.orient_mode, 'IMU')
         % kinematic processing with IMU information
-        dt = abs(mod(Epoch.gps_time,86400) - input.IMU.timestamp);
-        bool = (dt == min(dt));
-        [model.R_LL2ECEF] = YawPitchRoll2ECEF(input.IMU.yaw(bool), input.IMU.pitch(bool), input.IMU.roll(bool), pos_WGS84.lat, pos_WGS84.lon);
+        dt = abs(mod(Epoch.gps_time,86400) - input.IMU.sow);
+        bool = (dt == min(dt));         % get nearest orientation data
+        yaw = input.IMU.yaw(bool);      % [degree]
+        pitch = input.IMU.pitch(bool);  % [degree]
+        roll = input.IMU.roll(bool);    % [degree]
+        [model.R2ECEF] = YawPitchRoll2ECEF(yaw, pitch, roll, pos_WGS84.lat, pos_WGS84.lon, true); 
+        model.bool_FLU = true;
     elseif contains(settings.PROC.method,'+ Doppler')
         % kinematic processing with velocity estimation
-        model.R_LL2ECEF = setupRotation_BF2ECEF(param_(1:3), param_(4:6), settings.KINE.orient_mode);
+        model.R2ECEF = setupRotation_BF2ECEF(param_(1:3), param_(4:6), settings.KINE.orient_mode);
+        model.bool_FLU = true;
+        % [yaw, pitch, roll] = ECEF2YawPitchRoll(model.R2ECEF, pos_WGS84.lat, pos_WGS84.lon, model.bool_FLU);
     else
         % fallback
-        model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
+        model.R2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
     end
 end
 
+% --- Lever arm ---
+% settings.KINE.leverarm is the vector pointing from the desired reference point TO the GNSS antenna
+if settings.KINE.bool_offset && settings.KINE.bool_kinematic
+    Epoch.leverarm_ECEF = - model.R2ECEF * settings.KINE.leverarm;
+end
 
 % troposphere: if the a priori zenith delays should be modeled at all
 if ~(strcmpi(settings.TROPO.zhd,'no')   &&   strcmpi(settings.TROPO.zwd,'no'))
@@ -115,6 +121,14 @@ if ~(strcmpi(settings.TROPO.zhd,'no')   &&   strcmpi(settings.TROPO.zwd,'no'))
         aw_VMF3  = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{4}, Epoch.mjd, 'spline', 9999);
         zhd_VMF3 = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{5}, Epoch.mjd, 'spline', 9999);
         zwd_VMF3 = interp1(input.TROPO.V3GR.data{2}, input.TROPO.V3GR.data{6}, Epoch.mjd, 'spline', 9999);
+    end
+
+    % VMF3 coefficients: identical for all satellites of this epoch 
+    % -> computed once per epoch here
+    bh_VMF3 = 0; bw_VMF3 = 0; ch_VMF3 = 0; cw_VMF3 = 0;
+    if (~strcmpi(settings.TROPO.zhd,'no') && (strcmpi(settings.TROPO.mfh,'VMF3') || strcmpi(settings.TROPO.mfh,'GPT3'))) || ...
+            (~strcmpi(settings.TROPO.zwd,'no') && (strcmpi(settings.TROPO.mfw,'VMF3') || strcmpi(settings.TROPO.mfw,'GPT3')))
+        [bh_VMF3, bw_VMF3, ch_VMF3, cw_VMF3] = vmf3_coeff(Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon);
     end
 
     % VMF1: interpolate to the respective mjd
@@ -143,7 +157,6 @@ if ~(strcmpi(settings.TROPO.zhd,'no')   &&   strcmpi(settings.TROPO.zwd,'no'))
 end
 
 
-
 %% Loop over satellites
 
 
@@ -157,25 +170,20 @@ for i_sat = 1:num_sat
     isBDS  = Epoch.bds(i_sat);      % is current satellite a BeiDou sat.?
     isQZSS = Epoch.qzss(i_sat);     % is current satellite a QZSS sat.?
     f1 = Epoch.f1(i_sat);   f2 = Epoch.f2(i_sat);   f3 = Epoch.f3(i_sat);
-    if strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
-        y2 = f1.^2 ./ f2.^2;            % coefficients of 3-Frequency-IF-LC
-        y3 = f1.^2 ./ f3.^2;
-        e1 = (y2.^2 +y3.^2  -y2-y3) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-        e2 = (y3.^2 -y2.*y3 -y2 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-        e3 = (y2.^2 -y2.*y3 -y3 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
+    if strcmpi(settings.IONO.model,'2-Frequency-IF-LCs')
+        [k1, k2] = coeff_2IF(f1, f2);           % coefficients of 1st 2-Frequency-IF-LC
+        [k3, k4] = coeff_2IF(f2, f3);           % coefficients of 2nd 2-Frequency-IF-LC
+    elseif strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
+        [e1, e2, e3] = coeff_3IF(f1, f2, f3);   % coefficients of 3-Frequency-IF-LC
     end
     % initialize
     dT_sat = 0;   dT_rel = 0;   mfw_VMF3 = [];   mfw_VMF1 = [];   mfw_GPT3 = [];
-    % get cutoff (could be already set!) and satellite status
-    exclude = Epoch.exclude(i_sat);	status = Epoch.sat_status(i_sat,:);
+    % initialize exclude and get satellite status
+    exclude = false;	status = Epoch.sat_status(i_sat,:);
 
     % check if satellite has valid code observations
     if all(isnan(Epoch.code(i_sat,:)))
-        Epoch.exclude(i_sat,frqs) = true; 	% eliminate satellite
-        Epoch.sat_status(i_sat) = 16;
-        Epoch.tracked(prn) = 1;
-        model.Rot_X(:,i_sat) = [0; 0; 0];
-        model.el(i_sat,frqs) = 0;
+        [Epoch, model] = EliminateSat(Epoch, model, i_sat, prn, frqs, 16);
         continue
     end
 
@@ -258,11 +266,7 @@ for i_sat = 1:num_sat
     k = Epoch.BRDCcolumn(prn);
     if settings.ORBCLK.bool_brdc && isnan(k)      % no ephemeris
         %         fprintf('No broadcast orbit data for satellite %d in SOW %.3f              \n', prn, Ttr);
-        Epoch.exclude(i_sat,frqs) = true; 	% eliminate satellite
-        Epoch.sat_status(i_sat) = 15;
-        Epoch.tracked(prn) = 1;
-        model.Rot_X(:,i_sat) = [0; 0; 0];
-        model.el(i_sat,frqs) = 0;
+        [Epoch, model] = EliminateSat(Epoch, model, i_sat, prn, frqs, 15);
         continue
     end
 
@@ -277,7 +281,7 @@ for i_sat = 1:num_sat
         % if ~settings.INPUT.bool_parfor; fprintf('No precise clock data for satellite %.0f in SOW %0.3f              \n', prn, Ttr); end
         exclude = true;                  	% eliminate satellite
         status(:) = 5;
-        Epoch.tracked(prn) = 1;             % set epoch counter for this satellite to 1
+        Epoch.tracked(prn) = 0;             % reset number of tracked epochs
     end
 
 
@@ -318,20 +322,20 @@ for i_sat = 1:num_sat
     [az, elev] = topocent(pos_XYZ, los);
     az_BF = az; elev_BF = elev;     % azimuth and elevation to satellite in antenna coordinate system
     if settings.KINE.bool_kinematic && settings.KINE.bool_IMU
-        [az_BF, elev_BF] = Rot2AzimuthElevation(model.R_LL2ECEF, los0, settings.KINE.ant_orient);
+        [az_BF, elev_BF] = Rot2AzimuthElevation(model.R2ECEF, los0, settings.KINE.ant_orient);
     end
 
     %  --- cutoff-angle ---
-    if elev < settings.PROC.elev_mask            	% elevation is under cut-off-angle
+    if elev < settings.PROC.elev_mask       % elevation is under cut-off-angle
         exclude = true;         % eliminate satellite
         status(:) = 2;          % set satellite status
-        Epoch.tracked(prn) = 1; % reset number of tracked epochs
+        Epoch.tracked(prn) = 0; % reset number of tracked epochs
     end
 
     % --- Boresight angle ---
     bore = 0;
     if settings.ADJ.weight_bore
-        % For Earth pointing only
+        % For Earth pointing satellites only
         Los_Body = ECEF2RWS(X_rot, Epoch.time, Adjust.param_pred(1:6), obs.leap_sec);
         Ant_BoreSight = [0; 0; -1];
         bore = acosd(dot((Los_Body/norm(Los_Body)), Ant_BoreSight));
@@ -360,21 +364,21 @@ for i_sat = 1:num_sat
             if ~isnan(i_windup)     % get windup correction from last epoch for current satellite
                 delta_windup_old = Epoch.old.delta_windup(i_windup);    % [cycles]
             end
-        end      
-        % calculate Phase Wind-Up
-        [delta_windup, flag] = PhaseWindUp(delta_windup_old, model.R_LL2ECEF, SatOr_ECEF, los0);
-        if flag
-            exclude = true;              % eliminate satellite
-            status(:) = 9;
         end
+
+        % calculate Phase Wind-Up correction:
+        % always use rotation matrix from Local Level (North-East-Up) here
+        R2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);        
+        delta_windup = PhaseWindUp(delta_windup_old, R2ECEF, SatOr_ECEF, -los0);
+
         % Conversion of windup in cycles to frequency
         windupCorr_L1 = delta_windup * Epoch.l1(i_sat);     % [m]
         windupCorr_L2 = delta_windup * Epoch.l2(i_sat);   	% [m]
         windupCorr_L3 = delta_windup * Epoch.l3(i_sat);   	% [m]
         % convert modeled Wind-Up to processed frequency
         if strcmpi(settings.IONO.model,'2-Frequency-IF-LCs')
-            windupCorr(1) = (f1^2*windupCorr_L1 - f2^2*windupCorr_L2)/(f1^2 - f2^2);    % 1st IF-LC
-            windupCorr(2) = (f2^2*windupCorr_L2 - f3^2*windupCorr_L3)/(f2^2 - f3^2);   	% 2nd IF-LC
+            windupCorr(1) = k1.*windupCorr_L1 + k2.*windupCorr_L2;      % 1st IF-LC
+            windupCorr(2) = k3.*windupCorr_L2 + k4.*windupCorr_L3;      % 2nd IF-LC
         elseif strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
             windupCorr(1) = e1.*windupCorr_L1 + e2.*windupCorr_L2 + e3.*windupCorr_L3;
         elseif strcmpi(settings.IONO.model,'GRAPHIC')
@@ -426,9 +430,9 @@ for i_sat = 1:num_sat
         switch settings.TROPO.mfh
             case 'VMF3'
                 if strcmpi(input.TROPO.V3GR.version,'sitewise')
-                    [mfh, mfw_VMF3] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, elev*pi/180);
+                    [mfh, mfw_VMF3] = vmf3_eval(ah_VMF3, aw_VMF3, bh_VMF3, bw_VMF3, ch_VMF3, cw_VMF3, elev*pi/180);
                 elseif strcmpi(input.TROPO.V3GR.version,'gridwise')
-                    [mfh, mfw_VMF3] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, pos_WGS84.h, elev*pi/180);
+                    [mfh, mfw_VMF3] = vmf3_ht_eval(ah_VMF3, aw_VMF3, bh_VMF3, bw_VMF3, ch_VMF3, cw_VMF3, pos_WGS84.h, elev*pi/180);
                 end
             case 'VMF1'
                 if strcmpi(input.TROPO.VMF1.version,'sitewise')
@@ -437,7 +441,7 @@ for i_sat = 1:num_sat
                     [mfh, mfw_VMF1] = vmf1_ht(ah_VMF1, aw_VMF1, Epoch.mjd, pos_WGS84.lat, pos_WGS84.h, elev*pi/180);
                 end
             case 'GPT3'
-                [mfh, mfw_GPT3] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, pos_WGS84.h, elev*pi/180);
+                [mfh, mfw_GPT3] = vmf3_ht_eval(ah_GPT3, aw_GPT3, bh_VMF3, bw_VMF3, ch_VMF3, cw_VMF3, pos_WGS84.h, elev*pi/180);
             otherwise
                 error('There is something wrong here...')
         end
@@ -487,9 +491,9 @@ for i_sat = 1:num_sat
                 if ~isempty(mfw_VMF3)           % check if this was already calculated
                     mfw = mfw_VMF3;
                 elseif strcmpi(input.TROPO.V3GR.version,'sitewise')
-                    [~,mfw] = vmf3(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, elev*pi/180);
+                    [~,mfw] = vmf3_eval(ah_VMF3, aw_VMF3, bh_VMF3, bw_VMF3, ch_VMF3, cw_VMF3, elev*pi/180);
                 elseif strcmpi(input.TROPO.V3GR.version,'gridwise')
-                    [~,mfw] = vmf3_ht(ah_VMF3, aw_VMF3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, pos_WGS84.h, elev*pi/180);
+                    [~,mfw] = vmf3_ht_eval(ah_VMF3, aw_VMF3, bh_VMF3, bw_VMF3, ch_VMF3, cw_VMF3, pos_WGS84.h, elev*pi/180);
                 end
             case 'VMF1'
                 if ~isempty(mfw_VMF1)           % check if this was already calculated
@@ -503,7 +507,7 @@ for i_sat = 1:num_sat
                 if ~isempty(mfw_GPT3)           % check if this was already calculated
                     mfw = mfw_GPT3;
                 else
-                    [~,mfw] = vmf3_ht(ah_GPT3, aw_GPT3, Epoch.mjd, pos_WGS84.lat, pos_WGS84.lon, pos_WGS84.h, elev*pi/180 );
+                    [~,mfw] = vmf3_ht_eval(ah_GPT3, aw_GPT3, bh_VMF3, bw_VMF3, ch_VMF3, cw_VMF3, pos_WGS84.h, elev*pi/180);
                 end
             otherwise
                 error('There is something wrong here...')
@@ -526,6 +530,13 @@ for i_sat = 1:num_sat
         mfw = 0;
         Gn_w = 0;
         Ge_w = 0;
+    end
+
+    % apply height correction in kinematic processing with VFM3
+    if settings.KINE.bool_kinematic && contains(settings.TROPO.zhd, 'VMF3') && contains(settings.TROPO.zwd, 'VMF3')
+        [zhd_correction, zwd_correction] = tropo_height_correction(pos_WGS84, input.TROPO.V3GR.H, input.TROPO.V3GR.atm);
+        zhd = zhd + zhd_correction;
+        zwd = zwd + zwd_correction;
     end
 
     % stick together the slant total delay
@@ -576,7 +587,7 @@ for i_sat = 1:num_sat
 
             case 'BDGIM'
                 % ||| use input.IONO.BDGIM_coeff here
-                % ||| modelApproxamtely!
+                % ||| modelApproximately!
                 % ||| use newest information for calculation
 
             case 'NTCM-G'
@@ -663,21 +674,30 @@ for i_sat = 1:num_sat
     %% Phase Center Offsets and Variations
     % --- Receiver Antenna Reference Point Correction ---
     % correct the measurement to the ARP with values from RINEX-File-Header
-    % or, in kinematic case, with offsets provided in the GUI
+    % (only static, kinematic: lever arm is applied after epoch-wise processing)
     dX_ARP_ECEF_corr = zeros(3,1);
-    if settings.OTHER.bool_rec_arp || (settings.KINE.bool_offset && settings.KINE.bool_kinematic)
-        dX_ARP_ECEF_corr = model.R_LL2ECEF*antenna_delta;   % convert to ECEF
+    if settings.OTHER.bool_rec_arp && ~settings.KINE.bool_kinematic
+        dX_ARP_ECEF_corr = model.R2ECEF*obs.rec_ant_delta;      % convert to ECEF
     end
     dX_ARP_ECEF_corr = dot2(los0, dX_ARP_ECEF_corr);            % project onto line of sight
 
     % --- Receiver Antenna Phase Center Offset Correction---
     dX_PCO_REC_ECEF_corr = zeros(n_proc_frq,1);
-    if settings.OTHER.bool_rec_pco        % Receiver Phase Center Offset is enabled
-        dX_PCO_REC_ECEF = model.R_LL2ECEF * PCO_rec; 	% convert Local Level into ECEF
+    if settings.OTHER.bool_rec_pco
+        PCO_ = PCO_rec;              % ANTEX order: [North, East, Up]
+        if model.bool_FLU
+            % model.R2ECEF is FLU to ECEF and ANTEX uses NEU -> transform 
+            % PCO_rec to FLU before rotating to ECEF
+            if strcmp(settings.KINE.ant_orient, 'backwards')
+                % antenna North points backwards -> 180° yaw about Up
+                PCO_ = PCO_rec .* [-1; 1; 1];
+            else
+                % antenna North points forwards (forward=N, left=-E, up=U)
+                PCO_ = PCO_rec .* [ 1; -1; 1];
+            end
+        end
+        dX_PCO_REC_ECEF = model.R2ECEF * PCO_; 	% convert into ECEF
         los_pco_r = sum(los0.*dX_PCO_REC_ECEF, 1);         % project onto line of sight, dot-product of each column
-        % missing receiver PCO correction are replaced with the correction
-        % of the 1st frequency:
-        los_pco_r(los_pco_r==0) = los_pco_r(1);
         % convert to the processed frequencies
         dX_PCO_REC_ECEF_corr = Convert2ProcFrqs(settings, j, los_pco_r, f1, f2, f3, dX_PCO_REC_ECEF_corr);
     end
@@ -693,7 +713,7 @@ for i_sat = 1:num_sat
         los_pco_s = sum(los0.*dX_PCO_SAT_ECEF, 1); 	% project each frequency onto line of sight
         % missing satellite PCO corrections are replaced with the correction
         % of the 1st frequency:
-        los_pco_s(los_pco_s==0) = los_pco_s(1);
+        los_pco_s(los_pco_s==0) = los_pco_s(1);     % ||| would be better to take nearest available frequency
         % convert to the processed frequencies
         dX_PCO_SAT_ECEF_corr = Convert2ProcFrqs(settings, j, los_pco_s, f1, f2, f3, dX_PCO_SAT_ECEF_corr);
     end
@@ -713,12 +733,15 @@ for i_sat = 1:num_sat
     end
 
     % --- APC correction due to PCOs for raw processed frequencies---
+    % for correcting HMW observation in create_HMW_LC.m
     los_APC = zeros(1, n_num_frq);
-    if settings.AMBFIX.bool_AMBFIX && settings.AMBFIX.APC_MODEL
-        % simplified version, https://doi.org/10.1186/s43020-021-00049-9 or
-        % https://doi.org/10.1007/s00190-022-01602-3
-        % for correcting HMW observation in create_HMW_LC.m
-        los_APC(1:numel(j)) = PCO_rec(3,j).*sind(elev) + offset_LL(3,j);
+    if settings.AMBFIX.bool_AMBFIX && settings.AMBFIX.APC_MODEL    
+        % replace missing satellite PCO in z-direction with 1st frequency values
+        z_sat = offset_LL(3, j);
+        z_sat(z_sat == 0) = offset_LL(3, 1);        % ||| would be better to take nearest available frequency
+        % use simplified version (only boresight offsets, no PCVs)
+        % https://doi.org/10.1186/s43020-021-00049-9  or https://doi.org/10.1007/s00190-022-01602-3
+        los_APC(1:numel(j)) = PCO_rec(3,j).*sind(elev) + z_sat;
     end
 
 
@@ -748,6 +771,10 @@ for i_sat = 1:num_sat
     model.az(i_sat,frqs)   = az;                % satellite azimuth [degree]
     model.el(i_sat,frqs)   = elev;            	% satellite elevation [degree]
     model.bore(i_sat,frqs) = bore;              % satellite boresight angle [degree]
+    if settings.KINE.bool_kinematic && settings.KINE.bool_IMU
+        model.el_BF(i_sat,frqs) = elev_BF;      % satellite elevation in body-frame [degree]
+        model.az_BF(i_sat,frqs) = az_BF;        % satellite azimuth in body-frame [degree]
+    end
     % Phase Wind-Up
     model.delta_windup(i_sat,frqs) = delta_windup;          % Phase windup effect [cycles]
     model.windup(i_sat,frqs)       = windupCorr(frqs);      % Phase windup effect, scaled to frequency [m]
@@ -772,7 +799,10 @@ for i_sat = 1:num_sat
     model.Rot_X(:,i_sat)  = X_rot;      % Sat Position after correcting the earth rotation during runtime tau [m]
     model.Rot_V(:,i_sat)  = V_rot;  	% Sat Velocity after correcting the earth rotation during runtime tau [m]
 
-    Epoch.exclude(i_sat,frqs) = exclude;   	% boolean, true = do not use satellite (e.g. cutoff angle)
+    Epoch.useCode(i_sat,frqs)    = Epoch.useCode(i_sat,frqs)    & ~exclude;   % boolean, false = do not use
+    Epoch.usePhase(i_sat,frqs)   = Epoch.usePhase(i_sat,frqs)   & ~exclude;
+    Epoch.useDoppler(i_sat,frqs) = Epoch.useDoppler(i_sat,frqs) & ~exclude;   % boolean, false = do not use
+
     Epoch.sat_status(i_sat,:) = status;
 
 end     % of loop over satellites
@@ -781,3 +811,15 @@ end     % of modelErrorSources.m
 
 
 
+
+function [Epoch, model] = EliminateSat(Epoch, model, i_sat, prn, frqs, new_status)
+% eliminate satellite
+Epoch.useCode(i_sat,frqs) = false;
+Epoch.usePhase(i_sat,frqs) = false;
+Epoch.useDoppler(i_sat,frqs) = false;
+% set some variables for excluded satellite
+Epoch.sat_status(i_sat) = new_status;
+Epoch.tracked(prn) = 0;
+model.Rot_X(:,i_sat) = [0; 0; 0];
+model.el(i_sat,frqs) = 0;
+end

@@ -22,13 +22,14 @@ function [A, omc] = DSM_add_Doppler(A, omc, Adjust, Epoch, model, settings)
 % --- Preparations
 param_ = Adjust.param_pred;                 % predicted state vector
 proc_frqs = settings.INPUT.proc_freqs;      % number of processed frequencies
-exclude = Epoch.exclude(:);
+useDoppler = Epoch.useDoppler(:);           % true = use Doppler observation
 rho = model.rho(:);
 
 % build wavelength vector of processed frequencies
 wavelengths = Epoch.l1;
 if proc_frqs == 1 && strcmp(settings.IONO.model, '2-Frequency-IF-LCs')
-    wavelengths = (Epoch.f1.^2.*Epoch.l1-Epoch.f2.^2.*Epoch.l2) ./ (Epoch.f1.^2-Epoch.f2.^2);
+    [k1, k2] = coeff_2IF(Epoch.f1, Epoch.f2);
+    wavelengths = k1.*Epoch.l1 + k2.*Epoch.l2;
 elseif proc_frqs == 2
     wavelengths = [Epoch.l1; Epoch.l2];
 elseif proc_frqs == 3
@@ -77,20 +78,18 @@ bool = strcmp(Adjust.ORDER_PARAM, 'rec_clk_drift');     % detect columns of rece
 A_Doppler(:,bool) = dR_reclk_drift;
 
 % set rows of excluded satellites to zero in the design matrix
-A_Doppler(exclude,:) = 0;
+A_Doppler(~useDoppler,:) = 0;
 
 
 
 %% update observed-minus-computed
 
-% calculate observed-minus-computed for Doppler observations
-omc_doppler  = (model.model_doppler(:) + Epoch.doppler(:)) .* ~exclude;
-
-% change sign of Doppler observations (somehow necessary)
-omc_doppler = -(omc_doppler);
+% calculate observed-minus-computed for Doppler observations.
+% Epoch.doppler holds the Doppler observable scaled to [m/s]
+omc_doppler  = -(model.model_doppler(:) + Epoch.doppler(:)) .* useDoppler;
 
 % remove Doppler observations of excluded satellites in omc vector
-omc_doppler(exclude) = 0;
+omc_doppler(~useDoppler) = 0;
 
 
 

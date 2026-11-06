@@ -47,6 +47,9 @@ idx_frqs_gal(idx_frqs_gal>DEF.freq_GAL(end)) = [];
 idx_frqs_bds(idx_frqs_bds>DEF.freq_BDS(end)) = [];
 idx_frqs_qzss(idx_frqs_qzss>DEF.freq_QZSS(end)) = [];
 
+bool_stream_COM = ...       % true = correction stream refers to COM
+    settings.ORBCLK.corr2brdc_orb && settings.ORBCLK.CorrectionStream_COM;
+
 
 % ----- Epoch-specific corrections -----
 % corrections which are valid for all satellites but only for a specific epoch
@@ -54,8 +57,25 @@ idx_frqs_qzss(idx_frqs_qzss>DEF.freq_QZSS(end)) = [];
 h = mod(Epoch.gps_time,86400)/3600;
 model.sunECEF  = sunPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h);
 model.moonECEF = moonPositionECEF(obs.startdate(1), obs.startdate(2), obs.startdate(3), h);
-% --- Rotation Matrix from Local Level to ECEF ---
-model.R_LL2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
+% --- Rotation Matrix from Body Frame to ECEF ---
+if ~settings.KINE.bool_kinematic
+    % static processing
+    model.R2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
+elseif strcmp(settings.KINE.orient_mode, 'IMU')
+    % kinematic processing with IMU information
+    dt = abs(mod(Epoch.gps_time,86400) - input.IMU.sow);
+    bool = (dt == min(dt));         % get nearest orientation data
+    yaw = input.IMU.yaw(bool);      % [degree]
+    pitch = input.IMU.pitch(bool);  % [degree]
+    roll = input.IMU.roll(bool);    % [degree]
+    [model.R2ECEF] = YawPitchRoll2ECEF(yaw, pitch, roll, pos_WGS84.lat, pos_WGS84.lon, true);
+elseif contains(settings.PROC.method,'+ Doppler')
+    % kinematic processing with velocity estimation
+    model.R2ECEF = setupRotation_BF2ECEF(param(1:3), param(4:6), settings.KINE.orient_mode);
+else
+    % fallback
+    model.R2ECEF = setupRotation_LL2ECEF(pos_WGS84.lat, pos_WGS84.lon);
+end
 
 
 
@@ -104,7 +124,8 @@ for i_sat = 1:num_sat
     code_dist = Epoch.code(i_sat);
     [Ttr, tau] = calcTimeOfTransmission(code_dist, Epoch.gps_time, dT_sat, dT_rel);
     if isnan(tau) 
-        Epoch.exclude(i_sat,frqs) = true;       % eliminate satellite
+        Epoch.useCode(i_sat,frqs) = false;       % eliminate satellite
+        Epoch.useDoppler(i_sat,frqs) = false;
         continue; 
     end
 
@@ -112,9 +133,10 @@ for i_sat = 1:num_sat
     k = Epoch.BRDCcolumn(prn);
     if settings.ORBCLK.bool_brdc && isnan(k)      % no ephemeris
         if ~settings.INPUT.bool_parfor; fprintf('No broadcast orbit data for satellite %d in SOW %.3f              \n', prn, Ttr); end
-        Epoch.exclude(i_sat,frqs) = true;       % eliminate satellite
-        Epoch.status(:) = 15;
-        Epoch.tracked(prn) = 1;
+        Epoch.useCode(i_sat,frqs) = false;       % eliminate satellite
+        Epoch.useDoppler(i_sat,frqs) = false;
+        Epoch.sat_status(i_sat) = 15;
+        Epoch.tracked(prn) = 0;
         continue
     end
     
@@ -129,7 +151,7 @@ for i_sat = 1:num_sat
         if ~settings.INPUT.bool_parfor; fprintf('No precise clock data for satellite %.0f (%s)              \n', prn, Epoch.rinex_header); end
         exclude = true;                 % eliminate satellite
         status(:) = 5;
-        Epoch.tracked(prn) = 1;         % set epoch counter for this satellite to 1
+        Epoch.tracked(prn) = 0;         % reset number of tracked epochs
     end   
     
     for step = 1:2   % Iteration to estimate relativistic effect and interpolate satellite position
@@ -150,9 +172,9 @@ for i_sat = 1:num_sat
         
         % --- Relativistic correction ---
         dT_rel = -2/Const.C^2 * dot2(X_rot, V_rot);
-%         if isGLO && ~settings.ORBCLK.bool_sp3 && input.ORBCLK.Eph_GLO(3,k) ~= 0  % ||| GLO
-%             dT_rel = 0; % for BRDC correction already applied in gamma
-%         end
+        if isGLO && settings.ORBCLK.bool_brdc  % ||| GLO
+            dT_rel = 0;     % already applied in satelliteClock.m
+        end
     end % end of for step = 1:2 - Iteration to estimate relativistic effect and interpolate satellite position
     
     
@@ -171,7 +193,7 @@ for i_sat = 1:num_sat
     if settings.ADJ.weight_bore
         % For Earth pointing only
         Los_Body = ECEF2RWS(X_rot, Epoch.time, param(1:6), obs.leap_sec);
-        Ant_BoreSight = [-1; 0; 0];
+        Ant_BoreSight = [0; 0; -1];
         bore = acosd(dot((Los_Body/norm(Los_Body)), Ant_BoreSight));
     end    
     
@@ -198,7 +220,7 @@ for i_sat = 1:num_sat
     iono = zeros(1, proc_frqs);
     if iteration > 2 && ((strcmpi(settings.IONO.model, 'Estimate with ... as constraint') || strcmpi(settings.IONO.model, 'Correct with ...'))  && ~isnan(Ttr))
         switch settings.IONO.source
-            case 'IONEX File'
+            case 'IONEX File' 	% calculate ionospheric delay from IONEX file
                 % calculate ionospheric pierce point
                 [Lat_IPP, Lon_IPP] = calculate_IPP(pos_WGS84.lat, pos_WGS84.lon, az*pi/180, el*pi/180, input.IONO.ionex.hgt(1)*1e3);
                 % convert at_IPP and Lon_IPP from radiant to degree
@@ -206,23 +228,36 @@ for i_sat = 1:num_sat
                 % get value of mapping-function
                 mf = iono_mf(el, input.IONO.ionex.mf, az, input.IONO.ionex.radius, input.IONO.ionex.hgt);
                 vtec = iono_gims(Lat_IPP, Lon_IPP, Ttr, input.IONO.ionex, settings.IONO.interpol);	% interpolate VTEC
+                % convert VTEC to STEC and calculate ionospheric delay
+                stec = mf * vtec;
+                iono = stec2iono(stec, f1, f2, f3);
+                % save mapping function and VTEC
                 model.iono_mf(i_sat)   = mf;      % saving value of mapping-function
                 model.iono_vtec(i_sat) = vtec;          % saving value of VTEC
-                iono(1) = mf * 40.3e16/f1^2* vtec;      % delta_iono [m]
-                iono(2) = mf * 40.3e16/f2^2* vtec;
-                iono(3) = mf * 40.3e16/f3^2* vtec;
+
             case 'Klobuchar model'
                 iono(1) = iono_klobuchar(pos_WGS84.lat*(180/pi), pos_WGS84.lon*(180/pi), az, el, Ttr, input.IONO.klob_coeff);
                 iono(2) = iono(1) * ( f1.^2 ./ f2.^2 );     % convert Klobuchar correction from L1 to L2
                 iono(3) = iono(1) * ( f1.^2 ./ f3.^2 );     % convert Klobuchar correction from L2 to L3
+
             case 'NeQuick model'
-				stec = call_NeQuick_G(input.IONO.nequ_coeff, obs.startdate(2), Ttr-obs.leap_sec, pos_WGS84, X_rot);
+                stec = call_NeQuick_G(input.IONO.nequ_coeff, obs.startdate(2), Ttr-obs.leap_sec, pos_WGS84, X_rot);
                 iono = stec2iono(stec, f1, f2, f3);
+
+            case 'BDGIM'
+                % ||| use input.IONO.BDGIM_coeff here
+                % ||| use newest information for calculation
+
+            case 'NTCM-G'
+                sod = mod(Ttr,86400);               % seconds of day
+                UTC = (sod - obs.leap_sec)/3600;    % UTC in [h]
+                stec = NTCM_Galileo(pos_WGS84, az, el, obs.doy, UTC, input.IONO.nequ_coeff);
+                iono = stec2iono(stec, f1, f2, f3);
+
             case 'CODE Spherical Harmonics'
                 stec = iono_coeff_global(pos_WGS84.lat, pos_WGS84.lon, az, el, round(Ttr), input.IONO.ion, obs.leap_sec);
-                iono(1) = 40.3/f1^2 * stec;
-                iono(2) = 40.3/f2^2 * stec;
-                iono(3) = 40.3/f3^2 * stec;
+                iono = stec2iono(stec, f1, f2, f3); 	% calculate ionospheric delay from STEC
+
             case 'VTEC from Correction Stream'
                 % find nearest VTEC data in correction stream       ||| interpolate
                 dt = Ttr - input.ORBCLK.corr2brdc_vtec.t;      % time difference [sow]
@@ -234,9 +269,19 @@ for i_sat = 1:num_sat
                 % calculate STEC and ionospheric delay on signal frequencies
                 stec = corr2brdc_stec(C_nm, S_nm, input.ORBCLK.corr2brdc_vtec.height, az, el, pos_WGS84.lat, pos_WGS84.lon, pos_WGS84.h, Ttr);
                 iono = stec2iono(stec, f1, f2, f3); 	% calculate ionospheric delay from STEC
-                
+
+            case 'TOBS File'
+                % get data for current satellite
+                TOBS = input.IONO.TOBS_STEC(input.IONO.TOBS_STEC(:,2) == prn, :);
+                % calculate time difference
+                dt_TOBS = abs(TOBS(:,1) - mod(Epoch.gps_time, 86400));
+                % find temporally nearest STEC for current satellite
+                stec = TOBS(dt_TOBS == min(dt_TOBS),3);
+                % calculate ionospheric delay from STEC
+                iono = stec2iono(stec, f1, f2, f3);
+
             % otherwise is handled before switch
-            
+
         end
     end    
     
@@ -256,15 +301,15 @@ for i_sat = 1:num_sat
     % ----- Phase Center Offset Corrections -----
     % --- Receiver Antenna Reference Point Correction ---
     % correct the measurement to the ARP with values from RINEX-File-Header
-    
+    % (only static, kinematic: lever arm is applied after epoch-wise processing)
     dX_ARP_ECEF_corr = zeros(3,1);
-    if iteration > 1 && settings.OTHER.bool_rec_arp        % Antenna Reference Point Correction is enabled
-        dX_ARP_ECEF_corr = model.R_LL2ECEF*obs.rec_ant_delta;   % convert Local Level into ECEF
-    end    
+    if iteration > 1 && (settings.OTHER.bool_rec_arp && ~settings.KINE.bool_kinematic)        % Antenna Reference Point Correction is enabled
+        dX_ARP_ECEF_corr = model.R2ECEF*obs.rec_ant_delta;   % convert Local Level into ECEF
+    end
     dX_ARP_ECEF_corr = dot2(los0, dX_ARP_ECEF_corr);            % project onto line of sight
     
     % ----- Receiver Antenna Phase Center Offset Correction -----
-    % PCV are no applied, Glonass is not implemented
+    % PCV are no applied, GLONASS is not implemented
     dX_PCO_REC_ECEF_corr = zeros(proc_frqs,1);
     if iteration > 1 && settings.OTHER.bool_rec_pco        % Receiver Phase Center Offset is enabled
         if isGPS
@@ -280,7 +325,19 @@ for i_sat = 1:num_sat
             PCO_rec = input.OTHER.PCO.rec_BDS;
             idx_frqs = idx_frqs_bds;
         end
-        dX_PCO_REC_ECEF = model.R_LL2ECEF * PCO_rec; 	% convert Local Level into ECEF   
+        PCO_ = PCO_rec;              % ANTEX order: [North, East, Up]
+        if settings.KINE.bool_kinematic
+            % model.R2ECEF is FLU to ECEF and ANTEX uses NEU -> transform
+            % PCO_rec to FLU before rotating to ECEF
+            if strcmp(settings.KINE.ant_orient, 'backwards')
+                % antenna North points backwards -> 180° yaw about Up
+                PCO_ = PCO_rec .* [-1; 1; 1];
+            else
+                % antenna North points forwards (forward=N, left=-E, up=U)
+                PCO_ = PCO_rec .* [ 1; -1; 1];
+            end
+        end
+        dX_PCO_REC_ECEF = model.R2ECEF * PCO_; 	% convert into ECEF
         dX_los = sum(los0.*dX_PCO_REC_ECEF, 1);         % project onto line of sight, dot-product of each column        
         % missing receiver PCO correction are replaced with the correction
         % of the 1st frequency:
@@ -294,26 +351,27 @@ for i_sat = 1:num_sat
     % is necessary when orbit/clock product refers to the CoM
     % ||| check and change for not sp3
     dX_PCO_SAT_ECEF_corr = zeros(proc_frqs,1);
-    if settings.OTHER.bool_sat_pco && settings.ORBCLK.bool_sp3 && ~exclude   	
-        % satellite Phase Center Offset and precise ephemerides are enabled
+    if settings.OTHER.bool_sat_pco && (settings.ORBCLK.bool_sp3 || bool_stream_COM) && ~exclude
+        % satellite Phase Center Offset is enabled and orbit/clock refers to
+        % the CoM (precise ephemeris or COM-referenced correction stream)
         % and satellite is not under cutoff
         if isGPS        % get offsets for current satellite
-            offset_LL = input.OTHER.PCO.sat_GPS(input.OTHER.PCO.sat_GPS(:,1) == sv, 2:4, 1:5); 
+            offset_LL = input.OTHER.PCO.sat_GPS(sv, 2:4, 1:6);
             idx_frqs = idx_frqs_gps;
         elseif isGLO
-            offset_LL = input.OTHER.PCO.sat_GLO(input.OTHER.PCO.sat_GLO(:,1) == sv, 2:4, 1:5);
+            offset_LL = input.OTHER.PCO.sat_GLO(sv, 2:4, 1:6);
             idx_frqs = idx_frqs_glo;
         elseif isGAL
-            offset_LL = input.OTHER.PCO.sat_GAL(input.OTHER.PCO.sat_GAL(:,1) == sv, 2:4, 1:5);
+            offset_LL = input.OTHER.PCO.sat_GAL(sv, 2:4, 1:6);
             idx_frqs = idx_frqs_gal;
         elseif isBDS
-            offset_LL = input.OTHER.PCO.sat_BDS(input.OTHER.PCO.sat_BDS(:,1) == sv, 2:4, 1:5);
+            offset_LL = input.OTHER.PCO.sat_BDS(sv, 2:4, 1:6);
             idx_frqs = idx_frqs_bds;
         elseif isQZSS
-            offset_LL = input.OTHER.PCO.sat_QZSS(input.OTHER.PCO.sat_QZSS(:,1) == sv, 2:4, 1:5);
+            offset_LL = input.OTHER.PCO.sat_QZSS(sv, 2:4, 1:6);
             idx_frqs = idx_frqs_qzss;
         end
-        offset_LL = reshape(offset_LL,3,5,1);       % each column contains another frequency
+        offset_LL = reshape(offset_LL,3,6,1);       % each column contains another frequency
         dX_PCO_SAT_ECEF = SatOr_ECEF*offset_LL;   	% transform offsets into ECEF site displacements
         dX_los = sum(los0.*dX_PCO_SAT_ECEF, 1); 	% project each frequency onto line of sight
         % missing satellite PCO corrections are replaced with the correction
@@ -325,7 +383,7 @@ for i_sat = 1:num_sat
     
     
     
-    %% -+-+-+- Assign modelled values to struct 'model' -+-+-+-
+    %% -+-+-+- Assign modeled values to struct 'model' -+-+-+-
     
     % General stuff
     model.rho(i_sat,frqs)  	 = rho;             % theoretical range, maybe recalculated in iteration of epoch
@@ -333,7 +391,7 @@ for i_sat = 1:num_sat
     model.dT_rel(i_sat,frqs)  = dT_rel;     	% Relativistic clock correction
     model.dT_sat_rel(i_sat,frqs) = dT_sat_rel;  % Satellite clock  + relativistic correction
     model.Ttr(i_sat,frqs)    = Ttr;             % Signal transmission time
-    model.k(i_sat,frqs)      = k;               % Column of ephemerides
+    model.k(i_sat,frqs)      = k;               % Column of ephemeris
     % Atmosphere
     model.trop(i_sat,frqs) = trop;              % Troposphere delay for elevation
     model.iono(i_sat,frqs) = iono(frqs);        % Ionosphere delay
@@ -351,7 +409,10 @@ for i_sat = 1:num_sat
     model.Rot_X(:,i_sat)  = X_rot;      % Sat Position after correcting the earth rotation during runtime tau
     model.Rot_V(:,i_sat)  = V_rot;  	% Sat Velocity after correcting the earth rotation during runtime tau 
     
-    Epoch.exclude(i_sat,frqs) = exclude;   	% boolean, true = do not use satellites (e.g. under cutoff angle)
+    % boolean, false = do not use (e.g. under cutoff angle)
+    Epoch.useCode(i_sat,frqs) = Epoch.useCode(i_sat,frqs) & ~exclude;   	
+    Epoch.useDoppler(i_sat,frqs) = Epoch.useDoppler(i_sat,frqs) & ~exclude;
+
     Epoch.sat_status(i_sat,:) = status;   	
     
 end     % of loop over satellites

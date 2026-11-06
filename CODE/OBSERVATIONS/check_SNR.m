@@ -19,13 +19,13 @@ function Epoch = check_SNR(Epoch, settings, use_column)
 % *************************************************************************
 
 
-num = settings.INPUT.num_freqs;
-pro = settings.INPUT.proc_freqs;
+n_num = settings.INPUT.num_freqs;
+n_proc = settings.INPUT.proc_freqs;
 
 % C/N0 cutoff
 if any(~isnan(settings.PROC.SNR_mask))
     no_sats = numel(Epoch.sats);
-    SNR = NaN(no_sats, num);
+    SNR = NaN(no_sats, n_num);
     % get column of SNR observation for all GNSS and frequencies
     col_G = cell2mat(use_column(1,7:9));    col_R = cell2mat(use_column(2,7:9));
     col_E = cell2mat(use_column(3,7:9));    col_C = cell2mat(use_column(4,7:9));
@@ -53,12 +53,13 @@ if any(~isnan(settings.PROC.SNR_mask))
     % determine C/N0s threshold
     SNR_threshold = settings.PROC.SNR_mask;
     if numel(SNR_threshold) ~= 1    % is threshold frequency-specific?
-        SNR_threshold = SNR_threshold(1:num);
+        SNR_threshold = SNR_threshold(1:n_num);
     end
     % check for exclusion
     remove_SNR = SNR < SNR_threshold;   % compare with threshold  
-    if pro == 1; remove_SNR = any(remove_SNR,2); end    % e.g. IF LC processing
-    Epoch.exclude(remove_SNR) = true;   % exclude observations individually
+    % map exclusion of input frequencies to processed frequencies
+    remove_SNR = Map2ProcFrqs(remove_SNR, n_num, settings.IONO.model);
+    Epoch.useCode(remove_SNR) = false;   % exclude observations individually
     remove_sat = all(remove_SNR,2);     % check if satellite is completely excluded
     % removed satellites: set number of tracked epochs to zero and mark status
     Epoch.tracked(Epoch.sats(remove_sat)) = 0;
@@ -70,7 +71,7 @@ end
 if ~isnan(settings.PROC.ss_thresh) && settings.PROC.ss_thresh ~= 1
     % signal strength digits from phase observations are not considered
     no_sats = numel(Epoch.sats);
-    SS_code = zeros(no_sats, num);
+    SS_code = zeros(no_sats, n_num);
     % columns and number of columns of gnss code observations
     gps_col  = cell2mat(use_column(1,4:6)); n_gps  = numel(gps_col);
     glo_col  = cell2mat(use_column(2,4:6)); n_glo  = numel(glo_col);
@@ -90,7 +91,7 @@ if ~isnan(settings.PROC.ss_thresh) && settings.PROC.ss_thresh ~= 1
     % removed satellites: set number of tracked epochs to zero
     Epoch.tracked(Epoch.sats(remove_SS)) = 0;
     % exclude
-    Epoch.exclude(remove_SS,:) = true;
+    Epoch.useCode(remove_SS,:) = false;
     Epoch.sat_status(remove_SS) = 8;
 end
 

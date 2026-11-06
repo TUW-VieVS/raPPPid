@@ -60,6 +60,12 @@ Literature
 [23]: Pan Li & Xiaohong Zhang (2015). Precise Point Positioning with 
       Partial Ambiguity Fixing. Sensors 2015, 15, 13627-13643.
       https://doi.org/10.3390/s150613627
+[24]: Teunissen, de Jonge, Tiberius (1995). The LAMBDA-method for fast GPS
+      surveying. International Symposium "GPS Technology Applications",
+      Bucharest, Romania, September 26-29, 1995.
+[25]: Teunissen P.J.G. (1995): The least-squares ambiguity decorrelation 
+      adjustment: a method for fast GPS integer ambiguity estimation. 
+      J Geod 70:65–82. 
 
 
 

@@ -22,11 +22,12 @@
 %   observation streams of individual stations are hosted there), decoded
 %   and written as a RINEX 4 observation file, e.g.
 %   FFMJ00DEU0_S_20260010000_01D_MO.rnx.
-% All streams are optional and independent: set any subset of mountpoint,
-% iono_mountpoint, bias_mountpoint, nav_mountpoint and obs_mountpoint. If
-% iono_mountpoint (or bias_mountpoint) is left empty, VTEC (or code/phase
-% bias) data is instead taken from the "mountpoint" orbit/clock stream, if
-% that stream provides it.
+% All streams are optional and independent: at startup the script fetches
+% the casters' sourcetables and lets the user pick a stream (or skip) for
+% each of orbit/clock, ionosphere, biases, broadcast ephemeris and
+% observations, and enter the recording duration. If the ionosphere (or
+% bias) selection is skipped, VTEC (or code/phase bias) data is instead
+% taken from the orbit/clock stream, if that stream provides it.
 %
 % Casters used here, both port 2101:
 %   products.igs-ip.net (BKG) for SSR corrections and broadcast ephemeris
@@ -81,17 +82,15 @@
 % *************************************************************************
 
 %% Settings - adjust to your needs
+% The account credentials, the streams (mountpoints) and the recording
+% duration are NOT hardcoded here: credentials are entered in a dialog
+% (ask_credentials), and the streams and duration are chosen interactively
+% below from the casters' live sourcetables. Only the casters, port and
+% raw-capture flags are set here.
 caster          = 'products.igs-ip.net';    % Ntrip Caster for SSR corrections and broadcast ephemeris
 obs_caster      = 'igs-ip.net';             % Ntrip Caster for GNSS observation streams
 port            = 2101;                     % Ntrip Caster port (both casters)
-obs_mountpoint  = 'BRUX00BEL0';             % GNSS observation stream on obs_caster (leave empty to skip)
-nav_mountpoint  = 'BCEP00CAS0';             % broadcast ephemeris stream (leave empty to skip)
-mountpoint      = 'SSRA01CAS1';             % SSR stream for orbit+clock (leave empty to skip)
-iono_mountpoint = '';             % optional dedicated ionosphere/VTEC stream, e.g. 'IONO00CAS0' (leave empty to instead use VTEC from "mountpoint", if it provides any)
-bias_mountpoint = '';             % optional dedicated code/phase bias stream, e.g. 'OSBC00WHU1' (leave empty to instead use biases from "mountpoint", if it provides any)
-
-username        = input('Ntrip account username (leave empty if not needed): ', 's');
-password        = input('Ntrip account password (leave empty if not needed): ', 's');
+[username, password] = ask_credentials();
 % optionally also save the exact raw RTCM3 bytes received, next to the
 % decoded output file, using the same name but a ".raw" extension, e.g.
 % SSRA01CAS1_S_20262040838_15M_MC.ssr -> SSRA01CAS1_S_20262040838_15M_MC.raw
@@ -99,49 +98,37 @@ password        = input('Ntrip account password (leave empty if not needed): ', 
 save_raw_ssr    = false;                       % raw SSR (orbit+clock) bytes
 save_raw_nav    = false;                       % raw NAV bytes
 save_raw_obs    = false;                       % raw OBS bytes
-rec_time        = 600;                       % recording duration [s]
 
-if isempty(obs_mountpoint)
-    % the observation caster hosts many per-station streams, so print its
-    % sourcetable whenever no obs_mountpoint has been chosen, to help pick one
-    ntrip_connect(obs_caster, port, '', username, password);
+
+%% Select the streams and the recording duration
+% The available streams are fetched from the casters' live sourcetables and
+% offered for selection (listdlg), so only streams that are actually being
+% broadcast can be picked. Every selection is optional and may be skipped
+% (all streams are independent). The recording duration is entered via an
+% input dialog.
+[prod_mounts, prod_labels] = fetch_stream_list(caster, port, username, password);
+[obs_mounts,  obs_labels ] = fetch_stream_list(obs_caster, port, username, password);
+
+mountpoint      = pick_stream(prod_mounts, prod_labels, caster, ...
+    {'Select the SSR stream for ORBIT + CLOCK corrections.'; ...
+     '(main SSR stream; it may additionally carry ionosphere and/or biases)'});
+iono_mountpoint = pick_stream(prod_mounts, prod_labels, caster, ...
+    {'Optional: select a dedicated IONOSPHERE (VTEC) stream.'; ...
+     'Skip to use VTEC from the orbit/clock stream instead (if it provides any).'});
+bias_mountpoint = pick_stream(prod_mounts, prod_labels, caster, ...
+    {'Optional: select a dedicated CODE / PHASE BIAS stream.'; ...
+     'Skip to use biases from the orbit/clock stream instead (if it provides any).'});
+nav_mountpoint  = pick_stream(prod_mounts, prod_labels, caster, ...
+    {'Select the BROADCAST EPHEMERIS (navigation message) stream.'});
+obs_mountpoint  = pick_stream(obs_mounts, obs_labels, obs_caster, ...
+    {'Select the GNSS OBSERVATION stream (single station).'});
+
+if isempty(mountpoint) && isempty(iono_mountpoint) && isempty(bias_mountpoint) ...
+        && isempty(nav_mountpoint) && isempty(obs_mountpoint)
+    error('No stream selected - nothing to record.');
 end
 
-if isempty(mountpoint) && isempty(iono_mountpoint) && isempty(bias_mountpoint) && isempty(nav_mountpoint) && isempty(obs_mountpoint)
-    % nothing selected: print the sourcetable (list of available streams)
-    % instead of just erroring out, then stop
-    ntrip_connect(caster, port, '', username, password);
-    return
-end
-
-
-%% Check that the requested streams actually exist before retrieving any data
-requested = {'mountpoint', mountpoint; 'iono_mountpoint', iono_mountpoint; ...
-    'bias_mountpoint', bias_mountpoint; 'nav_mountpoint', nav_mountpoint};
-requested = requested(~cellfun(@isempty, requested(:,2)), :);
-
-if ~isempty(requested)
-    available = get_sourcetable_mounts(caster, port, username, password);
-    missing = requested(~ismember(requested(:,2), available), :);
-    if ~isempty(missing)
-        msg = '';
-        for i = 1:size(missing,1)
-            msg = [msg, sprintf('  %s = ''%s''\n', missing{i,1}, missing{i,2})]; %#ok<AGROW>
-        end
-        warning('The following stream(s) were not found on %s:\n%s', caster, msg);
-        return
-    end
-end
-
-% obs_mountpoint lives on a different caster, so it is checked against
-% that caster's own sourcetable
-if ~isempty(obs_mountpoint)
-    available_obs = get_sourcetable_mounts(obs_caster, port, username, password);
-    if ~ismember(obs_mountpoint, available_obs)
-        warning('The following stream was not found on %s:\n  obs_mountpoint = ''%s''', obs_caster, obs_mountpoint);
-        return
-    end
-end
+rec_time = ask_rec_time();      % recording duration [s]
 
 
 %% Connect to the requested stream(s)
@@ -404,9 +391,75 @@ end
 
 %% ######################### LOCAL FUNCTIONS #############################
 
-function mounts = get_sourcetable_mounts(caster, port, username, password)
-% fetches the sourcetable from the caster and returns a cell array of all
-% advertised mountpoint names (the "STR;<mountpoint>;..." lines)
+function [mounts, labels] = fetch_stream_list(caster, port, username, password)
+% wrapper around get_sourcetable_mounts that returns empty lists (with a
+% warning) instead of erroring, so an unreachable caster does not abort the
+% whole selection (the streams of the other caster can still be picked)
+mounts = {}; labels = {};
+try
+    [mounts, labels] = get_sourcetable_mounts(caster, port, username, password);
+catch ME
+    warning('Could not fetch sourcetable from %s: %s', caster, ME.message);
+end
+end
+
+
+function mp = pick_stream(mounts, labels, caster, prompt_lines)
+% lets the user pick one mountpoint from a caster's sourcetable via a
+% listdlg; returns '' if the user skips, cancels, or the list is empty
+mp = '';
+if isempty(mounts)
+    warning('No streams available from %s; skipping this selection.', caster);
+    return
+end
+items  = [{'(skip - do not use a stream here)'}, labels(:)'];
+prompt = [prompt_lines(:); {''; ['Caster: ' caster]}];
+[sel, ok] = listdlg('Name', 'raPPPid NTRIP client - select stream', ...
+    'PromptString', prompt, 'SelectionMode', 'single', ...
+    'ListString', items, 'ListSize', [760 460], 'InitialValue', 1);
+if ~ok || isempty(sel) || sel == 1
+    return          % cancelled, or "(skip)" chosen
+end
+mp = mounts{sel - 1};
+end
+
+
+function [username, password] = ask_credentials()
+% asks for the Ntrip account username and password via an input dialog
+% (leave both empty, or cancel, for casters/streams that need no login)
+answer = inputdlg({'Ntrip account username (leave empty if not needed):', ...
+    'Ntrip account password (leave empty if not needed):'}, ...
+    'raPPPid NTRIP client - account', 1, {'', ''});
+if isempty(answer)
+    username = ''; password = '';    % dialog cancelled -> try without login
+else
+    username = answer{1};
+    password = answer{2};
+end
+end
+
+
+function rec_time = ask_rec_time()
+% asks the user for the recording duration [s] via an input dialog
+answer = inputdlg({'Recording duration [seconds]:'}, ...
+    'raPPPid NTRIP client - recording duration', 1, {'600'});
+if isempty(answer)
+    error('No recording duration entered - aborting.');   % dialog cancelled
+end
+rec_time = str2double(answer{1});
+if isnan(rec_time) || rec_time <= 0
+    error('Invalid recording duration "%s" - must be a positive number of seconds.', answer{1});
+end
+end
+
+
+function [mounts, labels] = get_sourcetable_mounts(caster, port, username, password)
+% fetches the sourcetable from the caster and returns, for each advertised
+% stream (the "STR;<mountpoint>;..." lines):
+%   mounts - cell array of the mountpoint names
+%   labels - matching one-line descriptions (mountpoint, identifier,
+%            supported GNSS and broadcast message list) for display in a
+%            selection dialog
 fprintf('Fetching sourcetable from %s:%d ...\n', caster, port);
 t = tcpclient(caster, port, "Timeout", 10);
 
@@ -465,13 +518,38 @@ clear t
 
 lines = strsplit(char(body), sprintf('\r\n'));
 mounts = {};
+labels = {};
 for i = 1:numel(lines)
     if startsWith(lines{i}, 'STR;')
-        parts = strsplit(lines{i}, ';');
-        if numel(parts) >= 2
-            mounts{end+1} = parts{2}; %#ok<AGROW>
+        % keep empty fields so the positional STR record fields line up
+        parts = strsplit(lines{i}, ';', 'CollapseDelimiters', false);
+        if numel(parts) >= 2 && ~isempty(strtrim(parts{2}))
+            mounts{end+1} = strtrim(parts{2}); %#ok<AGROW>
+            labels{end+1} = format_str_label(parts); %#ok<AGROW>
         end
     end
+end
+end
+
+
+function label = format_str_label(parts)
+% builds a one-line description from an NTRIP sourcetable STR record's
+% positional fields: mountpoint (2), identifier (3), format (4),
+% format-details/message list (5) and supported navigation systems (7)
+mp      = get_str_field(parts, 2);
+ident   = get_str_field(parts, 3);   % e.g. "IGS-SSR APC"
+navsys  = get_str_field(parts, 7);   % e.g. "GPS+GLO+GAL+BDS"
+details = get_str_field(parts, 5);   % message list, e.g. "1057(5),1058(5),..."
+label = sprintf('%-11s | %-14s | %-16s | %s', mp, ident, navsys, details);
+end
+
+
+function s = get_str_field(parts, k)
+% safely returns the trimmed k-th field of an STR record ('' if missing)
+if k <= numel(parts)
+    s = strtrim(parts{k});
+else
+    s = '';
 end
 end
 

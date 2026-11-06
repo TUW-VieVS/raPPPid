@@ -31,6 +31,8 @@ Adjust.res_doppler = [];% residuals of Doppler observations
 Adjust.Transition = [];	% Transition matrix (Kalman Filter)
 Adjust.Noise = [];    	% Noise matrix (Kalman Filter)
 Adjust.P_pred = [];     % inverse of parameters' covariance matrix (weight matrix of parameters)
+% IEKF: do not carry x_pred_IEKF into next epoch
+Adjust.x_pred_IEKF = [];
 % PPP-AR variables
 Adjust.fix_now  = [false false];
 if settings.AMBFIX.bool_AMBFIX
@@ -60,6 +62,7 @@ end
 % .reset_time         time of last reset [sow]
 % .float_reset_epochs     epochs with reset of float solution
 % .fixed_reset_epochs     epochs with reset of float solution
+% .N_est_epochs       number of epochs each float ambiguity is continuously estimated 
 
 
 %% prepare variables
@@ -78,27 +81,11 @@ est_zwd_now = (settings.TROPO.est_ZWD_from - dt_last_reset) < 1e-3;     % to avo
 Adjust.est_ZWD   = settings.TROPO.estimate_ZWD && est_zwd_now;
 
 
-% handle variables of observed minus computed check (check_omc.m)
-if settings.PROC.check_omc
-    if ~Adjust.float    % delete the stored omc values if no valid float solution 
-        Adjust.code_omc(:) = NaN;
-        Adjust.phase_omc(:) = NaN;
-    else                % move stored values up
-        n = settings.PROC.omc_window; last = n + 1;
-        if ~isnan(n)
-            Adjust.code_omc(1:n,:) = Adjust.code_omc(2:last,:);
-            Adjust.phase_omc(1:n,:) = Adjust.phase_omc(2:last,:);
-            Adjust.code_omc(last,:) = NaN;
-            Adjust.phase_omc(last,:) = NaN;
-        end
-    end
-end
-
 % check if ambiguity fixing is performed in current epoch
 fix_now = [false false];    % [WL, NL]
 if settings.AMBFIX.bool_AMBFIX
     % direction of filter
-    fwd = strcmp(settings.ADJ.filter.direction, 'Forwards');
+    fwd = contains(settings.ADJ.filter.direction, 'Forwards');
     bwd = strcmp(settings.ADJ.filter.direction, 'Backwards');
     fwd_bwd = strcmpi(settings.ADJ.filter.direction, 'Fwd-Bwd');
     bwd_fwd = strcmpi(settings.ADJ.filter.direction, 'Bwd-Fwd');

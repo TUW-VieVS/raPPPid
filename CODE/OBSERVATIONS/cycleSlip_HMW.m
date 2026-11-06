@@ -235,7 +235,9 @@ Epoch.cs_HMW_k(3, reset_23) = 0; Epoch.cs_HMW_av(3, reset_23) = 0; Epoch.cs_HMW_
 %% save detected cycle slips and print to command window
 if any(new_cs_found(:))
     % put detected cycle slips into Epoch
-    Epoch.cs_found = Epoch.cs_found | new_cs_found(:, 1:settings.INPUT.proc_freqs);
+    n_input = settings.INPUT.num_freqs;
+    new_cs_found = Map2ProcFrqs(new_cs_found(:, 1:n_input), n_input, settings.IONO.model);
+    Epoch.cs_found = Epoch.cs_found | new_cs_found;
 
     % print information of detected cycle slips
     if ~settings.INPUT.bool_parfor
@@ -267,7 +269,7 @@ function [Obs] = getObs(obs_gps, obs_glo, obs_gal, obs_bds, obs_qzss, l_gps, l_g
 %   Obs         code or phase observation for all GNSS of current epoch
 
 % initialize
-Obs = NaN(1,410);
+Obs = NaN(1,DEF.SATS);
 % extract observations
 if ~isempty(l_gps)
     Obs(gps) = obs_gps(:,l_gps);      % phase observations of current epoch [cy]

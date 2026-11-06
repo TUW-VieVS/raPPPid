@@ -130,6 +130,7 @@ if bool_BATCH_PROC && (exist('gcp', 'file') == 2)
             % save failed processlist in folder PROCESSLIST
             process_list = TABLE(~success, :);
             save('PROCESSLIST/LastFailed.mat', 'process_list', 'settings');
+            if ~exist('PROCESSLIST/LastFailed', 'dir'); mkdir('PROCESSLIST/LastFailed'); end
             save(['PROCESSLIST/LastFailed/LastFailed_' datestr(datetime('now'), 'yyyy-mm-dd_HH-MM-SS') '.mat'], 'process_list', 'settings');
         end
     else            % Batch Processing was stopped

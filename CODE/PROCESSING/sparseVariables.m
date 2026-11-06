@@ -51,11 +51,8 @@ if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(set
         storeData.iono_vtec = sparse(storeData.iono_vtec);
     end
 end
-if contains(settings.IONO.model,'Estimate')		% ionosphere is estimated
-    storeData.iono_est = sparse(storeData.iono_est);
-end
 storeData.exclude  = sparse(storeData.exclude);
-storeData.cs_found = sparse(storeData.cs_found);
+storeData.excludePhase = sparse(storeData.excludePhase);
 
 % satellite status
 if settings.EXP.storeData_sat_status && isfield(storeData, 'sat_status')
@@ -147,7 +144,7 @@ if settings.AMBFIX.bool_AMBFIX
         % replace fixed ambiguities = 0 with 0.1 to make sparse possible
         storeData.N_WL_12 = replace_sparse(storeData.N_WL_12, 0, 0.1);
         storeData.N_NL_12 = replace_sparse(storeData.N_NL_12, 0, 0.1);
-        if proc_freqs >= 2
+        if proc_freqs >= 2 || strcmp(settings.IONO.model, '3-Frequency-IF-LC')
             storeData.HMW_13 = sparse(storeData.HMW_13);
             storeData.HMW_23 = sparse(storeData.HMW_23);
             % replace fixed ambiguities = 0 with 0.1 to make sparse possible
@@ -195,8 +192,6 @@ end
 % frequency 1
 storeData.residuals_code_1  = sparse(storeData.residuals_code_1);
 if bool_phase
-    storeData.N_1               = sparse(storeData.N_1);
-    storeData.N_var_1           = sparse(storeData.N_var_1);
 	if ~strcmp(settings.IONO.model, 'GRAPHIC')
 		storeData.residuals_phase_1 = sparse(storeData.residuals_phase_1);
 	end
@@ -210,8 +205,6 @@ if bool_doppler; storeData.residuals_doppler_1 = sparse(storeData.residuals_dopp
 if proc_freqs > 1
     storeData.residuals_code_2 = sparse(storeData.residuals_code_2);
     if bool_phase
-        storeData.N_2 = sparse(storeData.N_2);
-        storeData.N_var_2 = sparse(storeData.N_var_2);
         storeData.residuals_phase_2 = sparse(storeData.residuals_phase_2);
         if settings.AMBFIX.bool_AMBFIX
             storeData.residuals_code_fix_2  = sparse(storeData.residuals_code_fix_2);
@@ -224,8 +217,6 @@ end
 if proc_freqs > 2
     storeData.residuals_code_3  = sparse(storeData.residuals_code_3);
     if bool_phase
-        storeData.N_3 = sparse(storeData.N_3);
-        storeData.N_var_3 = sparse(storeData.N_var_3);
         storeData.residuals_phase_3 = sparse(storeData.residuals_phase_3);
         if settings.AMBFIX.bool_AMBFIX
             storeData.residuals_code_fix_3  = sparse(storeData.residuals_code_fix_3);

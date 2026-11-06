@@ -18,7 +18,7 @@ function [obs] = assign_sinex_biases(obs, SinexBiases, settings)
 % to C1W, from C1W to C2W. In apply_biases.m these biases are used to
 % convert the observation to the C1W-C2W-IF-LC of precise products (if
 % necessary)
-% - Glonass: three code biases are saved: from observation type to C1C,
+% - GLONASS: three code biases are saved: from observation type to C1C,
 % from C1C to C1P, from C1P to C2P. In apply_biases.m these biases are used
 % to convert the observation to the C1W-C2W-IF-LC of precise products (if
 % necessary)
@@ -714,7 +714,7 @@ if bool_OSB
 
         if settings.INPUT.use_BDS && ~isempty(obs.use_column{4,3+i})
             if all(all(obs.([frq '_bias']).value(1,idx_C,:) == 0))
-                if ~(CODE_MGEX && contains(obs.BDS.(frq), {'C2I', 'C7I'}))      % ||| check this
+                if ~(CODE_MGEX && contains(obs.BDS.(frq), {'C1P', 'C2I', 'C5P'}))      % ||| check this
                     error_str = [error_str 'C' obs.BDS.(frq) ', '];
                 end
             end
@@ -740,7 +740,7 @@ if bool_OSB && settings.AMBFIX.bool_AMBFIX
             if all(all(obs.([frq '_bias']).value(1,idx_G,:) == 0))
             end
         end
-        % no Glonass phase biases
+        % no GLONASS phase biases
         if settings.INPUT.use_GAL && ~CNES_int_rec
             if all(all(obs.([frq '_bias']).value(1,idx_E,:) == 0))
                 error_str = [error_str 'E' obs.GAL.(frq), ', '];

@@ -26,7 +26,9 @@ los_PCV_s = [0 0 0];
 
 % calculate zenith distance from satellite antenna to receiver
 z_axis = SatOr_ECEF(:,3);           % pointing from CoM to earth center
-z_sat = acosd(dot(-los0, z_axis));    % los0 and z_axis are unit vectors
+cos_z_sat = dot(-los0, z_axis);     % los0 and z_axis are unit vectors
+cos_z_sat = min(1, max(-1, cos_z_sat));    % clamp against rounding errors pushing |cos_z_sat| > 1, which would make acosd complex
+z_sat = acosd(cos_z_sat);
 
 % protect against numerical problems
 if z_sat < 0 || 90 < z_sat || isinf(z_sat)

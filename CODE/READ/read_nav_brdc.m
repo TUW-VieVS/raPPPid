@@ -32,10 +32,10 @@ if settings.ORBCLK.bool_nav_multi || glo_channels
     input.ORBCLK.Eph_version = rversion;
     if rversion == 3
         [input.IONO.klob_coeff, input.IONO.nequ_coeff, input.IONO.klob_coeff_BDS, ....
-            Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi(NAVDATA, leap_sec);
+            Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS, Eph_QZS] = read_nav_multi(NAVDATA, leap_sec);
     elseif rversion >= 4
         [input.IONO.klob_coeff, input.IONO.nequ_coeff, input.IONO.klob_coeff_BDS, input.IONO.BDGIM_coeff, ....
-            Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS] = read_nav_multi_r4(NAVDATA, leap_sec);
+            Eph_GPS, Eph_GLO, Eph_GAL, Eph_BDS, Eph_QZS] = read_nav_multi_r4(NAVDATA, leap_sec);
     else
         errordlg('Check read_nav_brdc.m and version of navigation message!', 'HUGE error');
     end
@@ -65,7 +65,7 @@ end
 
 %% SORT EPHEMERIS
 % --- GPS
-% Sort GPS ephemerides blocks with respect to # of sv (pnr) and time
+% Sort GPS ephemeris blocks with respect to # of sv (pnr) and time
 if settings.INPUT.use_GPS && settings.ORBCLK.bool_brdc
 %     temp_Eph = sortrows(Eph_GPS',[21,1])';
 %     unhealthy = temp_Eph(23,:) > 0;            % look for unhealthy satellites in column 23
@@ -85,7 +85,7 @@ if settings.INPUT.use_GPS && settings.ORBCLK.bool_brdc
 end
 
 % --- GLONASS
-% Sort Glonass ephemerides blocks with respect to # of sv and time of ephemeris
+% Sort GLONASS ephemeris blocks with respect to # of sv and time of ephemeris
 if settings.INPUT.use_GLO
 %     temp_Eph = sortrows(Eph_GLO',[18,1])';
 %     unhealthy = temp_Eph(14,:) > 0;            % look for unhealthy satellites in column 14
@@ -100,7 +100,7 @@ if settings.INPUT.use_GLO
 end
 
 % --- GALILEO
-% Sort Galileo ephemerides blocks with respect to # of sv and time
+% Sort Galileo ephemeris blocks with respect to # of sv and time
 if settings.INPUT.use_GAL && settings.ORBCLK.bool_brdc
 %     temp_Eph = sortrows(Eph_GAL',[21,1])';
 %     unhealthy = temp_Eph(23,:) > 0;            % look for unhealthy satellites in column 23
@@ -118,7 +118,7 @@ if settings.INPUT.use_GAL && settings.ORBCLK.bool_brdc
 end
 
 % --- BEIDOU
-% Sort BeiDou ephemerides blocks with respect to # of sv and time
+% Sort BeiDou ephemeris blocks with respect to # of sv and time
 if settings.INPUT.use_BDS && settings.ORBCLK.bool_brdc
 %     temp_Eph = sortrows(Eph_BDS',[21,1])';
 %     unhealthy = temp_Eph(23,:) > 0;            % look for unhealthy satellites in column 23
@@ -133,4 +133,10 @@ if settings.INPUT.use_BDS && settings.ORBCLK.bool_brdc
 %         end
 %     end
     input.ORBCLK.Eph_BDS = sortrows(Eph_BDS',[1,21])';
+end
+
+% --- QZSS
+% Sort QZSS ephemeris blocks with respect to # of sv (pnr) and time
+if settings.INPUT.use_QZSS && settings.ORBCLK.bool_brdc
+    input.ORBCLK.Eph_QZSS = sortrows(Eph_QZS',[1,21])';
 end

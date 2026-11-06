@@ -19,12 +19,12 @@ function handles = LoadDefaultFilterSettings(handles)
 % check filter settings
 value = get(handles.popupmenu_filter, 'Value');
 string_all = get(handles.popupmenu_filter, 'String');
-filter_type = string_all{value};		% 'No Filter' or 'Kalman Filter' or 'Kalman Filter Iterative'
+filter_type = string_all{value};		% 'No Filter' or 'Kalman Filter' or 'Iterated Extended Kalman Filter'
 
 % check selected ionosphere model
 decoupled_clock_model = contains(handles.buttongroup_models_ionosphere.SelectedObject.String, 'Estimate, decoupled clock');
 
-if strcmp(filter_type, 'Kalman Filter Iterative')
+if strcmp(filter_type, 'Iterated Extended Kalman Filter')
     % filter's direction
     handles.popupmenu_filter_direction.Value = 1;  % 'Forwards'
     

@@ -32,11 +32,12 @@ decoupled_clock_model = strcmp(settings.IONO.model, 'Estimate, decoupled clock')
 
 %% Shrink Variables
 if settings.INPUT.bool_realtime || ...
-        (strcmp(settings.ADJ.filter.direction, 'Forward') && ...
+        (contains(settings.ADJ.filter.direction, 'Forwards') && ...
         settings.PROC.timeFrame(2) - settings.PROC.timeFrame(1) > q)
     eps = 1:q;      % vector of processed epochs
     % satellites
 	satellites.obs = satellites.obs(eps,:);
+	satellites.sats = satellites.sats(eps);
     satellites.elev = satellites.elev(eps,:);
     satellites.az = satellites.az(eps,:);
     if settings.KINE.satellite.bool; satellites.bore = satellites.bore(eps,:); end
@@ -52,17 +53,23 @@ if settings.INPUT.bool_realtime || ...
     % storeData
     storeData.float             = storeData.float(eps);
     storeData.param             = storeData.param(eps,:);
+    storeData.param_pred        = storeData.param_pred(eps,:);
+    if settings.KINE.bool_offset && settings.KINE.bool_kinematic
+        storeData.leverarm_ECEF = storeData.leverarm_ECEF(eps,:);
+    end
     storeData.param_sigma       = storeData.param_sigma(eps);   % cell
+    storeData.param_full        = storeData.param_full(eps);    % cell
+    if strcmp(settings.ADJ.filter.direction, 'Forwards + RTS')
+        storeData.param_pred_full   = storeData.param_pred_full(eps);   % cell
+        storeData.param_sigma_pred  = storeData.param_sigma_pred(eps);  % cell
+        storeData.Transition        = storeData.Transition(eps);        % cell
+    end
     storeData.gpstime           = storeData.gpstime(eps);
 	storeData.time           	= storeData.time(eps);
 	storeData.dt_last_reset     = storeData.dt_last_reset(eps);
-    storeData.param_var         = storeData.param_var(eps,:);
-    storeData.N_var_1           = storeData.N_var_1(eps,:);
 	if settings.EXP.storeData_sat_status
 		storeData.sat_status        = storeData.sat_status(eps,:);
 	end
-	if proc_freqs>1; storeData.N_var_2 = storeData.N_var_2(eps,:); end
-	if proc_freqs>2; storeData.N_var_3 = storeData.N_var_3(eps,:); end
     storeData.PDOP              = storeData.PDOP(eps);
     storeData.HDOP              = storeData.HDOP(eps);
     storeData.VDOP              = storeData.VDOP(eps);
@@ -82,7 +89,7 @@ if settings.INPUT.bool_realtime || ...
             storeData.HMW_12            = storeData.HMW_12(eps,:);
             storeData.N_WL_12           = storeData.N_WL_12(eps,:);
             storeData.N_NL_12           = storeData.N_NL_12(eps,:);
-            if proc_freqs >= 2
+            if proc_freqs >= 2 || strcmp(settings.IONO.model, '3-Frequency-IF-LC')
                 storeData.N_WL_23      	= storeData.N_WL_23(eps,:);
                 storeData.N_NL_23       = storeData.N_NL_23(eps,:);
                 storeData.HMW_23      	= storeData.HMW_23(eps,:);
@@ -98,9 +105,6 @@ if settings.INPUT.bool_realtime || ...
             storeData.HMW_23   = storeData.HMW_23(eps,:);
         end
     end
-    storeData.N_1               = storeData.N_1(eps,:);
-	if proc_freqs>1; storeData.N_2 = storeData.N_2(eps,:); end
-	if proc_freqs>2; storeData.N_3 = storeData.N_3(eps,:); end
     storeData.C1                = storeData.C1(eps,:);
     storeData.C2                = storeData.C2(eps,:);
     storeData.C3                = storeData.C3(eps,:);
@@ -122,7 +126,7 @@ if settings.INPUT.bool_realtime || ...
         storeData.MP_p              = storeData.MP_p(eps,:);
     end
     storeData.exclude           = storeData.exclude(eps,:);
-	storeData.cs_found          = storeData.cs_found(eps,:);
+	storeData.excludePhase          = storeData.excludePhase(eps,:);
     storeData.zwd               = storeData.zwd(eps,:);
     storeData.zhd               = storeData.zhd(eps,:);
     if contains(settings.PROC.method,'+ Phase')
@@ -201,7 +205,7 @@ if settings.INPUT.bool_realtime || ...
     % data from ambiguity fixing
     if settings.AMBFIX.bool_AMBFIX
         storeData.param_fix             = storeData.param_fix(eps,:);
-        storeData.param_var_fix         = storeData.param_var_fix(eps,:);
+		storeData.param_sigma_fix       = storeData.param_sigma_fix(eps);   % cell
         storeData.residuals_code_fix_1  = storeData.residuals_code_fix_1(eps,:);
         storeData.residuals_phase_fix_1 = storeData.residuals_phase_fix_1(eps,:);
         if proc_freqs>=2
@@ -215,7 +219,6 @@ if settings.INPUT.bool_realtime || ...
     end
     if contains(settings.IONO.model,'Estimate') 	% if ionosphere is estimated
         storeData.constraint = storeData.constraint(eps,:);
-        storeData.iono_est = storeData.iono_est(eps,:);
     end
     if strcmpi(settings.IONO.model,'Estimate with ... as constraint') || strcmpi(settings.IONO.model,'Correct with ...')
         storeData.iono_corr         = storeData.iono_corr(eps,:);
@@ -226,7 +229,15 @@ if settings.INPUT.bool_realtime || ...
             storeData.iono_vtec         = storeData.iono_vtec(eps,:);
         end
     end
-    
+
+    % IMU variables
+    if settings.KINE.bool_IMU
+        storeData.fn            = storeData.fn(eps,:);
+        storeData.quat          = storeData.quat(eps,:);
+        storeData.motionState   = storeData.motionState(eps,:);
+        storeData.ZUPT_prob     = storeData.ZUPT_prob(eps,:);
+    end
+
     % model_save
     if settings.EXP.model_save
         model_save.phase            = model_save.phase(eps,:,:);

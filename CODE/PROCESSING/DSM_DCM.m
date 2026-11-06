@@ -37,8 +37,8 @@ isBDS = repmat(Epoch.bds,  num_freq, 1);
 isQZS = repmat(Epoch.qzss, num_freq, 1);  	
 
 s_f = n*num_freq;                   % satellites x frequencies
-exclude = Epoch.exclude(:);         % satellite excluded?
-usePhase = ~Epoch.cs_found(:);      % use phase observation? (e.g., cycle slip found)
+useCode = Epoch.useCode(:);         % true = use observation
+usePhase = Epoch.usePhase(:);      % use phase observation? (e.g., cycle slip found)
 rho = model.rho(:);                 % geometric distance
 sat_x = repmat(model.Rot_X(1,:)', 1, num_freq);   % satellite ECEF position x
 sat_y = repmat(model.Rot_X(2,:)', 1, num_freq);   % satellite ECEF position y
@@ -52,8 +52,8 @@ code_row = 1:2:2*s_f;   	% rows for code  obs [1,3,5,7,...]
 phase_row = 2:2:2*s_f;  	% rows for phase obs [2,4,6,8,...]
 
 % --- observed minus computed
-omc(code_row,1)	 = (obs_code(:)  - model.model_code(:))  .*  ~exclude; 	% for code-observations
-omc(phase_row,1) = (obs_phase(:) - model.model_phase(:)) .*  ~exclude .*  usePhase;    % for phase-observations
+omc(code_row,1)	 = (obs_code(:)  - model.model_code(:))  .*  useCode; 	% for code-observations
+omc(phase_row,1) = (obs_phase(:) - model.model_phase(:)) .*  useCode .*  usePhase;    % for phase-observations
 
 % --- Partial derivatives
 % position
@@ -127,8 +127,8 @@ if num_freq >= 3        % 3rd frequency is processed
 end
 
 % --- Build A-Matrix without ionosphere submatrix
-A(code_row,:)  = [xyz, v_xyz, T, rx_clk_c, IFB,  O_n5,    O_n5,    O_n1, O_nn ] .*  ~exclude;
-A(phase_row,:) = [xyz, v_xyz, T, rx_clk_p, O_n5, bias_L2, bias_L3, O_n1, amb_p] .*  ~exclude .* usePhase;
+A(code_row,:)  = [xyz, v_xyz, T, rx_clk_c, IFB,  O_n5,    O_n5,    O_n1, O_nn ] .*  useCode;
+A(phase_row,:) = [xyz, v_xyz, T, rx_clk_p, O_n5, bias_L2, bias_L3, O_n1, amb_p] .*  useCode .* usePhase;
 
 % create ionospheric delay estimation submatrix
 dR_diono_code_f1  =  Epoch.f1.^2 ./ Epoch.f1.^2;
@@ -146,9 +146,10 @@ end
 A_iono = [A_iono_1; A_iono_2; A_iono_3];
 
 % manipulate ionospheric delay estimation submatrix
-A_iono(exclude(:), :) = 0;          % remove iono estimation of excluded satellites
-A_iono = kron(A_iono,ones(2,1));  	% duplicate for phase observation
-A_iono(phase_row,:) = -A_iono(phase_row,:); 	% change sign for phase observations
+A_iono(~useCode(:), :) = 0;                 % remove iono estimation of excluded satellites
+A_iono = kron(A_iono,ones(2,1));  	        % duplicate for phase observation
+A_iono(phase_row,:) = -A_iono(phase_row,:); % change sign for phase observations
+A_iono(phase_row(~usePhase),:) = 0;         % remove iono estimation of excluded phase observations (e.g., cycle slip)
 
 
 % --- Put Design-Matrix together

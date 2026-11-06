@@ -31,8 +31,16 @@ isGAL  = settings.INPUT.use_GAL;
 isBDS  = settings.INPUT.use_BDS;
 isQZSS = settings.INPUT.use_QZSS;
 
+% check if float or fixed is plotted and get covariance matrix for current epoch
+if settings.PLOT.float
+    sol = 'float';
+    covar = storeData.param_sigma{q};
+elseif settings.PLOT.fixed
+    sol = 'fixed';
+    covar = storeData.param_sigma_fix{q};
+end
+
 % get some variables
-covar = storeData.param_sigma{q};       % get (Co)-Variance Matrix from adjustment for current epoch
 NO_PARAM = storeData.NO_PARAM;          % number of estimated parameters
 bool_sats = logical(satellites.obs(q,:));
 bool_sats = full(bool_sats);
@@ -49,15 +57,15 @@ if ~isBDS
     bool_sats(301:399) = 0;
 end
 if ~isQZSS
-    bool_sats(401:410) = 0;
+    bool_sats(401:DEF.SATS) = 0;
 end
 noSats = sum(bool_sats);                % number of satellites
 noSatsGPS = sum(bool_sats(001:000+DEF.SATS_GPS));    	% number of GPS satellites
 noSatsGLO = sum(bool_sats(101:100+DEF.SATS_GLO));     	% number of Glonass satellites
 noSatsGAL = sum(bool_sats(201:200+DEF.SATS_GAL));   	% number of Galileo satellites
 noSatsBDS = sum(bool_sats(301:300+DEF.SATS_BDS));    	% number of BeiDou satellites
-noSatsQZSS= sum(bool_sats(401:410));                   	% number of QZSS satellites
-prns = 1:410;              
+noSatsQZSS= sum(bool_sats(401:DEF.SATS));               % number of QZSS satellites
+prns = 1:DEF.SATS;              
 prns = prns(bool_sats);                 % prn numbers of observed satellites in current epocj
 
 s_f = noSats*frqs;                      % satellites x frequencies
@@ -228,7 +236,7 @@ NO_PARAM = NO_PARAM - numel(idx_remove);
 %% Plot figure with Correlations between all parameters
 imagesc(CORR)
 colorbar
-caxis([-1 1])
+clim([-1 1])
 hold on
 
 % move view
@@ -244,7 +252,7 @@ xtickangle(90);
 set(gca, 'TickLength',[0 0])
 
 % Some Styling
-ylabel(['Epoch: ',num2str(q), ', sow: ',num2str(storeData.gpstime(q))])
+ylabel(['Epoch: ',num2str(q), ', sow: ',num2str(storeData.gpstime(q)) ', solution: ' sol])
 xlabel([num2str(noSatsGPS) ' GPS, ' num2str(noSatsGLO) ' GLONASS, ' num2str(noSatsGAL) ' Galileo, '  num2str(noSatsBDS) ' BeiDou, '   num2str(noSatsQZSS) ' QZSS' ])
 % plot line between parameters and ambiguities
 xy_line = NO_PARAM + 0.5;

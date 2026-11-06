@@ -1,10 +1,10 @@
 function [az, el] = Rot2AzimuthElevation(R, los0, ant_orientation)
 % This function calculates the azimuth and elevation to a specific GNSS
 % satellite in the coordinate frame of a moving vehicle (e.g., drone).
-% ATTENTION: uses NED (North-East-DOWN)
+% ATTENTION: uses FLU body frame (Forward-Left-Up)
 % 
 % INPUT:
-%   R           3x3, rotation matrix from body to ECEF
+%   R           3x3, rotation matrix from body (FLU) to ECEF
 %   los0        3x1, unit line of sight vector (receiver to satellite)
 % OUTPUT:
 %	az          azimuth from north positive clockwise [°]
@@ -19,14 +19,15 @@ function [az, el] = Rot2AzimuthElevation(R, los0, ant_orientation)
 % transform line of sight vector into the body frame
 los0_BF = R' * los0;
 
-% components in body frame
+% components in body frame (FLU: Forward-Left-Up)
 x = los0_BF(1);     % points forwards
-y = los0_BF(2);     % to the right
-z = los0_BF(3);     % points downwards
+y = los0_BF(2);     % to the left
+z = los0_BF(3);     % points upwards
 
 % calculate azimuth and elevation in [°]
-az = atan2(y, x) * 180 / pi;
-el = atan2(-z, sqrt(x^2 + y^2)) * 180 / pi;
+% azimuth positive clockwise from forward towards the right (= -left)
+az = atan2(-y, x) * 180 / pi;
+el = atan2(z, sqrt(x^2 + y^2)) * 180 / pi;
 
 % consider mounting of antenna and adjust azimuth
 if strcmp(ant_orientation, 'backwards')

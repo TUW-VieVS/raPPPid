@@ -21,7 +21,7 @@ function [] = writeTropo(storeData, obs, settings)
 % get troposphere variables
 zhd_model = storeData.zhd;
 zwd_model = storeData.zwd;
-zwd_est   = storeData.param(:,4);
+zwd_est   = storeData.param(:,7);
 ztd = zhd_model + zwd_model + zwd_est;
 ztd = ztd * 1000;       % convert from [m] to [mm]
 % get information about station

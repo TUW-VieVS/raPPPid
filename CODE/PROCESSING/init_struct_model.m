@@ -16,14 +16,15 @@ model.first_call = true;
 model.sunECEF = [0; 0; 0];      % approximate sun position
 model.moonECEF = [0; 0; 0];     % approximate moon position
 
-model.R_LL2ECEF = zeros(3);     % rotation matrix from Local Level to ECEF
+model.R2ECEF = zeros(3);     	% rotation matrix from body frame to ECEF
+model.bool_FLU = false;			% true if R2ECEF rotates from FLU to ECEF
 
 model.rho   = NaN(m,n);         % Theoretical range
 model.dT_sat = NaN(m,n);        % Satellite clock correction
 model.dT_rel = NaN(m,n);        % Relativistic clock correction
 model.dT_sat_rel = NaN(m,n);    % Sat. clock  + relativistic correction
 model.Ttr = NaN(m,n);           % Signal transmission time
-model.k   = NaN(m,n);       	% Column of ephemerides
+model.k   = NaN(m,n);       	% Column of ephemeris
 model.solid_tides_ECEF   = [0; 0; 0];   % ECEF displacement because of solid tides
 model.ocean_loading_ECEF = [0; 0; 0];  	% ECEF displacement because of ocean loading
 
@@ -48,6 +49,8 @@ model.zhd  = NaN(m,n);			% zenith hydrostatic delay
 model.az = NaN(m,n);            % Satellites' azimuth
 model.el = NaN(m,n);            % Satellites' elevation
 model.bore = NaN(m,n);          % Satellites' boresight angle
+model.az_BF = NaN(m,n);         % Satellites' azimuth in body-frame
+model.el_BF = NaN(m,n);         % Satellites' elevation in body-frame
 
 model.ECEF_X = NaN(3,m);        % Sat Position before rotation
 model.ECEF_V = NaN(3,m);        % Sat Velocity before rotation

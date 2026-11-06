@@ -1,0 +1,10 @@
+*
+!.gitignore
+!CODE/
+!CODE/**
+!DATA
+!RESULTS
+!WORK
+!LICENSE
+!README.md
+*.asv

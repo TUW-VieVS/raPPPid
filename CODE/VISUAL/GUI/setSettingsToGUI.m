@@ -488,7 +488,7 @@ switch structure.IONO.model_ionex
         set(handles.radiobutton_iono_folder_auto,'Value',   structure.IONO.folder_auto);
         set(handles.radiobutton_iono_folder_manual,'Value', structure.IONO.folder_manual);
         set(handles.edit_iono_folder, 'String', structure.IONO.folder);
-    case 'manually'
+    case 'manually:'
         set(handles.radiobutton_models_ionosphere_ionex_manually,   'Value', 1);
         % Ionex file path
         [path.ionex_1, path.ionex_2] = fileparts2(structure.IONO.file_ionex);
@@ -742,12 +742,18 @@ catch
     end
 end
 
-% Offsets
+% kinematic offsets / lever arm
 try
     set(handles.checkbox_offsets,  'Value', structure.KINE.bool_offset);
-    set(handles.edit_offset_x,  'String', num2str(structure.KINE.offset(1), '%.4f'));
-    set(handles.edit_offset_y,  'String', num2str(structure.KINE.offset(2), '%.4f'));
-    set(handles.edit_offset_z,  'String', num2str(structure.KINE.offset(3), '%.4f'));
+    try
+        set(handles.edit_offset_x,  'String', num2str(structure.KINE.leverarm(1), '%.4f'));
+        set(handles.edit_offset_y,  'String', num2str(structure.KINE.leverarm(2), '%.4f'));
+        set(handles.edit_offset_z,  'String', num2str(structure.KINE.leverarm(3), '%.4f'));
+    catch
+        set(handles.edit_offset_x,  'String', num2str(structure.KINE.offset(1), '%.4f'));
+        set(handles.edit_offset_y,  'String', num2str(structure.KINE.offset(2), '%.4f'));
+        set(handles.edit_offset_z,  'String', num2str(structure.KINE.offset(3), '%.4f'));
+    end
 catch
     set(handles.checkbox_offsets,  'Value', 0);
     set(handles.edit_offset_x,  'String', '0.0000');
@@ -784,9 +790,9 @@ end
 try
     switch structure.KINE.orient_mode
         case 'vertical'
-            handles.radiobutton_or_vertical.Value = 1;
+            handles.radiobutton_vertical.Value = 1;
         case 'radial'
-            handles.radiobutton_or_radial.Value = 1;
+            handles.radiobutton_radial.Value = 1;
         case 'Yaw-Steering'
             handles.radiobutton_or_yaw.Value = 1;
         case 'Earth-Pointing'
@@ -922,14 +928,14 @@ try     % write elevation weighting function to text-field
     try
         set(handles.edit_elevation_weighting_function,  'String', structure.ADJ.elev_weight_fun);
     end
-    set(handles.edit_elevation_weighting_function,  'String', strrep(func2str(structure.ADJ.elev_weight_fun), '@(e)', ''));
+    set(handles.edit_elevation_weighting_function,  'String', regexprep(func2str(structure.ADJ.elev_weight_fun), '^@\(e\)', ''));
 end
 set(handles.radiobutton_Signal_Strength_Dependency, 'Value', structure.ADJ.weight_sign_str );
 try     % write C/N0 weighting function to text-field
     try
         set(handles.edit_snr_weighting_function,  'String', structure.ADJ.snr_weight_fun);
     end
-    set(handles.edit_snr_weighting_function,  'String', strrep(func2str(structure.ADJ.snr_weight_fun), '@(snr)', ''));
+    set(handles.edit_snr_weighting_function,  'String', regexprep(func2str(structure.ADJ.snr_weight_fun), '^@\((snr|SNR)\)', ''));
 end
 try
     set(handles.radiobutton_Bore_Dependency,          'Value', structure.ADJ.weight_bore );
@@ -1021,13 +1027,20 @@ try
     set(handles.edit_omc_thresh_p, 'String', num2str(structure.PROC.omc_phase_thresh));
 end
 try
-    set(handles.edit_omc_fac, 'String', num2str(structure.PROC.omc_factor));
-end
-try
-    set(handles.edit_omc_window, 'String', num2str(structure.PROC.omc_window));
+    set(handles.edit_omc_thresh_d, 'String', num2str(structure.PROC.omc_doppler_thresh));
 end
 try
     handles.checkbox_check_omc.Value = structure.PROC.check_omc;
+end
+
+% post-fit residual check
+try
+    handles.checkbox_postfit.Value = structure.PROC.check_postfit;
+catch
+    handles.checkbox_postfit.Value = 0;
+end
+try
+    set(handles.edit_postfit, 'String', num2str(structure.PROC.postfit_factor));
 end
 
 % detect and compensate receiver clock jump
@@ -1144,6 +1157,24 @@ try         % ||| remove at some point
         handles.checkbox_exp_nmea.Value = structure.EXP.nmea;
         handles.checkbox_exp_kml.Value  = structure.EXP.kml;
     end
+
+    % Coordinate System
+    try
+
+        switch structure.EXP.coord_sys
+            case 'no transformation'
+                handles.radiobutton_exp_no_trafo.Value = 1;
+            case 'EPSG Code:'
+                handles.radiobutton_exp_epsg.Value = 1;
+            otherwise
+                errordlg('Error: Export, Coordinate System!', 'Error');
+        end
+        handles.edit_exp_epsg.String = structure.EXP.epsg_code;
+    catch
+        handles.radiobutton_exp_no_trafo.Value = 1;
+        handles.edit_exp_epsg.String = '0';
+    end
+
 end
 
 
@@ -1209,6 +1240,9 @@ if bool_settings == 1   % do this only for the settings structure
     set(handles.checkbox_plot_signal_qual,      'Value', structure.PLOT.signal_qual   );
     set(handles.checkbox_plot_res_sats,         'Value', structure.PLOT.res_sats      );
     set(handles.checkbox_plot_stream_corr,      'Value', structure.PLOT.res_sats      );
+    try
+        set(handles.checkbox_plot_attitude,     'Value', structure.PLOT.attitude      );
+    end
 
 end
 

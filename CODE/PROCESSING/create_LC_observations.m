@@ -26,34 +26,28 @@ lam1 = Epoch.l1;    lam2 = Epoch.l2;    lam3 = Epoch.l3;
 %% --- Build observation vectors ---
 if strcmpi(settings.IONO.model,'2-Frequency-IF-LCs')
     % factors of Ionosphere-Free-LC between 1st and 2nd processed frequency
-    k2 = f2.^2 ./ (f1.^2-f2.^2);
-    k1 = f1.^2 ./ (f1.^2-f2.^2);
+    [k1, k2] = coeff_2IF(f1, f2);
     % build IF-LC between 1st and 2nd processed frequency
-    Epoch.code(:,1)    = k1 .* Epoch.C1 - k2 .* Epoch.C2;
-    Epoch.phase(:,1)   = k1 .* Epoch.L1 - k2 .* Epoch.L2;
+    Epoch.code(:,1)    = k1 .* Epoch.C1 + k2 .* Epoch.C2;
+    Epoch.phase(:,1)   = k1 .* Epoch.L1 + k2 .* Epoch.L2;
     if ~isempty(Epoch.D1) && ~isempty(Epoch.D2)
-        Epoch.doppler(:,1) = k1 .* Epoch.D1 - k2 .* Epoch.D2;
+        Epoch.doppler(:,1) = k1 .* Epoch.D1 + k2 .* Epoch.D2;
     end
     % build IF-LC between 2nd and 3rd processed frequency
     if settings.INPUT.proc_freqs == 2         % 2x 2-Fr.-IF-LC
         % factors of Ionosphere-Free-LC between 2nd and 3rd processed frequency
-        k4 = f3.^2 ./ (f2.^2-f3.^2);
-        k3 = f2.^2 ./ (f2.^2-f3.^2);
-        Epoch.code(:,2)    = k3 .* Epoch.C2 - k4 .* Epoch.C3;
-        Epoch.phase(:,2)   = k3 .* Epoch.L2 - k4 .* Epoch.L3;
+        [k3, k4] = coeff_2IF(f2, f3);
+        Epoch.code(:,2)    = k3 .* Epoch.C2 + k4 .* Epoch.C3;
+        Epoch.phase(:,2)   = k3 .* Epoch.L2 + k4 .* Epoch.L3;
         if ~isempty(Epoch.D2) && ~isempty(Epoch.D3)
-            Epoch.doppler(:,2) = k3 .* Epoch.D2 - k4 .* Epoch.D3;
+            Epoch.doppler(:,2) = k3 .* Epoch.D2 + k4 .* Epoch.D3;
         end
     end
 
 elseif strcmpi(settings.IONO.model,'3-Frequency-IF-LC')
     % from "A Comparison of Three GPS Triple-Frequency Precise Point
     % Positioning Models" [14]
-    y2 = f1.^2 ./ f2.^2;
-    y3 = f1.^2 ./ f3.^2;
-    e1 = (y2.^2 +y3.^2  -y2-y3) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-    e2 = (y3.^2 -y2.*y3 -y2 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
-    e3 = (y2.^2 -y2.*y3 -y3 +1) ./ (2.*(y2.^2 +y3.^2 -y2.*y3 -y2-y3+1));
+    [e1, e2, e3] = coeff_3IF(f1, f2, f3);
     Epoch.code    = e1.*Epoch.C1 + e2.*Epoch.C2 + e3.*Epoch.C3;
     Epoch.phase   = e1.*Epoch.L1 + e2.*Epoch.L2 + e3.*Epoch.L3;
     if ~isempty(Epoch.D1) && ~isempty(Epoch.D2) && ~isempty(Epoch.D3)
@@ -133,24 +127,24 @@ if strcmp(settings.PROC.method, 'Code (Phase Smoothing)') && ~isempty(Epoch.old.
     % --- first frequency
     L1_dt = Epoch.L1(i) - Epoch.old.L1(i_1);
     % smooth code with doppler observations:
-    code_smooth =  (1-sm_fac) * Epoch.code(i) + sm_fac * (Epoch.old.code(i_1) + L1_dt);
+    code_smooth =  (1-sm_fac) * Epoch.code(i,1) + sm_fac * (Epoch.old.code(i_1,1) + L1_dt);
     % take only valid smoothed code observations (e.g., cycle slip),
     % otherwise unsmoothed code observations are used
-    take = ~isnan(code_smooth) & ~Epoch.cs_found(i,1);
-    Epoch.code(i(take)) = code_smooth(take);
+    take = ~isnan(code_smooth) & Epoch.usePhase(i,1);
+    Epoch.code(i(take),1) = code_smooth(take);
     if settings.INPUT.proc_freqs >= 2
         % --- second frequency
         L2_dt = Epoch.L2(i) - Epoch.old.L2(i_1);
-        code_smooth =  (1-sm_fac) * Epoch.code(i) + sm_fac * (Epoch.old.code(i_1) + L2_dt);
-        take = ~isnan(code_smooth) & ~Epoch.cs_found(i,2);
-        Epoch.code(i(take)) = code_smooth(take);
+        code_smooth =  (1-sm_fac) * Epoch.code(i,2) + sm_fac * (Epoch.old.code(i_1,2) + L2_dt);
+        take = ~isnan(code_smooth) & Epoch.usePhase(i,2);
+        Epoch.code(i(take),2) = code_smooth(take);
     end
     if settings.INPUT.proc_freqs >= 3
         % --- third frequency
         L3_dt = Epoch.L3(i) - Epoch.old.L3(i_1);
-        code_smooth =  (1-sm_fac) * Epoch.code(i) + sm_fac * (Epoch.old.code(i_1) + L3_dt);
-        take = ~isnan(code_smooth) & ~Epoch.cs_found(i,3);
-        Epoch.code(i(take)) = code_smooth(take);
+        code_smooth =  (1-sm_fac) * Epoch.code(i,3) + sm_fac * (Epoch.old.code(i_1,3) + L3_dt);
+        take = ~isnan(code_smooth) & Epoch.usePhase(i,3);
+        Epoch.code(i(take),3) = code_smooth(take);
     end
 end
 
@@ -170,10 +164,10 @@ if strcmp(settings.PROC.method, 'Code (Doppler Smoothing)') && ~isempty(Epoch.ol
     D_int = dt/2 * (Epoch.D1(i) + Epoch.old.D1(i_1));
     % D_int = dt * sqrt(Epoch.D1(i).*Epoch.old.D1(i_1)) .* sign(Epoch.D1(i));
     % smooth code with doppler observations:
-    code_smooth =  (1-sm_fac) * Epoch.code(i) + sm_fac * (Epoch.old.code(i_1) - Epoch.l1(i) .* D_int);
+    code_smooth =  (1-sm_fac) * Epoch.code(i,1) + sm_fac * (Epoch.old.code(i_1,1) - Epoch.l1(i) .* D_int);
     % take only valid smoothed code observations, otherwise unsmoothed code observations are used
     take = ~isnan(code_smooth);
-    Epoch.code(i(take)) = code_smooth(take);
+    Epoch.code(i(take),1) = code_smooth(take);
     
     
     % --- second frequency
@@ -182,10 +176,10 @@ if strcmp(settings.PROC.method, 'Code (Doppler Smoothing)') && ~isempty(Epoch.ol
         D_int_2 = dt/2 * (Epoch.D2(i) + Epoch.old.D2(i_1));
         % D_int_2 = dt * sqrt(Epoch.D2(i).*Epoch.old.D2(i_1)) .* sign(Epoch.D2(i));
         % smooth code with doppler observations:
-        code_smooth_2 =  (1-sm_fac) * Epoch.code(i) + sm_fac * (Epoch.old.code(i_1) - Epoch.l2(i) .* D_int_2);
+        code_smooth_2 =  (1-sm_fac) * Epoch.code(i,2) + sm_fac * (Epoch.old.code(i_1,2) - Epoch.l2(i) .* D_int_2);
         % take only valid smoothed code observations, otherwise unsmoothed code observations are used
         take = ~isnan(code_smooth_2);
-        Epoch.code(i(take)) = code_smooth_2(take);
+        Epoch.code(i(take),2) = code_smooth_2(take);
     end
     % --- third frequency
     if settings.INPUT.proc_freqs >= 3
@@ -193,10 +187,10 @@ if strcmp(settings.PROC.method, 'Code (Doppler Smoothing)') && ~isempty(Epoch.ol
         D_int_3 = dt/2 * (Epoch.D3(i) + Epoch.old.D3(i_1));
         % D_int_3 = dt * sqrt(Epoch.D3(i).*Epoch.old.D3(i_1)) .* sign(Epoch.D3(i));
         % smooth code with doppler observations:
-        code_smooth_3 =  (1-sm_fac) * Epoch.code(i) + sm_fac * (Epoch.old.code(i_1) - Epoch.l3(i) .* D_int_3);
+        code_smooth_3 =  (1-sm_fac) * Epoch.code(i,3) + sm_fac * (Epoch.old.code(i_1,3) - Epoch.l3(i) .* D_int_3);
         % take only valid smoothed code observations, otherwise unsmoothed code observations are used
         take = ~isnan(code_smooth_3);
-        Epoch.code(i(take)) = code_smooth_3(take);
+        Epoch.code(i(take),3) = code_smooth_3(take);
     end
 end
 

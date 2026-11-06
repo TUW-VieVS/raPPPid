@@ -157,6 +157,7 @@ while 1
             nextline = fgetl(fid);
             obs_line = [obs_line, nextline(7:58)];
         end
+        obs_line = strrep(obs_line, 'X1 ', 'XXX');  % protect against X1 channel numbers
         obs_types = regexprep(obs_line, ' ', ''); 	% delete empty spaces
         types = obs_types(3:3:length(obs_types));	% char of observation types
         freq = obs_types(2:3:length(obs_types));    % frequency numbers

@@ -30,7 +30,8 @@ param(1:3) = xyz;
 % get wavelengths for estimation of receiver clock error
 wavelengths = Epoch.l1;
 if n_proc == 1 && strcmp(settings.IONO.model, '2-Frequency-IF-LCs')
-    wavelengths = (Epoch.f1.^2.*Epoch.l1-Epoch.f2.^2.*Epoch.l2) ./ (Epoch.f1.^2-Epoch.f2.^2);
+    [k1, k2] = coeff_2IF(Epoch.f1, Epoch.f2);
+    wavelengths = k1.*Epoch.l1 + k2.*Epoch.l2;
 elseif n_proc == 2
     wavelengths = [Epoch.l1; Epoch.l2];
 elseif n_proc == 3
@@ -49,7 +50,7 @@ for iteration = 1:30
     sat_pos_z = repmat(model.Rot_X(3,:)', n_proc, 1);  	% satellite ECEF position z
 
     % build Design Matrix
-    A_Doppler = zeros(numel(Epoch.doppler), 4);
+    A_Doppler = zeros(numel(Epoch.doppler), 11);
     % Partial derivations: velocity
     rho = model.rho(:);
     A_Doppler(:,4) = (param(1) - sat_pos_x) ./ rho;   % x velocity
@@ -57,6 +58,12 @@ for iteration = 1:30
     A_Doppler(:,6) = (param(3) - sat_pos_z) ./ rho;   % z velocity
     % Partial derivations: receiver clock drift
     A_Doppler(:,11) = ones(size(wavelengths));  % receiver clock drift
+
+    % determine which observations should be excluded
+    useDoppler = Epoch.useDoppler(:); 
+
+    % set rows of excluded satellites to zero in the design matrix
+    A_Doppler(~useDoppler,:) = 0;
 
     % weight matrix
     P_Doppler = eye(s_f);       % ignore weighting here -> eye
@@ -79,9 +86,8 @@ for iteration = 1:30
     dot_r_v = repmat(dot(r,v), 1, n_proc)';
     model_doppler = dot_r_v  + rec_clk_drift;
 
-    % calculate observed minus computed of Doppler shift and exclude observations
-    omc_doppler = (model_doppler(:) + Epoch.doppler(:)) .* ~Epoch.exclude(:);
-    omc_doppler = -(omc_doppler);
+    % calculate observed minus computed of Doppler and exclude observations
+    omc_doppler = -(model_doppler(:) + Epoch.doppler(:)) .* useDoppler;
 
     % standard LSQ Adjustment
     dx = adjustment(A_Doppler, P_Doppler, omc_doppler, 5);
@@ -100,8 +106,9 @@ end
 
 % calculate receiver clock drift after velocity estimation
 rec_clk_drift_ = -Epoch.doppler(:) - dot_r_v;
-rec_clk_drift_ = rec_clk_drift_(~isnan(rec_clk_drift_));    % remove NaNs
-rec_clk_drift = median(rec_clk_drift_);
+% remove NaNs and excluded satellites (e.g. cutoff angle)
+valid = ~isnan(rec_clk_drift_) & useDoppler;
+rec_clk_drift = median(rec_clk_drift_(valid));
 
 % return the approximate velocity
 velo = param(4:6);

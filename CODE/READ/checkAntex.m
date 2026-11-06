@@ -163,11 +163,11 @@ if GLO_on
     PCO_rec_GLO(:,2) = SubstRecPCO(frqs_, PCOs_, Const.GLO_F2, PCO_rec_GLO(:,2));
     PCO_rec_GLO(:,3) = SubstRecPCO(frqs_, PCOs_, Const.GLO_F3, PCO_rec_GLO(:,3));
     % handle error message
-    if all(no_PCO_R); error_pco = [error_pco, '-Glonass '];
+    if all(no_PCO_R); error_pco = [error_pco, '-GLONASS '];
     else
-        if no_PCO_R(1) && G1_proc; error_pco = [error_pco, '-Glonass_G1 ']; end
-        if no_PCO_R(2) && G2_proc; error_pco = [error_pco, '-Glonass_G2 ']; end
-        if no_PCO_R(3) && G3_proc; error_pco = [error_pco, '-Glonass_G3 ']; end
+        if no_PCO_R(1) && G1_proc; error_pco = [error_pco, '-GLONASS_G1 ']; end
+        if no_PCO_R(2) && G2_proc; error_pco = [error_pco, '-GLONASS_G2 ']; end
+        if no_PCO_R(3) && G3_proc; error_pco = [error_pco, '-GLONASS_G3 ']; end
     end
 end
 
@@ -265,19 +265,19 @@ if GLO_on && bool_rec_PCV
     if ~isempty(PCV_rec_GLO)
         no_PCV_R = squeeze(all(PCV_rec_GLO == 0, [1 2]));
         if no_PCV_R(1) && G1_proc
-            error_pcv = [error_pcv, '-Glonass_G1 ']; 
+            error_pcv = [error_pcv, '-GLONASS_G1 ']; 
             PCV_rec_GLO(:,:,1) = NearestRecPCV(Const.GLO_F1, PCV_rec_GLO(:,:,1), PCV_rec_GPS, PCV_rec_GLO, PCV_rec_GAL, PCV_rec_BDS, PCV_rec_QZS);
         end
         if no_PCV_R(2) && G2_proc
-            error_pcv = [error_pcv, '-Glonass_G2 '];
+            error_pcv = [error_pcv, '-GLONASS_G2 '];
             PCV_rec_GLO(:,:,2) = NearestRecPCV(Const.GLO_F2, PCV_rec_GLO(:,:,2), PCV_rec_GPS, PCV_rec_GLO, PCV_rec_GAL, PCV_rec_BDS, PCV_rec_QZS);
         end
         if no_PCV_R(3) && G3_proc
-            error_pcv = [error_pcv, '-Glonass_G3 '];
+            error_pcv = [error_pcv, '-GLONASS_G3 '];
             PCV_rec_GLO(:,:,3) = NearestRecPCV(Const.GLO_F3, PCV_rec_GLO(:,:,3), PCV_rec_GPS, PCV_rec_GLO, PCV_rec_GAL, PCV_rec_BDS, PCV_rec_QZS);
         end
     else        % no GLONASS receiver PCV at all
-        error_pcv = [error_pcv, '-Glonass '];
+        error_pcv = [error_pcv, '-GLONASS '];
         PCV_rec_GLO = zeros([size_PCV(1:2) 3]);
         PCV_rec_GLO(:,:,1) = NearestRecPCV(Const.GLO_F1, PCV_rec_GLO(:,:,1), PCV_rec_GPS, PCV_rec_GLO, PCV_rec_GAL, PCV_rec_BDS, PCV_rec_QZS);
         PCV_rec_GLO(:,:,2) = NearestRecPCV(Const.GLO_F2, PCV_rec_GLO(:,:,2), PCV_rec_GPS, PCV_rec_GLO, PCV_rec_GAL, PCV_rec_BDS, PCV_rec_QZS);

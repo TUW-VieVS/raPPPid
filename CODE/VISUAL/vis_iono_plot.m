@@ -1,4 +1,4 @@
-function [] = vis_iono_plot(settings, storeData, xaxis_label, hours, resets, bool_obs, rgb)
+function [] = vis_iono_plot(settings, storeData, satellites, xaxis_label, hours, resets, bool_obs, rgb)
 % Plot of modelled correction of ionospheric delay, estimation of
 % ionospheric delay and histogramm of the difference between the modelled
 % and estimated ionospheric delay - all for the 1st frequency
@@ -6,6 +6,7 @@ function [] = vis_iono_plot(settings, storeData, xaxis_label, hours, resets, boo
 % INPUT:
 %   settings        struct, settings of processing
 %   storeData       struct, data from processing
+%   satellites      struct, satellite-specific data from processing
 %   xaxis_label 	string, label for x-axis
 %   hours           vector, time [h] since beginning of processing
 %   resets          vector, time [s] of resets
@@ -99,7 +100,7 @@ end
 if bool_est
     if ~bool_fixed    	% estimation from float solution
         sol_str = 'Float';
-        iono_est = full(storeData.iono_est);       
+        iono_est = GetIonoMatrix(storeData, satellites);       
     else                % estimation from fixed solution
         sol_str = 'Fixed';
         iono_est = full(storeData.iono_fixed);      
@@ -137,7 +138,7 @@ if bool_corr && bool_est
     iono_corr = full(storeData.iono_corr);
     iono_corr(iono_corr == 0) = NaN;
     if ~bool_fixed    	% estimation from float solution
-        iono_est = full(storeData.iono_est);
+        iono_est = GetIonoMatrix(storeData, satellites);
     else                % estimation from fixed solution
         iono_est = full(storeData.iono_fixed);
     end

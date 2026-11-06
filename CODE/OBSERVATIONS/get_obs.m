@@ -17,13 +17,13 @@ function [Epoch] = get_obs(Epoch, obs, settings)
 %   23 Jan 2020, MFG:  changing satellite exclusion depending on PPP model
 %   06 Oct 2020, MFG:  deleting removing of satellites without phase obs.
 %   06 Nov 2023, MFWG: adding QZSS
-% 
+%
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
 
 
 % get some variables
-num_freq = settings.INPUT.proc_freqs;
+num_freq = settings.INPUT.num_freqs;    % number of input frequencies
 % indices of processed frequencies
 idx_frqs_gps  = settings.INPUT.gps_freq_idx;
 idx_frqs_glo  = settings.INPUT.glo_freq_idx;
@@ -81,14 +81,13 @@ if settings.INPUT.use_GLO
     % vector element is true if 
     % - this observation is not a number 
     % - this observation is zero
-    % - this observation is in a line of the observation matrix which belongs to a glonass satellite
-    no_C1 = (isnan(Obs(:,C1)) | Obs(:,C1)==0) & Epoch.glo;
-    no_C2 = (isnan(Obs(:,C2)) | Obs(:,C2)==0) & Epoch.glo;
-    no_C3 = (isnan(Obs(:,C3)) | Obs(:,C3)==0) & Epoch.glo;
-    no_L1 = (isnan(Obs(:,L1)) | Obs(:,L1)==0) & Epoch.glo;
-    no_L2 = (isnan(Obs(:,L2)) | Obs(:,L2)==0) & Epoch.glo;
-    no_L3 = (isnan(Obs(:,L3)) | Obs(:,L3)==0) & Epoch.glo;
-    % for Glonass also the existence of the frequency has to be checked
+    % - this observation is in a line of the observation matrix which belongs to a GLONASS satellite
+    % - this observation type is not available at all (e.g., frequency 'OFF')
+    no_C1 = MissingObs(Obs, C1, Epoch.glo);
+    no_C2 = MissingObs(Obs, C2, Epoch.glo);
+    no_C3 = MissingObs(Obs, C3, Epoch.glo);
+    no_L1 = MissingObs(Obs, L1, Epoch.glo);
+    % for GLONASS also the existence of the frequency has to be checked
     f = ones(numel(Epoch.sats), 1);
     f(Epoch.glo) = Epoch.f1_glo;
     no_frq = isnan(f);       % true if frequency is not known
@@ -98,9 +97,9 @@ if settings.INPUT.use_GLO
     
     
     if no_LC                % at least observation on 1st frequency and one frequency is needed
-        % ||| Glonass satellite is excluded if an observation on any
+        % ||| GLONASS satellite is excluded if an observation on any
         % observed frequency is missing. Otherwise some problems have
-        % occured (e.g. L2 missing -> next epoch ambiguity wrong, missing
+        % occurred (e.g. L2 missing -> next epoch ambiguity wrong, missing
         % reset?)
         remove_sat = no_C1;
         
@@ -126,14 +125,14 @@ if settings.INPUT.use_GLO
     % remove_obs.....vector to remove specific observations
     % 1 = true  = observation will be removed
     % 0 = false = observation will not be removed
-    remove_sat = remove_sat & Epoch.glo;  % take only glonass satellites;
+    remove_sat = remove_sat & Epoch.glo;  % take only GLONASS satellites;
     % remove observations and satellites
     Obs(remove_sat,:) = [];
     sats(remove_sat) = [];
     % update Epoch
     Epoch.obs = Obs;
     Epoch.sats = sats;
-    % remove entries from glonass frequencies
+    % remove entries from GLONASS frequencies
     Epoch.f1_glo(remove_sat(Epoch.glo)) = [];
     Epoch.f2_glo(remove_sat(Epoch.glo)) = [];
     Epoch.f3_glo(remove_sat(Epoch.glo)) = [];
@@ -168,12 +167,21 @@ if settings.INPUT.use_GLO
     Epoch.S2 = [Epoch.S2; Epoch.obs(Epoch.glo,S2)];
     Epoch.S3 = [Epoch.S3; Epoch.obs(Epoch.glo,S3)];
     if doppler
-        Epoch.D1 = [Epoch.D1; Epoch.obs(Epoch.glo,D1) .* lambda_1];     % [m/s]
-        Epoch.D2 = [Epoch.D2; Epoch.obs(Epoch.glo,D2) .* lambda_2];     % [m/s]
-        Epoch.D3 = [Epoch.D3; Epoch.obs(Epoch.glo,D3) .* lambda_3];     % [m/s]
+        no_glo_sats = sum(Epoch.glo);
+        add_D1 = Epoch.obs(Epoch.glo,D1) .* lambda_1;
+        add_D2 = Epoch.obs(Epoch.glo,D2) .* lambda_2;
+        add_D3 = Epoch.obs(Epoch.glo,D3) .* lambda_3;
+        % Doppler observation type can be completely missing 
+        % -> fill with NaN so Epoch.D1/D2/D3 stay aligned with Epoch.sats
+        if isempty(add_D1); add_D1 = NaN(no_glo_sats,1); end
+        if isempty(add_D2); add_D2 = NaN(no_glo_sats,1); end
+        if isempty(add_D3); add_D3 = NaN(no_glo_sats,1); end
+        Epoch.D1 = [Epoch.D1; add_D1];     % [m/s]
+        Epoch.D2 = [Epoch.D2; add_D2];     % [m/s]
+        Epoch.D3 = [Epoch.D3; add_D3];     % [m/s]
     end
-    
-    % if 2+ frequencies are processed but any observation type has only one 
+
+    % if 2+ frequencies are processed but any observation type has only one
     % frequency, fill up second frequency with NaNs
     if num_freq >= 2
         no_glo_sats = sum(Epoch.glo);
@@ -186,12 +194,9 @@ if settings.INPUT.use_GLO
         if isempty(Epoch.obs(Epoch.glo,S2))
             Epoch.S2 = [Epoch.S2; NaN(no_glo_sats,1)];
         end
-        if doppler && isempty(Epoch.obs(Epoch.glo,D2))
-            Epoch.D2 = [Epoch.D2; NaN(no_glo_sats,1)];
-        end
     end
-    
-    % if 3+ frequencies are processed but any observation type has only two 
+
+    % if 3+ frequencies are processed but any observation type has only two
     % frequencies, fill up third frequency with NaNs
     if num_freq >= 3
         no_glo_sats = sum(Epoch.glo);
@@ -203,9 +208,6 @@ if settings.INPUT.use_GLO
         end
         if isempty(Epoch.obs(Epoch.glo,S3))
             Epoch.S3 = [Epoch.S3; NaN(no_glo_sats,1)];
-        end
-        if doppler && isempty(Epoch.obs(Epoch.glo,D3))
-            Epoch.D3 = [Epoch.D3; NaN(no_glo_sats,1)];
         end
     end
 end
@@ -270,15 +272,14 @@ function [Epoch] = CheckAndGetObs(Epoch, C1, C2, C3, L1, L2, L3, S1, S2, S3, D1,
 sats = Epoch.sats;
 Obs = Epoch.obs;
 
-% vector element is true if this observation is not a number or this 
-% observation is zero and this observation is in a line of the observation 
+% vector element is true if this observation is not a number or this
+% observation is zero (or this observation type is not available at all,
+% e.g. frequency 'OFF') and this observation is in a line of the observation
 % matrix which belongs to this GNSS
-no_C1 = (isnan(Obs(:,C1)) | Obs(:,C1)==0) & bool_gnss;
-no_L1 = (isnan(Obs(:,L1)) | Obs(:,L1)==0) & bool_gnss;
-no_L2 = (isnan(Obs(:,L2)) | Obs(:,L2)==0) & bool_gnss;
-no_C2 = (isnan(Obs(:,C2)) | Obs(:,C2)==0) & bool_gnss;
-no_L3 = (isnan(Obs(:,L3)) | Obs(:,L3)==0) & bool_gnss;
-no_C3 = (isnan(Obs(:,C3)) | Obs(:,C3)==0) & bool_gnss;
+no_C1 = MissingObs(Obs, C1, bool_gnss);
+no_L1 = MissingObs(Obs, L1, bool_gnss);
+no_C2 = MissingObs(Obs, C2, bool_gnss);
+no_C3 = MissingObs(Obs, C3, bool_gnss);
 
 
 % +-+-+-+-+-+-+ CHECK FOR SATELLITES TO REMOVE +-+-+-+-+-+-+
@@ -307,11 +308,6 @@ end
 % 1 = true  = observation will be removed
 % 0 = false = observation will not be removed
 remove_sat = remove_sat & bool_gnss;  % take only satellites of current GNSS
-if isempty(remove_sat)
-    % this occurs if a unobserved frequency is processed
-    % ->  exclude all satellites of this GNSS
-    remove_sat = bool_gnss;
-end
 % remove satellites
 Obs(remove_sat,:) = [];
 sats(remove_sat) = [];
@@ -353,12 +349,18 @@ Epoch.S1 = [Epoch.S1; add_S1];                  % carrier-to-noise density [db.H
 Epoch.S2 = [Epoch.S2; add_S2];
 Epoch.S3 = [Epoch.S3; add_S3];
 if doppler                                      % Doppler shift
+    no_sats = sum(bool_gnss);
+    % Doppler observation type can be completely missing 
+    % -> fill with NaN so Epoch.D1/D2/D3 stay aligned with Epoch.sats
+    if isempty(add_D1); add_D1 = NaN(no_sats,1); end
+    if isempty(add_D2); add_D2 = NaN(no_sats,1); end
+    if isempty(add_D3); add_D3 = NaN(no_sats,1); end
     Epoch.D1 = [Epoch.D1; add_D1 .* lambda(1)];     % [m/s]
     Epoch.D2 = [Epoch.D2; add_D2 .* lambda(2)];     % [m/s]
     Epoch.D3 = [Epoch.D3; add_D3 .* lambda(3)];     % [m/s]
 end
 
-% if 2+ frequencies are processed but any observation type has only one 
+% if 2+ frequencies are processed but any observation type has only one
 % frequency, fill up second frequency with NaNs
 if n >= 2
     no_sats = sum(bool_gnss);
@@ -371,12 +373,9 @@ if n >= 2
     if isempty(add_S2)
         Epoch.S2 = [Epoch.S2; NaN(no_sats,1)];
     end
-    if doppler && isempty(add_D2)
-        Epoch.D2 = [Epoch.D2; NaN(no_sats,1)];
-    end
 end
 
-% if 3 frequencies are processed but this any observation type has only two 
+% if 3 frequencies are processed but this any observation type has only two
 % frequencies, fill up third frequency with NaNs
 if n == 3
     no_sats = sum(bool_gnss);
@@ -389,13 +388,16 @@ if n == 3
     if isempty(add_S3)
         Epoch.S3 = [Epoch.S3; NaN(no_sats,1)];
     end
-    if doppler && isempty(add_D3)
-        Epoch.D3 = [Epoch.D3; NaN(no_sats,1)];
-    end
 end
 
 
 
-
-
-
+function no_obs = MissingObs(Obs, col, bool_gnss)
+% This function checks for each satellite of the current GNSS if an 
+% observation is missing (NaN or zero). If the observation type is not 
+% available at all (e.g., frequency 'OFF' or not observed), the column is 
+% empty and the observation is missing for all satellites of this GNSS
+no_obs = bool_gnss;
+if ~isempty(col)
+    no_obs = (isnan(Obs(:,col)) | Obs(:,col)==0) & bool_gnss;
+end

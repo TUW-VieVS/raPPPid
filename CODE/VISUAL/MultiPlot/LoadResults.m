@@ -36,6 +36,7 @@ if ~success
         load(fpath_data4plot, 'storeData', 'obs');      %  variables not used: 'satellites', 'settings', 'model_save'
         if isempty(storeData); storeData = recover_storeData(folderpath); end
         if isempty(obs); obs = recover_obs(folderpath); end
+        success = true;
     catch
         success = false;
         errordlg({['Loading File #' sprintf('%d',n) ' of label ' ], [label ' failed!']}, 'Error')

@@ -17,8 +17,8 @@ function [init_ambs, Epoch] = AdjustPhase2Code(Epoch, init_ambs)
 prns = Epoch.sats;
 
 % keep initialized ambiguities only for satellites which are properly observed
-sats = prns(any(~Epoch.exclude & ~Epoch.cs_found,2));       % satellites properly observed
-delete = true(3,410);       % delete all initialized ambiguities ...
+sats = prns(any(Epoch.useCode & Epoch.usePhase,2));       % satellites properly observed
+delete = true(3, DEF.SATS);       % delete all initialized ambiguities ...
 delete(:,sats) = false;     % ... except satellites with valid phase observations
 init_ambs(delete) = NaN;
 

@@ -37,11 +37,14 @@ end
 
 % loop over all stations
 for i = 1:n
-    if all(xyz_found)     % check if all true coordinates are found
-        return
+    if all(xyz_found)     
+        return          % check if all true coordinates are found
     end
-    if xyz_found(i)       % check if true coordinates are already found
-        continue
+    if xyz_found(i)       
+        continue        % check if true coordinates are already found
+    end
+    if isempty(stations{i})
+        continue        % check if station name is empty
     end
     
     % get date of current station

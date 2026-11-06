@@ -16,6 +16,7 @@ function [] = settings2txt(settings, obs, input, rec_pco, rec_pcv, tStart)
 % 
 % Revision:
 %   2024/12/16, MFWG: improved the printing of the version
+%   2026/08/18, MFWG: robust git info via getGitInfo
 %
 % This function belongs to raPPPid, Copyright (c) 2023, M.F. Glaner
 % *************************************************************************
@@ -27,13 +28,20 @@ fileID = fopen([settings.PROC.output_dir,'/', 'settings_summary.txt'], 'w');
 % check if decoupled clock model was used during processing
 bool_DCM = strcmp(settings.IONO.model, 'Estimate, decoupled clock');
 
+% check if IMU data was used during processing
+bool_IMU = settings.KINE.bool_kinematic && settings.KINE.bool_IMU && settings.INPUT.rawDataAndroid;
 
 %% File - Set input file
 
 fprintf(fileID,'%s\n','Input Data:');
 
 fprintf(fileID,'  %s%s\n','Obs-File: ', settings.INPUT.file_obs);
-fprintf(fileID,'  %s%s\n','Coordinate System: ', obs.coordsyst);
+if strcmp(settings.EXP.coord_sys, 'EPSG Code:')
+    fprintf(fileID,'  %s%s\n','Coordinate System: ', settings.EXP.epsg_code);
+else
+    fprintf(fileID,'  %s%s\n','Coordinate System: ', obs.coordsyst);
+end
+
 if settings.INPUT.bool_realtime
     fprintf(fileID,'  %s\n', ['Real-Time processing from ' settings.INPUT.realtime_start_GUI ' to ' settings.INPUT.realtime_ende_GUI]);
 end
@@ -62,13 +70,15 @@ switch settings.PROC.method
 end
 if settings.INPUT.use_GPS
     fprintf(fileID,'%s\n','Selected GPS Signals:');
+    fprintf(fileID,'  Frequency: %s, %s, %s\n', settings.INPUT.gps_freq{1}, settings.INPUT.gps_freq{2}, settings.INPUT.gps_freq{3});
     fprintf(fileID,'  Code:     %s, %s, %s\n', obs.GPS.C1,obs.GPS.C2,obs.GPS.C3);
     fprintf(fileID,'  Phase:    %s, %s, %s\n', obs.GPS.L1,obs.GPS.L2,obs.GPS.L3);
     fprintf(fileID,'  Strength: %s, %s, %s\n', obs.GPS.S1,obs.GPS.S2,obs.GPS.S3);
     fprintf(fileID,'  Doppler:  %s, %s, %s\n', obs.GPS.D1,obs.GPS.D2,obs.GPS.D3);
 end
 if settings.INPUT.use_GLO
-    fprintf(fileID,'%s\n','Selected Glonass Signals:');
+    fprintf(fileID,'%s\n','Selected GLONASS Signals:');
+    fprintf(fileID,'  Frequency: %s, %s, %s\n', settings.INPUT.glo_freq{1}, settings.INPUT.glo_freq{2}, settings.INPUT.glo_freq{3});
     fprintf(fileID,'  Code:     %s, %s, %s\n', obs.GLO.C1,obs.GLO.C2,obs.GLO.C3);
     fprintf(fileID,'  Phase:    %s, %s, %s\n', obs.GLO.L1,obs.GLO.L2,obs.GLO.L3);
     fprintf(fileID,'  Strength: %s, %s, %s\n', obs.GLO.S1,obs.GLO.S2,obs.GLO.S3);
@@ -76,6 +86,7 @@ if settings.INPUT.use_GLO
 end
 if settings.INPUT.use_GAL
     fprintf(fileID,'%s\n','Selected Galileo Signals:');    
+    fprintf(fileID,'  Frequency: %s, %s, %s\n', settings.INPUT.gal_freq{1}, settings.INPUT.gal_freq{2}, settings.INPUT.gal_freq{3});
     fprintf(fileID,'  Code:     %s, %s, %s\n', obs.GAL.C1,obs.GAL.C2,obs.GAL.C3);
     fprintf(fileID,'  Phase:    %s, %s, %s\n', obs.GAL.L1,obs.GAL.L2,obs.GAL.L3);
     fprintf(fileID,'  Strength: %s, %s, %s\n', obs.GAL.S1,obs.GAL.S2,obs.GAL.S3);
@@ -83,6 +94,7 @@ if settings.INPUT.use_GAL
 end
 if settings.INPUT.use_BDS
     fprintf(fileID,'%s\n','Selected BeiDou Signals:');    
+    fprintf(fileID,'  Frequency: %s, %s, %s\n', settings.INPUT.bds_freq{1}, settings.INPUT.bds_freq{2}, settings.INPUT.bds_freq{3});
     fprintf(fileID,'  Code:     %s, %s, %s\n', obs.BDS.C1,obs.BDS.C2,obs.BDS.C3);
     fprintf(fileID,'  Phase:    %s, %s, %s\n', obs.BDS.L1,obs.BDS.L2,obs.BDS.L3);
     fprintf(fileID,'  Strength: %s, %s, %s\n', obs.BDS.S1,obs.BDS.S2,obs.BDS.S3);
@@ -90,6 +102,7 @@ if settings.INPUT.use_BDS
 end
 if settings.INPUT.use_QZSS
     fprintf(fileID,'%s\n','Selected QZSS Signals:');    
+    fprintf(fileID,'  Frequency: %s, %s, %s\n', settings.INPUT.qzss_freq{1}, settings.INPUT.qzss_freq{2}, settings.INPUT.qzss_freq{3});
     fprintf(fileID,'  Code:     %s, %s, %s\n', obs.QZSS.C1,obs.QZSS.C2,obs.QZSS.C3);
     fprintf(fileID,'  Phase:    %s, %s, %s\n', obs.QZSS.L1,obs.QZSS.L2,obs.QZSS.L3);
     fprintf(fileID,'  Strength: %s, %s, %s\n', obs.QZSS.S1,obs.QZSS.S2,obs.QZSS.S3);
@@ -249,6 +262,10 @@ fprintf(fileID,'\n');
 fprintf(fileID,'%s\n','Other Corrections:');
 if ~isempty(settings.OTHER.file_antex)
     switch settings.OTHER.antex
+        case 'igsXX_wwww.atx autodetection'
+            fprintf(fileID,'  %s%s\n','igsXX_wwww.atx autodetection: ', settings.OTHER.file_antex);
+        case 'Download current igsXX.atx'
+            fprintf(fileID,'  %s%s\n','Download current igsXX.atx: ', settings.OTHER.file_antex);
         case 'Manual choice:'
             fprintf(fileID,'  %s%s\n','Manual Antex file: ', settings.OTHER.file_antex);
         otherwise 
@@ -257,11 +274,11 @@ if ~isempty(settings.OTHER.file_antex)
     if settings.OTHER.antex_rec_manual
         fprintf(fileID,'  %s\n','Own corrections from MyAntex.atx');
     end
-    if ~isempty(rec_pco)        % print missing PCO corrrections
-        fprintf(fileID,'    %s%s\n','Missing PCOs: ', rec_pco);
+    if ~isempty(rec_pco)        % print missing PCO corrections
+        fprintf(fileID,'    %s%s\n','Missing receiver PCOs: ', rec_pco);
     end
-    if ~isempty(rec_pcv)        % print missing PCV corrrections
-        fprintf(fileID,'    %s%s\n','Missing PCVs: ', rec_pcv);
+    if ~isempty(rec_pcv)        % print missing PCV corrections
+        fprintf(fileID,'    %s%s\n','Missing receiver PCVs: ', rec_pcv);
     end
 end
 if settings.OTHER.bool_rec_arp || settings.OTHER.bool_rec_pco || settings.OTHER.bool_sat_pco || ... % all other corrections
@@ -318,7 +335,7 @@ end
 if settings.OTHER.CS.l1c1 || settings.OTHER.CS.DF || settings.OTHER.CS.Doppler
     fprintf(fileID,'  %s\n','Cycle-Slip-Detection:');
     if settings.OTHER.CS.l1c1
-        fprintf(fileID,'    %s%.2f%s%.2f%s%d%s\n','L1-C1: threshold = ',settings.OTHER.CS.l1c1_threshold,' [m], window-size = ',settings.OTHER.CS.l1c1_window,' [epochs]' );
+        fprintf(fileID,'    %s%.2f%s%.2f%s\n','L1-C1: threshold = ',settings.OTHER.CS.l1c1_threshold,' [m], window-size = ',settings.OTHER.CS.l1c1_window,' [epochs]' );
     end
     if settings.OTHER.CS.DF
         fprintf(fileID,'    %s%.2f%s\n','dL1-dL2: threshold = ',settings.OTHER.CS.DF_threshold,' [m]');
@@ -327,12 +344,12 @@ if settings.OTHER.CS.l1c1 || settings.OTHER.CS.DF || settings.OTHER.CS.Doppler
         fprintf(fileID,'    %s%.2f%s\n','Doppler-Shift: threshold = ',settings.OTHER.CS.D_threshold,' [cy]');
     end
     if settings.OTHER.CS.TimeDifference
-        fprintf(fileID,'    %s%.2f%s%.2f%s%d\n','Time difference: threshold = ',settings.OTHER.CS.TD_threshold,' [m], degree = ',settings.OTHER.CS.TD_degree );
+        fprintf(fileID,'    %s%.2f%s%.2f\n','Time difference: threshold = ',settings.OTHER.CS.TD_threshold,' [m], degree = ',settings.OTHER.CS.TD_degree );
     end    
     if settings.OTHER.CS.HMW
-        fprintf(fileID,'    %s%.2f%s%.2f%s%d\n','HMW LC: threshold = ',settings.OTHER.CS.HMW_threshold,' [cy], factor = ',settings.OTHER.CS.HMW_factor );
+        fprintf(fileID,'    %s%.2f%s%.2f\n','HMW LC: threshold = ',settings.OTHER.CS.HMW_threshold,' [cy], factor = ',settings.OTHER.CS.HMW_factor );
     end    
-    if settings.PROC.LLI
+    if settings.PROC.LLI && ~settings.INPUT.rawDataAndroid
         fprintf(fileID,'    %s\n','LLI from RINEX is used');
     end
 else
@@ -341,10 +358,10 @@ end
 if settings.OTHER.mp_detection || settings.OTHER.mp_doppler
     fprintf(fileID,'  %s\n','Multipath Detection is on:');
     if settings.OTHER.mp_detection
-        fprintf(fileID,'    %s%.2f%s%.2f%s%d%s%d\n','Code time-difference: threshold = ',settings.OTHER.mp_thresh,' [m], degree = ',settings.OTHER.mp_degree,', cooldown = ', settings.OTHER.mp_cooldown);
+        fprintf(fileID,'    %s%.2f%s%.2f%s%d\n','Code time-difference: threshold = ',settings.OTHER.mp_thresh,' [m], degree = ',settings.OTHER.mp_degree,', cooldown = ', settings.OTHER.mp_cooldown);
     end
     if settings.OTHER.mp_doppler
-        fprintf(fileID,'    %s%.2f\n','Code range rate with Doppler: threshold = ',settings.OTHER.mp_doppler_thresh);
+        fprintf(fileID,'    %s%s%s\n','Code range rate with Doppler: threshold = ',num2str(settings.OTHER.mp_doppler_thresh),' [m/s]');
     end
 end
 
@@ -363,7 +380,7 @@ if settings.KINE.bool_kinematic || settings.KINE.satellite.bool
         fprintf(fileID,'  %s\n', 'No IMU data is used.');
     end
     if settings.KINE.bool_offset
-        fprintf(fileID,'  %s%.4f, %.4f, %.4f\n', 'Offsets are applied [m]: ', settings.KINE.offset(1), settings.KINE.offset(2), settings.KINE.offset(3));
+        fprintf(fileID,'  %s%.4f, %.4f, %.4f\n', 'Lever arm (reference point -> antenna) [m]: ', settings.KINE.leverarm(1), settings.KINE.leverarm(2), settings.KINE.leverarm(3));
     else
         fprintf(fileID,'  %s\n', 'No offsets applied');
     end
@@ -398,13 +415,13 @@ elseif settings.ADJ.weight_elev
     if ischar(settings.ADJ.elev_weight_fun)
         fprintf(fileID,'%s%s\n','Elevation: ', settings.ADJ.elev_weight_fun);
     else
-        fprintf(fileID,'%s%s\n','Elevation, function: ', strrep(func2str(settings.ADJ.elev_weight_fun), '@(e)', ''));
+        fprintf(fileID,'%s%s\n','Elevation, function: ', regexprep(func2str(settings.ADJ.elev_weight_fun), '^@\(e\)', ''));
     end
 elseif settings.ADJ.weight_sign_str
     if ischar(settings.ADJ.snr_weight_fun)
         fprintf(fileID,'%s%s\n','C/N0: ', settings.ADJ.snr_weight_fun);
     else
-        fprintf(fileID,'%s%s\n','C/N0, function: ', strrep(func2str(settings.ADJ.snr_weight_fun), '@(snr)', ''));
+        fprintf(fileID,'%s%s\n','C/N0, function: ', regexprep(func2str(settings.ADJ.snr_weight_fun), '^@\((snr|SNR)\)', ''));
     end
 elseif settings.ADJ.weight_bore
     fprintf(fileID,'%s\n','Boresight angle');
@@ -507,7 +524,7 @@ if ~strcmp(settings.ADJ.filter.type,'No Filter')
         fprintf(fileID,'    %s%11.3f%s%11.3f%s%d\n','Ionospheric Delay:  ',sqrt(settings.ADJ.filter.var_iono),     ' | ',sqrt(settings.ADJ.filter.Q_iono),      ' | ', settings.ADJ.filter.dynmodel_iono);
     end
 end
-fprintf(fileID,'  %s%d','Number of estimated parameters: ', ~bool_DCM*DEF.NO_PARAM_ZD + bool_DCM*DEF.NO_PARAM_DCM);
+fprintf(fileID,'  %s%d','Number of estimated parameters: ', ~bool_DCM*DEF.NO_PARAM_ZD + bool_DCM*DEF.NO_PARAM_DCM + bool_IMU.*DEF.NO_PARAM_IMU);
 fprintf(fileID,'\n');
 
 
@@ -517,7 +534,7 @@ fprintf(fileID,'\n');
 fprintf(fileID,'\n%s\n','Ambiguity Fixing: ');
 if settings.AMBFIX.bool_AMBFIX
     if ~bool_DCM
-        fprintf(fileID,'  %s%.0f%s%.0f%s\n','Fixing-Start [s]: WL = ',settings.AMBFIX.start_WL_sec,', NL = ',settings.AMBFIX.start_NL_sec);
+        fprintf(fileID,'  %s%.0f%s%.0f\n','Fixing-Start [s]: WL = ',settings.AMBFIX.start_WL_sec,', NL = ',settings.AMBFIX.start_NL_sec);
     else
         fprintf(fileID,'  %s%.0f\n', 'Fixing-Start [s] = ', settings.AMBFIX.start_WL_sec);
     end
@@ -527,16 +544,16 @@ if settings.AMBFIX.bool_AMBFIX
     fprintf(fileID,'  %s%d\n','Fixing cutoff [°]: ', settings.AMBFIX.cutoff);
     fprintf(fileID,'  %s%s\n','Choice of Reference Satellite: ', settings.AMBFIX.refSatChoice);
     if strcmp(settings.AMBFIX.refSatChoice, 'manual choice (list):')
-        fprintf(fileID,'    %s%d\n','GPS: ', settings.AMBFIX.refSatGPS);
-		fprintf(fileID,'    %s%d\n','GLONASS: ', settings.AMBFIX.refSatGLO);
-        fprintf(fileID,'    %s%d\n','Galileo: ', settings.AMBFIX.refSatGAL);
-		fprintf(fileID,'    %s%d\n','BeiDou: ', settings.AMBFIX.refSatBDS);
-		fprintf(fileID,'    %s%d\n','QZSS: ', settings.AMBFIX.refSatQZS);
+        fprintf(fileID,'    %s%s\n','GPS: ',     num2str(settings.AMBFIX.refSatGPS));       % num2str works here
+		fprintf(fileID,'    %s%s\n','GLONASS: ', num2str(settings.AMBFIX.refSatGLO));
+        fprintf(fileID,'    %s%s\n','Galileo: ', num2str(settings.AMBFIX.refSatGAL));
+		fprintf(fileID,'    %s%s\n','BeiDou: ',  num2str(settings.AMBFIX.refSatBDS));
+		fprintf(fileID,'    %s%s\n','QZSS: ',    num2str(settings.AMBFIX.refSatQZS));
     end
     if isempty(settings.AMBFIX.exclude_sats_fixing)
         fprintf(fileID,'  %s\n','No satellites excluded from fixing.');
     else
-        fprintf(fileID,'  %s%s\n','Excluded satellites from fixing: ', num2str(settings.AMBFIX.exclude_sats_fixing'));
+        fprintf(fileID,'  %s%s\n','Excluded satellites from fixing: ', num2str(settings.AMBFIX.exclude_sats_fixing(:)'));       % make sure that it is a row vector
     end
     fprintf(fileID,'  %s%s\n','Detection of Wrong Fixes: ', settings.AMBFIX.wrongFixes);
 else
@@ -572,8 +589,8 @@ if settings.INPUT.use_GPS
     fprintf(fileID,'  GPS-Ranking: %s\n', settings.INPUT.gps_ranking);
 end
 if settings.INPUT.use_GLO
-    fprintf(fileID,'  %s%s%s%s%s%s\n','Glonass-Frequencies: ',settings.INPUT.glo_freq{1},', ',settings.INPUT.glo_freq{2},', ',settings.INPUT.glo_freq{3});
-    fprintf(fileID,'  Glonass-Ranking: %s\n', settings.INPUT.glo_ranking);
+    fprintf(fileID,'  %s%s%s%s%s%s\n','GLONASS-Frequencies: ',settings.INPUT.glo_freq{1},', ',settings.INPUT.glo_freq{2},', ',settings.INPUT.glo_freq{3});
+    fprintf(fileID,'  GLONASS-Ranking: %s\n', settings.INPUT.glo_ranking);
 end
 if settings.INPUT.use_GAL
     fprintf(fileID,'  %s%s%s%s%s%s\n','Galileo-Frequencies: ',settings.INPUT.gal_freq{1},', ',settings.INPUT.gal_freq{2},', ',settings.INPUT.gal_freq{3});
@@ -585,7 +602,7 @@ if settings.INPUT.use_BDS
 end
 if settings.INPUT.use_QZSS
     fprintf(fileID,'  %s%s%s%s%s%s\n','QZSS-Frequencies: ',settings.INPUT.qzss_freq{1},', ',settings.INPUT.qzss_freq{2},', ',settings.INPUT.qzss_freq{3});
-    fprintf(fileID,'  %s%s\n','BeiDou-Ranking: ', settings.INPUT.qzss_ranking);
+    fprintf(fileID,'  %s%s\n','QZSS-Ranking: ', settings.INPUT.qzss_ranking);
 end
 
 % adjust phase to code
@@ -666,9 +683,17 @@ if settings.PROC.check_omc
     fprintf(fileID,'    %s\n', 'Check of observed minus (omc) computed is ON.');
     fprintf(fileID,'      %s%06.3f\n', 'Threshold Code  [m]: ', settings.PROC.omc_code_thresh);
     fprintf(fileID,'      %s%06.3f\n', 'Threshold Phase [m]: ', settings.PROC.omc_phase_thresh);
-    fprintf(fileID,'      %s%d%s%d\n', 'Factor: ', settings.PROC.omc_factor, '; Window: ', settings.PROC.omc_window);
+    if contains(settings.PROC.method, '+ Doppler')
+        fprintf(fileID,'      %s%06.3f\n', 'Threshold Doppler [m/s]: ', settings.PROC.omc_doppler_thresh);
+    end
 else
     fprintf(fileID,'    %s\n', 'Check of observed minus (omc) computed is OFF.');
+end
+
+if settings.PROC.check_postfit
+    fprintf(fileID,'    %s%06.3f%s\n', 'Post-fit residual check is ON, factor ', settings.PROC.postfit_factor, '.');
+else
+    fprintf(fileID,'    %s\n', 'Post-fit residual check is OFF.');
 end
 
 if settings.PROC.bool_rec_clk_jump
@@ -768,6 +793,7 @@ if settings.EXP.satellites && settings.EXP.satellites_D
     fprintf(fileID,'    .D1, .D2, .D3 is saved to satellites\n');
 end
 
+
 %% Processing end and time
 fprintf(fileID,'\n\n');
 fprintf(fileID,'Processing:\n');
@@ -790,20 +816,23 @@ fprintf(fileID,'  End: %s\n', datetime('now'));
 
 
 %% raPPPid version
-try
-    [~,git_hash_str] = system('git rev-parse HEAD');
-    git_hash_str = strtrim(git_hash_str);
-    if contains(git_hash_str, 'not a git repository') || ...
-            contains(git_hash_str, 'not recognized as an internal or external command') || ...
-            contains(git_hash_str, 'Der Befehl "git" ist entweder falsch geschrieben')
-        fprintf(fileID,'  Git commit detection failed\n');
-    else
-        fprintf(fileID,'  Git commit: %s\n', git_hash_str);
+fprintf(fileID,'  raPPPid %s\n', DEF.version);
+% git information to recover the exact code state used for this run
+git = getGitInfo();
+if isempty(git.hash)
+    fprintf(fileID,'  Git commit: unknown (no git information available)\n');
+else
+    fprintf(fileID,'  Git commit: %s\n', git.hash);
+    if ~isempty(git.branch)
+        fprintf(fileID,'  Git branch: %s\n', git.branch);
     end
-catch
-    fprintf(fileID,'  Git commit detection failed\n');
+    if ~isempty(git.date)
+        fprintf(fileID,'  Git commit date: %s\n', git.date);
+    end
+    if islogical(git.dirty) && git.dirty
+        fprintf(fileID,'  Git working tree: uncommitted changes present (results not exactly reproducible)\n');
+    end
 end
-fprintf(fileID,'  raPPPid %s', DEF.version);
 
 
 %% close file

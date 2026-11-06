@@ -87,6 +87,13 @@ if ~contains(settings.PROC.method, '+ Doppler')       % Doppler not processed
     set(handles.checkbox_plot_velocity,      'Value', 0);
 end
 
+% Attitude plot
+set(handles.checkbox_plot_attitude,      'Enable', 'off');
+set(handles.checkbox_plot_attitude,      'Value', 0);
+if settings.KINE.bool_kinematic && settings.KINE.bool_IMU
+    set(handles.checkbox_plot_attitude,      'Enable', 'on');
+end
+
 
 
 %% no data4plot for single plotting -> disable a lot
@@ -106,6 +113,7 @@ if ~bool_data4plot
     handles.checkbox_plot_mp.Enable = 'off';
     handles.checkbox_plot_elev.Enable = 'off';
     handles.checkbox_plot_DOP.Enable = 'off';
+    handles.checkbox_plot_attitude.Enable = 'off';
 end
 
 

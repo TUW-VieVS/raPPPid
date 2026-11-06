@@ -29,6 +29,12 @@ no_sats = numel(Epoch.sats);            % total number of satellites in current 
 filter_type = settings.ADJ.filter.type; % method of parameter estimation
 dx.x = zeros(size(Adjust.param));       % initialize
 it = 0; 	                            % number of current iteration
+n_removed_PF = [0 0 0];                 % # obs excluded by post-fit check
+
+% reset float ambiguity counter if no valid float solution from last epoch
+if ~Adjust.float || strcmp(filter_type, 'No Filter')
+    Adjust.N_est_epochs(:,:) = 0;
+end
 
 % Initialize struct model
 model = init_struct_model(no_sats, settings.INPUT.proc_freqs, settings.INPUT.num_freqs);
@@ -65,7 +71,7 @@ end
 
 
 % Start iteration (because of linearization)
-while it < DEF.ITERATION_MAX_NUMBER    	
+while it < DEF.ITERATION_MAX_NUMBER
     it = it + 1;
 
     % --- model the observations of current epoch, IMPORTANT FUNCTION!
@@ -83,17 +89,9 @@ while it < DEF.ITERATION_MAX_NUMBER
     los = vecnorm2(model.Rot_X - Adjust.param_pred(1:3));
     model.rho = repmat(los', 1, proc_freq);
     
-    % --- check for outliers
-    % dangerous function!, omc depends on predicted parameters which can
-    % be very wrong at the beginning of the convergence
-    if settings.PROC.check_omc
-        % calculate modeled observations
-        [model_code, model_phase, ~] = model_observations(model, Adjust, settings, Epoch);
-        [Epoch, Adjust] = check_omc(model_code, model_phase, Epoch, Adjust, settings, obs.interval); 
-    end
-
     % --- initialize float ambiguities (e.g., 1st epoch or after cycle-slip)
-    if ~settings.INPUT.rawDataAndroid
+    bool_amb_init = false(no_sats, proc_freq);      % true = ambiguity was initialized in this iteration
+    if contains(settings.PROC.method, '+ Phase') && ~settings.INPUT.rawDataAndroid
         [N_float, idx] = GetAmbiguitiesFromParam(Adjust.param, NO_PARAM, no_sats, proc_freq);
         N_init = Epoch.phase - Epoch.code;          % values for potential initialization
         N_init(isnan(N_init) | isinf(N_init)) = 0;  % avoids NaNs and Infs
@@ -102,10 +100,11 @@ while it < DEF.ITERATION_MAX_NUMBER
         is_refSat = ismember(Epoch.sats, refSats(refSats ~= 0));
         is_refSat_ = repmat(is_refSat(:), proc_freq, 1);
         % check which ambiguities should be initialized
-        bool_init = (N_float == 0) & ~Epoch.exclude(:) & ~Epoch.cs_found(:) & ~is_refSat_;
+        bool_init = (N_float == 0) & Epoch.useCode(:) & Epoch.usePhase(:) & ~is_refSat_;
         % initialize ambiguities in parameter and predicted parameter vector
         Adjust.param(idx(bool_init)) = N_init(bool_init);
         Adjust.param_pred(idx(bool_init)) = N_init(bool_init);
+        bool_amb_init = reshape(bool_init, no_sats, proc_freq);
     end
 
     % --- initialize estimation of ionosphere in parameter vector:
@@ -121,10 +120,18 @@ while it < DEF.ITERATION_MAX_NUMBER
     
     % --- update model with modeled observations
     [model.model_code, model.model_phase, model.model_doppler] = ...
-        model_observations(model, Adjust, settings, Epoch);
-    
+        model_observations(Adjust.param_pred, Adjust, model, settings, Epoch);
+
+    % --- check pre-fit residuals for outliers in code, phase and Doppler observations;
+    % dangerous function! depends on predicted parameters which can be very
+    % wrong at the beginning of the convergence -> use large thresholds
+    if settings.PROC.check_omc && (it == 1 || coord_jump || clock_jump)
+        [Epoch, Adjust] = check_omc(model.model_code, model.model_phase, Epoch, Adjust, settings, obs.interval, model.model_doppler, bool_amb_init);
+    end
+
     % --- select reference satellite for decoupled clock model
     if strcmp(settings.IONO.model, 'Estimate, decoupled clock')
+        Epoch = DCM_check_completeness(Epoch);
         Epoch = CheckSatellitesFixable(Epoch, settings, model, input);
         [Epoch, Adjust] = handleRefSats(Epoch, model.el, settings, Adjust);
     end
@@ -148,12 +155,12 @@ while it < DEF.ITERATION_MAX_NUMBER
     Adjust.A = A; Adjust.omc = omc;
         
     % --- create covariance matrix of observations
-    Adjust = createObsCovariance(Adjust, Epoch, settings, model.el, model.bore);
+    Adjust = createObsCovariance(Adjust, Epoch, settings, model);
     
     % --- check if too many observations have been excluded because of e.g. 
     % elevation cutoff, check_omc, missing broadcast corrections...
-    n_observations = numel(Epoch.exclude);
-    n_reject = sum(Epoch.exclude(:) | Epoch.cs_found(:) * strcmp(settings.IONO.model, 'GRAPHIC'));
+    n_observations = numel(Epoch.useCode);
+    n_reject = sum(~Epoch.useCode(:) | ~Epoch.usePhase(:) * strcmp(settings.IONO.model, 'GRAPHIC'));
     if n_observations - n_reject < DEF.MIN_SATS
         % not enough observation for parameter estimation in current epoch
         fprintf(2, 'Not enough observations in epoch %d (%s)           \n', Epoch.q, Epoch.rinex_header)
@@ -162,31 +169,56 @@ while it < DEF.ITERATION_MAX_NUMBER
         return
     end
 
-    
-
     %% ------- Calculate Position ------------
     switch filter_type        
 
-        case 'Kalman Filter Iterative'      % Kalman Filter with inner-epoch iteration
+        case 'Iterated Extended Kalman Filter'      % Kalman Filter with inner-epoch iteration
             if it == 1
-                x_pred = zeros(size(Adjust.A,2),1);              
+                % pseudo-observations, offset between prior and current linearization point
+                Adjust.x_pred_IEKF = zeros(size(Adjust.A,2),1);
             end
-            dx = KalmanFilterIterative(Adjust, x_pred);
-            x_pred = x_pred - dx.x;
+            dx = IteratedExtendedKalmanFilter(Adjust, Adjust.x_pred_IEKF);
+            Adjust.x_pred_IEKF = Adjust.x_pred_IEKF - dx.x;
             if norm(dx.x(1:3)) < DEF.ITERATION_THRESHOLD      % Norm of change in coordinates smaller than 1mm
                 Adjust = stop_iteration(Adjust, dx);
+
+                % check post-fit residuals
+                bool_PF = false;
+                if settings.PROC.check_postfit
+                    [Epoch, n_removed_PF, bool_PF] = ...
+                        check_postfit_IEKF(Epoch, Adjust, settings, n_removed_PF);
+                end
+
+                if bool_PF
+                    % post-fit residual check was positive -> iterate again.
+                    Adjust.param_pred = Adjust.param;
+                    continue
+                end
+
                 break;
             else        % inner-epoch iteration continues
                 Adjust.param = Adjust.param + dx.x;
                 % replace prediction with current values (used in modelErrorSources in next iteration)
                 Adjust.param_pred = Adjust.param;
-                Adjust.param_sigma_pred = Adjust.param_sigma;
             end
 
         case 'Kalman Filter'
             [Adjust.param, Adjust.param_sigma, Adjust.float] = ...
                 KalmanFilter(Adjust.omc, Adjust.A, Adjust.param_pred, Adjust.param_sigma_pred, Adjust.Q);
+
+            % check post-fit residuals
+            if settings.PROC.check_postfit
+                [Epoch, Adjust] = check_postfit(Epoch, Adjust, model, settings, input, obs);
+            end
+
+            % IMU attitude feedback: reset the error state
+            if isfield(Adjust, 'quat');     Adjust.param(24:26) = 0;     end
+
             [Adjust.res, Adjust.res_doppler] = calc_res(settings, input, Epoch, model, Adjust, obs);
+
+            % IMU virtual measurements and yaw corrections (ZUPT/ZARU/NHC);
+            % self-guards and returns immediately when the IMU is not initialized
+            Adjust = applyIMUCorrections(Adjust, Epoch, settings);
             break;              % no inner-epoch iteration
             
         case 'No Filter'      			% perform single-epoch Standard-LSQ-Adjustment
@@ -217,18 +249,18 @@ end
 
 % Code + Phase - Processing AND at least one satellite is excluded:
 % -> set ambiguities to zero
-if contains(settings.PROC.method, '+ Phase') && any(Epoch.exclude(:))         
-    kk = 1:(proc_freq*no_sats);
-    kk = kk(Epoch.exclude(:));              % index-numbers of satellites and their frequencies under cutoff
-    idx_amb = kk+NO_PARAM;                  % indices where to reset
+if contains(settings.PROC.method, '+ Phase') && ~all(Epoch.useCode(:))         
+    kk = 1:(proc_freq*no_sats);     % initialize to maximum number
+    kk = kk(~Epoch.useCode(:));     % index-numbers of satellites and their frequencies under cutoff
+    idx_amb = kk+NO_PARAM;          % indices where to reset
     Adjust = reset_param_sigma(Adjust, idx_amb, settings.ADJ.filter.var_amb); 
 end
 
 % Ionospheric delay is estimated AND at first frequency is excluded:
 % -> set estimated ionospheric delay of this satellite to zero
-if contains(settings.IONO.model, 'Estimate') && any(Epoch.exclude(:,1)) 
-    kkk = 1:100;
-    kkk = kkk(Epoch.exclude(:,1));      % index-numbers of satellites and their frequencies under cutoff
+if contains(settings.IONO.model, 'Estimate') && ~all(Epoch.useCode(:,1)) 
+    kkk = 1:no_sats;                    % initialize to maximum number
+    kkk = kkk(~Epoch.useCode(:,1));     % index-numbers of satellites and their frequencies under cutoff
     idx_iono = kkk+NO_PARAM;            % indices where to reset
     if contains(settings.PROC.method, '+ Phase')
         idx_iono = idx_iono + proc_freq*no_sats;   % change indices because of ambiguities
@@ -237,11 +269,19 @@ if contains(settings.IONO.model, 'Estimate') && any(Epoch.exclude(:,1))
 end
 
 % If a cycle slip is found reset the float ambiguities and covariances
-if contains(settings.PROC.method, '+ Phase') && any(Epoch.cs_found(:))
-    kkkk = 1:410;
-    kkkk = kkkk(Epoch.cs_found(:));     % index-numbers of satellites and their frequencies under cutoff
+if contains(settings.PROC.method, '+ Phase') && ~all(Epoch.usePhase(:))
+    kkkk = 1:(proc_freq*no_sats);       % initialize to maximum number
+    kkkk = kkkk(~Epoch.usePhase(:));    % index-numbers of satellites and their frequencies under cutoff
     idx_cs = kkkk+NO_PARAM;             % indices where to reset
-    Adjust = reset_param_sigma(Adjust, idx_cs, settings.ADJ.filter.var_amb);    
+    Adjust = reset_param_sigma(Adjust, idx_cs, settings.ADJ.filter.var_amb);
+end
+
+% reset/increase .N_est_epochs, counting the epochs each float ambiguity is continuously estimated
+if contains(settings.PROC.method, '+ Phase')
+    bool_estimated = Epoch.useCode & Epoch.usePhase & Adjust.float;
+    N_new = zeros(size(Adjust.N_est_epochs));       % not tracked anymore -> set to 0
+    N_new(Epoch.sats, :) = (Adjust.N_est_epochs(Epoch.sats, :) + 1) .* bool_estimated;
+    Adjust.N_est_epochs = N_new;
 end
 
 
@@ -281,36 +321,22 @@ idx_ = sub2ind(sz, idx, idx);           % convert to linear indices
 Adjust.param_sigma(idx_) = initial_var; % reset variances to initial variance
 
 
-function [res, res_doppler] = calc_res(settings, input, Epoch, model, Adjust, obs)
-% Calculates the post-fit residuals when using a Kalman Filter
-% recalculate error sources and modeled observations since parameters changed
-Adjust.param_pred = Adjust.param;       % replace prediction with current estimation
-los = vecnorm2(model.Rot_X - Adjust.param(1:3));
-model.rho = repmat(los', 1, settings.INPUT.proc_freqs);
-model = getReceiverClockBiases(model, Epoch, Adjust.param, settings);
-[model, Epoch] = modelErrorSources(settings, input, Epoch, model, Adjust, obs);
-[code_model, phase_model, doppler_model] = model_observations(model, Adjust, settings, Epoch);
-% calculate residuals (observation minus modeled observation)
-exclude = Epoch.exclude(:);
-usePhase = ~Epoch.cs_found(:);
-if contains(settings.PROC.method, '+ Phase')
-    s_f = numel(Epoch.sats) * settings.INPUT.proc_freqs;    % #sats x # freqs
-    res = zeros(s_f, 1);
-    code_row = 1:2:2*s_f;   	% rows for code  obs [1,3,5,7,...]
-    phase_row = 2:2:2*s_f;  	% rows for phase obs [2,4,6,8,...]
-    res(code_row,:)	 = (Epoch.code(:)  - code_model(:))  .*  ~exclude; 	% for code-observations
-    res(phase_row,:) = (Epoch.phase(:) - phase_model(:)) .*  ~exclude .*  usePhase;    % for phase-observations
-    if strcmp(settings.IONO.model, 'GRAPHIC')
-         res(code_row,:) = [];
-    end
-else
-    res = (Epoch.code(:)  - code_model(:))  .*  ~exclude;
-end
-res_doppler = [];
-if contains(settings.PROC.method, '+ Doppler')
-    res_doppler = (Epoch.doppler(:)  + doppler_model(:))  .*  ~exclude;
-    res = [res; res_doppler];
-end
 
-
-
+function Epoch = DCM_check_completeness(Epoch)
+% DCM is sensitive to satellites with an incomplete set of observations:
+% Make sure that, if a single code or phase observation of a specific 
+% satellite was removed, all observations of this satellite are removed. 
+% Makes sure that missing observations (e.g., GPS L5) are handled properly.
+% -> only satellites with a full set of code and phase observations are
+% used in the parameter estimation
+code = Epoch.code;  
+phase = Epoch.phase; 
+% make sure that non-existing observations are NaN
+code(code == 0) = NaN;
+phase(phase == 0) = NaN;
+% find observations, which have been rejected
+rejected  = any((~Epoch.useCode  & ~isnan(code) ) | ( ~Epoch.usePhase & ~isnan(phase)), 2);
+% remove all observations
+Epoch.useCode(rejected, :)  = false;
+% usePhase is deliberately not changed: phase rows are already removed via
+% useCode and ~usePhase would reset the float ambiguities

@@ -70,3 +70,14 @@ hour = obs.startdate(4) + obs.startdate(5)/60 + obs.startdate(6)/3600;
 obs.startdate_jd = cal2jd_GT(obs.startdate(1),obs.startdate(2), obs.startdate(3) + hour/24);
 [obs.doy, ~] = jd2doy_GT(obs.startdate_jd);
 [obs.startGPSWeek, obs.startSow] = cal2gpstime(obs.startdate);
+
+% detect leap seconds
+bool_leap_sec = contains(TXT, 'Leap seconds:');
+if any(bool_leap_sec)
+    line_leap_sec = TXT{bool_leap_sec};
+    obs.leap_sec = str2double(line_leap_sec(16:end));
+end
+% fallback: derive leap seconds from the start date
+if ~isfield(obs, 'leap_sec') || isnan(obs.leap_sec)
+    obs.leap_sec = GetLeapSec_UTC_GPS(obs.startdate_jd);
+end

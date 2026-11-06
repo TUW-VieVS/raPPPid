@@ -67,6 +67,7 @@ end
 % reset fixed EWL, WL, NL ambiguities
 Epoch.WL_23(idx) = NaN;
 Epoch.WL_12(idx) = NaN;
+Epoch.WL_13(idx) = NaN;
 Epoch.NL_12(idx) = NaN;
 Epoch.NL_23(idx) = NaN;
 

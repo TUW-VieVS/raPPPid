@@ -30,8 +30,8 @@ if contains(funstring, 'option')
    return
 end
 
-% check string for valid beginning for conversion
-if funstring(1) ~= '@' || ~strcmp(funstring, '@(snr)')
+% add function head if missing (e.g., "10.^(-(snr-50)/20)" -> "@(snr)10.^(-(snr-50)/20)")
+if ~startsWith(funstring, '@')
     if contains(funstring, 'snr')
         funstring = ['@(snr)' funstring];
     else

@@ -29,7 +29,7 @@ cutoff = full(cutoff);
 cutoff(isnan(cutoff)) = 0;
 
 eps = numel(epochs);
-prn_obs = ones(eps,1) * [1:410];        % [] are important
+prn_obs = ones(eps,1) * [1:DEF.SATS];   % [] are important
 prn_obs(~observ_sats) = false;          % matrix with observed prns
 prn_obs(prn_obs==0) = NaN;
 % satellite indices for each GNSS

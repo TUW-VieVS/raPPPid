@@ -34,8 +34,8 @@ for i = 1:4
         % previous local file is only replaced once the download succeeded
         websaveChecked([target_atx file_atx{i}] , ['https://files.igs.org/pub/station/general/' file_atx{i}], woptions);
         fprintf('File %d finished, %d remaining.        \n', i, 4-i);
-    catch
-        fprintf(2, 'Download failed: %s! Keeping previous local file.\n', file_atx{i});
+    catch ME
+        fprintf(2, 'Download failed: %s! Keeping previous local file.\n%s\n', file_atx{i}, ME.message);
     end
 end
 

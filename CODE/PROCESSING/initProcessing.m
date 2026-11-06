@@ -50,6 +50,12 @@ if decoupled_clock_model                            % Decoupled Clock Model is u
     Adjust.NO_PARAM = DEF.NO_PARAM_DCM;
 	Adjust.ORDER_PARAM = DEF.PARAM_DCM;
 end   
+% add IMU parameters if IMU data is processed
+if settings.KINE.bool_kinematic && settings.KINE.bool_IMU  && settings.INPUT.rawDataAndroid
+    Adjust.NO_PARAM = Adjust.NO_PARAM + DEF.NO_PARAM_IMU;
+    Adjust.ORDER_PARAM = [Adjust.ORDER_PARAM; DEF.PARAM_IMU];
+end
+
 % Initialize Adjust
 Adjust.float = false;
 Adjust.fixed = false;
@@ -59,8 +65,9 @@ Adjust.fixed_reset_epochs = [];
 Adjust.reset_time = NaN;            % initialized in resetSolution.m in first epoch, time of last reset in gps-time [sow]
 Adjust.param = [];          Adjust.param_pred = [];
 Adjust.param_sigma = [];    Adjust.param_sigma_pred = [];
-Adjust.constraint = false;  
+Adjust.constraint = false;
 Adjust.iono_fix = [];
+Adjust.N_est_epochs = zeros(DEF.SATS, proc_frqs);   % number of epochs a float ambiguity is continuously estimated
 Adjust.A = [];          % Design Matrix (aka Observation Matrix)
 Adjust.P = [];          % weight matrix of the observations
 Adjust.Q = [];          % covariance matrix of the observations
@@ -83,26 +90,22 @@ Adjust.iono_fix = [];   % fixed ionospheric delay estimation
 Adjust.Transition = [];	% Transition matrix (Kalman Filter)
 Adjust.Noise = [];    	% Noise matrix (Kalman Filter)
 Adjust.P_pred = [];     % inverse of parameters' covariance matrix (weight matrix of parameters)
-Adjust.Noise_0 = []; 
+Adjust.Noise_0 = [];
 Adjust.Transition_0 = [];
-% to store the omc values for check_omc
-if settings.PROC.check_omc
-    Adjust.code_omc  = [];
-    Adjust.phase_omc = [];
-    if ~isnan(settings.PROC.omc_window)
-        Adjust.code_omc  = NaN(settings.PROC.omc_window+1, nnn);
-        Adjust.phase_omc = NaN(settings.PROC.omc_window+1, nnn);
-    end
-end
 % initialize matrices for Hatch-Melbourne-Wübbena (HMW) LC between
 % different frequencies, e.g., for GPS L1-L2-L5 processing
 Adjust.HMW_12 = []; Adjust.HMW_23 = []; Adjust.HMW_13 = [];
 if settings.AMBFIX.bool_AMBFIX
-    Adjust.HMW_12 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, 410);  % e.g., Wide-Lane (WL)
-    Adjust.HMW_23 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, 410);  % e.g., Extra-Wide-Lane (EW)
-    Adjust.HMW_13 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, 410);  % e.g., Medium-Lane (ML)
+    Adjust.HMW_12 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, DEF.SATS);  % e.g., Wide-Lane (WL)
+    Adjust.HMW_23 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, DEF.SATS);  % e.g., Extra-Wide-Lane (EW)
+    Adjust.HMW_13 = zeros(settings.PROC.epochs(2)-settings.PROC.epochs(1)+1, DEF.SATS);  % e.g., Medium-Lane (ML)
 end
-
+% IMU related fields
+Adjust.quat_initialized = false;
+Adjust.vel_imu      = zeros(3,1);
+Adjust.pos_imu      = zeros(3,1);
+Adjust.pos_imu_step = zeros(3,1);
+Adjust.bias_acc     = zeros(3,1);
 
 %% obs
 if ~isfield(obs, 'coordsyst')
@@ -129,12 +132,14 @@ Epoch.ss_digit_rinex = [];      % signal strength value from Rinex file
 Epoch.code  = [];
 Epoch.phase = [];
 Epoch.doppler = [];
-Epoch.C1 = [];          % code observations on 1st frequency
-Epoch.C2 = [];          % code observations on 2nd frequency
-Epoch.C3 = [];          % code observations on 3rd frequency
-Epoch.L1 = [];          % phase observations on 1st frequency
-Epoch.L2 = [];          % phase observations on 1st frequency
-Epoch.L3 = [];          % phase observations on 1st frequency
+% code observations on 1st, 2nd, and 3rd frequency
+Epoch.C1 = [];      Epoch.C2 = [];      Epoch.C3 = [];      
+% phase observations on 1st, 2nd, and 3rd frequency
+Epoch.L1 = [];      Epoch.L2 = [];      Epoch.L3 = [];    
+% carrier-to-noise density on 1st, 2nd, and 3rd frequency
+Epoch.S1 = [];      Epoch.S2 = [];      Epoch.S3 = [];    
+% observed Doppler shift on 1st, 2nd, and 3rd frequency
+Epoch.D1 = [];      Epoch.D2 = [];      Epoch.D3 = [];    
 % boolean vectors for each GNSS
 Epoch.gps  = [];
 Epoch.glo  = [];
@@ -144,6 +149,7 @@ Epoch.qzss = [];
 Epoch.other_systems = [];
 Epoch.tracked    = zeros(nnn,1);        % number of epochs each satellite is tracked, reset when cycle slip or under cutoff
 % cycle slip variables
+Epoch.usePhase = [];
 Epoch.cs_found = [];
 Epoch.cs_dL1dL2 = [];				% dLi - dLj
 Epoch.cs_dL1dL3 = [];
@@ -219,10 +225,12 @@ Epoch.L2_bias = [];
 Epoch.L3_bias = [];
 % other
 Epoch.sats = [];
+Epoch.leverarm_ECEF = [];       % lever arm in ECEF for kinematic processing
 Epoch.delta_windup = [];
 Epoch.rinex_header = '';
 Epoch.usable = [];
-Epoch.exclude = [];
+Epoch.useCode = [];
+Epoch.useDoppler = [];
 Epoch.fixable = [];
 % broadcast column
 Epoch.BRDCcolumn = NaN(nnn,1);
@@ -247,10 +255,20 @@ storeData.fixed = false(tot_eps,1);         % true if fixed solution in this epo
 % Adjusted Parameters and Covariance
 storeData.param     = zeros(tot_eps, Adjust.NO_PARAM);
 storeData.param_pred= zeros(tot_eps, Adjust.NO_PARAM);
-storeData.param_sigma = cell(tot_eps,1);    % cell as covariance matrix of parameters changes size over time
-storeData.param_var = zeros(tot_eps,Adjust.NO_PARAM);
+% full parameter vectors (size changes over time)
+storeData.param_full = cell(tot_eps,1);            % x_{k|k}
+if strcmp(settings.ADJ.filter.direction, 'Forwards + RTS')
+    % additionally needed for the RTS smoother
+    storeData.param_pred_full = cell(tot_eps,1);   % x_{k|k-1}
+    storeData.param_sigma_pred = cell(tot_eps,1);  % P_{k|k-1}
+    storeData.Transition = cell(tot_eps,1);        % transition matrix x_{k-1} -> x_k
+end
+if settings.KINE.bool_offset && settings.KINE.bool_kinematic
+    storeData.leverarm_ECEF = zeros(tot_eps,3);     % lever arm in ECEF for kinematic processing
+end
+storeData.param_sigma = cell(tot_eps,1);    % cell for covariance matrix of parameters (changes size)
 storeData.exclude = zeros(tot_eps,nnn);   	% boolean for sat under cutoff angle, 1 = under cutoff
-storeData.cs_found = zeros(tot_eps,nnn);    % boolean, true = phase observation excluded
+storeData.excludePhase = zeros(tot_eps,nnn);    % boolean, true = phase observation excluded
 % DOPs
 storeData.PDOP = zeros(tot_eps,1);
 storeData.HDOP = zeros(tot_eps,1);
@@ -264,23 +282,17 @@ if settings.EXP.storeData_sat_status
 end
 
 % variables depending on the number of processed frequencies
-storeData.N_1    = zeros(tot_eps,nnn);              % float ambiguities
-storeData.N_var_1 = zeros(tot_eps,nnn);             % variance of float ambiguities
 storeData.residuals_code_1 = zeros(tot_eps,nnn);
 if bool_phase && ~strcmp(settings.IONO.model, 'GRAPHIC')
     storeData.residuals_phase_1 = zeros(tot_eps,nnn);
 end
 if bool_doppler; storeData.residuals_doppler_1 = zeros(tot_eps,nnn); end
 if proc_frqs > 1
-    storeData.N_2    = zeros(tot_eps,nnn);
-    storeData.N_var_2 = zeros(tot_eps,nnn);
     storeData.residuals_code_2 = zeros(tot_eps,nnn);
     if bool_phase;   storeData.residuals_phase_2   = zeros(tot_eps,nnn); end
     if bool_doppler; storeData.residuals_doppler_2 = zeros(tot_eps,nnn); end
 end
 if proc_frqs > 2
-    storeData.N_3    = zeros(tot_eps,nnn);
-    storeData.N_var_3 = zeros(tot_eps,nnn);
     storeData.residuals_code_3 = zeros(tot_eps,nnn);
     if bool_phase;   storeData.residuals_phase_3   = zeros(tot_eps,nnn); end
     if bool_doppler; storeData.residuals_doppler_3 = zeros(tot_eps,nnn); end
@@ -299,9 +311,9 @@ end
 if settings.AMBFIX.bool_AMBFIX    
     storeData.ttff = NaN;                       % time/epoch to first fix
     storeData.param_fix = zeros(tot_eps,Adjust.NO_PARAM);    	% fixed parameters
-    storeData.param_var_fix = zeros(tot_eps,3);	% variances of fixed coordinates
+	storeData.param_sigma_fix = cell(tot_eps,1);    % cell for covariance matrix of fixed parameters (changes size)
     storeData.HMW_12 = zeros(tot_eps,nnn);    	% HMW LC between 1st and 2nd frequency
-    if proc_frqs >= 2
+    if proc_frqs >= 2 || strcmp(settings.IONO.model, '3-Frequency-IF-LC')
         storeData.HMW_23 = zeros(tot_eps,nnn);  	% HMW LC between 2nd and 3rd frequency
 		storeData.HMW_13 = zeros(tot_eps,nnn);  % HMW LC between 1st and 3rd frequency
     end
@@ -320,7 +332,7 @@ if settings.AMBFIX.bool_AMBFIX
     if contains(settings.IONO.model,'IF-LC')
         storeData.N_WL_12      = NaN(tot_eps,nnn); 	% WL ambiguities
         storeData.N_NL_12      = NaN(tot_eps,nnn); 	% NL ambiguities
-        if proc_frqs >= 2
+        if proc_frqs >= 2 || strcmp(settings.IONO.model, '3-Frequency-IF-LC')
             storeData.N_WL_23	= NaN(tot_eps,nnn); 	% EW ambiguities
             storeData.N_NL_23 	= NaN(tot_eps,nnn); 	% EN ambiguities
         end
@@ -403,7 +415,6 @@ end
 % when ionosphere is estimated
 if contains(settings.IONO.model,'Estimate') 
     storeData.constraint = false(tot_eps,1);      % set to true when ionospheric constraint is used
-    storeData.iono_est = zeros(tot_eps,nnn);      % values of estimated ionospheric delay
 end
 % for saving the code and phase observations
 storeData.C1 = zeros(tot_eps,nnn);
@@ -431,15 +442,10 @@ end
 
 % IMU related variables
 if settings.KINE.bool_IMU
-    storeData.triad         = NaN(3,tot_eps);
-    storeData.fn            = NaN(3,tot_eps);
-    storeData.quat          = NaN(4,tot_eps);
-    storeData.motionState   = NaN(1,tot_eps);
-    storeData.up_axis       = NaN(1,tot_eps);
-    storeData.z_yaw         = NaN(1,tot_eps);
-    storeData.forward_body  = NaN(3,tot_eps);
-    storeData.gnss_bearing  = NaN(1,tot_eps);
-    storeData.yaw_forward   = NaN(1,tot_eps);
+    storeData.fn            = NaN(tot_eps, 3);   % specific force in nav frame
+    storeData.quat          = NaN(tot_eps, 4);   % body-to-nav attitude quaternion
+    storeData.motionState   = NaN(tot_eps, 1);   % 0 static, 1 quasi-static, 2 walking
+    storeData.ZUPT_prob     = NaN(tot_eps, 1);   % probability of zero velocity
 end
 
 
@@ -448,6 +454,7 @@ end
 satellites.elev   = zeros(tot_eps,nnn);		% elevation [°]
 satellites.az     = zeros(tot_eps,nnn);		% azimuth [°]
 satellites.obs    = zeros(tot_eps,nnn);   	% true if satellite observed
+satellites.sats   = cell(tot_eps,1);        % observed satellites in each Epoch
 if settings.KINE.satellite.bool
     satellites.bore = zeros(tot_eps,nnn);	% boresight angle [°]
 end

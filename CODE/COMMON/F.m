@@ -18,7 +18,7 @@ classdef F
         weight_BDS = 1;
         weight_QZSS = 1;
         
-        %% default settings for Kalman Filter Iterative [m]
+        %% default settings for Iterated Extended Kalman Filter [m]
         % coordinates
         KFI_coord_std       = 1e4;
         KFI_coord_noise     = 0;

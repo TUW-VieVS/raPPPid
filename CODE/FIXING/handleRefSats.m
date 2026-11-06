@@ -18,8 +18,8 @@ function [Epoch, Adjust] = handleRefSats(Epoch, elev, settings, Adjust)
 
 
 %% prepare               	
-elev(Epoch.exclude)  = NaN;         % exclude satellites 
-elev(Epoch.cs_found) = NaN;         % exclude satellites with cycle slip
+elev(~Epoch.useCode)  = NaN;         % exclude satellites 
+elev(~Epoch.usePhase) = NaN;         % exclude satellites with cycle slip
 elev(elev == 0) = NaN;              % exclude satellites with elevation = 0 (e.g., satellite has no precise orbit or clock)
 
 % extract reference satellites from last epoch
@@ -45,7 +45,7 @@ Epoch.refSatQZS_idx = find(Epoch.sats == Epoch.refSatQZS);
 if newRefSat(1) || changeRefSat(1)
     sats_gps = Epoch.sats(Epoch.gps);
     elev_gps = elev(Epoch.gps);
-    if ~(isempty(sats_gps) || all(isnan(elev_gps)) || all(Epoch.exclude(Epoch.gps)))
+    if ~(isempty(sats_gps) || all(isnan(elev_gps)) || ~any(Epoch.useCode(Epoch.gps)))
         % find suitable GPS reference satellite
         if strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite')
             Epoch.refSatGPS = chooseHighestRefSat(Epoch, sats_gps, elev_gps, Epoch.gps, settings, true);
@@ -65,7 +65,7 @@ end
 if newRefSat(2) || changeRefSat(2)
     sats_glo = Epoch.sats(Epoch.glo);
     elev_glo = elev(Epoch.glo);
-    if ~(isempty(sats_glo) || all(isnan(elev_glo)) || all(Epoch.exclude(Epoch.glo)))
+    if ~(isempty(sats_glo) || all(isnan(elev_glo)) || ~any(Epoch.useCode(Epoch.glo)))
         % find suitable GLO reference satellite
         if strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite')
             Epoch.refSatGLO = chooseHighestRefSat(Epoch, sats_glo, elev_glo, Epoch.glo, settings, false);
@@ -85,7 +85,7 @@ end
 if newRefSat(3) || changeRefSat(3)
     sats_gal = Epoch.sats(Epoch.gal);
     elev_gal = elev(Epoch.gal);
-    if ~(isempty(sats_gal) || all(isnan(elev_gal)) || all(Epoch.exclude(Epoch.gal)))
+    if ~(isempty(sats_gal) || all(isnan(elev_gal)) || ~any(Epoch.useCode(Epoch.gal)))
         % find suitable GAL reference satellite
         if strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite')
             Epoch.refSatGAL = chooseHighestRefSat(Epoch, sats_gal, elev_gal, Epoch.gal, settings, true);
@@ -105,7 +105,7 @@ end
 if newRefSat(4) || changeRefSat(4)
     sats_bds = Epoch.sats(Epoch.bds);
     elev_bds = elev(Epoch.bds);
-    if ~(isempty(sats_bds) || all(isnan(elev_bds)) || all(Epoch.exclude(Epoch.bds)))
+    if ~(isempty(sats_bds) || all(isnan(elev_bds)) || ~any(Epoch.useCode(Epoch.bds)))
         % find suitable BDS reference satellite
         if strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite')
             Epoch.refSatBDS = chooseHighestRefSat(Epoch, sats_bds, elev_bds, Epoch.bds, settings, true);
@@ -126,7 +126,7 @@ if newRefSat(5) || changeRefSat(5)
     sats_qzs = Epoch.sats(Epoch.qzss);
     elev_qzs = elev(Epoch.qzss);
     % check if any possible reference satellites for QZSS
-    if ~(isempty(sats_qzs) || all(isnan(elev_qzs)) || all(Epoch.exclude(Epoch.qzss)))
+    if ~(isempty(sats_qzs) || all(isnan(elev_qzs)) || ~any(Epoch.useCode(Epoch.qzss)))
         % find suitable QZSS reference satellite
         if strcmp(settings.AMBFIX.refSatChoice, 'Highest satellite')
             Epoch.refSatQZS = chooseHighestRefSat(Epoch, sats_qzs, elev_qzs, Epoch.qzss, settings, true);

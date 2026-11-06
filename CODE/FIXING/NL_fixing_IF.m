@@ -54,11 +54,12 @@ param_N_gal = param_N(Epoch.gal);       % Galileo float ambiguities
 param_N_bds = param_N(Epoch.bds);       % BeiDou float ambiguities
 param_N_qzs = param_N(Epoch.qzss);      % QZSS float ambiguities
 
-% get covariance matrix and convert from meters to cycles
+% get covariance matrix, convert to single-differenced variance-covariance 
+% matrix of the narrow-lane ambiguities, and convert from meters^2 to cycles^2
 Q_NN = Adjust.param_sigma(idx, idx);    % covariance matrix of float ambiguities
-lam = (f1.^2 .* l1 - f2.^2 .* l2) ./ (f1.^2 - f2.^2);   % wavelength of IF LC ||| check!
-Q_NN = Q_NN ./ lam;      % divide rows by wavelength
-Q_NN = Q_NN ./ lam';     % divide columns by wavelength
+lam_NL = (f1.^2 .* l1 - f2.^2 .* l2) ./ (f1.^2 - f2.^2);    % NL wavelength
+Q_NN = Q_NN ./ lam_NL;      % divide rows by wavelength
+Q_NN = Q_NN ./ lam_NL';     % divide columns by wavelength
 
 % remove GLONASS and QZSS (if processed in float solution)
 if settings.INPUT.use_GLO
